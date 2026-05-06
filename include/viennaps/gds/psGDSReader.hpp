@@ -1,8 +1,10 @@
 #pragma once
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <unordered_set>
 
 #include "psGDSGeometry.hpp"
 #include "psGDSUtils.hpp"
@@ -63,14 +65,17 @@ private:
   float currentWidth = 0;
   char *tempStr = nullptr;
 
-  static bool contains(int32_t X, int32_t Y,
-                       const std::vector<std::array<int32_t, 2>> &uniPoints) {
-    for (const auto &p : uniPoints) {
-      if (p[0] == X && p[1] == Y)
-        return true;
-    }
+  static constexpr std::uint64_t packPointKey(int32_t x, int32_t y) noexcept {
+    return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(x)) << 32) |
+           static_cast<std::uint32_t>(y);
+  }
 
-    return false;
+  // Returns true if the point already existed; inserts otherwise.
+  static bool contains(int32_t x, int32_t y,
+                       std::unordered_set<std::uint64_t> &uniquePointKeys) {
+    const auto key = packPointKey(x, y);
+    const auto [_, inserted] = uniquePointKeys.insert(key);
+    return !inserted;
   }
 
   void resetCurrentStructure() {
@@ -204,7 +209,8 @@ private:
   void parseXYBoundary() {
     const unsigned int numPoints = currentRecordLen / 8;
     auto &currentElPointCloud = currentStructure.elements.back().pointCloud;
-    std::vector<std::array<int32_t, 2>> uniquePoints;
+    std::unordered_set<std::uint64_t> uniquePoints;
+    uniquePoints.reserve(numPoints);
 
     // do not include the last point since it
     // is just a copy of the first
@@ -213,7 +219,6 @@ private:
       const auto pY = readFourByteSignedInt();
 
       if (!contains(pX, pY, uniquePoints)) {
-        uniquePoints.push_back({pX, pY});
 
         float X = units * static_cast<float>(pX);
         float Y = units * static_cast<float>(pY);

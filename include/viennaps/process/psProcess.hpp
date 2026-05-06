@@ -22,15 +22,20 @@ namespace viennaps {
 
 using namespace viennacore;
 
+inline bool gpuAvailable() {
 #ifdef VIENNACORE_COMPILE_GPU
-inline constexpr bool gpuAvailable() { return true; }
+  auto deviceContext = DeviceContext::getContextFromRegistry();
+  if (deviceContext)
+    return deviceContext->foundCuda();
+
+  deviceContext = DeviceContext::createContext();
+  return deviceContext != nullptr && deviceContext->foundCuda();
 #else
-inline constexpr bool gpuAvailable() { return false; }
+  return false;
 #endif
+}
 
-template <typename T> constexpr bool always_false = false;
-
-template <typename NumericType, int D> class Process {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Process {
 private:
   ProcessContext<NumericType, D> context_;
   std::vector<std::unique_ptr<ProcessStrategy<NumericType, D>>> strategies_;
@@ -62,20 +67,20 @@ public:
     context_.processDuration = duration;
   }
 
-  template <typename ParamType> void setParameters(const ParamType &params) {
-    if constexpr (std::is_same_v<ParamType, RayTracingParameters>) {
-      context_.rayTracingParams = params;
-    } else if constexpr (std::is_same_v<ParamType, AdvectionParameters>) {
-      context_.advectionParams = params;
-    } else if constexpr (std::is_same_v<ParamType, CoverageParameters>) {
-      context_.coverageParams = params;
-    } else if constexpr (std::is_same_v<ParamType,
-                                        AtomicLayerProcessParameters>) {
-      context_.atomicLayerParams = params;
-    } else {
-      static_assert(always_false<ParamType>,
-                    "Unsupported parameter type for Process.");
-    }
+  void setParameters(const RayTracingParameters &p) {
+    context_.rayTracingParams = p;
+  }
+
+  void setParameters(const AdvectionParameters &p) {
+    context_.advectionParams = p;
+  }
+
+  void setParameters(const CoverageParameters &p) {
+    context_.coverageParams = p;
+  }
+
+  void setParameters(const AtomicLayerProcessParameters &p) {
+    context_.atomicLayerParams = p;
   }
 
   void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }
@@ -99,7 +104,7 @@ public:
     VIENNACORE_LOG_DEBUG("Using strategy: " + std::string(strategy->name()));
 
     if (strategy->requiresFluxEngine()) {
-      VIENNACORE_LOG_DEBUG("Setting up " + to_string(fluxEngineType_) +
+      VIENNACORE_LOG_DEBUG("Setting up " + util::toString(fluxEngineType_) +
                            " flux engine for strategy.");
       strategy->setFluxEngine(createFluxEngine());
     }
@@ -191,7 +196,7 @@ private:
     assert(fluxEngineType_ != FluxEngineType::AUTO &&
            "Flux engine type must be specified before creation.");
     VIENNACORE_LOG_DEBUG("Creating flux engine of type: " +
-                         to_string(fluxEngineType_));
+                         util::toString(fluxEngineType_));
     // Create CPU engine
     if (fluxEngineType_ == FluxEngineType::CPU_DISK) {
       return std::make_unique<CPUDiskEngine<NumericType, D>>();
@@ -295,7 +300,7 @@ public:
         fluxEngineType_ = FluxEngineType::CPU_DISK;
       }
       VIENNACORE_LOG_DEBUG("Auto-selected flux engine type: " +
-                           to_string(fluxEngineType_));
+                           util::toString(fluxEngineType_));
     }
 
 #ifdef VIENNACORE_COMPILE_GPU

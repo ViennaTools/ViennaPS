@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../materials/psMaterialValueMap.hpp"
 #include "../psConstants.hpp"
 
 #include <unordered_map>
@@ -13,9 +14,14 @@ template <typename NumericType> struct PlasmaEtchingParameters {
   NumericType passivationFlux = 1.0e2;
 
   // sticking probabilities
-  std::unordered_map<int, NumericType> beta_E;
-  std::unordered_map<int, NumericType> beta_P;
+  MaterialValueMap<NumericType> beta_E =
+      MaterialValueMap<NumericType>::fromDefault(1.0);
+  MaterialValueMap<NumericType> beta_P =
+      MaterialValueMap<NumericType>::fromDefault(1.0);
 
+  MaterialValueMap<NumericType> rateFactors =
+      MaterialValueMap<NumericType>::fromDefault(
+          1.0); // default to 1.0 for all materials
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
 
   // Mask
@@ -37,6 +43,13 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     NumericType Eth_sp = 15.; // eV
     NumericType A_sp = 0.02;
     NumericType B_sp = 8.5;
+
+    // polynomial cosine angular yield form
+    bool usePolyCosThetaYield = false;
+    NumericType a1 = -0.26;
+    NumericType a2 = 2.72;
+    NumericType a3 = -4.3;
+    NumericType a4 = 1.95;
   } Polymer;
 
   // Etching material
@@ -91,11 +104,13 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     processData["Etchant Flux"] = {etchantFlux};
     processData["Passivation Flux"] = {passivationFlux};
 
-    for (const auto &pair : beta_E) {
-      processData["Beta_E " + std::to_string(pair.first)] = {pair.second};
+    for (auto entry : beta_E) {
+      processData["Beta_E " + MaterialMap::toString(entry.material)] =
+          std::vector<double>{entry.value};
     }
-    for (const auto &pair : beta_P) {
-      processData["Beta_P " + std::to_string(pair.first)] = {pair.second};
+    for (auto entry : beta_P) {
+      processData["Beta_P " + MaterialMap::toString(entry.material)] =
+          std::vector<double>{entry.value};
     }
 
     if (etchStopDepth != std::numeric_limits<NumericType>::lowest())
@@ -112,6 +127,14 @@ template <typename NumericType> struct PlasmaEtchingParameters {
     processData["Polymer Eth_sp"] = {Polymer.Eth_sp};
     processData["Polymer A_sp"] = {Polymer.A_sp};
     processData["Polymer B_sp"] = {Polymer.B_sp};
+    processData["Polymer UsePolyCosThetaYield"] = {
+        (double)Polymer.usePolyCosThetaYield};
+    if (Polymer.usePolyCosThetaYield) {
+      processData["Polymer a1"] = {(double)Polymer.a1};
+      processData["Polymer a2"] = {(double)Polymer.a2};
+      processData["Polymer a3"] = {(double)Polymer.a3};
+      processData["Polymer a4"] = {(double)Polymer.a4};
+    }
 
     // Material
     processData["Substrate Rho"] = {Substrate.rho};
@@ -163,6 +186,11 @@ struct PlasmaEtchingParametersGPU {
     Polymer.B_sp = static_cast<float>(parameters.Polymer.B_sp);
     Polymer.Eth_sp = static_cast<float>(parameters.Polymer.Eth_sp);
     Polymer.rho = static_cast<float>(parameters.Polymer.rho);
+    Polymer.usePolyCosThetaYield = parameters.Polymer.usePolyCosThetaYield;
+    Polymer.a1 = static_cast<float>(parameters.Polymer.a1);
+    Polymer.a2 = static_cast<float>(parameters.Polymer.a2);
+    Polymer.a3 = static_cast<float>(parameters.Polymer.a3);
+    Polymer.a4 = static_cast<float>(parameters.Polymer.a4);
 
     Substrate.rho = static_cast<float>(parameters.Substrate.rho);
     Substrate.Eth_sp = static_cast<float>(parameters.Substrate.Eth_sp);

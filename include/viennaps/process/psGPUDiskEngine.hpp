@@ -14,7 +14,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class GPUDiskEngine final : public FluxEngine<NumericType, D> {
 public:
   explicit GPUDiskEngine(std::shared_ptr<DeviceContext> deviceContext)
@@ -166,6 +166,7 @@ public:
     rayTracer_.normalizeResults();
     downloadResultsToPointData(*fluxes,
                                context.rayTracingParams.smoothingNeighbors);
+    ++this->fluxCalculationsCount_;
 
     // output
     if (Logger::hasIntermediate()) {

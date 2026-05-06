@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../materials/psMaterialMap.hpp"
 #include "../process/psProcessModel.hpp"
-#include "../psMaterials.hpp"
 
 #include <vcVectorType.hpp>
 
@@ -47,7 +47,7 @@ public:
   NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate,
                                 int material, const Vec3D<NumericType> &nv,
                                 unsigned long pointID) override {
-    for (auto etchingMaterial : materials) {
+    for (auto const &etchingMaterial : materials) {
       if (MaterialMap::isMaterial(material, etchingMaterial.first)) {
         if (std::abs(Norm(nv) - 1.) > 1e-4)
           return 0.;

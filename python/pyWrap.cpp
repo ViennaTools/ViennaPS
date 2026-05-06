@@ -1,22 +1,5 @@
 #include "pyWrapDimension.hpp"
 
-struct MaterialInfoPy {
-  MaterialInfoPy(Material m)
-      : name(info(m).name), category(info(m).category),
-        density_gcm3(info(m).density_gcm3), conductive(info(m).conductive),
-        colorHex(info(m).colorHex) {}
-  MaterialInfoPy(MaterialInfo info)
-      : name(info.name), category(info.category),
-        density_gcm3(info.density_gcm3), conductive(info.conductive),
-        colorHex(info.colorHex) {}
-
-  std::string name;
-  MaterialCategory category;
-  double density_gcm3;
-  bool conductive;
-  uint32_t colorHex;
-};
-
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
       "ViennaPS is a topography simulation library for microelectronic "
@@ -57,15 +40,88 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            py::arg("shouldAbort") = true)
       .def("print", [](Logger &instance) { instance.print(std::cout); });
 
-  // Material enum
-  auto matEnum =
-      py::native_enum<Material>(module, "Material", "enum.IntEnum",
-                                "Material types for domain and level sets");
+  // Built-in material enum
+  auto builtInMatEnum = py::native_enum<BuiltInMaterial>(
+      module, "BuiltInMaterial", "enum.IntEnum",
+      "Fixed built-in material types for domain and level sets");
 #define ENUM_BIND(id, sym, cat, dens, cond, color)                             \
-  matEnum.value(#sym, Material::sym);
-  MATERIAL_LIST(ENUM_BIND)
+  builtInMatEnum.value(#sym, BuiltInMaterial::sym);
+  BUILTIN_MATERIAL_LIST(ENUM_BIND)
 #undef ENUM_BIND
-  matEnum.finalize();
+  builtInMatEnum.finalize();
+
+  // Unified material handle
+  auto materialClass = py::class_<Material>(module, "Material");
+  materialClass.def(py::init<>())
+      .def(py::init<BuiltInMaterial>())
+      .def(py::init<int>())
+      .def_static("custom", &Material::custom, py::arg("id"))
+      .def("isBuiltIn", &Material::isBuiltIn)
+      .def("isCustom", &Material::isCustom)
+      .def("builtIn", &Material::builtIn)
+      .def("customId", &Material::customId)
+      .def("legacyId", &Material::legacyId)
+      .def("kind", &Material::kind)
+      .def("__int__", [](const Material &m) { return static_cast<int>(m); })
+      .def("__hash__",
+           [](const Material &m) { return std::hash<Material>{}(m); })
+      .def("__repr__",
+           [](const Material &m) {
+             return "Material('" + MaterialMap::toString(m) + "')";
+           })
+      .def(py::self == py::self)
+      .def(py::self != py::self);
+
+#define MATERIAL_CONST(id, sym, cat, dens, cond, color)                        \
+  materialClass.attr(#sym) = py::cast(Material::sym);
+  BUILTIN_MATERIAL_LIST(MATERIAL_CONST)
+#undef MATERIAL_CONST
+
+  py::implicitly_convertible<BuiltInMaterial, Material>();
+
+  py::native_enum<Material::Kind>(module, "MaterialKind", "enum.IntEnum")
+      .value("BuiltIn", Material::Kind::BuiltIn)
+      .value("Custom", Material::Kind::Custom)
+      .finalize();
+
+  // MaterialInfo
+  py::class_<MaterialInfo>(module, "MaterialInfo")
+      .def_readwrite("name", &MaterialInfo::name)
+      .def_readwrite("category", &MaterialInfo::category)
+      .def_readwrite("density_gcm3", &MaterialInfo::density_gcm3)
+      .def_readwrite("conductive", &MaterialInfo::conductive)
+      .def_readwrite("color_hex", &MaterialInfo::colorHex)
+      // convenience: "#RRGGBB"
+      .def_property_readonly("color_rgb", [](const MaterialInfo &x) {
+        char buf[8];
+        std::snprintf(buf, sizeof(buf), "#%06x",
+                      (unsigned)(x.colorHex & 0xFFFFFFu));
+        return std::string(buf);
+      });
+
+  py::class_<MaterialRegistry>(module, "MaterialRegistry")
+      .def_static(
+          "instance",
+          []() -> MaterialRegistry & { return MaterialRegistry::instance(); },
+          py::return_value_policy::reference)
+      .def("registerMaterial", &MaterialRegistry::registerMaterial,
+           py::arg("name"))
+      .def("hasMaterial", (bool(MaterialRegistry::*)(std::string_view) const) &
+                              MaterialRegistry::hasMaterial)
+      .def("hasMaterial", (bool(MaterialRegistry::*)(Material) const) &
+                              MaterialRegistry::hasMaterial)
+      .def("findMaterial", &MaterialRegistry::findMaterial, py::arg("name"))
+      .def("getMaterial", &MaterialRegistry::getMaterial, py::arg("name"))
+      .def(
+          "getName",
+          [](const MaterialRegistry &registry, const Material material) {
+            return std::string(registry.getName(material));
+          },
+          py::arg("material"))
+      .def("isBuiltIn", &MaterialRegistry::isBuiltIn, py::arg("material"))
+      .def("getInfo", &MaterialRegistry::getInfo)
+      .def("setInfo", &MaterialRegistry::setInfo)
+      .def("customMaterialCount", &MaterialRegistry::customMaterialCount);
 
   // Material category enum
   py::native_enum<MaterialCategory>(module, "MaterialCategory", "enum.IntEnum")
@@ -81,35 +137,29 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("Misc", MaterialCategory::Misc)
       .finalize();
 
-  // MaterialInfo (immutable/read-only)
-  py::class_<MaterialInfoPy>(module, "MaterialInfo")
-      .def(py::init<Material>())
-      .def_readonly("name", &MaterialInfoPy::name)
-      .def_readonly("category", &MaterialInfoPy::category)
-      .def_readonly("density_gcm3", &MaterialInfoPy::density_gcm3)
-      .def_readonly("conductive", &MaterialInfoPy::conductive)
-      .def_readonly("color_hex", &MaterialInfoPy::colorHex)
-      // convenience: "#RRGGBB"
-      .def_property_readonly("color_rgb", [](const MaterialInfoPy &x) {
-        char buf[8];
-        std::snprintf(buf, sizeof(buf), "#%06x",
-                      (unsigned)(x.colorHex & 0xFFFFFFu));
-        return std::string(buf);
-      });
-
   // MaterialMap
   py::class_<MaterialMap, SmartPointer<MaterialMap>>(module, "MaterialMap")
       .def(py::init<>())
       .def("insertNextMaterial", &MaterialMap::insertNextMaterial,
-           py::arg("material") = Material::Undefined)
+           py::arg("material"))
+      .def("getMaterialIdAtIdx", &MaterialMap::getMaterialIdAtIdx)
       .def("getMaterialAtIdx", &MaterialMap::getMaterialAtIdx)
       .def("getMaterialMap", &MaterialMap::getMaterialMap)
       .def("size", &MaterialMap::size)
       .def_static("mapToMaterial", &MaterialMap::mapToMaterial<T>,
                   "Map a float to a material.")
-      .def_static("isMaterial", &MaterialMap::isMaterial<T>)
+      .def_static("isMaterial", py::overload_cast<const T, const Material>(
+                                    &MaterialMap::isMaterial<T>))
+      .def_static("isMaterial",
+                  py::overload_cast<const T, const std::span<const Material>>(
+                      &MaterialMap::isMaterial<T>))
+      .def_static("fromString", &MaterialMap::fromString, py::arg("name"),
+                  "Resolve built-in or register custom material by name.")
       .def_static("toString",
                   py::overload_cast<const Material>(&MaterialMap::toString),
+                  "Get the name of a material.")
+      .def_static("toString",
+                  py::overload_cast<const int>(&MaterialMap::toString),
                   "Get the name of a material.");
 
   // Meta Data Enum
@@ -185,6 +235,19 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("toString", &units::Time::toString)
       .def("toShortString", &units::Time::toShortString);
 
+  // MaterialValueMap
+  py::class_<MaterialValueMap<T>>(module, "MaterialValueMap")
+      .def(py::init<>())
+      .def("set", &MaterialValueMap<T>::set, py::arg("material"),
+           py::arg("value"))
+      .def("get",
+           (T(MaterialValueMap<T>::*)(Material) const) &
+               MaterialValueMap<T>::get,
+           py::arg("material"))
+      .def("getDefault", &MaterialValueMap<T>::getDefault)
+      .def("setDefault", &MaterialValueMap<T>::setDefault, py::arg("value"))
+      .def("clearAll", &MaterialValueMap<T>::clearAll);
+
   // ProcessParams
   py::class_<ProcessParams<T>, SmartPointer<ProcessParams<T>>>(module,
                                                                "ProcessParams")
@@ -219,8 +282,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("rho", &PlasmaEtchingParameters<T>::PolymerType::rho)
       .def_readwrite("A_sp", &PlasmaEtchingParameters<T>::PolymerType::A_sp)
       .def_readwrite("B_sp", &PlasmaEtchingParameters<T>::PolymerType::B_sp)
-      .def_readwrite("Eth_sp",
-                     &PlasmaEtchingParameters<T>::PolymerType::Eth_sp);
+      .def_readwrite("Eth_sp", &PlasmaEtchingParameters<T>::PolymerType::Eth_sp)
+      .def_readwrite(
+          "usePolyCosThetaYield",
+          &PlasmaEtchingParameters<T>::PolymerType::usePolyCosThetaYield)
+      .def_readwrite("a1", &PlasmaEtchingParameters<T>::PolymerType::a1)
+      .def_readwrite("a2", &PlasmaEtchingParameters<T>::PolymerType::a2)
+      .def_readwrite("a3", &PlasmaEtchingParameters<T>::PolymerType::a3)
+      .def_readwrite("a4", &PlasmaEtchingParameters<T>::PolymerType::a4);
 
   py::class_<PlasmaEtchingParameters<T>::MaterialType>(
       module, "PlasmaEtchingParametersSubstrate")
@@ -276,11 +345,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &PlasmaEtchingParameters<T>::passivationFlux)
       .def_readwrite("etchStopDepth",
                      &PlasmaEtchingParameters<T>::etchStopDepth)
+      .def_readwrite("rateFactors", &PlasmaEtchingParameters<T>::rateFactors)
       .def_readwrite("beta_E", &PlasmaEtchingParameters<T>::beta_E)
       .def_readwrite("beta_P", &PlasmaEtchingParameters<T>::beta_P)
       .def_readwrite("Mask", &PlasmaEtchingParameters<T>::Mask)
       .def_readwrite("Substrate", &PlasmaEtchingParameters<T>::Substrate)
       .def_readwrite("Passivation", &PlasmaEtchingParameters<T>::Passivation)
+      .def_readwrite("Polymer", &PlasmaEtchingParameters<T>::Polymer)
       .def_readwrite("Ions", &PlasmaEtchingParameters<T>::Ions);
 
   // CF4O2 Parameters
@@ -539,6 +610,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &AdvectionParameters::adaptiveTimeStepping)
       .def_readwrite("adaptiveTimeStepSubdivisions",
                      &AdvectionParameters::adaptiveTimeStepSubdivisions)
+      .def_readwrite("calculateIntermediateVelocities",
+                     &AdvectionParameters::calculateIntermediateVelocities)
       .def("toMetaData", &AdvectionParameters::toMetaData,
            "Convert the advection parameters to a metadata dict.")
       .def("toMetaDataString", &AdvectionParameters::toMetaDataString,
@@ -549,6 +622,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def(py::init<>())
       .def_readwrite("tolerance", &CoverageParameters::tolerance)
       .def_readwrite("maxIterations", &CoverageParameters::maxIterations)
+      .def_readwrite("initialized", &CoverageParameters::initialized)
       .def("toMetaData", &CoverageParameters::toMetaData,
            "Convert the coverage parameters to a metadata dict.")
       .def("toMetaDataString", &CoverageParameters::toMetaDataString,

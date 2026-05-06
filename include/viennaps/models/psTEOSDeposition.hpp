@@ -33,7 +33,7 @@ public:
           depositionRate * std::pow(particleFlux->at(i), reactionOrder);
     }
 
-    return SmartPointer<std::vector<NumericType>>::New(velocity);
+    return SmartPointer<std::vector<NumericType>>::New(std::move(velocity));
   }
 
   void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,

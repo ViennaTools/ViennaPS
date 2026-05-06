@@ -42,7 +42,9 @@ private:
     etchant.name = "Etchant";
     etchant.dataLabels.push_back("etchantFlux");
     etchant.cosineExponent = 1.f;
-    etchant.materialSticking = params.beta_E;
+    for (auto entry : params.beta_E) {
+      etchant.materialSticking[static_cast<int>(entry.material)] = entry.value;
+    }
 
     // No oxygen/passivation particle for SF6C4F8
 
@@ -166,7 +168,9 @@ public:
     defParams.passivationFlux = 0.; // No passivation
 
     // sticking probabilities
-    defParams.beta_E = {{1, 0.7}, {0, 0.7}};
+    defParams.beta_E.set(Material::Si, 0.7);
+    defParams.beta_E.set(Material::Mask, 0.02);
+    defParams.beta_E.set(Material::Polymer, 0.02);
     // No beta_P needed since passivationFlux = 0
 
     defParams.etchStopDepth = std::numeric_limits<NumericType>::lowest();

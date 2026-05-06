@@ -191,8 +191,10 @@ template <typename NumericType, int D> void test_initialize() {
 
   CPUDiskEngine<NumericType, D> engine;
   auto context = createBasicContext<NumericType, D>();
+  auto result = engine.checkInput(context);
+  VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
-  auto result = engine.initialize(context);
+  result = engine.initialize(context);
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Test with ignore flux boundaries
@@ -216,9 +218,11 @@ template <typename NumericType, int D> void test_updateSurface() {
 
   CPUDiskEngine<NumericType, D> engine;
   auto context = createBasicContext<NumericType, D>();
+  auto result = engine.checkInput(context);
+  VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Initialize the engine first
-  auto result = engine.initialize(context);
+  result = engine.initialize(context);
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Create a disk mesh for the context
@@ -250,9 +254,11 @@ template <typename NumericType, int D> void test_calculateFluxes() {
 
   CPUDiskEngine<NumericType, D> engine;
   auto context = createBasicContext<NumericType, D>();
+  auto result = engine.checkInput(context);
+  VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Initialize the engine
-  auto result = engine.initialize(context);
+  result = engine.initialize(context);
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Create disk mesh
@@ -288,6 +294,8 @@ void test_calculateFluxesWithCoverages() {
 
   CPUDiskEngine<NumericType, D> engine;
   auto context = createBasicContext<NumericType, D>();
+  auto result = engine.checkInput(context);
+  VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Enable coverages
   context.flags.useCoverages = true;
@@ -299,7 +307,7 @@ void test_calculateFluxesWithCoverages() {
   surfModel->initializeCoverages(10); // Initialize with some points
 
   // Initialize the engine
-  auto result = engine.initialize(context);
+  result = engine.initialize(context);
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Create disk mesh
@@ -327,12 +335,14 @@ template <typename NumericType, int D> void test_fluxSmoothing() {
 
   CPUDiskEngine<NumericType, D> engine;
   auto context = createBasicContext<NumericType, D>();
+  auto result = engine.checkInput(context);
+  VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Enable flux smoothing
   context.rayTracingParams.smoothingNeighbors = 2;
 
   // Initialize the engine
-  auto result = engine.initialize(context);
+  result = engine.initialize(context);
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Create disk mesh
@@ -361,6 +371,8 @@ template <typename NumericType, int D> void test_multipleParticleTypes() {
 
   CPUDiskEngine<NumericType, D> engine;
   auto context = createBasicContext<NumericType, D>();
+  auto result = engine.checkInput(context);
+  VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Add second particle type to model
   auto mockModel =
@@ -369,7 +381,7 @@ template <typename NumericType, int D> void test_multipleParticleTypes() {
   mockModel->insertNextParticleType(particle2);
 
   // Initialize the engine
-  auto result = engine.initialize(context);
+  result = engine.initialize(context);
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Create disk mesh

@@ -12,7 +12,7 @@ template <typename NumericType>
 class SingleParticleALDSurfaceModel : public SurfaceModel<NumericType> {
   using SurfaceModel<NumericType>::coverages;
 
-  const NumericType dt_;
+  NumericType dt_;
   const NumericType gpc_;
   const NumericType s0_;
 
@@ -37,6 +37,8 @@ public:
     coverages->insertNextScalarData(cov, "Coverage");
   }
 
+  void setTimeStep(NumericType dt) override { dt_ = dt; }
+
   SmartPointer<std::vector<NumericType>>
   calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
                       const std::vector<Vec3D<NumericType>> &coordinates,
@@ -46,6 +48,7 @@ public:
     std::vector<NumericType> depoRate(numPoints, 0.);
 
     auto Coverage = coverages->getScalarData("Coverage");
+    assert(Coverage && Coverage->size() == numPoints);
 
     for (size_t i = 0; i < numPoints; ++i) {
       depoRate[i] = gpc_ * Coverage->at(i);

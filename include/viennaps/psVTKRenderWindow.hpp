@@ -49,7 +49,7 @@ namespace viennaps {
 enum class RenderMode { SURFACE, INTERFACE, VOLUME };
 
 // forward declaration of Domain
-template <typename T, int D> class Domain;
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Domain;
 
 /// Lightweight VTK-based viewer for one or more ViennaPS domains.
 ///
@@ -280,11 +280,12 @@ private:
     materialMinId = std::numeric_limits<int>::max();
     materialMaxId = std::numeric_limits<int>::min();
     int index = 0;
+    auto &registry = MaterialRegistry::instance();
     for (const auto &materialId : uniqueMaterialIds) {
-      auto colorHex = color(materialId);
-      auto [r, g, b] = util::hexToRGBArray(colorHex);
+      auto info = registry.getInfo(materialId);
+      auto [r, g, b] = util::hexToRGBArray(info.colorHex);
       lut->SetTableValue(index, r, g, b, 1.0);
-      auto label = to_string_view(materialId);
+      auto &label = info.name;
       int id = static_cast<int>(materialId);
       lut->SetAnnotation(id, label.data());
       ++index;
@@ -626,7 +627,7 @@ public:
 
 private:
   viennaps::VTKRenderWindow<double, 3> *Window = nullptr;
-}; // namespace viennaps
+};
 
 // vtkStandardNewMacro(Custom3DInteractorStyle);
 
@@ -651,7 +652,7 @@ public:
 
 private:
   viennaps::VTKRenderWindow<double, 2> *Window = nullptr;
-}; // namespace viennaps
+};
 
 // vtkStandardNewMacro(Custom2DInteractorStyle);
 

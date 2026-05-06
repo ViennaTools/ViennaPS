@@ -43,7 +43,9 @@ maxPoint = [params["openingWidth"] / 2.0 + params["gapLength"], params["gapHeigh
 ls.MakeGeometry(horiBox, ls.Box(minPoint, maxPoint)).apply()
 geometry.applyBooleanOperation(horiBox, ls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
 
-geometry.saveVolumeMesh("SingleParticleALD_initial")
+geometry.saveSurfaceMesh("SingleParticleALD_initial")
+
+model = ps.SingleParticleProcess(rate=1.0, stickingProbability=1e-4)
 
 geometry.duplicateTopLevelSet(ps.Material.Al2O3)
 
@@ -77,8 +79,8 @@ ALP.setParameters(rayParams)
 ALP.setParameters(alpParams)
 ALP.apply()
 
-## TODO: Implement MeasureProfile in Python
-#   MeasureProfile<NumericType, D>(domain, params.get("gapHeight") / 2.)
-#       .save(params.get<std::string>("outputFile"));
+# ## TODO: Implement MeasureProfile in Python
+# #   MeasureProfile<NumericType, D>(domain, params.get("gapHeight") / 2.)
+# #       .save(params.get<std::string>("outputFile"));
 
-geometry.saveVolumeMesh("SingleParticleALD_final")
+geometry.saveSurfaceMesh("SingleParticleALD_final")

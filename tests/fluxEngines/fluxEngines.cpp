@@ -18,7 +18,12 @@ void checkSurfaceHeight(SmartPointer<viennaps::Domain<T, D>> &domain,
                         const T height) {
   auto surfaceMesh = domain->getSurfaceMesh();
   for (const auto &node : surfaceMesh->nodes) {
-    VC_TEST_ASSERT(std::abs(node[D - 1] - height) < 1e-1);
+    if (std::abs(node[D - 1] - height) >= 0.15) {
+      std::cerr << "Dim " << D << ": ";
+      std::cerr << "Node at " << node << " is not close to expected height "
+                << height << std::endl;
+    }
+    VC_TEST_ASSERT(std::abs(node[D - 1] - height) < 0.1);
   }
 }
 
@@ -40,7 +45,7 @@ template <class T, int D> void RunTest() {
           1.0, 1.0, 1.0);
 
   for (const auto &engineType : engineTypes) {
-    std::cout << "Testing flux engine: " << viennaps::to_string(engineType)
+    std::cout << "Testing flux engine: " << viennaps::util::toString(engineType)
               << " in " << D << "D" << std::endl;
     auto domain = viennaps::Domain<T, D>::New(1.0, 10.0, 10.0);
 
@@ -48,6 +53,7 @@ template <class T, int D> void RunTest() {
 
     viennaps::RayTracingParameters rayParams;
     rayParams.rngSeed = 42;
+    rayParams.useRandomSeeds = false;
 
     viennaps::Process<T, D> process(domain, model);
     process.setFluxEngineType(engineType);
@@ -58,7 +64,7 @@ template <class T, int D> void RunTest() {
 
     domain->saveSurfaceMesh("fluxEngineTest_" +
                             std::to_string(static_cast<int>(D)) + "D_" +
-                            viennaps::to_string(engineType) + ".vtp");
+                            viennaps::util::toString(engineType) + ".vtp");
 
     checkSurfaceHeight<T, D>(domain, 1.0);
   }

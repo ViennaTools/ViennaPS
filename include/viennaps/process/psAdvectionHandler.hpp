@@ -8,10 +8,11 @@
 
 namespace viennaps {
 
-template <typename NumericType, int D> class AdvectionHandler {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class AdvectionHandler {
   viennals::Advect<NumericType, D> advectionKernel_;
   viennacore::Timer<> timer_;
-  unsigned lsVelOutputCounter = 0;
+  unsigned lsVelOutputCounter_ = 0;
+  unsigned totalAdvectionSteps_ = 0;
 
 public:
   ProcessResult initialize(ProcessContext<NumericType, D> &context) {
@@ -29,6 +30,7 @@ public:
          discSchem != SpatialScheme::ENGQUIST_OSHER_2ND_ORDER &&
          discSchem != SpatialScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER &&
          discSchem != SpatialScheme::LOCAL_LOCAL_LAX_FRIEDRICHS_2ND_ORDER &&
+         discSchem != SpatialScheme::WENO_3RD_ORDER &&
          discSchem != SpatialScheme::WENO_5TH_ORDER)) {
       VIENNACORE_LOG_WARNING(
           "Translation field method not supported in combination "
@@ -38,11 +40,10 @@ public:
 
     context.resetTime();
 
-    advectionKernel_.setTemporalScheme(context.advectionParams.temporalScheme);
-
     advectionKernel_.setSingleStep(true);
-    advectionKernel_.setVelocityField(context.translationField);
     advectionKernel_.setSpatialScheme(context.advectionParams.spatialScheme);
+    advectionKernel_.setTemporalScheme(context.advectionParams.temporalScheme);
+    advectionKernel_.setVelocityField(context.translationField);
     advectionKernel_.setTimeStepRatio(context.advectionParams.timeStepRatio);
     advectionKernel_.setSaveAdvectionVelocities(
         context.advectionParams.velocityOutput);
@@ -55,6 +56,8 @@ public:
         context.advectionParams.adaptiveTimeStepping,
         context.advectionParams.adaptiveTimeStepSubdivisions);
 
+    advectionKernel_.setVelocityUpdateCallback(nullptr);
+
     // normals vectors are only necessary for analytical velocity fields
     if (translationMethod > 0)
       advectionKernel_.setCalculateNormalVectors(false);
@@ -64,12 +67,22 @@ public:
       advectionKernel_.insertNextLevelSet(dom);
     }
 
+    totalAdvectionSteps_ = 0;
+
     return ProcessResult::SUCCESS;
   }
 
   void setAdvectionTime(double time) {
     advectionKernel_.setAdvectionTime(time);
   }
+
+  void setVelocityUpdateCallback(
+      std::function<bool(SmartPointer<viennals::Domain<NumericType, D>>)>
+          callback) {
+    advectionKernel_.setVelocityUpdateCallback(callback);
+  }
+
+  auto getTotalAdvectionSteps() const { return totalAdvectionSteps_; }
 
   void disableSingleStep() { advectionKernel_.setSingleStep(false); }
 
@@ -92,14 +105,14 @@ public:
     advectionKernel_.apply();
     timer_.finish();
 
+    ++totalAdvectionSteps_;
     if (context.advectionParams.velocityOutput) {
       auto mesh = viennals::Mesh<NumericType>::New();
-      viennals::ToMesh<NumericType, D>(context.domain->getLevelSets().back(),
-                                       mesh)
+      viennals::ToMesh<NumericType, D>(context.domain->getSurface(), mesh)
           .apply();
       viennals::VTKWriter<NumericType>(
           mesh,
-          "ls_velocities_" + std::to_string(lsVelOutputCounter++) + ".vtp")
+          "ls_velocities_" + std::to_string(lsVelOutputCounter_++) + ".vtp")
           .apply();
     }
 
@@ -120,25 +133,31 @@ public:
       SmartPointer<std::unordered_map<unsigned long, unsigned long>> const
           &translator) {
     // Move coverages to the top level set
-    auto topLS = context.domain->getLevelSets().back();
+    auto topLS = context.domain->getSurface();
     auto coverages = context.model->getSurfaceModel()->getCoverages();
     assert(coverages != nullptr);
     assert(translator != nullptr);
 
-    for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
+    std::vector<std::vector<NumericType>> levelSetCoverages(
+        coverages->getScalarDataSize());
+
+#pragma omp parallel for
+    for (unsigned i = 0; i < levelSetCoverages.size(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
       std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
       auto cov = coverages->getScalarData(covName);
-      for (const auto iter : *translator.get()) {
-        levelSetData[iter.first] = cov->at(iter.second);
+
+      for (const auto &[lsId, surfaceId] : *translator) {
+        levelSetData[lsId] = cov->at(surfaceId);
       }
-      if (auto data = topLS->getPointData().getScalarData(covName, true);
-          data != nullptr) {
-        *data = std::move(levelSetData);
-      } else {
-        topLS->getPointData().insertNextScalarData(std::move(levelSetData),
-                                                   covName);
-      }
+
+      levelSetCoverages[i] = std::move(levelSetData);
+    }
+
+    for (unsigned i = 0; i < levelSetCoverages.size(); i++) {
+      auto covName = coverages->getScalarDataLabel(i);
+      topLS->getPointData().insertReplaceScalarData(
+          std::move(levelSetCoverages[i]), covName);
     }
 
     return ProcessResult::SUCCESS;
@@ -149,17 +168,22 @@ public:
       SmartPointer<std::unordered_map<unsigned long, unsigned long>> const
           &translator) {
     // Update coverages from the advected surface
-    auto topLS = context.domain->getLevelSets().back();
+    auto topLS = context.domain->getSurface();
     auto coverages = context.model->getSurfaceModel()->getCoverages();
+    assert(coverages != nullptr);
+    assert(translator != nullptr);
+
     for (size_t i = 0; i < coverages->getScalarDataSize(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
       auto levelSetData = topLS->getPointData().getScalarData(covName);
       auto covData = coverages->getScalarData(covName);
       covData->resize(translator->size());
-      for (const auto it : *translator.get()) {
-        covData->at(it.second) = levelSetData->at(it.first);
+
+      for (const auto &[lsId, surfaceId] : *translator) {
+        covData->at(surfaceId) = levelSetData->at(lsId);
       }
     }
+
     return ProcessResult::SUCCESS;
   }
   auto &getTimer() const { return timer_; }

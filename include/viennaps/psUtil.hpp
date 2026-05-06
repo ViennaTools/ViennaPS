@@ -10,7 +10,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "psMaterials.hpp"
+#include "materials/psMaterialMap.hpp"
 
 namespace viennaps {
 enum class FluxEngineType {
@@ -48,6 +48,8 @@ convertSpatialScheme(const std::string &s) {
     return viennals::SpatialSchemeEnum::LOCAL_LAX_FRIEDRICHS_2ND_ORDER;
   if (s == "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER" || s == "SLLF_1")
     return viennals::SpatialSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+  if (s == "WENO_3RD_ORDER" || s == "WENO_3")
+    return viennals::SpatialSchemeEnum::WENO_3RD_ORDER;
   if (s == "WENO_5TH_ORDER" || s == "WENO_5")
     return viennals::SpatialSchemeEnum::WENO_5TH_ORDER;
   throw std::invalid_argument(
@@ -60,6 +62,7 @@ convertSpatialScheme(const std::string &s) {
       "LOCAL_LAX_FRIEDRICHS_1ST_ORDER, "
       "LOCAL_LAX_FRIEDRICHS_2ND_ORDER, "
       "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER, "
+      "WENO_3RD_ORDER, "
       "WENO_5TH_ORDER");
 }
 
@@ -127,6 +130,8 @@ convertSpatialSchemeToString(viennals::SpatialSchemeEnum scheme) {
     return "LOCAL_LAX_FRIEDRICHS_2ND_ORDER";
   case viennals::SpatialSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER:
     return "STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER";
+  case viennals::SpatialSchemeEnum::WENO_3RD_ORDER:
+    return "WENO_3RD_ORDER";
   case viennals::SpatialSchemeEnum::WENO_5TH_ORDER:
     return "WENO_5TH_ORDER";
   default:
@@ -191,14 +196,11 @@ template <typename T> [[nodiscard]] std::string toString(const T &value) {
   if constexpr (std::is_same_v<T, bool>)
     return value ? "true" : "false";
   else if constexpr (std::is_same_v<T, viennals::SpatialSchemeEnum>)
-    return convertSpatialSchemeToString(
-        static_cast<viennals::SpatialSchemeEnum>(value));
+    return convertSpatialSchemeToString(value);
   else if constexpr (std::is_same_v<T, viennals::TemporalSchemeEnum>)
-    return convertTemporalSchemeToString(
-        static_cast<viennals::TemporalSchemeEnum>(value));
+    return convertTemporalSchemeToString(value);
   else if constexpr (std::is_same_v<T, viennaps::Material>) {
-    std::string mat = viennaps::to_string_view(value);
-    return mat;
+    return viennaps::MaterialMap::toString(value);
   } else if constexpr (std::is_same_v<T, viennaps::FluxEngineType>) {
     return convertFluxEngineTypeToString(value);
   } else if constexpr (std::is_same_v<T, std::string>)
@@ -228,9 +230,3 @@ hexToRGBArray(const uint32_t hexColor) {
   return rgb;
 }
 }; // namespace viennacore::util
-
-namespace viennaps {
-[[nodiscard]] inline std::string to_string(FluxEngineType type) {
-  return viennacore::util::convertFluxEngineTypeToString(type);
-}
-} // namespace viennaps

@@ -28,7 +28,7 @@ void runBenchmark(SmartPointer<Domain<NumericType, D>> geometry,
   process.apply();
   timer.finish();
 
-  std::cout << "Flux Engine: " << to_string(fluxEngine)
+  std::cout << "Flux Engine: " << util::toString(fluxEngine)
             << ", Time taken: " << timer.currentDuration / 1e9 << " s"
             << std::endl;
   copy->saveSurfaceMesh(outputFilename);
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 
       for (const auto &fluxEngine : fluxEngines) {
         runBenchmark<NumericType, D>(geometry, model, fluxEngine,
-                                     "result_PE_" + to_string(fluxEngine) +
+                                     "result_PE_" + util::toString(fluxEngine) +
                                          "_" + std::to_string(i) + ".vtp",
                                      0.2);
       }
@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
     ibeParams.cos4Yield.a1 = 1.075;
     ibeParams.cos4Yield.a2 = -1.55;
     ibeParams.cos4Yield.a3 = 0.65;
-    ibeParams.materialPlaneWaferRate[Material::Si] = 2.0;
-    ibeParams.materialPlaneWaferRate[Material::Mask] = 0.15;
+    ibeParams.materialPlaneWaferRate.set(Material::Si, 2.0);
+    ibeParams.materialPlaneWaferRate.set(Material::Mask, 0.15);
     ibeParams.thetaRMin = 60;
     auto model = SmartPointer<IonBeamEtching<NumericType, D>>::New(ibeParams);
 
@@ -92,8 +92,9 @@ int main(int argc, char *argv[]) {
 
       for (const auto &fluxEngine : fluxEngines) {
         runBenchmark<NumericType, D>(geometry, model, fluxEngine,
-                                     "result_IBE_" + to_string(fluxEngine) +
-                                         "_" + std::to_string(i) + ".vtp");
+                                     "result_IBE_" +
+                                         util::toString(fluxEngine) + "_" +
+                                         std::to_string(i) + ".vtp");
       }
     }
   }

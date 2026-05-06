@@ -1,6 +1,6 @@
 #pragma once
 
-#include "process/psProcessParams.hpp"
+#include "psProcessParams.hpp"
 
 #include <lsPointData.hpp>
 #include <vcSmartPointer.hpp>
@@ -31,6 +31,8 @@ public:
   virtual void initializeSurfaceData(unsigned numGeometryPoints) {
     // if no surface data get initialized here, they won't be used at all
   }
+
+  virtual void setTimeStep(NumericType dt) {}
 
   virtual SmartPointer<std::vector<NumericType>>
   calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,

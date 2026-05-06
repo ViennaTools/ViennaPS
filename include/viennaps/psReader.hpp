@@ -3,6 +3,7 @@
 #include "psDomain.hpp"
 #include "psPreCompileMacros.hpp"
 
+#include <cstring>
 #include <fstream>
 #include <string>
 #include <utility>
@@ -21,7 +22,7 @@ using namespace viennacore;
 ///
 /// This class handles reading a Process Simulation Domain (Domain) from a
 /// binary file previously created with psWriter.
-template <class NumericType, int D> class Reader {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Reader {
 private:
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
   std::string fileName;
@@ -63,10 +64,13 @@ public:
       return;
     }
 
+    // Clear existing domain data
+    domain->clear();
+
     // Check identifier
     char identifier[8];
     fin.read(identifier, 8);
-    if (std::string(identifier).compare(0, 8, "psDomain")) {
+    if (std::memcmp(identifier, "psDomain", 8) != 0) {
       VIENNACORE_LOG_ERROR(
           "Reading domain from stream failed. Header could not be found.");
       return;
@@ -75,19 +79,34 @@ public:
     // Check format version
     char formatVersion;
     fin.read(&formatVersion, 1);
-    if (formatVersion > 0) { // Update this when version changes
+    if (formatVersion > 2) {
       VIENNACORE_LOG_ERROR("Reading domain of version " +
                            std::to_string(formatVersion) +
-                           " with reader of version 0 failed.");
+                           " with reader of version 2 failed.");
       return;
     }
 
-    // Clear existing domain data
-    domain->clear();
+    if (formatVersion >= 2) {
+      // Read dimension and check it matches the reader's dimension
+      char dimension;
+      fin.read(&dimension, 1);
+      if (dimension != D) {
+        VIENNACORE_LOG_ERROR("Reading domain failed. Domain dimension " +
+                             std::to_string(dimension) +
+                             " does not match reader dimension " +
+                             std::to_string(D) + ".");
+        return;
+      }
+    }
 
     // Read domain setup
     typename Domain<NumericType, D>::Setup setup;
-    fin.read(reinterpret_cast<char *>(&setup), sizeof(setup));
+    if (formatVersion >= 2) {
+      setup.deserialize(fin);
+    } else {
+      // Legacy formats store setup as a raw object dump.
+      fin.read(reinterpret_cast<char *>(&setup), sizeof(setup));
+    }
     domain->setup(setup);
 
     // Read number of level sets
@@ -95,11 +114,13 @@ public:
     fin.read(reinterpret_cast<char *>(&numLevelSets), sizeof(uint32_t));
 
     // Read each level set
+    std::vector<SmartPointer<viennals::Domain<NumericType, D>>> levelSets;
     for (uint32_t i = 0; i < numLevelSets; i++) {
       auto ls = viennals::Domain<NumericType, D>::New();
       ls->deserialize(fin);
-      domain->insertNextLevelSet(ls, false); // Don't wrap lower level sets
+      levelSets.push_back(ls);
     }
+    assert(levelSets.size() == numLevelSets);
 
     // Read material map if it exists
     char hasMaterialMap;
@@ -109,18 +130,30 @@ public:
       // Read number of materials
       uint32_t numMaterials;
       fin.read(reinterpret_cast<char *>(&numMaterials), sizeof(uint32_t));
+      assert(numMaterials == numLevelSets);
 
-      // Create new material map
-      auto materialMap = SmartPointer<MaterialMap>::New();
-
-      // Read each material ID
+      // Read each material and insert corresponding level set.
       for (uint32_t i = 0; i < numMaterials; i++) {
-        int materialId;
-        fin.read(reinterpret_cast<char *>(&materialId), sizeof(int));
-        materialMap->insertNextMaterial(static_cast<Material>(materialId));
+        Material material = Material::Undefined;
+
+        if (formatVersion == 0) {
+          int materialId;
+          fin.read(reinterpret_cast<char *>(&materialId), sizeof(int));
+          material = Material::fromLegacyId(materialId);
+        } else {
+          uint32_t nameLength = 0;
+          fin.read(reinterpret_cast<char *>(&nameLength), sizeof(uint32_t));
+          std::string materialName(nameLength, '\0');
+          fin.read(materialName.data(),
+                   static_cast<std::streamsize>(nameLength));
+          material = MaterialMap::fromString(materialName);
+        }
+
+        domain->insertNextLevelSetAsMaterial(levelSets[i], material, false);
       }
 
-      domain->setMaterialMap(materialMap);
+    } else {
+      VIENNACORE_LOG_ERROR("No material map found in the file.");
     }
 
     // Check if cell set exists

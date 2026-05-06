@@ -1,8 +1,4 @@
-#include <geometries/psMakeTrench.hpp>
-#include <models/psGeometricDistributionModels.hpp>
-
-#include <process/psProcess.hpp>
-#include <psUtil.hpp>
+#include <viennaps.hpp>
 
 namespace ps = viennaps;
 

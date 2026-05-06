@@ -24,59 +24,87 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            container: ghcr.io/viennatools/vienna-builder:suite-python
+            container: ghcr.io/viennatools/vienna-builder:cuda-suite-python
           - os: windows-latest
           - os: macos-latest
 
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
 
+    env:
+      VCPKG_COMMIT: c3867e714dd3a51c272826eea77267876517ed99
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
+
     name: "🐍 Test Bindings on ${{ matrix.os }}"
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🖥️ Setup Environment
         uses: ./.github/actions/setup
         with:
           os: ${{ matrix.os }}
 
-      - name: 📋 Install MacOS Dependencies
-        shell: bash
-        if: ${{ matrix.os == 'macos-latest' }}
+      - name: 🖥️ Setup vcpkg (Windows)
+        shell: pwsh
+        if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          brew install embree tbb vtk
+          Remove-Item Env:VCPKG_ROOT -ErrorAction SilentlyContinue
 
-      - name: 🦥 Cache Dependencies
-        uses: actions/cache@v4
+          git clone https://github.com/microsoft/vcpkg.git
+          git -C vcpkg checkout $env:VCPKG_COMMIT
+          & .\vcpkg\bootstrap-vcpkg.bat
+
+          "VCPKG_ROOT=$($env:GITHUB_WORKSPACE)\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          New-Item -ItemType Directory -Force -Path "${{ env.VCPKG_DEFAULT_BINARY_CACHE }}"
+
+      - name: 📋 Install MacOS Dependencies
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: brew install embree tbb vtk
+
+      - name: 🦥 Cache vcpkg binary
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: actions/cache@v5
         with:
-          key: python-${{ matrix.os }}
-          path: build
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-${{ matrix.os }}-Release-${{ env.VCPKG_COMMIT }}
 
-      - name: 🛠️ Disable IPO (Alpine)
+      - name: 🛠️ Build Dependencies (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          ./vcpkg/vcpkg install --triplet x64-windows
+
+      - name: 🛠️ Enable GPU Bindings (Linux)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DUSE_IPO=off"/g' pyproject.toml
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_USE_GPU=ON", "-DVIENNACORE_LINK_CUDA_DRIVER=OFF"/g' pyproject.toml
           cat pyproject.toml
 
       - name: 🐍 Build and check Python Module (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
         run: |
           python -m venv venv
-          ./venv/Scripts/activate.bat
-          pip install .
-          python -c "import viennaps; print(viennaps.__doc__)"
+          $toolchain = "${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake".Replace('\', '/')
+
+          .\venv\Scripts\python -m pip install --upgrade pip
+          .\venv\Scripts\python -m pip install . `
+            --config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE="$toolchain" `
+            --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows"
+          .\venv\Scripts\python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 🐍 Build and check Python Module (Other)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           python -m venv venv
-          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . # Alpine does not like LTO
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install .
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 📦 Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Pre-Built (${{ matrix.os }})
           path: venv
@@ -89,23 +117,21 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            container: ghcr.io/viennatools/vienna-builder:python
-            skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-* pp310-*"
+            skip: "cp38-* cp39-* pp38-* pp39-* pp310-* *-manylinux_i686 *-musllinux_*"
 
           - os: windows-latest
-            skip: "cp36-* cp37-* cp38-* cp39-* pp37-* pp38-* pp39-* pp310-*"
+            skip: "cp38-* cp39-* pp38-* pp39-* pp310-*"
 
           - os: macos-latest
-            skip: "cp36-* cp37-* cp38-* cp39-* cp310-* pp37-* pp38-* pp39-* pp310-*"
+            skip: "cp38-* cp39-* cp310-* pp38-* pp39-* pp310-*"
 
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.container }}
 
     name: "🐍 Package Bindings on ${{ matrix.os }}"
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🖥️ Setup Environment
         uses: ./.github/actions/setup
@@ -113,7 +139,7 @@ jobs:
           os: ${{ matrix.os }}
 
       - name: 🛞 CIBuildWheel
-        run: pip install cibuildwheel==2.17.0 --break-system-packages
+        run: pip install cibuildwheel==3.4.0 --break-system-packages
 
       - name: 🛠️ Use VTK-Python Libs
         if: ${{ matrix.os == 'windows-latest' }}
@@ -130,17 +156,25 @@ jobs:
       - name: 🛠️ Use VTK-Python Libs
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON", "-DVIENNAPS_USE_GPU=ON", "-DVIENNACORE_LINK_CUDA_DRIVER=OFF"/g' pyproject.toml
           cat pyproject.toml
 
-      - name: 🏗️ Build Wheels
+      - name: 🏗️ Build Wheels (Linux)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_SKIP: ${{ matrix.skip }}
-          CIBW_ARCHS: auto64
+          CIBW_MANYLINUX_X86_64_IMAGE: ghcr.io/viennatools/vienna-builder:cuda-python
+
+      - name: 🏗️ Build Wheels (Other)
+        if: ${{ matrix.os != 'ubuntu-latest' }}
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_SKIP: ${{ matrix.skip }}
+          CIBW_ARCHS_WINDOWS: auto64
 
       - name: 📦 Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
@@ -157,7 +191,7 @@ jobs:
 
     steps:
       - name: 📦 Download Wheels
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: wheels-*
           path: dist
@@ -165,3 +199,5 @@ jobs:
 
       - name: 🚀 Publish Wheels
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true

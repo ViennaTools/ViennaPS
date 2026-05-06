@@ -1,7 +1,7 @@
 #pragma once
 
+#include <materials/psMaterialMap.hpp>
 #include <process/psVelocityField.hpp>
-#include <psMaterials.hpp>
 #include <vector>
 
 template <class T, int D>

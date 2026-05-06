@@ -22,7 +22,6 @@ runs:
       shell: bash
       if: ${{ inputs.os == 'macos-latest' }}
       run: |
-        # brew reinstall --build-from-source --formula ./.github/homebrew/libomp.rb
         brew install libomp
         echo "OpenMP_ROOT=$(brew --prefix)/opt/libomp" >> $GITHUB_ENV
 
@@ -46,14 +45,9 @@ runs:
         echo "GIT_LFS_SKIP_SMUDGE=1" >> "$GITHUB_ENV"
         echo "CMAKE_GIT_COMMAND=$(which git)" >> "$GITHUB_ENV"
 
-    - name: 🐍 Install Python (windows)
-      if: ${{ inputs.os == 'windows-latest' }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-
-    - name: 🐍 Install Python (macOS)
+    - name: 💻 Setup Deployment Target
+      shell: bash
       if: ${{ inputs.os == 'macos-latest' }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.13"
+      run: |
+        echo "MACOSX_DEPLOYMENT_TARGET=15.0" >> $GITHUB_ENV
+

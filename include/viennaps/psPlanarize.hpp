@@ -10,7 +10,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <class NumericType, int D> class Planarize {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Planarize {
   SmartPointer<Domain<NumericType, D>> pDomain_;
   NumericType cutoffPosition_ = 0.;
 

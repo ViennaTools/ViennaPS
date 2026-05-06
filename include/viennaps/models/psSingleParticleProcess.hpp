@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../materials/psMaterialValueMap.hpp"
 #include "../process/psProcessModel.hpp"
-#include "../psMaterials.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -13,13 +13,11 @@ using namespace viennacore;
 namespace impl {
 template <typename NumericType, int D>
 class SingleParticleSurfaceModel : public viennaps::SurfaceModel<NumericType> {
-  const NumericType rate_;
-  const std::unordered_map<Material, NumericType> materialRates_;
+  MaterialValueMap<NumericType> &materialRates_;
 
 public:
-  SingleParticleSurfaceModel(
-      NumericType rate, const std::unordered_map<Material, NumericType> &mask)
-      : rate_(rate), materialRates_(mask) {}
+  SingleParticleSurfaceModel(MaterialValueMap<NumericType> &materialRates)
+      : materialRates_(materialRates) {}
 
   SmartPointer<std::vector<NumericType>>
   calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
@@ -29,16 +27,13 @@ public:
     auto velocity =
         SmartPointer<std::vector<NumericType>>::New(materialIds.size(), 0.);
     auto flux = rates->getScalarData("particleFlux");
+    assert(flux && velocity->size() == flux->size());
 
 #pragma omp parallel for
     for (size_t i = 0; i < velocity->size(); i++) {
-      if (auto matRate =
-              materialRates_.find(MaterialMap::mapToMaterial(materialIds[i]));
-          matRate == materialRates_.end()) {
-        velocity->at(i) = flux->at(i) * rate_;
-      } else {
-        velocity->at(i) = flux->at(i) * matRate->second;
-      }
+      velocity->at(i) =
+          flux->at(i) *
+          materialRates_.getRef(MaterialMap::mapToMaterial(materialIds[i]));
     }
 
     return velocity;
@@ -89,15 +84,22 @@ namespace gpu {
 
 template <typename NumericType, int D>
 class SingleParticleProcess final : public ProcessModelGPU<NumericType, D> {
+  NumericType stickingProbability_ = 1.;
+  NumericType sourceDistributionPower_ = 1.;
+  MaterialValueMap<NumericType> materialRates_;
+
 public:
-  SingleParticleProcess(std::unordered_map<Material, NumericType> materialRates,
-                        NumericType rate, NumericType stickingProbability,
-                        NumericType sourceExponent) {
+  SingleParticleProcess(MaterialValueMap<NumericType> const &materialRates,
+                        NumericType stickingProbability,
+                        NumericType sourceExponent)
+      : stickingProbability_(stickingProbability),
+        sourceDistributionPower_(sourceExponent),
+        materialRates_(materialRates) {
     // particles
     viennaray::gpu::Particle<NumericType> particle{
         .name = "SingleParticle",
-        .sticking = stickingProbability,
-        .cosineExponent = sourceExponent};
+        .sticking = stickingProbability_,
+        .cosineExponent = sourceDistributionPower_};
     particle.dataLabels.push_back("particleFlux");
 
     std::unordered_map<std::string, unsigned> pMap = {{"SingleParticle", 0}};
@@ -110,7 +112,7 @@ public:
 
     // surface model
     auto surfModel = SmartPointer<::viennaps::impl::SingleParticleSurfaceModel<
-        NumericType, D>>::New(rate, materialRates);
+        NumericType, D>>::New(materialRates_);
 
     // velocity field
     auto velField =
@@ -122,18 +124,13 @@ public:
     this->setProcessName("SingleParticleProcess");
     this->hasGPU = true;
 
-    this->processMetaData["Default Rate"] = std::vector<double>{rate};
     this->processMetaData["Sticking Probability"] =
-        std::vector<double>{stickingProbability};
+        std::vector<double>{stickingProbability_};
     this->processMetaData["Source Exponent"] =
-        std::vector<double>{sourceExponent};
-    if (!materialRates.empty()) {
-      for (const auto &pair : materialRates) {
-        if (pair.first == Material::Undefined)
-          continue;
-        this->processMetaData[MaterialMap::toString(pair.first) + " Rate"] =
-            std::vector<double>{pair.second};
-      }
+        std::vector<double>{sourceDistributionPower_};
+    for (auto rate : materialRates_) {
+      this->processMetaData[MaterialMap::toString(rate.material) + " Rate"] =
+          std::vector<double>{rate.value};
     }
   }
 };
@@ -144,29 +141,30 @@ public:
 // reflections.
 template <typename NumericType, int D>
 class SingleParticleProcess : public ProcessModelCPU<NumericType, D> {
-  NumericType rate_ = 1.;
   NumericType stickingProbability_ = 1.;
   NumericType sourceDistributionPower_ = 1.;
-  std::unordered_map<Material, NumericType> materialRates_;
+  MaterialValueMap<NumericType> materialRates_;
 
 public:
   SingleParticleProcess(NumericType rate = 1.,
                         NumericType stickingProbability = 1.,
                         NumericType sourceDistributionPower = 1.,
                         Material maskMaterial = Material::Undefined)
-      : rate_(rate), stickingProbability_(stickingProbability),
+      : stickingProbability_(stickingProbability),
         sourceDistributionPower_(sourceDistributionPower) {
-    materialRates_[maskMaterial] = 0.;
+    materialRates_.setDefault(rate);
+    materialRates_.set(maskMaterial, 0.0);
     initialize();
   }
 
   SingleParticleProcess(NumericType rate, NumericType stickingProbability,
                         NumericType sourceDistributionPower,
                         std::vector<Material> maskMaterial)
-      : rate_(rate), stickingProbability_(stickingProbability),
+      : stickingProbability_(stickingProbability),
         sourceDistributionPower_(sourceDistributionPower) {
+    materialRates_.setDefault(rate);
     for (auto &mat : maskMaterial) {
-      materialRates_[mat] = 0.;
+      materialRates_.set(mat, 0.0);
     }
     initialize();
   }
@@ -174,16 +172,28 @@ public:
   SingleParticleProcess(std::unordered_map<Material, NumericType> materialRates,
                         NumericType stickingProbability,
                         NumericType sourceDistributionPower)
-      : rate_(0.), stickingProbability_(stickingProbability),
+      : stickingProbability_(stickingProbability),
         sourceDistributionPower_(sourceDistributionPower),
-        materialRates_(std::move(materialRates)) {
+        materialRates_(materialRates) {
+    materialRates_.setDefault(0.);
     initialize();
+  }
+
+  void setDefaultRate(NumericType rate) {
+    materialRates_.setDefault(rate);
+    this->processMetaData["Default Rate"] = std::vector<double>{rate};
+  }
+
+  void setMaterialRate(Material material, NumericType rate) {
+    materialRates_.set(material, rate);
+    this->processMetaData[MaterialMap::toString(material) + " Rate"] =
+        std::vector<double>{rate};
   }
 
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
     auto model = SmartPointer<gpu::SingleParticleProcess<NumericType, D>>::New(
-        materialRates_, rate_, stickingProbability_, sourceDistributionPower_);
+        materialRates_, stickingProbability_, sourceDistributionPower_);
     model->setProcessName(this->getProcessName().value_or("default"));
     return model;
   }
@@ -198,7 +208,7 @@ private:
     // surface model
     auto surfModel =
         SmartPointer<impl::SingleParticleSurfaceModel<NumericType, D>>::New(
-            rate_, materialRates_);
+            materialRates_);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
@@ -209,19 +219,15 @@ private:
     this->setProcessName("SingleParticleProcess");
     this->hasGPU = true;
 
-    this->processMetaData["Default Rate"] = std::vector<double>{rate_};
+    this->processMetaData["Default Rate"] =
+        std::vector<double>{materialRates_.getDefault()};
     this->processMetaData["Sticking Probability"] =
         std::vector<double>{stickingProbability_};
     this->processMetaData["Source Exponent"] =
         std::vector<double>{sourceDistributionPower_};
-    if (!materialRates_.empty()) {
-      for (const auto &pair : materialRates_) {
-        if (pair.first == Material::Undefined)
-          continue; // skip undefined material
-
-        this->processMetaData[MaterialMap::toString(pair.first) + " Rate"] =
-            std::vector<double>{pair.second};
-      }
+    for (auto mrate : materialRates_) {
+      this->processMetaData[MaterialMap::toString(mrate.material) + " Rate"] =
+          std::vector<double>{mrate.value};
     }
   }
 };

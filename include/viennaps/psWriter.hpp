@@ -19,7 +19,7 @@ using namespace viennacore;
 ///  This class handles serializing a Process Simulation Domain (Domain) to a
 ///  binary file. The file format (.vpsd - ViennaPS Domain) contains all
 ///  levelSets, cell data, material mappings and domain setup information.
-template <class NumericType, int D> class Writer {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Writer {
 private:
   SmartPointer<Domain<NumericType, D>> domain = nullptr;
   std::string fileName;
@@ -57,8 +57,7 @@ public:
     }
 
     if (fileName.find(".vpsd") != fileName.length() - 5) {
-      VIENNACORE_LOG_WARNING(
-          "File name does not end in '.vpsd', appending it.");
+      VIENNACORE_LOG_INFO("File name does not end in '.vpsd', appending it.");
       fileName.append(".vpsd");
     }
 
@@ -68,13 +67,17 @@ public:
     // Write header identifier
     fout << "psDomain";
 
-    // Write version number (starting with 0)
-    char formatVersion = 0;
+    // Write format version for future compatibility.
+    char formatVersion = 2;
     fout.write(&formatVersion, 1);
+
+    // Since version 2: write dimension
+    char dimension = static_cast<char>(D);
+    fout.write(&dimension, 1);
 
     // Write domain setup
     auto &setup = domain->getSetup();
-    fout.write(reinterpret_cast<const char *>(&setup), sizeof(setup));
+    setup.serialize(fout);
 
     // Write number of level sets
     auto &levelSets = domain->getLevelSets();
@@ -97,10 +100,15 @@ public:
       fout.write(reinterpret_cast<const char *>(&numMaterials),
                  sizeof(uint32_t));
 
-      // Write each material ID
+      // Write each material by canonical name for stable cross-run I/O.
       for (size_t i = 0; i < numMaterials; i++) {
-        int materialId = static_cast<int>(materialMap->getMaterialAtIdx(i));
-        fout.write(reinterpret_cast<const char *>(&materialId), sizeof(int));
+        const auto material = materialMap->getMaterialAtIdx(i);
+        std::string materialName = MaterialMap::toString(material);
+        const auto nameLength = static_cast<uint32_t>(materialName.size());
+        fout.write(reinterpret_cast<const char *>(&nameLength),
+                   sizeof(uint32_t));
+        fout.write(materialName.data(),
+                   static_cast<std::streamsize>(nameLength));
       }
     }
 

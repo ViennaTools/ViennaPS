@@ -6,15 +6,35 @@
 #include <psDomain.hpp>
 #include <rayParticle.hpp>
 
-#define MAKE_GEO Trench
+#define MAKE_GEO Hole
 #define DEFAULT_GRID_DELTA 0.1
 #define DEFAULT_STICKING 0.1
-#define DIM 2
+#define DIM 3
 #define FIXED_RAYS false
 
-constexpr int particleType = 1;
 using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 using namespace viennaps;
+
+template <class NumericType, int N>
+consteval std::array<NumericType, N> linspace(NumericType start,
+                                              NumericType end) {
+  std::array<NumericType, N> arr{};
+  NumericType step = (end - start) / static_cast<NumericType>(N - 1);
+  for (int i = 0; i < N; ++i) {
+    arr[i] = start + i * step;
+  }
+  return arr;
+}
+
+constexpr int particleType = 0;
+constexpr bool runDisk = false;
+constexpr bool runLine = false;
+constexpr bool runTriangle = true;
+
+constexpr auto gridDeltaValues = linspace<float, 8>(0.08f, 0.4f);
+constexpr int numRuns = 10;
+constexpr int raysPerPoint = 1000;
+constexpr int numRays = int(1.4e8);
 
 template <class NumericType>
 auto Trench(NumericType gridDelta = DEFAULT_GRID_DELTA) {
@@ -40,16 +60,6 @@ auto Hole(NumericType gridDelta = DEFAULT_GRID_DELTA) {
       gridDelta, xExtent, yExtent, BoundaryType::REFLECTIVE_BOUNDARY);
   MakeHole<NumericType, DIM>(domain, radius, depth).apply();
   return domain;
-}
-
-template <class NumericType, int N>
-std::array<NumericType, N> linspace(NumericType start, NumericType end) {
-  std::array<NumericType, N> arr{};
-  NumericType step = (end - start) / static_cast<NumericType>(N - 1);
-  for (int i = 0; i < N; ++i) {
-    arr[i] = start + i * step;
-  }
-  return arr;
 }
 
 template <typename NumericType> auto getIBEParameters() {
@@ -199,8 +209,9 @@ void setupTriangleGeometry(
     elementKdTree_->setPoints(triangleCenters);
     elementKdTree_->build();
   } else {
-    triangleMesh = CreateTriangleMesh(
-        static_cast<float>(domain->getGridDelta()), surfaceMesh_);
+    CopyTriangleMesh(static_cast<float>(domain->getGridDelta()), surfaceMesh_,
+                     triangleMesh);
+    // preserves surfaceMesh_
   }
 
   rayTracer_.setGeometry(triangleMesh);

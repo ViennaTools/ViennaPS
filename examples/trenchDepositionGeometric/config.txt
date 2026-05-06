@@ -1,6 +1,6 @@
 # Config file for a geometric trench depostion example process
 # Domain
-gridDelta=0.2
+gridDelta=0.21
 xExtent=10
 yExtent=10
 

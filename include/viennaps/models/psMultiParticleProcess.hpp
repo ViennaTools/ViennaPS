@@ -1,8 +1,9 @@
 #pragma once
 
+#include "../materials/psMaterialMap.hpp"
+#include "../materials/psMaterialValueMap.hpp"
 #include "../process/psProcessModel.hpp"
 #include "../psConstants.hpp"
-#include "../psMaterials.hpp"
 #include "../psUtil.hpp"
 #include "psIonModelUtil.hpp"
 #include "psPipelineParameters.hpp"
@@ -73,7 +74,8 @@ public:
               const std::string &dataLabel)
       : sourcePower_(sourcePower), meanEnergy_(meanEnergy),
         sigmaEnergy_(sigmaEnergy), thresholdEnergy_(thresholdEnergy),
-        B_sp_(B_sp), thetaRMin_(thetaRMin), thetaRMax_(thetaRMax),
+        sqrtThresholdEnergy_(std::sqrt(thresholdEnergy)), B_sp_(B_sp),
+        thetaRMin_(thetaRMin), thetaRMax_(thetaRMax),
         inflectAngle_(inflectAngle), minAngle_(minAngle),
         A_(1. / (1. + n * (M_PI_2 / inflectAngle - 1.))), n_(n),
         dataLabel_(dataLabel) {}
@@ -94,8 +96,8 @@ public:
     }
 
     if (energy_ > 0.) {
-      flux *= std::max(std::sqrt(energy_) - std::sqrt(thresholdEnergy_),
-                       NumericType(0.));
+      flux *=
+          std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0.));
     }
 
     localData.getVectorData(0)[primID] += flux;
@@ -142,7 +144,7 @@ public:
     return {dataLabel_};
   }
 
-private:
+public:
   NumericType energy_ = 0.;
 
   const NumericType sourcePower_;
@@ -150,6 +152,7 @@ private:
   const NumericType meanEnergy_;
   const NumericType sigmaEnergy_;
   const NumericType thresholdEnergy_;
+  const NumericType sqrtThresholdEnergy_;
 
   const NumericType B_sp_;
 
@@ -168,14 +171,12 @@ template <typename NumericType, int D>
 class DiffuseParticle
     : public viennaray::Particle<DiffuseParticle<NumericType, D>, NumericType> {
 public:
-  DiffuseParticle(NumericType stickingProbability, const std::string &dataLabel)
-      : stickingProbability_(stickingProbability), dataLabel_(dataLabel) {}
-
-  DiffuseParticle(NumericType stickingProbability,
-                  std::unordered_map<Material, NumericType> materialSticking,
-                  const std::string &dataLabel)
-      : materialSticking_(materialSticking),
-        stickingProbability_(stickingProbability), dataLabel_(dataLabel) {}
+  DiffuseParticle(
+      NumericType defaultStickingProbability,
+      const std::unordered_map<Material, NumericType> &materialSticking,
+      const std::string &dataLabel)
+      : materialSticking_(materialSticking, defaultStickingProbability),
+        dataLabel_(dataLabel) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
@@ -191,13 +192,7 @@ public:
                     const int materialId,
                     const viennaray::TracingData<NumericType> *,
                     RNG &rngState) override final {
-    NumericType sticking = stickingProbability_;
-    if (auto mat =
-            materialSticking_.find(MaterialMap::mapToMaterial(materialId));
-        mat != materialSticking_.end()) {
-      sticking = mat->second;
-    }
-
+    auto sticking = materialSticking_.get(Material::fromLegacyId(materialId));
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
     return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
@@ -206,9 +201,8 @@ public:
     return {dataLabel_};
   }
 
-private:
-  const std::unordered_map<Material, NumericType> materialSticking_;
-  const NumericType stickingProbability_;
+public:
+  const MaterialValueMap<NumericType> materialSticking_;
   const std::string dataLabel_;
 };
 } // namespace impl
@@ -251,8 +245,9 @@ public:
 
   MultiParticleProcess(
       const std::vector<std::string> &fluxDataLabels,
-      std::unordered_map<std::string, NumericType> const &ionParams,
-      std::unordered_map<std::string, NumericType> const &neutralParams,
+      std::vector<::viennaps::impl::IonParticle<NumericType, D>> const &ions,
+      std::vector<::viennaps::impl::DiffuseParticle<NumericType, D>> const
+          &neutrals,
       std::function<NumericType(const std::vector<NumericType> &,
                                 const Material &)>
           rateFunction) {
@@ -285,22 +280,76 @@ public:
          "__direct_callable__multiIonInit"}};
     this->setParticleCallableMap(pMap, cMap);
 
+    if (ions.size() > 1) {
+      VIENNACORE_LOG_WARNING(
+          "GPU MultiParticleProcess currently only supports one ion particle "
+          "type. Additional ion particles will be ignored.");
+    }
+    bool ionAdded = false;
+    std::vector<bool> neutralAdded(neutrals.size(), false);
+
     for (auto const &label : fluxDataLabels) {
-      if (label.find("ion") != std::string::npos) {
-        assert(ionParams.size() > 0 &&
-               "Ion parameters must be provided when adding ion flux.");
-        addIonParticle(ionParams.at("SourcePower"), ionParams.at("ThetaRMin"),
-                       ionParams.at("ThetaRMax"), ionParams.at("MinAngle"),
-                       ionParams.at("B_sp"), ionParams.at("MeanEnergy"),
-                       ionParams.at("SigmaEnergy"),
-                       ionParams.at("ThresholdEnergy"),
-                       ionParams.at("InflectAngle"), ionParams.at("n"), label);
-      } else if (label.find("neutral") != std::string::npos) {
-        assert(neutralParams.size() > 0 &&
-               "Neutral parameters must be provided when adding neutral flux.");
-        addNeutralParticle(neutralParams.at("StickingProbability"), label);
+      if (!ions.empty() && label == ions.front().dataLabel_) {
+        const auto &ion = ions.front();
+        addIonParticle(ion.sourcePower_, ion.thetaRMin_, ion.thetaRMax_,
+                       ion.minAngle_, ion.B_sp_, ion.meanEnergy_,
+                       ion.sigmaEnergy_, ion.thresholdEnergy_,
+                       ion.inflectAngle_, ion.n_, ion.dataLabel_);
+        ionAdded = true;
+      }
+
+      for (std::size_t i = 0; i < neutrals.size(); ++i) {
+        if (!neutralAdded[i] && label == neutrals[i].dataLabel_) {
+          const auto &neutral = neutrals[i];
+          if (neutral.materialSticking_.empty()) {
+            addNeutralParticle(neutral.materialSticking_.getDefault(),
+                               neutral.dataLabel_);
+          } else {
+            addNeutralParticle(neutral.materialSticking_,
+                               neutral.materialSticking_.getDefault(),
+                               neutral.dataLabel_);
+          }
+          neutralAdded[i] = true;
+          break;
+        }
       }
     }
+
+    if (!ions.empty() && !ionAdded) {
+      const auto &ion = ions.front();
+      VIENNACORE_LOG_WARNING(
+          "Ion label was not found in flux label ordering during CPU->GPU "
+          "conversion. Falling back to first ion particle.");
+      addIonParticle(ion.sourcePower_, ion.thetaRMin_, ion.thetaRMax_,
+                     ion.minAngle_, ion.B_sp_, ion.meanEnergy_,
+                     ion.sigmaEnergy_, ion.thresholdEnergy_, ion.inflectAngle_,
+                     ion.n_, ion.dataLabel_);
+    }
+
+    for (std::size_t i = 0; i < neutrals.size(); ++i) {
+      if (neutralAdded[i]) {
+        continue;
+      }
+
+      const auto &neutral = neutrals[i];
+      VIENNACORE_LOG_WARNING(
+          "Neutral label was not found in flux label ordering during CPU->GPU "
+          "conversion. Appending neutral particle with label: " +
+          neutral.dataLabel_);
+      if (neutral.materialSticking_.empty()) {
+        addNeutralParticle(neutral.materialSticking_.getDefault(),
+                           neutral.dataLabel_);
+      } else {
+        addNeutralParticle(neutral.materialSticking_,
+                           neutral.materialSticking_.getDefault(),
+                           neutral.dataLabel_);
+      }
+    }
+
+    VIENNACORE_LOG_DEBUG("GPU MultiParticleProcess conversion completed with " +
+                         std::to_string(ionCount_) + " ion particle(s) and " +
+                         std::to_string(neutralCount_) +
+                         " neutral particle(s).");
   }
 
   void addNeutralParticle(NumericType stickingProbability,
@@ -318,12 +367,14 @@ public:
     this->setUseMaterialIds(true);
 
     addStickingData(stickingProbability);
+    ++neutralCount_;
+    VIENNACORE_LOG_DEBUG("Added neutral particle with sticking probability: " +
+                         std::to_string(stickingProbability));
   }
 
-  void
-  addNeutralParticle(std::unordered_map<Material, NumericType> materialSticking,
-                     NumericType defaultStickingProbability = 1.,
-                     const std::string &label = "neutralFlux") {
+  void addNeutralParticle(const MaterialValueMap<NumericType> &materialSticking,
+                          NumericType defaultStickingProbability = 1.,
+                          const std::string &label = "neutralFlux") {
     std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
 
@@ -331,14 +382,19 @@ public:
     particle.name = "Neutral";
     particle.sticking = defaultStickingProbability;
     particle.dataLabels.push_back(dataLabel);
-    for (auto &mat : materialSticking) {
-      particle.materialSticking[static_cast<int>(mat.first)] = mat.second;
+    for (auto entry : materialSticking) {
+      particle.materialSticking[static_cast<int>(entry.material)] = entry.value;
     }
 
     this->insertNextParticleType(particle);
     this->setUseMaterialIds(true);
 
     addStickingData(defaultStickingProbability);
+    ++neutralCount_;
+    VIENNACORE_LOG_DEBUG(
+        "Added neutral particle with default sticking probability: " +
+        std::to_string(defaultStickingProbability) +
+        " and material-specific sticking.");
   }
 
   void addIonParticle(NumericType sourcePower, NumericType thetaRMin = 0.,
@@ -386,6 +442,16 @@ public:
                 {"InflectAngle", inflectAngle},
                 {"MinAngle", minAngle},
                 {"n", n}});
+    VIENNACORE_LOG_DEBUG(
+        "Added ion particle with source power: " + std::to_string(sourcePower) +
+        ", thetaRMin: " + std::to_string(thetaRMin) + ", thetaRMax: " +
+        std::to_string(thetaRMax) + ", minAngle: " + std::to_string(minAngle) +
+        ", B_sp: " + std::to_string(B_sp) +
+        ", meanEnergy: " + std::to_string(meanEnergy) +
+        ", sigmaEnergy: " + std::to_string(sigmaEnergy) +
+        ", thresholdEnergy: " + std::to_string(thresholdEnergy) +
+        ", inflectAngle: " + std::to_string(inflectAngle) +
+        ", n: " + std::to_string(n));
   }
 
   void
@@ -404,6 +470,7 @@ private:
   std::vector<std::string> fluxDataLabels_;
   using ProcessModelBase<NumericType, D>::processMetaData;
   unsigned int ionCount_ = 0;
+  unsigned int neutralCount_ = 0;
 
   void setDirection(viennaray::gpu::Particle<NumericType> &particle) {
     auto direction = this->getPrimaryDirection();
@@ -461,17 +528,22 @@ public:
                           const std::string &label = "neutralFlux") {
     std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
+    std::unordered_map<Material, NumericType>
+        materialSticking; // empty map will use default sticking for all
+                          // materials
     auto particle = std::make_unique<impl::DiffuseParticle<NumericType, D>>(
-        stickingProbability, dataLabel);
+        stickingProbability, materialSticking, dataLabel);
     this->insertNextParticleType(particle);
 
     addStickingData(stickingProbability);
+    neutralParticles_.emplace_back(stickingProbability, materialSticking,
+                                   dataLabel);
   }
 
-  void
-  addNeutralParticle(std::unordered_map<Material, NumericType> materialSticking,
-                     NumericType defaultStickingProbability = 1.,
-                     const std::string &label = "neutralFlux") {
+  void addNeutralParticle(
+      const std::unordered_map<Material, NumericType> &materialSticking,
+      NumericType defaultStickingProbability = 1.,
+      const std::string &label = "neutralFlux") {
     std::string dataLabel = label + std::to_string(fluxDataLabels_.size());
     fluxDataLabels_.push_back(dataLabel);
     auto particle = std::make_unique<impl::DiffuseParticle<NumericType, D>>(
@@ -479,6 +551,8 @@ public:
     this->insertNextParticleType(particle);
 
     addStickingData(defaultStickingProbability);
+    neutralParticles_.emplace_back(defaultStickingProbability, materialSticking,
+                                   dataLabel);
   }
 
   void addIonParticle(NumericType sourcePower, NumericType thetaRMin = 0.,
@@ -507,6 +581,9 @@ public:
                 {"InflectAngle", inflectAngle},
                 {"MinAngle", minAngle},
                 {"n", n}});
+    ionParticles_.emplace_back(sourcePower, meanEnergy, sigmaEnergy,
+                               thresholdEnergy, B_sp, thetaRMin, thetaRMax,
+                               inflectAngle, minAngle, n, dataLabel);
   }
 
   void
@@ -521,17 +598,38 @@ public:
 
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
-    if (ionParams_.empty() && neutralParams_.empty()) {
+    if (ionParticles_.empty() && neutralParticles_.empty()) {
       VIENNACORE_LOG_WARNING(
           "Cannot convert MultiParticleProcess to GPU model without any "
           "particles added.");
       return nullptr;
     }
+    if (!ionParticles_.empty() && ionParticles_.size() > 1) {
+      VIENNACORE_LOG_WARNING(
+          "GPU MultiParticleProcess currently only supports one ion particle "
+          "type. Only the first ion particle will be converted.");
+    }
+
     auto surfModel = std::dynamic_pointer_cast<
         impl::MultiParticleSurfaceModel<NumericType, D>>(
         this->getSurfaceModel());
+    if (!surfModel) {
+      VIENNACORE_LOG_WARNING(
+          "Failed to access MultiParticleSurfaceModel during CPU->GPU "
+          "conversion.");
+      return nullptr;
+    }
+
+    VIENNACORE_LOG_DEBUG(
+        "Converting MultiParticleProcess to GPU with " +
+        std::to_string(std::min<std::size_t>(ionParticles_.size(), 1)) +
+        " ion and " + std::to_string(neutralParticles_.size()) +
+        " neutral particle(s); flux labels: " +
+        std::to_string(fluxDataLabels_.size()));
+
     auto model = SmartPointer<gpu::MultiParticleProcess<NumericType, D>>::New(
-        fluxDataLabels_, ionParams_, neutralParams_, surfModel->rateFunction_);
+        fluxDataLabels_, ionParticles_, neutralParticles_,
+        surfModel->rateFunction_);
     model->setProcessName(this->getProcessName().value());
     return model;
   }
@@ -540,8 +638,8 @@ public:
 private:
   std::vector<std::string> fluxDataLabels_;
   using ProcessModelCPU<NumericType, D>::processMetaData;
-  std::unordered_map<std::string, NumericType> ionParams_;
-  std::unordered_map<std::string, NumericType> neutralParams_;
+  std::vector<impl::IonParticle<NumericType, D>> ionParticles_;
+  std::vector<impl::DiffuseParticle<NumericType, D>> neutralParticles_;
 
   void addStickingData(NumericType stickingProbability) {
     if (processMetaData.find("StickingProbability") == processMetaData.end()) {
@@ -549,7 +647,6 @@ private:
     } else {
       processMetaData["StickingProbability"].push_back(stickingProbability);
     }
-    neutralParams_["StickingProbability"] = stickingProbability;
   }
 
   void addIonData(std::vector<std::pair<std::string, NumericType>> data) {
@@ -559,7 +656,6 @@ private:
       } else {
         processMetaData[pair.first].push_back(pair.second);
       }
-      ionParams_[pair.first] = pair.second;
     }
   }
 

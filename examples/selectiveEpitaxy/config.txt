@@ -12,6 +12,6 @@ etchTime = 4.0
 
 # Process
 processTime=5.
-epitaxyRate=1.
+epitaxyRate=2.
 R111=0.4
 R100=1.0

@@ -344,7 +344,7 @@ private:
   const NumericType sqrt_E_th_ie_C;
   const NumericType sqrt_E_th_ie_Si;
 
-  NumericType E;
+  NumericType E = 0.;
 };
 
 template <typename NumericType, int D>
@@ -370,8 +370,10 @@ public:
       const auto &phi_O = globalData->getVectorData(1)[primID];
       // F surface coverage on oxidized SiGe
       const auto &phi_C = globalData->getVectorData(2)[primID];
-      NumericType gamma_F = sticking(materialId);
-      NumericType gamma_FO = stickingOxidized(materialId);
+      NumericType gamma_F =
+          params.gamma_F.get(Material::fromLegacyId(materialId));
+      NumericType gamma_FO =
+          params.gamma_F_oxidized.get(Material::fromLegacyId(materialId));
       S_eff =
           gamma_F * std::max(1. - phi_F - phi_O - phi_C, 0.) + gamma_FO * phi_O;
     }
@@ -392,8 +394,10 @@ public:
     // F surface coverage on oxidized SiGe
     const auto &phi_C = globalData->getVectorData(2)[primID];
     // Obtain the sticking probability
-    NumericType gamma_F = sticking(materialId);
-    NumericType gamma_FO = stickingOxidized(materialId);
+    NumericType gamma_F =
+        params.gamma_F.get(Material::fromLegacyId(materialId));
+    NumericType gamma_FO =
+        params.gamma_F_oxidized.get(Material::fromLegacyId(materialId));
     NumericType S_eff =
         gamma_F * std::max(1. - phi_F - phi_O - phi_C, 0.) + gamma_FO * phi_O;
 
@@ -404,27 +408,6 @@ public:
   NumericType getSourceDistributionPower() const override { return 1.; }
   [[nodiscard]] std::vector<std::string> getLocalDataLabels() const override {
     return {"etchantFlux"};
-  }
-
-private:
-  NumericType sticking(const int materialId) const {
-    auto material = static_cast<Material>(materialId);
-    auto gamma = params.gamma_F.find(material);
-    if (gamma != params.gamma_F.end())
-      return gamma->second;
-
-    // default value
-    return 1.0;
-  }
-
-  // Sticking probability for oxidized SiGe or Si
-  NumericType stickingOxidized(const int materialId) const {
-    auto material = static_cast<Material>(materialId);
-    auto gamma = params.gamma_F_oxidized.find(material);
-    if (gamma != params.gamma_F_oxidized.end())
-      return gamma->second;
-
-    return 1.0; // Default
   }
 };
 
@@ -448,8 +431,10 @@ public:
       const auto &phi_F = globalData->getVectorData(0)[primID];
       const auto &phi_O = globalData->getVectorData(1)[primID];
       const auto &phi_C = globalData->getVectorData(2)[primID];
-      NumericType gamma_O = sticking(materialId);
-      NumericType gamma_OC = stickingPassivated(materialId);
+      NumericType gamma_O =
+          params.gamma_O.get(Material::fromLegacyId(materialId));
+      NumericType gamma_OC =
+          params.gamma_O_passivated.get(Material::fromLegacyId(materialId));
       S_eff =
           gamma_O * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_OC * phi_C;
     }
@@ -466,8 +451,10 @@ public:
     const auto &phi_F = globalData->getVectorData(0)[primID];
     const auto &phi_O = globalData->getVectorData(1)[primID];
     const auto &phi_C = globalData->getVectorData(2)[primID];
-    NumericType gamma_O = sticking(materialId);
-    NumericType gamma_OC = stickingPassivated(materialId);
+    NumericType gamma_O =
+        params.gamma_O.get(Material::fromLegacyId(materialId));
+    NumericType gamma_OC =
+        params.gamma_O_passivated.get(Material::fromLegacyId(materialId));
     NumericType S_eff =
         gamma_O * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_OC * phi_C;
 
@@ -478,27 +465,6 @@ public:
   NumericType getSourceDistributionPower() const override { return 1.; }
   [[nodiscard]] std::vector<std::string> getLocalDataLabels() const override {
     return {"oxygenFlux"};
-  }
-
-private:
-  NumericType sticking(const int materialId) const {
-    auto material = static_cast<Material>(materialId);
-    auto gamma = params.gamma_O.find(material);
-    if (gamma != params.gamma_O.end())
-      return gamma->second;
-
-    // default value
-    return 1.0;
-  }
-
-  NumericType stickingPassivated(const int materialId) const {
-    auto material = static_cast<Material>(materialId);
-    auto gamma = params.gamma_O_passivated.find(material);
-    if (gamma != params.gamma_O_passivated.end())
-      return gamma->second;
-
-    // default value
-    return 1.0;
   }
 };
 
@@ -522,8 +488,10 @@ public:
       const auto &phi_F = globalData->getVectorData(0)[primID];
       const auto &phi_O = globalData->getVectorData(1)[primID];
       const auto &phi_C = globalData->getVectorData(2)[primID];
-      NumericType gamma_C = sticking(materialId);
-      NumericType gamma_CO = stickingOxidized(materialId);
+      NumericType gamma_C =
+          params.gamma_C.get(Material::fromLegacyId(materialId));
+      NumericType gamma_CO =
+          params.gamma_C_oxidized.get(Material::fromLegacyId(materialId));
       S_eff =
           gamma_C * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_CO * phi_O;
     }
@@ -540,8 +508,10 @@ public:
     const auto &phi_F = globalData->getVectorData(0)[primID];
     const auto &phi_O = globalData->getVectorData(1)[primID];
     const auto &phi_C = globalData->getVectorData(2)[primID];
-    NumericType gamma_C = sticking(materialId);
-    NumericType gamma_CO = stickingOxidized(materialId);
+    NumericType gamma_C =
+        params.gamma_C.get(Material::fromLegacyId(materialId));
+    NumericType gamma_CO =
+        params.gamma_C_oxidized.get(Material::fromLegacyId(materialId));
     NumericType S_eff =
         gamma_C * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_CO * phi_O;
 
@@ -552,27 +522,6 @@ public:
   NumericType getSourceDistributionPower() const override { return 1.; }
   [[nodiscard]] std::vector<std::string> getLocalDataLabels() const override {
     return {"polymerFlux"};
-  }
-
-private:
-  NumericType sticking(const int materialId) const {
-    auto material = static_cast<Material>(materialId);
-    auto gamma = params.gamma_C.find(material);
-    if (gamma != params.gamma_C.end())
-      return gamma->second;
-
-    // default value
-    return 1.0;
-  }
-
-  NumericType stickingOxidized(const int materialId) const {
-    auto material = static_cast<Material>(materialId);
-    auto gamma = params.gamma_C_oxidized.find(material);
-    if (gamma != params.gamma_C_oxidized.end())
-      return gamma->second;
-
-    // default value
-    return 1.0;
   }
 };
 } // namespace impl

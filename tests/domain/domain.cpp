@@ -68,10 +68,6 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(domain->getLevelSets().size() == 0);
 
     // insert level sets
-    domain->insertNextLevelSet(plane1);
-    VC_TEST_ASSERT(domain->getLevelSets().size() == 1);
-
-    domain->clear();
     domain->insertNextLevelSetAsMaterial(plane1, ps::Material::Si);
     VC_TEST_ASSERT(domain->getLevelSets().size() == 1);
     VC_TEST_ASSERT(domain->getMaterialMap());

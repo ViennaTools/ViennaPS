@@ -43,13 +43,17 @@ private:
     etchant.name = "Etchant";
     etchant.dataLabels.push_back("etchantFlux");
     etchant.cosineExponent = 1.f;
-    etchant.materialSticking = params.beta_E;
+    for (auto entry : params.beta_E) {
+      etchant.materialSticking[static_cast<int>(entry.material)] = entry.value;
+    }
 
     viennaray::gpu::Particle<NumericType> oxygen;
     oxygen.name = "Oxygen";
     oxygen.dataLabels.push_back("passivationFlux");
     oxygen.cosineExponent = 1.f;
-    oxygen.materialSticking = params.beta_P;
+    for (auto entry : params.beta_P) {
+      oxygen.materialSticking[static_cast<int>(entry.material)] = entry.value;
+    }
 
     // surface model
     auto surfModel = SmartPointer<
@@ -176,10 +180,11 @@ public:
     defParams.passivationFlux = 1.0e2;
 
     // sticking probabilities
-    defParams.beta_E = {{static_cast<int>(Material::Si), 0.1},
-                        {static_cast<int>(Material::Mask), 0.1}};
-    defParams.beta_P = {{static_cast<int>(Material::Si), 1.},
-                        {static_cast<int>(Material::Mask), 1.}};
+    defParams.beta_E.set(Material::Si, 0.1);
+    defParams.beta_E.set(Material::Mask, 0.1);
+
+    defParams.beta_P.set(Material::Si, 1.);
+    defParams.beta_P.set(Material::Mask, 1.);
 
     defParams.etchStopDepth = std::numeric_limits<NumericType>::lowest();
 

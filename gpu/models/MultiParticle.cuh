@@ -30,7 +30,7 @@ multiNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   float sticking = launchParams.materialSticking[material];
   prd->rayWeight -= prd->rayWeight * sticking;
   auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
-  viennaray::gpu::diffuseReflection(prd, geoNormal, launchParams.D);
+  viennaray::gpu::diffuseReflection(prd, geoNormal);
 }
 
 //
@@ -89,8 +89,7 @@ multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 
   prd->rayWeight -= prd->rayWeight * sticking;
   conedCosineReflection(prd, geomNormal,
-                        M_PI_2f - min(incomingAngle, params->minAngle),
-                        launchParams.D);
+                        M_PI_2f - min(incomingAngle, params->minAngle));
 }
 
 __forceinline__ __device__ void multiIonInit(viennaray::gpu::PerRayData *prd) {

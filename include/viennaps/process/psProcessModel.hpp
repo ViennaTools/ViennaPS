@@ -24,7 +24,7 @@ using namespace viennacore;
 
 /// The process model combines all models (particle types, surface model,
 /// geometric model, advection callback)
-template <typename NumericType, int D> class ProcessModelBase {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class ProcessModelBase {
 protected:
   SmartPointer<SurfaceModel<NumericType>> surfaceModel = nullptr;
   SmartPointer<AdvectionCallback<NumericType, D>> advectionCallback = nullptr;
@@ -82,7 +82,7 @@ public:
 };
 
 /// Process model for CPU-based particle tracing (or no particle tracing)
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class ProcessModelCPU : public ProcessModelBase<NumericType, D> {
 protected:
   std::vector<std::unique_ptr<viennaray::AbstractParticle<NumericType>>>
@@ -169,14 +169,14 @@ public:
   }
 };
 
+PS_PRECOMPILE_PRECISION_DIMENSION(ProcessModelCPU)
+
 } // namespace viennaps
 
 #ifdef VIENNACORE_COMPILE_GPU
 namespace viennaps::gpu {
 
-using namespace viennacore;
-
-template <class NumericType, int D>
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class ProcessModelGPU : public ProcessModelBase<NumericType, D> {
 private:
   std::vector<viennaray::gpu::Particle<NumericType>> particles;
@@ -187,7 +187,7 @@ private:
   std::vector<viennaray::gpu::CallableConfig> callableMap_;
 
 public:
-  CudaBuffer processData;
+  viennacore::CudaBuffer processData;
   auto &getParticleTypes() { return particles; }
   auto getProcessDataDPtr() const { return processData.dPointer(); }
   bool useMaterialIds() const { return materialIds; }
@@ -240,6 +240,8 @@ public:
     return dataLabels;
   }
 };
+
+PS_PRECOMPILE_PRECISION_DIMENSION(ProcessModelGPU)
 
 } // namespace viennaps::gpu
 #endif

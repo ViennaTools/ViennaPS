@@ -2,9 +2,9 @@
 
 #include <cmath>
 
+#include "../materials/psMaterialMap.hpp"
 #include "../process/psProcessModel.hpp"
 #include "../psConstants.hpp"
-#include "../psMaterials.hpp"
 #include "../psUnits.hpp"
 
 #include "psIonModelUtil.hpp"
@@ -346,7 +346,7 @@ class FluorocarbonIon
   const FluorocarbonParameters<NumericType> &p;
   const NumericType A;
   NumericType minEnergy = std::numeric_limits<NumericType>::max();
-  NumericType E;
+  NumericType E = 0.;
 
 public:
   FluorocarbonIon(const FluorocarbonParameters<NumericType> &parameters)

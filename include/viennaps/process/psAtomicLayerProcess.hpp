@@ -21,7 +21,7 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <typename NumericType, int D>
+VIENNAPS_TEMPLATE_ND(NumericType, D)
 class DesorptionSource : public viennaray::Source<NumericType> {
 public:
   DesorptionSource(const std::vector<Vec3D<NumericType>> &points,

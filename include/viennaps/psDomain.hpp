@@ -1,9 +1,10 @@
 #pragma once
 
+#include "materials/psMaterialMap.hpp"
 #include "psDomainSetup.hpp"
-#include "psMaterials.hpp"
 #include "psPreCompileMacros.hpp"
 #include "psSurfacePointValuesToLevelSet.hpp"
+#include "psUtil.hpp"
 #include "psVTKRenderWindow.hpp"
 #include "psVersion.hpp"
 
@@ -12,6 +13,7 @@
 #include <lsExpand.hpp>
 #include <lsRemoveStrayPoints.hpp>
 #include <lsToDiskMesh.hpp>
+#include <lsToHullMesh.hpp>
 #include <lsToMesh.hpp>
 #include <lsToMultiSurfaceMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
@@ -46,7 +48,7 @@ enum class MetaDataLevel {
 // If specified, each Level-Set is assigned a specific material,
 // which can be used in a process to implement material specific rates or
 // similar.
-template <class NumericType, int D> class Domain {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class Domain {
 public:
   using lsDomainType = SmartPointer<viennals::Domain<NumericType, D>>;
   using lsDomainsType = std::vector<lsDomainType>;
@@ -148,14 +150,10 @@ public:
     }
 
     // Copy material map.
-    if (domain->materialMap_) {
-      materialMap_ = MaterialMapType::New();
-      for (std::size_t i = 0; i < domain->materialMap_->size(); i++) {
-        materialMap_->insertNextMaterial(
-            domain->materialMap_->getMaterialAtIdx(i));
-      }
-    } else {
-      materialMap_ = nullptr;
+    materialMap_ = MaterialMapType::New();
+    for (std::size_t i = 0; i < domain->materialMap_->size(); i++) {
+      materialMap_->insertNextMaterial(
+          domain->materialMap_->getMaterialAtIdx(i));
     }
 
     // Copy Cell-Set.
@@ -168,26 +166,12 @@ public:
     }
   }
 
-  // Will be deprecated in the future. Please use insertNextLevelSetAsMaterial
-  // instead.
-  void insertNextLevelSet(lsDomainType levelSet,
-                          bool wrapLowerLevelSet = true) {
-    if (levelSets_.empty() && setup_.gridDelta() == 0.0) {
-      setup_.init(levelSet->getGrid());
-      initMetaData();
-    }
-    if (!levelSets_.empty() && wrapLowerLevelSet) {
-      viennals::BooleanOperation<NumericType, D>(
-          levelSet, levelSets_.back(), viennals::BooleanOperationEnum::UNION)
-          .apply();
-    }
-    levelSets_.push_back(levelSet);
-    if (materialMap_) {
-      VIENNACORE_LOG_WARNING(
-          "Inserting non-material specific Level-Set in domain with material "
-          "mapping.");
-      materialMapCheck();
-    }
+  void insertNextLevelSetAsMaterial(lsDomainType levelSet,
+                                    std::string materialName,
+                                    bool wrapLowerLevelSet = true) {
+    auto material =
+        MaterialRegistry::instance().registerMaterial(std::move(materialName));
+    insertNextLevelSetAsMaterial(levelSet, material, wrapLowerLevelSet);
   }
 
   void insertNextLevelSetAsMaterial(lsDomainType levelSet,
@@ -215,6 +199,26 @@ public:
     materialMapCheck();
   }
 
+  void insertMask(lsDomainType mask, const Material material = Material::Mask) {
+    // insert mask at front of level set vector
+    levelSets_.insert(levelSets_.begin(), mask);
+    for (std::size_t i = 1; i < levelSets_.size(); i++) {
+      viennals::BooleanOperation<NumericType, D>(
+          levelSets_.at(i), mask, viennals::BooleanOperationEnum::UNION)
+          .apply();
+    }
+
+    auto newMatMap = MaterialMapType::New();
+    newMatMap->insertNextMaterial(material);
+    if (materialMap_) {
+      for (std::size_t i = 0; i < materialMap_->size(); i++) {
+        newMatMap->insertNextMaterial(materialMap_->getMaterialAtIdx(i));
+      }
+    }
+    materialMap_ = newMatMap;
+    materialMapCheck();
+  }
+
   // Copy the top Level-Set and insert it in the domain (e.g. in order to
   // capture depositing material on top of the surface).
   void duplicateTopLevelSet(const Material material) {
@@ -227,6 +231,11 @@ public:
     insertNextLevelSetAsMaterial(copy, material, false);
   }
 
+  void duplicateTopLevelSet(const std::string &materialName) {
+    auto material = MaterialRegistry::instance().registerMaterial(materialName);
+    duplicateTopLevelSet(material);
+  }
+
   // Remove the top (last inserted) Level-Set.
   void removeTopLevelSet() {
     if (levelSets_.empty()) {
@@ -234,9 +243,8 @@ public:
     }
 
     levelSets_.pop_back();
-    if (materialMap_) {
-      materialMap_->removeMaterial();
-    }
+    materialMap_->removeMaterial();
+    materialMapCheck();
   }
 
   // Apply a boolean operation with the passed Level-Set to all
@@ -267,16 +275,14 @@ public:
       return;
     }
 
-    if (materialMap_) {
-      auto newMatMap = MaterialMapType::New();
-      for (std::size_t i = 0; i < levelSets_.size(); i++) {
-        if (i == idx)
-          continue;
+    auto newMatMap = MaterialMapType::New();
+    for (std::size_t i = 0; i < levelSets_.size(); i++) {
+      if (i == idx)
+        continue;
 
-        newMatMap->insertNextMaterial(materialMap_->getMaterialAtIdx(i));
-      }
-      materialMap_ = newMatMap;
+      newMatMap->insertNextMaterial(materialMap_->getMaterialAtIdx(i));
     }
+    materialMap_ = newMatMap;
 
     if (removeWrapped) {
       auto remove = levelSets_.at(idx);
@@ -301,10 +307,7 @@ public:
   }
 
   void removeMaterial(const Material material) {
-    if (!materialMap_) {
-      return;
-    }
-
+    assert(materialMap_ != nullptr);
     for (int i = 0; i < materialMap_->size(); i++) {
       if (materialMap_->getMaterialAtIdx(i) == material) {
         removeLevelSet(i);
@@ -374,9 +377,7 @@ public:
 
   // Set the material of a specific Level-Set in the domain.
   void setMaterial(unsigned int lsId, const Material material) {
-    if (materialMap_) {
-      materialMap_ = MaterialMapType::New();
-    }
+    assert(materialMap_ != nullptr);
     materialMap_->setMaterialAtIdx(lsId, material);
     materialMapCheck();
   }
@@ -446,14 +447,50 @@ public:
     return levelSets_.back()->getGrid().getBoundaryConditions();
   }
 
+  // Returns a set of all materials present in the domain.
   auto getMaterialsInDomain() const {
     std::set<Material> materials;
-    if (materialMap_) {
-      for (std::size_t i = 0; i < materialMap_->size(); i++) {
-        materials.insert(materialMap_->getMaterialAtIdx(i));
-      }
+    for (std::size_t i = 0; i < materialMap_->size(); i++) {
+      materials.insert(materialMap_->getMaterialAtIdx(i));
     }
     return materials;
+  }
+
+  // Returns a Level-Set representing the specified material in the domain. If
+  // the material is not present in the domain, it returns an empty Level-Set.
+  auto getMaterialLevelSet(const Material material) const {
+    lsDomainType levelSet = nullptr;
+
+    for (int i = 0; i < levelSets_.size(); i++) {
+      if (materialMap_->getMaterialAtIdx(i) == material) {
+        auto lsCopy =
+            SmartPointer<viennals::Domain<NumericType, D>>::New(levelSets_[i]);
+
+        // remove lower level set
+        if (i > 0) {
+          viennals::BooleanOperation<NumericType, D>(
+              lsCopy, levelSets_[i - 1],
+              viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
+              .apply();
+        }
+
+        if (levelSet) {
+          // add to level set
+          viennals::BooleanOperation<NumericType, D>(
+              levelSet, lsCopy, viennals::BooleanOperationEnum::UNION)
+              .apply();
+        } else {
+          levelSet = lsCopy;
+        }
+      }
+    }
+
+    if (!levelSet) {
+      VIENNACORE_LOG_WARNING("Material " + MaterialMap::toString(material) +
+                             " not found in domain.");
+    }
+
+    return levelSet;
   }
 
   void print(std::ostream &out = std::cout, bool hrle = false) const {
@@ -461,14 +498,10 @@ public:
         "*****************************************\n";
     out << "Process Simulation Domain:\n" << separator;
     out << "Number of Level-Sets: " << levelSets_.size() << "\n";
-    if (materialMap_) {
-      out << "Materials:\n";
-      for (std::size_t i = 0; i < materialMap_->size(); i++) {
-        out << "\t" << i << ": "
-            << MaterialMap::toString(materialMap_->getMaterialAtIdx(i)) << "\n";
-      }
-    } else {
-      out << "No Material Map available.\n";
+    out << "Materials:\n";
+    for (std::size_t i = 0; i < materialMap_->size(); i++) {
+      out << "\t" << i << ": "
+          << MaterialMap::toString(materialMap_->getMaterialAtIdx(i)) << "\n";
     }
     auto bb = getBoundingBox();
     out << "Bounding Box: [" << bb[0][0] << ", " << bb[0][1] << ", " << bb[0][2]
@@ -505,6 +538,70 @@ public:
     return meshes;
   }
 
+  SmartPointer<viennals::Mesh<NumericType>>
+  getSurfaceMesh(bool addInterfaces = false, bool sharpCorners = false,
+                 double minNodeDistanceFactor = 0.01) const {
+    auto mesh = viennals::Mesh<NumericType>::New();
+    if (addInterfaces) {
+      viennals::ToMultiSurfaceMesh<NumericType, D> meshConverter(
+          mesh, minNodeDistanceFactor);
+      for (const auto &ls : levelSets_) {
+        meshConverter.insertNextLevelSet(ls);
+      }
+      meshConverter.setSharpCorners(sharpCorners);
+      meshConverter.setMaterialMap(materialMap_->getMaterialMap());
+      meshConverter.apply();
+    } else {
+      // Add material IDs to surface point data
+      viennals::ToDiskMesh<NumericType, D> meshConverter;
+      meshConverter.setMesh(mesh);
+      meshConverter.setMaterialMap(materialMap_->getMaterialMap());
+      for (const auto ls : levelSets_) {
+        meshConverter.insertNextLevelSet(ls);
+      }
+      meshConverter.apply();
+
+      SurfacePointValuesToLevelSet<NumericType, D>(levelSets_.back(), mesh,
+                                                   {"MaterialIds"})
+          .apply();
+
+      viennals::ToSurfaceMesh<NumericType, D> surfMesher(levelSets_.back(),
+                                                         mesh);
+      surfMesher.setSharpCorners(sharpCorners);
+      surfMesher.apply();
+    }
+
+    return mesh;
+  }
+
+  SmartPointer<viennals::Mesh<NumericType>>
+  getHullMesh(NumericType bottomExtension = 0.0,
+              bool sharpCorners = false) const {
+    auto mesh = viennals::Mesh<NumericType>::New();
+    viennals::ToHullMesh<NumericType, D> meshConverter(mesh);
+    for (unsigned i = 0; i < levelSets_.size(); i++) {
+      meshConverter.insertNextLevelSet(levelSets_.at(i));
+    }
+    meshConverter.setMaterialMap(materialMap_->getMaterialMap());
+    meshConverter.setSharpCorners(sharpCorners);
+    if (bottomExtension > 0.0)
+      meshConverter.setBottomExtension(bottomExtension);
+    meshConverter.apply();
+    return mesh;
+  }
+
+  SmartPointer<viennals::Mesh<NumericType>> getDiskMesh() const {
+    auto mesh = viennals::Mesh<NumericType>::New();
+    viennals::ToDiskMesh<NumericType, D> meshConverter;
+    meshConverter.setMesh(mesh);
+    meshConverter.setMaterialMap(materialMap_->getMaterialMap());
+    for (const auto ls : levelSets_) {
+      meshConverter.insertNextLevelSet(ls);
+    }
+    meshConverter.apply();
+    return mesh;
+  }
+
   // Save the level set as a VTK file.
   void saveLevelSetMesh(const std::string &fileName, int width = 1) {
     auto meshes = getLevelSetMesh(width);
@@ -516,53 +613,28 @@ public:
     }
   }
 
-  SmartPointer<viennals::Mesh<NumericType>>
-  getSurfaceMesh(bool addInterfaces = false, double wrappingLayerEpsilon = 0.01,
-                 bool boolMaterials = false) const {
-    auto mesh = viennals::Mesh<NumericType>::New();
-    if (addInterfaces) {
-      viennals::ToMultiSurfaceMesh<NumericType, D> meshConverter(
-          mesh, 1e-12, wrappingLayerEpsilon);
-      for (unsigned i = 0; i < levelSets_.size(); i++) {
-        auto lsCopy = lsDomainType::New(levelSets_.at(i));
-        if (i > 0 && boolMaterials) {
-          viennals::BooleanOperation<NumericType, D>(
-              lsCopy, levelSets_.at(i - 1),
-              viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-              .apply();
-        }
-        meshConverter.insertNextLevelSet(lsCopy);
-      }
-      if (materialMap_)
-        meshConverter.setMaterialMap(materialMap_->getMaterialMap());
-      meshConverter.apply();
-    } else {
-      // Add material IDs to surface point data
-      viennals::ToDiskMesh<NumericType, D> meshConverter;
-      meshConverter.setMesh(mesh);
-      if (materialMap_)
-        meshConverter.setMaterialMap(materialMap_->getMaterialMap());
-      for (const auto ls : levelSets_) {
-        meshConverter.insertNextLevelSet(ls);
-      }
-      meshConverter.apply();
-
-      SurfacePointValuesToLevelSet<NumericType, D>(levelSets_.back(), mesh,
-                                                   {"MaterialIds"})
-          .apply();
-
-      viennals::ToSurfaceMesh<NumericType, D>(levelSets_.back(), mesh).apply();
-    }
-
-    return mesh;
+  // Print the top Level-Set (surface) in a VTK file format (vtp).
+  void saveSurfaceMesh(const std::string &fileName, bool addInterfaces = true,
+                       bool sharpCorners = false,
+                       double minNodeDistanceFactor = 0.01) const {
+    auto mesh =
+        getSurfaceMesh(addInterfaces, sharpCorners, minNodeDistanceFactor);
+    viennals::VTKWriter<NumericType> writer(mesh, fileName);
+    writer.setMetaData(metaData_);
+    writer.apply();
   }
 
-  // Print the top Level-Set (surface) in a VTK file format (vtp).
-  void saveSurfaceMesh(std::string fileName, bool addInterfaces = true,
-                       double wrappingLayerEpsilon = 0.01,
-                       bool boolMaterials = false) const {
-    auto mesh =
-        getSurfaceMesh(addInterfaces, wrappingLayerEpsilon, boolMaterials);
+  void saveHullMesh(const std::string &fileName,
+                    NumericType bottomExtension = 0.0,
+                    bool sharpCorners = false) const {
+    auto mesh = getHullMesh(bottomExtension, sharpCorners);
+    viennals::VTKWriter<NumericType> writer(mesh, fileName);
+    writer.setMetaData(metaData_);
+    writer.apply();
+  }
+
+  void saveDiskMesh(const std::string &fileName) const {
+    auto mesh = getDiskMesh();
     viennals::VTKWriter<NumericType> writer(mesh, fileName);
     writer.setMetaData(metaData_);
     writer.apply();
@@ -570,7 +642,7 @@ public:
 
   // Save the domain as a volume mesh
   void
-  saveVolumeMesh(std::string fileName,
+  saveVolumeMesh(const std::string &fileName,
                  double wrappingLayerEpsilon = DEFAULT_WRAPPING_EPSILON) const {
     viennals::WriteVisualizationMesh<NumericType, D> writer;
     writer.setFileName(fileName);
@@ -578,25 +650,7 @@ public:
     for (auto &ls : levelSets_) {
       writer.insertNextLevelSet(ls);
     }
-    if (materialMap_)
-      writer.setMaterialMap(materialMap_->getMaterialMap());
-    writer.setMetaData(metaData_);
-    writer.apply();
-  }
-
-  void
-  saveHullMesh(std::string fileName,
-               double wrappingLayerEpsilon = DEFAULT_WRAPPING_EPSILON) const {
-    viennals::WriteVisualizationMesh<NumericType, D> writer;
-    writer.setFileName(fileName);
-    writer.setWrappingLayerEpsilon(wrappingLayerEpsilon);
-    writer.setExtractHullMesh(true);
-    writer.setExtractVolumeMesh(false);
-    for (auto &ls : levelSets_) {
-      writer.insertNextLevelSet(ls);
-    }
-    if (materialMap_)
-      writer.setMaterialMap(materialMap_->getMaterialMap());
+    writer.setMaterialMap(materialMap_->getMaterialMap());
     writer.setMetaData(metaData_);
     writer.apply();
   }
@@ -626,8 +680,7 @@ public:
     levelSets_.clear();
     if (cellSet_)
       cellSet_ = csDomainType::New();
-    if (materialMap_)
-      materialMap_ = MaterialMapType::New();
+    materialMap_ = MaterialMapType::New();
     clearMetaData(true);
   }
 
@@ -639,12 +692,9 @@ public:
 
 private:
   void materialMapCheck() const {
-    if (!materialMap_)
-      return;
-
     if (materialMap_->size() != levelSets_.size()) {
-      VIENNACORE_LOG_WARNING(
-          "Size mismatch in material map and number of Level-Sets in domain.");
+      VIENNACORE_LOG_WARNING("Size mismatch in material map and number of "
+                             "Level-Sets in domain.");
     }
   }
 

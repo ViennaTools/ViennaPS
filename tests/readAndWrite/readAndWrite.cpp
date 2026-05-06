@@ -10,8 +10,8 @@
 
 #include <geometries/psMakeHole.hpp>
 #include <geometries/psMakeTrench.hpp>
+#include <materials/psMaterialMap.hpp>
 #include <psDomain.hpp>
-#include <psMaterials.hpp>
 #include <psReader.hpp>
 #include <psWriter.hpp>
 

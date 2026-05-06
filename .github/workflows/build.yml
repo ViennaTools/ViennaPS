@@ -34,31 +34,64 @@ jobs:
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
 
+    env:
+      VCPKG_COMMIT: c3867e714dd3a51c272826eea77267876517ed99
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
+
     name: "🧪 Test on ${{ matrix.os }} (⚙️: ${{ matrix.config }}, 💿: ${{ matrix.container || matrix.os }})"
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🖥️ Setup Environment
         uses: ./.github/actions/setup
         with:
           os: ${{ matrix.os }}
 
-      - name: 📋 Install MacOS Dependencies
-        shell: bash
-        if: ${{ matrix.os == 'macos-latest' }}
+      - name: 🖥️ Setup vcpkg (Windows)
+        shell: pwsh
+        if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          brew install embree tbb vtk
+          Remove-Item Env:VCPKG_ROOT -ErrorAction SilentlyContinue
 
-      - name: 🦥 Cache Dependencies
-        uses: actions/cache@v4
+          git clone https://github.com/microsoft/vcpkg.git
+          git -C vcpkg checkout $env:VCPKG_COMMIT
+          & .\vcpkg\bootstrap-vcpkg.bat
+
+          "VCPKG_ROOT=$($env:GITHUB_WORKSPACE)\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          New-Item -ItemType Directory -Force -Path "${{ env.VCPKG_DEFAULT_BINARY_CACHE }}"
+
+      - name: 📋 Install MacOS Dependencies
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: brew install vtk embree tbb
+
+      - name: 🦥 Cache vcpkg binary (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: actions/cache@v5
         with:
-          key: test-${{ matrix.os }}-${{ matrix.config }}
-          path: build
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-${{ matrix.os }}-${{ matrix.config }}-${{ env.VCPKG_COMMIT }}
 
-      - name: 🏗️ Compile
-        run: cmake -DVIENNAPS_BUILD_TESTS=ON -B build && cmake --build build --config ${{ matrix.config }}
+      - name: 🛠️ Build Dependencies (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          ./vcpkg/vcpkg install --triplet x64-windows
+
+      - name: 🏗️ Compile (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          cmake -DVIENNAPS_BUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows -B build
+          cmake --build build --config ${{ matrix.config }}
+
+      - name: 🏗️ Compile (other)
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          cmake -DVIENNAPS_BUILD_TESTS=ON -DVIENNAPS_ENABLE_SANITIZER=ON -B build
+          cmake --build build --config ${{ matrix.config }}
 
       - name: 🧪 Test
-        run: ctest -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
+        run: |
+          ctest --output-on-failure -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build

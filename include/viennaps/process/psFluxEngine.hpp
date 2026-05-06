@@ -6,9 +6,10 @@
 
 namespace viennaps {
 
-template <typename NumericType, int D> class FluxEngine {
+VIENNAPS_TEMPLATE_ND(NumericType, D) class FluxEngine {
 protected:
   viennacore::Timer<> timer_;
+  unsigned fluxCalculationsCount_ = 0;
 
 public:
   virtual ~FluxEngine() = default;
@@ -28,6 +29,7 @@ public:
 
   auto &getTimer() const { return timer_; }
   void resetTimer() { timer_.reset(); }
+  auto getFluxCalculationsCount() const { return fluxCalculationsCount_; }
 };
 
 } // namespace viennaps

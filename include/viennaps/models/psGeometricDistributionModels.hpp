@@ -20,10 +20,24 @@ public:
 
     auto geomModel =
         SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
+    geomModel->setDeposition(radius > 0);
 
     this->setGeometricModel(geomModel);
     this->setProcessName("SphereDistribution");
     this->processMetaData["Radius"] = std::vector<double>{radius};
+  }
+
+  void addMaskMaterial(const Material material) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->addMaskMaterial(material);
+  }
+
+  void applyToSingleMaterial(const Material material) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->setSingleMaterial(true);
+    geomModel->addMaskMaterial(material);
   }
 };
 
@@ -39,12 +53,32 @@ public:
 
     auto geomModel =
         SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
+    geomModel->setDeposition(true);
+    for (const auto &halfAxis : halfAxes) {
+      if (halfAxis < 0) {
+        geomModel->setDeposition(false);
+        break;
+      }
+    }
 
     this->setGeometricModel(geomModel);
     this->setProcessName("BoxDistribution");
     this->processMetaData["HalfAxes"] = std::vector<double>{
         static_cast<double>(halfAxes[0]), static_cast<double>(halfAxes[1]),
         static_cast<double>(halfAxes[2])};
+  }
+
+  void addMaskMaterial(const Material material) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->addMaskMaterial(material);
+  }
+
+  void applyToSingleMaterial(const Material material) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->setSingleMaterial(true);
+    geomModel->addMaskMaterial(material);
   }
 };
 
@@ -61,9 +95,22 @@ public:
 
     auto geomModel =
         SmartPointer<GeometricModel<NumericType, D>>::New(dist, mask);
+    geomModel->setDeposition(true);
+    for (const auto &radius : radii) {
+      if (radius < 0) {
+        geomModel->setDeposition(false);
+        break;
+      }
+    }
 
     this->setGeometricModel(geomModel);
     this->setProcessName("CustomSphereDistribution");
+  }
+
+  void addMaskMaterial(const Material material) {
+    auto geomModel = this->getGeometricModel();
+    assert(geomModel != nullptr);
+    geomModel->addMaskMaterial(material);
   }
 };
 

@@ -3,8 +3,8 @@
 #include "psIonBeamEtching.hpp"
 #include "psPipelineParameters.hpp"
 
+#include "../materials/psMaterialMap.hpp"
 #include "../process/psProcessModel.hpp"
-#include "../psMaterials.hpp"
 #include "../psUtil.hpp"
 
 #include <random>
@@ -181,9 +181,8 @@ template <typename NumericType, int D>
 class FaradayCageEtching final : public ProcessModelGPU<NumericType, D> {
 public:
   // Angles in degrees
-  FaradayCageEtching(const FaradayCageParameters<NumericType> &params,
-                     const std::vector<Material> &maskMaterials)
-      : params_(params), maskMaterials_(maskMaterials) {
+  FaradayCageEtching(const FaradayCageParameters<NumericType> &params)
+      : params_(params) {
 
     auto [direction1, direction2] =
         ::viennaps::impl::getFaradayCageSourceDirections<NumericType, D>(
@@ -258,15 +257,18 @@ public:
 
     // surface model
     // adjust rate here since we trace two particles per point
-    auto surfaceModelParams = params_.ibeParams;
-    surfaceModelParams.planeWaferRate *= 0.5;
-    for (auto &pair : surfaceModelParams.materialPlaneWaferRate) {
-      pair.second *= 0.5;
+    surfaceModelParams_ = params_.ibeParams;
+    surfaceModelParams_.planeWaferRate *= 0.5;
+    surfaceModelParams_.materialPlaneWaferRate.setDefault(
+        surfaceModelParams_.planeWaferRate);
+    for (auto entry : params_.ibeParams.materialPlaneWaferRate) {
+      surfaceModelParams_.materialPlaneWaferRate.set(entry.material,
+                                                     entry.value * 0.5);
     }
-    surfaceModelParams.redepositionRate *= 0.5;
+    surfaceModelParams_.redepositionRate *= 0.5;
     auto surfModel =
         SmartPointer<::viennaps::impl::IBESurfaceModel<NumericType>>::New(
-            surfaceModelParams, maskMaterials_);
+            surfaceModelParams_);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
@@ -282,7 +284,7 @@ public:
 
 private:
   FaradayCageParameters<NumericType> params_;
-  std::vector<Material> maskMaterials_;
+  IBEParameters<NumericType> surfaceModelParams_;
 };
 } // namespace gpu
 #endif
@@ -292,7 +294,15 @@ class FaradayCageEtching : public ProcessModelCPU<NumericType, D> {
 public:
   FaradayCageEtching(const FaradayCageParameters<NumericType> &params,
                      const std::vector<Material> &maskMaterials)
-      : maskMaterials_(maskMaterials), params_(params) {
+      : params_(params) {
+
+    // material-specific plane wafer rates and mask
+    params_.ibeParams.materialPlaneWaferRate.setDefault(
+        params_.ibeParams.planeWaferRate);
+    for (const auto &mask : maskMaterials) {
+      params_.ibeParams.materialPlaneWaferRate.set(mask, 0.);
+    }
+
     // particles
     auto particle =
         std::make_unique<impl::IBEIonWithRedeposition<NumericType, D>>(
@@ -300,7 +310,7 @@ public:
 
     // surface model
     auto surfModel = SmartPointer<impl::IBESurfaceModel<NumericType>>::New(
-        params_.ibeParams, maskMaterials_);
+        params_.ibeParams);
 
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
@@ -351,8 +361,8 @@ public:
 
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() final {
-    auto model = SmartPointer<gpu::FaradayCageEtching<NumericType, D>>::New(
-        params_, maskMaterials_);
+    auto model =
+        SmartPointer<gpu::FaradayCageEtching<NumericType, D>>::New(params_);
     model->setProcessName(this->getProcessName().value());
     return model;
   }
@@ -360,7 +370,6 @@ public:
 
 private:
   bool firstInit = false;
-  std::vector<Material> maskMaterials_;
   FaradayCageParameters<NumericType> params_;
 };
 
