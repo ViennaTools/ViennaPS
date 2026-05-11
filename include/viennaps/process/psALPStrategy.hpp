@@ -16,6 +16,7 @@ class ALPStrategy final : public ProcessStrategy<NumericType, D> {
   AdvectionHandler<NumericType, D> advectionHandler_;
   CoverageManager<NumericType, D> coverageManager_;
   std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine_;
+  SurfaceDiffusionSolver<NumericType> surfaceDiffusionSolver_;
 
   viennals::ToDiskMesh<NumericType, D> meshGenerator_;
   SmartPointer<TranslatorType> translator_ = nullptr;
@@ -122,6 +123,13 @@ private:
     PROCESS_CHECK(fluxEngine_->checkInput(context));
     PROCESS_CHECK(fluxEngine_->initialize(context));
 
+    // Initialize surface diffusion solver
+    if (auto diffusionCoefficients =
+            context.model->getSurfaceModel()->getDiffusionCoefficients();
+        !diffusionCoefficients.empty()) {
+      surfaceDiffusionSolver_.setActive(true);
+    }
+
     if (Logger::hasDebug()) {
       // debug output
       std::stringstream ss;
@@ -161,6 +169,11 @@ private:
         return ProcessResult::INVALID_INPUT;
       }
 
+      if (surfaceDiffusionSolver_.isActive()) {
+        // setup surface diffusion stencil based on current surface geometry
+        updateSurfaceDiffusion(context);
+      }
+
       double time = 0.;
       unsigned pulseIteration = 0;
       const double coverageTimeStep =
@@ -181,23 +194,17 @@ private:
         PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
 
         // Calculate surface diffusion of fluxes
-        if (auto diffusionCoefficients =
-                context.model->getSurfaceModel()->getDiffusionCoefficients();
-            !diffusionCoefficients.empty()) {
-          PROCESS_CHECK(applySurfaceDiffusion(dt, diffusionCoefficients,
-                                              context, fluxes));
+        if (surfaceDiffusionSolver_.isActive()) {
+          PROCESS_CHECK(calculateSurfaceDiffusion(dt, context, fluxes));
         }
 
         // Update coverages
         updateCoverages(context, fluxes);
 
         // Calculate surface diffusion of coverages
-        if (auto diffusionCoefficients =
-                context.model->getSurfaceModel()->getDiffusionCoefficients();
-            !diffusionCoefficients.empty()) {
-          PROCESS_CHECK(applySurfaceDiffusion(
-              dt, diffusionCoefficients, context,
-              context.model->getSurfaceModel()->getCoverages()));
+        if (surfaceDiffusionSolver_.isActive()) {
+          PROCESS_CHECK(calculateSurfaceDiffusion(
+              dt, context, context.model->getSurfaceModel()->getCoverages()));
         }
 
         outputIntermediateResults(context, fluxes, pulseIteration);
@@ -320,6 +327,71 @@ private:
       kdTree_->setPoints(context.diskMesh->getNodes());
       kdTree_->build();
     }
+  }
+
+  ProcessResult calculateSurfaceDiffusion(
+      NumericType timeStep, const ProcessContext<NumericType, D> &context,
+      SmartPointer<viennals::PointData<NumericType>> targets) {
+    if (timeStep <= 0.)
+      return ProcessResult::SUCCESS;
+    auto diffusionCoefficients =
+        context.model->getSurfaceModel()->getDiffusionCoefficients();
+    assert(!diffusionCoefficients.empty() &&
+           "Surface diffusion solver called without diffusion coefficients.");
+
+    bool hasValidTarget = false;
+    for (const auto &[name, coefficient] : diffusionCoefficients) {
+      if (auto target = targets->getScalarData(name, true); target != nullptr) {
+        hasValidTarget = true;
+        break;
+      }
+    }
+    if (!hasValidTarget)
+      return ProcessResult::SUCCESS;
+
+    assert(surfaceDiffusionSolver_.isActive() &&
+           "Surface diffusion solver must be active to calculate surface "
+           "diffusion.");
+    for (const auto &[name, coefficient] : diffusionCoefficients) {
+      if (coefficient <= 0.)
+        continue;
+
+      if (auto target = targets->getScalarData(name, true); target != nullptr) {
+        const double dt =
+            std::min(context.surfaceDiffusionParams.stabilityFactor *
+                         std::pow(context.domain->getGridDelta(), 2.0) /
+                         (4.0 * coefficient),
+                     static_cast<double>(timeStep));
+        VIENNACORE_LOG_DEBUG("Applying surface diffusion for " + name +
+                             " with coefficient " +
+                             std::to_string(coefficient) + " and time step " +
+                             std::to_string(dt));
+
+        auto current = *target;
+        double diffusionTime = 0.0;
+        while (diffusionTime < timeStep) {
+#ifdef VIENNATOOLS_PYTHON_BUILD
+          // Check for user interruption
+          if (PyErr_CheckSignals() != 0)
+            return ProcessResult::USER_INTERRUPTED;
+#endif
+          current =
+              surfaceDiffusionSolver_.stepExplicit(current, dt, coefficient);
+          diffusionTime += dt;
+        }
+        targets->insertReplaceScalarData(std::move(current), name);
+      }
+    }
+    return ProcessResult::SUCCESS;
+  }
+
+  void updateSurfaceDiffusion(const ProcessContext<NumericType, D> &context) {
+    PointCloud<NumericType> cloud;
+    cloud.positions = context.diskMesh->getNodes();
+    cloud.normals = *context.diskMesh->getCellData().getVectorData("Normals");
+
+    surfaceDiffusionSolver_.setStencil(SurfaceDiffusionStencil<NumericType>(
+        std::move(cloud), context.surfaceDiffusionParams));
   }
 
   static void

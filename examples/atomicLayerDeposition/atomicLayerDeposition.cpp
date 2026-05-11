@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
       params.get("stickingProbability"), params.get("numCycles"),
       params.get("growthPerCycle"), params.get("totalCycles"),
       params.get("coverageTimeStep"), params.get("evFlux"),
-      params.get("inFlux"), params.get("s0"), gasMFP);
+      params.get("inFlux"), params.get("s0"), 100.0, gasMFP);
 
   ps::AtomicLayerProcessParameters alpParams;
   alpParams.numCycles = params.get<unsigned>("numCycles");

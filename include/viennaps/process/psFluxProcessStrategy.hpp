@@ -293,16 +293,7 @@ private:
 
     // Update coverages if needed
     if (context.flags.useCoverages) {
-      updateCoverages(context, fluxes);
-
-      // Calculate surface diffusion of coverages
-      if (auto diffusionCoefficients =
-              context.model->getSurfaceModel()->getDiffusionCoefficients();
-          !diffusionCoefficients.empty()) {
-        PROCESS_CHECK(applySurfaceDiffusion(
-            context.timeStep, diffusionCoefficients, context,
-            context.model->getSurfaceModel()->getCoverages()));
-      }
+      PROCESS_CHECK(updateCoverages(context, fluxes));
     }
 
     // Calculate velocities in model
@@ -382,8 +373,9 @@ private:
                                                                  materialIds);
   }
 
-  void updateCoverages(ProcessContext<NumericType, D> &context,
-                       SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+  ProcessResult
+  updateCoverages(ProcessContext<NumericType, D> &context,
+                  SmartPointer<viennals::PointData<NumericType>> &fluxes) {
     auto surfaceModel = context.model->getSurfaceModel();
     assert(surfaceModel != nullptr);
     assert(surfaceModel->getCoverages() != nullptr);
@@ -396,6 +388,16 @@ private:
         *context.diskMesh->getCellData().getScalarData(materialIdsLabel);
 
     surfaceModel->updateCoverages(fluxes, materialIds);
+
+    // Calculate surface diffusion of coverages
+    if (auto diffusionCoefficients =
+            context.model->getSurfaceModel()->getDiffusionCoefficients();
+        !diffusionCoefficients.empty()) {
+      PROCESS_CHECK(applySurfaceDiffusion(
+          context.timeStep, diffusionCoefficients, context,
+          context.model->getSurfaceModel()->getCoverages()));
+    }
+    return ProcessResult::SUCCESS;
   }
 
   void updateState(ProcessContext<NumericType, D> &context) {
@@ -407,7 +409,8 @@ private:
     }
   }
 
-  void coverageInitIterations(ProcessContext<NumericType, D> &context) {
+  ProcessResult
+  coverageInitIterations(ProcessContext<NumericType, D> &context) {
 
     const auto name = context.getProcessName();
     auto &maxIterations = context.coverageParams.maxIterations;
@@ -423,20 +426,20 @@ private:
     timer.start();
     VIENNACORE_LOG_INFO("Initializing coverages ...");
 
-    fluxEngine_->updateSurface(context);
+    PROCESS_CHECK(fluxEngine_->updateSurface(context));
     for (unsigned iteration = 0; iteration < maxIterations; ++iteration) {
 #ifdef VIENNATOOLS_PYTHON_BUILD
       // Check for user interruption
       if (PyErr_CheckSignals() != 0)
-        throw pybind11::error_already_set();
+        return ProcessResult::USER_INTERRUPTED;
 #endif
-      // save current coverages to compare with the new ones
+      // save current coverages to compare with the new ones for convergence
       coverageManager_.saveCoverages(context);
 
       auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-      fluxEngine_->calculateFluxes(context, fluxes);
+      PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
 
-      updateCoverages(context, fluxes);
+      PROCESS_CHECK(updateCoverages(context, fluxes));
 
       if (Logger::hasIntermediate()) {
         auto coverages = context.model->getSurfaceModel()->getCoverages();
@@ -460,6 +463,66 @@ private:
     context.coverageParams.initialized = true;
     timer.finish();
     VIENNACORE_LOG_TIMING("Coverage initialization", timer);
+
+    return ProcessResult::SUCCESS;
+  }
+
+  ProcessResult applySurfaceDiffusion(
+      double timeStep,
+      const std::unordered_map<std::string, NumericType> &diffusionCoefficients,
+      ProcessContext<NumericType, D> const &context,
+      SmartPointer<viennals::PointData<NumericType>> targets) {
+    if (timeStep <= 0.)
+      return ProcessResult::SUCCESS;
+    bool hasValidTarget = false;
+    for (const auto &[name, coefficient] : diffusionCoefficients) {
+      if (auto target = targets->getScalarData(name, true); target != nullptr) {
+        hasValidTarget = true;
+        break;
+      }
+    }
+    if (!hasValidTarget)
+      return ProcessResult::SUCCESS;
+
+    PointCloud<NumericType> cloud;
+    cloud.positions = context.diskMesh->getNodes();
+    cloud.normals = *context.diskMesh->getCellData().getVectorData("Normals");
+
+    using Solver = SurfaceDiffusionSolver<NumericType>;
+    using Stencil = SurfaceDiffusionStencil<NumericType>;
+
+    Solver solver(Stencil(std::move(cloud), context.surfaceDiffusionParams));
+
+    for (const auto &[name, coefficient] : diffusionCoefficients) {
+      if (coefficient <= 0.)
+        continue;
+
+      if (auto target = targets->getScalarData(name, true); target != nullptr) {
+        const double dt =
+            std::min(context.surfaceDiffusionParams.stabilityFactor *
+                         std::pow(context.domain->getGridDelta(), 2.0) /
+                         (4.0 * coefficient),
+                     timeStep);
+        VIENNACORE_LOG_DEBUG("Applying surface diffusion for " + name +
+                             " with coefficient " +
+                             std::to_string(coefficient) + " and time step " +
+                             std::to_string(dt));
+
+        auto current = *target;
+        double diffusionTime = 0.0;
+        while (diffusionTime < timeStep) {
+#ifdef VIENNATOOLS_PYTHON_BUILD
+          // Check for user interruption
+          if (PyErr_CheckSignals() != 0)
+            return ProcessResult::USER_INTERRUPTED;
+#endif
+          current = solver.stepExplicit(current, dt, coefficient);
+          diffusionTime += dt;
+        }
+        targets->insertReplaceScalarData(std::move(current), name);
+      }
+    }
+    return ProcessResult::SUCCESS;
   }
 
   static void

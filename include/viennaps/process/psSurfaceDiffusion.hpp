@@ -1,5 +1,9 @@
 #pragma once
 
+#include "psProcessContext.hpp"
+
+#include <lsMesh.hpp>
+
 #include <vcKDTree.hpp>
 #include <vcVectorType.hpp>
 
@@ -8,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
@@ -86,23 +91,14 @@ private:
 
 template <class NumericType> class SurfaceDiffusionStencil {
 public:
-  struct Parameters {
-    int kNeighbors = 32;
-    NumericType radius = 0.;
-    NumericType normalCutoff = 0.25;
-    NumericType sigmaNormal = 0.35;
-    bool normalizeByLocalScale = true;
-    bool symmetrizeWeights = true;
-  };
-
+  using Parameters = SurfaceDiffusionParameters;
   using SparseRow = std::vector<std::pair<std::size_t, NumericType>>;
 
-  explicit SurfaceDiffusionStencil(const PointCloud<NumericType> &cloud)
-      : SurfaceDiffusionStencil(cloud, Parameters{}) {}
+  explicit SurfaceDiffusionStencil(PointCloud<NumericType> cloud)
+      : SurfaceDiffusionStencil(std::move(cloud), Parameters{}) {}
 
-  SurfaceDiffusionStencil(const PointCloud<NumericType> &cloud,
-                          Parameters parameters)
-      : cloud_(cloud), parameters_(parameters), neighborSearch_(cloud) {
+  SurfaceDiffusionStencil(PointCloud<NumericType> cloud, Parameters parameters)
+      : cloud_(std::move(cloud)), parameters_(parameters) {
     cloud_.validate();
     build();
   }
@@ -127,11 +123,12 @@ private:
   };
 
   void build() {
+    NeighborSearch<NumericType> neighborSearch(cloud_);
     std::vector<std::vector<DirectedEdge>> directed(cloud_.size());
     localScales_.assign(cloud_.size(), NumericType(0.));
 
     for (std::size_t i = 0; i < cloud_.size(); ++i) {
-      directed[i] = buildDirectedRow(i);
+      directed[i] = buildDirectedRow(i, neighborSearch);
     }
 
     L_.clear();
@@ -143,13 +140,16 @@ private:
     }
   }
 
-  [[nodiscard]] std::vector<DirectedEdge> buildDirectedRow(std::size_t i) {
+  [[nodiscard]] std::vector<DirectedEdge>
+  buildDirectedRow(std::size_t i,
+                   const NeighborSearch<NumericType> &neighborSearch) {
     const auto neighbors =
         parameters_.radius > NumericType(0.)
-            ? neighborSearch_.getRadius(i, parameters_.radius)
-            : neighborSearch_.getKNN(i, parameters_.kNeighbors + 1);
+            ? neighborSearch.getRadius(i, parameters_.radius)
+            : neighborSearch.getKNN(i, parameters_.kNeighbors + 1);
 
-    const auto ni = Normalize(cloud_.normals[i]);
+    const Vec3D<NumericType> &normalI = cloud_.normals[i];
+    const auto ni = Normalize(normalI);
     std::vector<std::pair<std::size_t, NumericType>> candidates;
     candidates.reserve(neighbors.size());
 
@@ -159,8 +159,8 @@ private:
       if (j == i || distance <= std::numeric_limits<NumericType>::epsilon()) {
         continue;
       }
-      if (std::abs(DotProduct(ni, Normalize(cloud_.normals[j]))) <=
-          parameters_.normalCutoff) {
+      const Vec3D<NumericType> &normalJ = cloud_.normals[j];
+      if (DotProduct(ni, Normalize(normalJ)) <= parameters_.normalCutoff) {
         continue;
       }
       candidates.push_back({j, static_cast<NumericType>(distance)});
@@ -180,7 +180,8 @@ private:
     std::vector<DirectedEdge> row;
     row.reserve(candidates.size());
     for (const auto &[j, distance] : candidates) {
-      const auto nj = Normalize(cloud_.normals[j]);
+      const Vec3D<NumericType> &normalJ = cloud_.normals[j];
+      const auto nj = Normalize(normalJ);
       const auto normalDot = DotProduct(ni, nj);
       const auto normalPenalty =
           (NumericType(1.) - normalDot * normalDot) /
@@ -259,21 +260,38 @@ private:
             static_cast<std::size_t>(key & 0xffffffffULL)};
   }
 
-  const PointCloud<NumericType> &cloud_;
+  PointCloud<NumericType> cloud_;
   Parameters parameters_;
-  NeighborSearch<NumericType> neighborSearch_;
   std::vector<SparseRow> L_;
   std::vector<NumericType> localScales_;
 };
 
 template <class NumericType> class SurfaceDiffusionSolver {
 public:
+  SurfaceDiffusionSolver() : isActive_(false) {}
+
   explicit SurfaceDiffusionSolver(SurfaceDiffusionStencil<NumericType> stencil)
-      : stencil_(std::move(stencil)) {}
+      : stencil_(std::move(stencil)), isActive_(true) {}
+
+  void setStencil(SurfaceDiffusionStencil<NumericType> stencil) {
+    stencil_.emplace(std::move(stencil));
+    isActive_ = true;
+  }
+
+  void setActive(bool active) { isActive_ = active; }
+
+  bool isActive() const { return isActive_; }
 
   [[nodiscard]] std::vector<NumericType>
   applyLaplacian(const std::vector<NumericType> &u) const {
-    const auto &matrix = stencil_.matrix();
+    if (!stencil_) {
+      VIENNACORE_LOG_ERROR(
+          "SurfaceDiffusionSolver::applyLaplacian called before stencil is "
+          "set.");
+      return {};
+    }
+
+    const auto &matrix = stencil_->matrix();
     if (u.size() != matrix.size()) {
       VIENNACORE_LOG_ERROR(
           "SurfaceDiffusionSolver::applyLaplacian vector size mismatch.");
@@ -292,6 +310,12 @@ public:
   [[nodiscard]] std::vector<NumericType>
   stepExplicit(const std::vector<NumericType> &u, NumericType dt,
                NumericType diffusionCoefficient) const {
+    if (!isActive_) {
+      VIENNACORE_LOG_ERROR(
+          "SurfaceDiffusionSolver::stepExplicit called before stencil is set.");
+      return {};
+    }
+
     auto laplacian = applyLaplacian(u);
     std::vector<NumericType> result(u.size(), NumericType(0.));
 #pragma omp parallel for
@@ -302,76 +326,11 @@ public:
   }
 
   [[nodiscard]] const SurfaceDiffusionStencil<NumericType> &stencil() const {
-    return stencil_;
+    return *stencil_;
   }
 
 private:
-  SurfaceDiffusionStencil<NumericType> stencil_;
+  std::optional<SurfaceDiffusionStencil<NumericType>> stencil_;
+  bool isActive_ = false;
 };
-
-template <typename NumericType, int D>
-ProcessResult applySurfaceDiffusion(
-    double timeStep,
-    const std::unordered_map<std::string, NumericType> &diffusionCoefficients,
-    ProcessContext<NumericType, D> const &context,
-    SmartPointer<viennals::PointData<NumericType>> targets) {
-  if (timeStep <= 0.)
-    return ProcessResult::SUCCESS;
-  bool hasValidTarget = false;
-  for (const auto &[name, coefficient] : diffusionCoefficients) {
-    if (auto target = targets->getScalarData(name, true); target != nullptr) {
-      hasValidTarget = true;
-      break;
-    }
-  }
-  if (!hasValidTarget)
-    return ProcessResult::SUCCESS;
-
-  PointCloud<NumericType> cloud;
-  cloud.positions = context.diskMesh->getNodes();
-  cloud.normals = *context.diskMesh->getCellData().getVectorData("Normals");
-
-  using Solver = SurfaceDiffusionSolver<NumericType>;
-  using Stencil = SurfaceDiffusionStencil<NumericType>;
-
-  typename Stencil::Parameters stencilParams;
-  stencilParams.kNeighbors = context.surfaceDiffusionParams.kNeighbors;
-  stencilParams.radius = context.surfaceDiffusionParams.radius;
-  stencilParams.normalCutoff = context.surfaceDiffusionParams.normalCutoff;
-  stencilParams.sigmaNormal = context.surfaceDiffusionParams.sigmaNormal;
-  stencilParams.normalizeByLocalScale =
-      context.surfaceDiffusionParams.normalizeByLocalScale;
-  stencilParams.symmetrizeWeights =
-      context.surfaceDiffusionParams.symmetrizeWeights;
-
-  Solver solver(Stencil(cloud, stencilParams));
-
-  for (const auto &[name, coefficient] : diffusionCoefficients) {
-    if (auto target = targets->getScalarData(name, true); target != nullptr) {
-      const double dt =
-          std::min(context.surfaceDiffusionParams.stabilityFactor *
-                       std::pow(context.domain->getGridDelta(), 2.0) /
-                       (4.0 * coefficient),
-                   timeStep);
-      VIENNACORE_LOG_DEBUG("Applying surface diffusion for " + name +
-                           " with coefficient " + std::to_string(coefficient) +
-                           " and time step " + std::to_string(dt));
-
-      auto current = *target;
-      double diffusionTime = 0.0;
-      while (diffusionTime < timeStep) {
-#ifdef VIENNATOOLS_PYTHON_BUILD
-        // Check for user interruption
-        if (PyErr_CheckSignals() != 0)
-          return ProcessResult::USER_INTERRUPTED;
-#endif
-        current = solver.stepExplicit(current, dt, coefficient);
-        diffusionTime += dt;
-      }
-      targets->insertReplaceScalarData(std::move(current), name);
-    }
-  }
-  return ProcessResult::SUCCESS;
-}
-
 } // namespace viennaps
