@@ -38,7 +38,7 @@ void printBottomTransmissionProbabilityTriangles(
   const float tol = static_cast<float>(gridDelta);
   const float bottomRMax = static_cast<float>(bottomRadius) + tol;
   const double topArea = M_PI * static_cast<double>(topRadius) *
-                         static_cast<double>(topRadius) / 4.;
+                         static_cast<double>(topRadius);
 
   struct TriangleInfo {
     float cx = 0.f;
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
       0.0, // start from a flat substrate; only open the mask
       0.0, // no taper in the substrate etch front
       params.get("maskHeight"), params.get("maskTaperAngle"),
-      ps::HoleShape::QUARTER)
+      ps::HoleShape::FULL)
       .apply();
 
   ps::NeutralTransportParameters<NumericType> modelParams;
@@ -198,7 +198,10 @@ int main(int argc, char *argv[]) {
 
   ps::RayTracingParameters rayTracingParams;
   rayTracingParams.raysPerPoint = params.get<unsigned>("raysPerPoint");
-
+  if (params.m.find("maxReflections") != params.m.end()) {
+    rayTracingParams.maxReflections = params.get<unsigned>("maxReflections");
+  }
+  
   ps::AdvectionParameters advectionParams;
   advectionParams.spatialScheme =
       ps::util::convertSpatialScheme(params.get<std::string>("spatialScheme"));
@@ -229,8 +232,8 @@ int main(int argc, char *argv[]) {
   // process.setFluxEngineType(
   //     ps::util::convertFluxEngineType(params.get<std::string>("fluxEngine")));
 
-  // auto initialFile = params.get<std::string>("initialFile");
-  // geometry->saveSurfaceMesh(initialFile);
+  auto initialFile = params.get<std::string>("initialFile");
+  geometry->saveSurfaceMesh(initialFile);
 
   // process.apply();
 
