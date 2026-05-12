@@ -89,7 +89,7 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateFluxes(
+  ProcessResult calculateSourceFluxes(
       ProcessContext<NumericType, D> &context,
       SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
     assert(model_ != nullptr);
@@ -102,7 +102,11 @@ public:
     if (context.flags.useCoverages) {
       if (auto materialIds =
               context.diskMesh->getCellData().getScalarData("MaterialIds")) {
-        desorptionWeights = surfaceModel->getDesorptionWeights(*materialIds);
+        auto desorptionWeightOpt =
+            surfaceModel->getDesorptionWeights(*materialIds);
+        if (desorptionWeightOpt.has_value()) {
+          desorptionWeights = std::move(desorptionWeightOpt.value());
+        }
       }
       rayTracingData = movePointDataToRayData(surfaceModel->getCoverages());
     }
@@ -129,6 +133,12 @@ public:
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
+  }
+
+  ProcessResult calculateSurfaceFluxes(
+      ProcessContext<NumericType, D> &,
+      SmartPointer<viennals::PointData<NumericType>> &) override {
+    return ProcessResult::NOT_IMPLEMENTED;
   }
 
 private:

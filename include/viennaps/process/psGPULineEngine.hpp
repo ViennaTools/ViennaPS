@@ -156,7 +156,7 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateFluxes(
+  ProcessResult calculateSourceFluxes(
       ProcessContext<NumericType, D> &context,
       SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
     this->timer_.start();
@@ -241,6 +241,14 @@ public:
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
+  }
+
+  ProcessResult calculateSurfaceFluxes(
+      ProcessContext<NumericType, D> &,
+      SmartPointer<viennals::PointData<NumericType>> &) override {
+    VIENNACORE_LOG_WARNING(
+        "Surface flux calculation not implemented for GPULineEngine.");
+    return ProcessResult::NOT_IMPLEMENTED;
   }
 
 private:

@@ -181,7 +181,7 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateFluxes(
+  ProcessResult calculateSourceFluxes(
       ProcessContext<NumericType, D> &context,
       SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
 
@@ -212,8 +212,9 @@ public:
     std::vector<NumericType> desorptionWeights;
     if (auto materialIds =
             context.diskMesh->getCellData().getScalarData("MaterialIds")) {
-      desorptionWeights =
-          model_->getSurfaceModel()->getDesorptionWeights(*materialIds);
+      desorptionWeights = model_->getSurfaceModel()
+                              ->getDesorptionWeights(*materialIds)
+                              .value_or(std::vector<NumericType>{});
     }
 
     // run the ray tracer
@@ -262,6 +263,12 @@ public:
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
+  }
+
+  ProcessResult calculateSurfaceFluxes(
+      ProcessContext<NumericType, D> &,
+      SmartPointer<viennals::PointData<NumericType>> &) override {
+    return ProcessResult::NOT_IMPLEMENTED;
   }
 
 private:

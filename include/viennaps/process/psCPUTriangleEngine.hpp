@@ -157,7 +157,7 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateFluxes(
+  ProcessResult calculateSourceFluxes(
       ProcessContext<NumericType, D> &context,
       SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
     this->timer_.start();
@@ -169,7 +169,8 @@ public:
     if (context.flags.useCoverages) {
       if (auto materialIds =
               context.diskMesh->getCellData().getScalarData("MaterialIds")) {
-        desorptionWeights = surfaceModel->getDesorptionWeights(*materialIds);
+        desorptionWeights = surfaceModel->getDesorptionWeights(*materialIds)
+                                .value_or(std::vector<NumericType>{});
       }
 
       auto &pointKdTree = context.translationField->getKdTree();
@@ -189,7 +190,7 @@ public:
           Logger::hasIntermediate())
           .apply();
       // Move data from PointData to TracingData
-      rayTracingData = MovePointDataToRayData(elementData);
+      rayTracingData = movePointDataToRayData(elementData);
     }
 
     if (context.flags.useProcessParams) {
@@ -220,6 +221,12 @@ public:
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
+  }
+
+  ProcessResult calculateSurfaceFluxes(
+      ProcessContext<NumericType, D> &,
+      SmartPointer<viennals::PointData<NumericType>> &) override {
+    return ProcessResult::NOT_IMPLEMENTED;
   }
 
 private:
@@ -380,7 +387,7 @@ private:
   }
 
   static viennaray::TracingData<NumericType>
-  MovePointDataToRayData(viennals::PointData<NumericType> &pointData) {
+  movePointDataToRayData(viennals::PointData<NumericType> &pointData) {
     viennaray::TracingData<NumericType> rayData;
 
     const auto numData = pointData.getScalarDataSize();

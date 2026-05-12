@@ -253,22 +253,22 @@ public:
     }
   }
 
-  std::vector<NumericType> getDesorptionWeights(
+  std::optional<std::vector<NumericType>> getDesorptionWeights(
       const std::vector<NumericType> &materialIds) const override {
     if (params.desorptionRate <= 0. || params.surfaceSiteDensity <= 0. ||
         params.incomingFlux <= 0. || coverages == nullptr) {
-      return {};
+      return std::nullopt;
     }
 
     const auto coverage = coverages->getScalarData(params.coverageLabel);
     if (coverage == nullptr || coverage->size() != materialIds.size()) {
-      return {};
+      return std::nullopt;
     }
 
     std::vector<NumericType> weights(materialIds.size(), 0.);
     bool hasNonZeroWeight = false;
 
-#pragma omp parallel for
+#pragma omp parallel for reduction(| : hasNonZeroWeight)
     for (size_t i = 0; i < materialIds.size(); ++i) {
       if (!MaterialMap::isMaterial(materialIds[i], params.desorptionMaterial)) {
         continue;
@@ -277,16 +277,10 @@ public:
           std::clamp(coverage->at(i), NumericType(0.), NumericType(1.));
       weights[i] = params.desorptionRate * theta * params.surfaceSiteDensity *
                    constants::N_A / params.incomingFlux;
+      hasNonZeroWeight = hasNonZeroWeight || weights[i] > NumericType(0.);
     }
 
-    for (const auto weight : weights) {
-      if (weight > NumericType(0.)) {
-        hasNonZeroWeight = true;
-        break;
-      }
-    }
-
-    return hasNonZeroWeight ? weights : std::vector<NumericType>{};
+    return hasNonZeroWeight ? std::make_optional(weights) : std::nullopt;
   }
 
 private:

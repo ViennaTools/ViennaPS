@@ -56,6 +56,14 @@ public:
   }
 
 private:
+  ProcessResult
+  calculateFluxes(ProcessContext<NumericType, D> &context,
+                  SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+    PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
+    PROCESS_CHECK(fluxEngine_->calculateSurfaceFluxes(context, fluxes));
+    return ProcessResult::SUCCESS;
+  }
+
   static ProcessResult
   validateContext(const ProcessContext<NumericType, D> &context) {
     if (!context.model->getSurfaceModel()) {
@@ -126,7 +134,7 @@ private:
     // Initialize surface diffusion solver
     if (auto diffusionCoefficients =
             context.model->getSurfaceModel()->getDiffusionCoefficients();
-        !diffusionCoefficients.empty()) {
+        diffusionCoefficients.has_value() && !diffusionCoefficients->empty()) {
       surfaceDiffusionSolver_.setActive(true);
     }
 
@@ -197,7 +205,7 @@ private:
 
         // Calculate fluxes
         auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-        PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
+        PROCESS_CHECK(calculateFluxes(context, fluxes));
 
         // Calculate surface diffusion of fluxes
         if (surfaceDiffusionSolver_.isActive()) {
@@ -234,7 +242,7 @@ private:
 
       // Calculate velocities in model
       auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-      PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
+      PROCESS_CHECK(calculateFluxes(context, fluxes));
       auto velocities = calculateVelocities(context, fluxes);
       context.model->getVelocityField()->prepare(context.domain, velocities,
                                                  0.);
@@ -340,10 +348,12 @@ private:
       SmartPointer<viennals::PointData<NumericType>> targets) {
     if (timeStep <= 0.)
       return ProcessResult::SUCCESS;
-    auto diffusionCoefficients =
+    auto diffusionCoefficientsOpt =
         context.model->getSurfaceModel()->getDiffusionCoefficients();
-    assert(!diffusionCoefficients.empty() &&
+    assert(diffusionCoefficientsOpt.has_value() &&
+           !diffusionCoefficientsOpt.value().empty() &&
            "Surface diffusion solver called without diffusion coefficients.");
+    const auto &diffusionCoefficients = diffusionCoefficientsOpt.value();
 
     bool hasValidTarget = false;
     for (const auto &[name, coefficient] : diffusionCoefficients) {

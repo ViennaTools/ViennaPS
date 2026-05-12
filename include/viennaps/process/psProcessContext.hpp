@@ -51,6 +51,7 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
     bool isAnalytic = false;
     bool isGeometric = false;
     bool domainHasPeriodicBoundaries = false;
+    bool hasSurfaceDesorption = false;
   } flags;
 
   void updateFlags() {
@@ -73,6 +74,12 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
         flags.domainHasPeriodicBoundaries = true;
         break;
       }
+    }
+
+    if (auto surfaceModel = model->getSurfaceModel()) {
+      auto materialIds = std::vector<NumericType>{};
+      auto desorptionWeights = surfaceModel->getDesorptionWeights(materialIds);
+      flags.hasSurfaceDesorption = desorptionWeights.has_value();
     }
   }
 

@@ -64,9 +64,14 @@ public:
     updateState(context);
     PROCESS_CHECK(fluxEngine_->updateSurface(context));
 
-    // Calculate fluxes only
+    // Calculate source fluxes
     auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-    PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
+    PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
+
+    // Calculate desorption fluxes
+    if (context.flags.hasSurfaceDesorption) {
+      PROCESS_CHECK(fluxEngine_->calculateSurfaceFluxes(context, fluxes));
+    }
 
     mergeScalarData(context.diskMesh->getCellData(), fluxes);
 
@@ -189,7 +194,7 @@ private:
 
             // Calculate fluxes on the intermediate surface
             auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-            if (this->fluxEngine_->calculateFluxes(context, fluxes) !=
+            if (fluxEngine_->calculateSourceFluxes(context, fluxes) !=
                 ProcessResult::SUCCESS)
               return false;
 
@@ -279,16 +284,21 @@ private:
     updateState(context);
     PROCESS_CHECK(fluxEngine_->updateSurface(context));
 
-    // Calculate fluxes
+    // Calculate fluxes from source plane to surface
     auto fluxes = viennals::PointData<NumericType>::New();
-    PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
+    PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
+
+    // Calculate desorption fluxes
+    if (context.flags.hasSurfaceDesorption) {
+      PROCESS_CHECK(fluxEngine_->calculateSurfaceFluxes(context, fluxes));
+    }
 
     // Calculate surface diffusion of fluxes
     if (auto diffusionCoefficients =
             context.model->getSurfaceModel()->getDiffusionCoefficients();
-        !diffusionCoefficients.empty()) {
-      PROCESS_CHECK(applySurfaceDiffusion(
-          context.timeStep, diffusionCoefficients, context, fluxes));
+        diffusionCoefficients.has_value()) {
+      PROCESS_CHECK(calculateSurfaceDiffusion(
+          context, diffusionCoefficients.value(), fluxes));
     }
 
     // Update coverages if needed
@@ -392,10 +402,10 @@ private:
     // Calculate surface diffusion of coverages
     if (auto diffusionCoefficients =
             context.model->getSurfaceModel()->getDiffusionCoefficients();
-        !diffusionCoefficients.empty()) {
-      PROCESS_CHECK(applySurfaceDiffusion(
-          context.timeStep, diffusionCoefficients, context,
-          context.model->getSurfaceModel()->getCoverages()));
+        diffusionCoefficients.has_value()) {
+      PROCESS_CHECK(calculateSurfaceDiffusion(context,
+                                              diffusionCoefficients.value(),
+                                              surfaceModel->getCoverages()));
     }
     return ProcessResult::SUCCESS;
   }
@@ -437,7 +447,8 @@ private:
       coverageManager_.saveCoverages(context);
 
       auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-      PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
+      PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
+      // no desorption fluxes are calculated in coverage initialization
 
       PROCESS_CHECK(updateCoverages(context, fluxes));
 
@@ -467,12 +478,11 @@ private:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult applySurfaceDiffusion(
-      double timeStep,
-      const std::unordered_map<std::string, NumericType> &diffusionCoefficients,
+  ProcessResult calculateSurfaceDiffusion(
       ProcessContext<NumericType, D> const &context,
+      const std::unordered_map<std::string, NumericType> &diffusionCoefficients,
       SmartPointer<viennals::PointData<NumericType>> targets) {
-    if (timeStep <= 0.)
+    if (context.timeStep <= 0.)
       return ProcessResult::SUCCESS;
     bool hasValidTarget = false;
     for (const auto &[name, coefficient] : diffusionCoefficients) {
@@ -502,7 +512,7 @@ private:
             std::min(context.surfaceDiffusionParams.stabilityFactor *
                          std::pow(context.domain->getGridDelta(), 2.0) /
                          (4.0 * coefficient),
-                     timeStep);
+                     context.timeStep);
         VIENNACORE_LOG_DEBUG("Applying surface diffusion for " + name +
                              " with coefficient " +
                              std::to_string(coefficient) + " and time step " +
@@ -510,7 +520,7 @@ private:
 
         auto current = *target;
         double diffusionTime = 0.0;
-        while (diffusionTime < timeStep) {
+        while (diffusionTime < context.timeStep) {
 #ifdef VIENNATOOLS_PYTHON_BUILD
           // Check for user interruption
           if (PyErr_CheckSignals() != 0)
