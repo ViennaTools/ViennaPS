@@ -1,0 +1,53 @@
+gridDelta=0.25
+xExtent=100.0
+topSpace=15.0
+substrateDepth=100.0
+
+openingWidth=15.0
+maskHeight=10.0
+oxideThickness=2.0
+
+# Example target: B, 10 keV, Si(100), 7 degree tilt
+species=B
+material=Si
+energyKeV=10.0
+rotationDeg=0.0
+angle=7.0
+doseCm2=1.0e15
+doseControl=WaferDose
+substrateType=crystalline
+screenThickness=2.0
+damageLevel=0.0
+
+# If projectedRange/depthSigma/skewness/... are omitted, the example will try
+# to load defaults from data/implant/implant_moments.csv using the species,
+# material, energyKeV, tilt (angle), rotationDeg, and substrateType fields.
+
+# Representative random-component parameters for B in Si at 10 keV.
+# Units in this example are nm.
+projectedRange=31.0
+depthSigma=11.0
+skewness=1.15
+kurtosis=6.2
+lateralSigma=5.0
+lateralMu=0.0
+
+# Optional crystalline-Si dual-Pearson tail. Set substrateType=amorphous to disable.
+# These are representative heuristic values for B, 10 keV, Si(100), 7 degree tilt.
+headFraction=0.97
+tailProjectedRange=85.0
+tailDepthSigma=28.0
+tailSkewness=0.35
+tailKurtosis=4.0
+tailLateralSigma=6.0
+tailLateralMu=0.0
+
+# Anneal: 3-step ramp schedule (ramp-up, soak, ramp-down)
+# Temperatures in Kelvin. N+1 temperatures for N steps → ramp between each pair.
+# Step 1:  9 s  ramp   600°C → 1050°C  (~50°C/s ramp-up)
+# Step 2:  5 s  soak   1050°C           (isothermal peak)
+# Step 3:  9 s  ramp   1050°C → 600°C  (~50°C/s ramp-down)
+annealMode=implicit
+annealStepDurations=9.0,5.0,9.0
+annealTemperatures=873.15,1323.15,1323.15,873.15
+annealDefectCoupling=1
