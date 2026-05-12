@@ -171,7 +171,13 @@ private:
 
       if (surfaceDiffusionSolver_.isActive()) {
         // setup surface diffusion stencil based on current surface geometry
-        updateSurfaceDiffusion(context);
+        PointCloud<NumericType> cloud;
+        cloud.positions = context.diskMesh->getNodes();
+        cloud.normals =
+            *context.diskMesh->getCellData().getVectorData("Normals");
+
+        surfaceDiffusionSolver_.setStencil(SurfaceDiffusionStencil<NumericType>(
+            std::move(cloud), context.surfaceDiffusionParams));
       }
 
       double time = 0.;
@@ -383,15 +389,6 @@ private:
       }
     }
     return ProcessResult::SUCCESS;
-  }
-
-  void updateSurfaceDiffusion(const ProcessContext<NumericType, D> &context) {
-    PointCloud<NumericType> cloud;
-    cloud.positions = context.diskMesh->getNodes();
-    cloud.normals = *context.diskMesh->getCellData().getVectorData("Normals");
-
-    surfaceDiffusionSolver_.setStencil(SurfaceDiffusionStencil<NumericType>(
-        std::move(cloud), context.surfaceDiffusionParams));
   }
 
   static void

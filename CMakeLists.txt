@@ -1,24 +1,4 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
-
-if(DEFINED VIENNAPS_USE_GPU
-   AND VIENNAPS_USE_GPU
-   AND NOT DEFINED CMAKE_C_COMPILER
-   AND NOT DEFINED CMAKE_CXX_COMPILER
-   AND "$ENV{CC}" STREQUAL ""
-   AND "$ENV{CXX}" STREQUAL "")
-  find_program(VIENNAPS_GCC_12 gcc-12)
-  find_program(VIENNAPS_GXX_12 g++-12)
-  if(VIENNAPS_GCC_12 AND VIENNAPS_GXX_12)
-    set(CMAKE_C_COMPILER
-        "${VIENNAPS_GCC_12}"
-        CACHE FILEPATH "C compiler for CUDA-compatible GPU builds")
-    set(CMAKE_CXX_COMPILER
-        "${VIENNAPS_GXX_12}"
-        CACHE FILEPATH "CXX compiler for CUDA-compatible GPU builds")
-    message(STATUS "[ViennaPS] GPU build: defaulting to gcc-12/g++-12")
-  endif()
-endif()
-
 project(
   ViennaPS
   LANGUAGES CXX C
@@ -122,40 +102,6 @@ target_include_directories(
 # --------------------------------------------------------------------------------------------------------
 # Setup Dependencies
 # --------------------------------------------------------------------------------------------------------
-
-set(VIENNAPS_VIENNARAY_BRANCH
-    "feature/gpu-surface-source"
-    CACHE STRING "ViennaRay branch/tag to use when fetching ViennaRay")
-option(VIENNAPS_USE_LOCAL_VIENNARAY "Use a sibling local ViennaRay checkout when available" OFF)
-set(VIENNAPS_LOCAL_VIENNARAY_DIR
-    "${PROJECT_SOURCE_DIR}/../ViennaRay"
-    CACHE PATH "Local ViennaRay checkout used by CPM when available")
-
-if(VIENNAPS_USE_LOCAL_VIENNARAY
-   AND NOT DEFINED CPM_ViennaRay_SOURCE
-   AND EXISTS "${VIENNAPS_LOCAL_VIENNARAY_DIR}/CMakeLists.txt")
-  set(CPM_ViennaRay_SOURCE
-      "${VIENNAPS_LOCAL_VIENNARAY_DIR}"
-      CACHE PATH "Local ViennaRay source directory" FORCE)
-  message(STATUS "[ViennaPS] Using local ViennaRay: ${CPM_ViennaRay_SOURCE}")
-endif()
-
-if(DEFINED CPM_ViennaRay_SOURCE
-   AND EXISTS "${CPM_ViennaRay_SOURCE}/.git"
-   AND NOT VIENNAPS_VIENNARAY_BRANCH STREQUAL "")
-  execute_process(
-    COMMAND git -C "${CPM_ViennaRay_SOURCE}" branch --show-current
-    OUTPUT_VARIABLE VIENNAPS_LOCAL_VIENNARAY_BRANCH
-    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-  if(NOT VIENNAPS_LOCAL_VIENNARAY_BRANCH STREQUAL "" AND NOT VIENNAPS_LOCAL_VIENNARAY_BRANCH
-                                                         STREQUAL VIENNAPS_VIENNARAY_BRANCH)
-    message(
-      WARNING
-        "[ViennaPS] Local ViennaRay is on branch '${VIENNAPS_LOCAL_VIENNARAY_BRANCH}', expected '${VIENNAPS_VIENNARAY_BRANCH}'."
-    )
-  endif()
-endif()
-
 include("cmake/cpm.cmake")
 
 CPMAddPackage(
@@ -172,9 +118,8 @@ CPMAddPackage(
 
 CPMAddPackage(
   NAME ViennaRay
-  VERSION 4.1.2
+  VERSION 4.2.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
-  GIT_TAG ${VIENNAPS_VIENNARAY_BRANCH}
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 

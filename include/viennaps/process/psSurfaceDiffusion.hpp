@@ -2,8 +2,6 @@
 
 #include "psProcessContext.hpp"
 
-#include <lsMesh.hpp>
-
 #include <vcKDTree.hpp>
 #include <vcVectorType.hpp>
 
