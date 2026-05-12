@@ -3,14 +3,15 @@
 #include <geometries/psMakeHole.hpp>
 #include <geometries/psMakeTrench.hpp>
 #include <models/psIonBeamEtching.hpp>
+#include <psCreateSurfaceMesh.hpp>
 #include <psDomain.hpp>
 #include <rayParticle.hpp>
 
-#define MAKE_GEO Hole
+#define MAKE_GEO Trench
 #define DEFAULT_GRID_DELTA 0.1
 #define DEFAULT_STICKING 0.1
 #define DIM 3
-#define FIXED_RAYS false
+#define FIXED_RAYS true
 
 using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 using namespace viennaps;
@@ -27,14 +28,14 @@ consteval std::array<NumericType, N> linspace(NumericType start,
 }
 
 constexpr int particleType = 0;
-constexpr bool runDisk = false;
-constexpr bool runLine = false;
+constexpr bool runDisk = true;
 constexpr bool runTriangle = true;
+constexpr bool runLine = false;
 
 constexpr auto gridDeltaValues = linspace<float, 8>(0.08f, 0.4f);
 constexpr int numRuns = 10;
 constexpr int raysPerPoint = 1000;
-constexpr int numRays = int(1.4e8);
+constexpr int numRays = int(1e8);
 
 template <class NumericType>
 auto Trench(NumericType gridDelta = DEFAULT_GRID_DELTA) {
@@ -51,10 +52,10 @@ auto Trench(NumericType gridDelta = DEFAULT_GRID_DELTA) {
 
 template <class NumericType>
 auto Hole(NumericType gridDelta = DEFAULT_GRID_DELTA) {
-  NumericType xExtent = 10.;
-  NumericType yExtent = 10.;
-  NumericType radius = 3.0;
-  NumericType depth = 30.;
+  NumericType xExtent = 20.;
+  NumericType yExtent = 20.;
+  NumericType radius = 5.0;
+  NumericType depth = 50.;
 
   auto domain = Domain<NumericType, DIM>::New(
       gridDelta, xExtent, yExtent, BoundaryType::REFLECTIVE_BOUNDARY);
