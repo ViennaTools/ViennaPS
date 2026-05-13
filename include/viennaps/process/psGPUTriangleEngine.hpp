@@ -223,6 +223,7 @@ public:
     ++this->fluxCalculationsCount_;
 
     // Prepare post-processing
+    assert(elementKdTree_ && "Element KDTree not initialized.");
     PostProcessingType postProcessing(
         model_->getParticleDataLabels(), fluxes, elementKdTree_,
         context.diskMesh, surfaceMesh_,
@@ -232,12 +233,6 @@ public:
 
     rayTracer_.normalizeResults(); // device sync point here
     auto combinedResults = rayTracer_.getResults();
-    if (desorptionWeights.size() == context.diskMesh->getNodes().size()) {
-      addDesorptionFlux(context, desorptionWeights, combinedResults);
-    } else if (desorptionWeights.size() > 0) {
-      VIENNACORE_LOG_WARNING("Desorption weights size does not match number "
-                             "of mesh nodes. Skipping desorption flux.");
-    }
 
     // always persist per-triangle flux so callers can access it
     saveResultsToPointData(surfaceMesh_->getCellData(), combinedResults);
@@ -246,7 +241,7 @@ public:
     postProcessing.setElementDataArrays(std::move(combinedResults));
     postProcessing.convert(); // run post-processing
 
-    if (Logger::hasIntermediate()) {
+    if (Logger::hasDebug()) {
       if (context.flags.useCoverages) {
         auto coverages = model_->getSurfaceModel()->getCoverages();
         downloadCoverages(d_coverages, surfaceMesh_->getCellData(), coverages,
@@ -266,9 +261,104 @@ public:
   }
 
   ProcessResult calculateSurfaceFluxes(
-      ProcessContext<NumericType, D> &,
-      SmartPointer<viennals::PointData<NumericType>> &) override {
-    return ProcessResult::NOT_IMPLEMENTED;
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+
+    this->timer_.start();
+
+    auto materialIds =
+        context.diskMesh->getCellData().getScalarData("MaterialIds");
+    auto desorptionWeights = model_->getSurfaceModel()
+                                 ->getDesorptionWeights(*materialIds)
+                                 .value_or(std::vector<NumericType>{});
+
+    if (desorptionWeights.size() != context.diskMesh->getNodes().size()) {
+      VIENNACORE_LOG_WARNING(
+          "Desorption weights size does not match number of mesh nodes. "
+          "Skipping surface flux calculation.");
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    auto &pointKdTree = context.translationField->getKdTree();
+    if (!pointKdTree) {
+      pointKdTree = KDTreeType::New();
+      context.translationField->setKdTree(pointKdTree);
+    }
+    if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
+      pointKdTree->setPoints(context.diskMesh->nodes);
+      pointKdTree->build();
+    }
+
+    // Map desorption weights from disk mesh nodes to surface mesh elements
+    assert(surfaceMesh_ && "Surface mesh not initialized.");
+    std::vector<float> elementWeights;
+    PointToElementDataSingle<NumericType, NumericType, float, float>(
+        desorptionWeights, elementWeights, *pointKdTree, surfaceMesh_)
+        .apply();
+
+    const auto &triangles = surfaceMesh_->triangles;
+    const auto &nodes = surfaceMesh_->nodes;
+    const auto meshNormals =
+        surfaceMesh_->getCellData().getVectorData("Normals");
+    assert(meshNormals);
+
+    auto sourceData = makeTriangleDesorptionSourceData<float>(
+        nodes, triangles, *meshNormals, elementWeights,
+        static_cast<float>(context.domain->getGridDelta()));
+    if (!sourceData.hasSource) {
+      // No active desorption sources, skip ray tracing
+      return ProcessResult::SUCCESS;
+    }
+
+    rayTracer_.setSurfaceSource(sourceData.positions, sourceData.normals,
+                                sourceData.weights, sourceData.sourceArea,
+                                sourceData.sourceOffset);
+    rayTracer_.apply();
+    ++this->fluxCalculationsCount_;
+
+    // Prepare post-processing
+    auto desorptionFlux = viennals::PointData<NumericType>::New();
+    PostProcessingType postProcessing(
+        model_->getParticleDataLabels(), desorptionFlux, elementKdTree_,
+        context.diskMesh, surfaceMesh_,
+        context.domain->getGridDelta() *
+            (context.rayTracingParams.smoothingNeighbors + 1));
+    postProcessing.prepare();
+
+    rayTracer_.normalizeResults();
+    auto desorptionResults = rayTracer_.getResults();
+    saveResultsToPointData(surfaceMesh_->getCellData(), desorptionResults);
+
+    postProcessing.setElementDataArrays(std::move(desorptionResults));
+    postProcessing.convert(); // run post-processing
+
+    if (Logger::hasDebug()) {
+      viennals::VTKWriter<float>(
+          surfaceMesh_, context.intermediateOutputPath +
+                            context.getProcessName() + "_desorptionFlux_" +
+                            std::to_string(context.currentIteration) + ".vtp")
+          .apply();
+    }
+
+    // combine desorption flux with existing fluxes
+    for (std::size_t dataIdx = 0; dataIdx < fluxes->getScalarDataSize();
+         ++dataIdx) {
+      auto fluxData = fluxes->getScalarData(dataIdx);
+      auto desorptionData = desorptionFlux->getScalarData(dataIdx);
+      assert(fluxData);
+      assert(desorptionData);
+      assert(fluxData->size() == desorptionData->size());
+
+      for (std::size_t i = 0; i < fluxData->size(); ++i) {
+        (*fluxData)[i] += (*desorptionData)[i];
+      }
+    }
+
+    // reset ray tracer surface source
+    rayTracer_.clearSurfaceSource();
+    this->timer_.finish();
+
+    return ProcessResult::SUCCESS;
   }
 
 private:
@@ -313,55 +403,6 @@ private:
       }
 
       pointData.insertReplaceScalarData(std::move(values), name);
-    }
-  }
-
-  void addDesorptionFlux(
-      ProcessContext<NumericType, D> &context,
-      const std::vector<NumericType> &diskDesorptionWeights,
-      std::vector<std::vector<viennaray::gpu::ResultType>> &combinedResults) {
-    auto &pointKdTree = context.translationField->getKdTree();
-    if (!pointKdTree) {
-      pointKdTree = KDTreeType::New();
-      context.translationField->setKdTree(pointKdTree);
-    }
-    if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
-      pointKdTree->setPoints(context.diskMesh->nodes);
-      pointKdTree->build();
-    }
-
-    std::vector<float> elementWeights;
-    PointToElementDataSingle<NumericType, NumericType, float, float>(
-        diskDesorptionWeights, elementWeights, *pointKdTree, surfaceMesh_)
-        .apply();
-
-    const auto &triangles = surfaceMesh_->triangles;
-    const auto &nodes = surfaceMesh_->nodes;
-    const auto meshNormals =
-        surfaceMesh_->getCellData().getVectorData("Normals");
-    const std::vector<Vec3Df> emptyNormals;
-    const auto &normals = meshNormals != nullptr ? *meshNormals : emptyNormals;
-
-    auto sourceData = makeTriangleDesorptionSourceData<float>(
-        nodes, triangles, normals, elementWeights,
-        static_cast<float>(context.domain->getGridDelta()));
-    if (!sourceData.hasSource) {
-      // No active desorption sources, skip ray tracing
-      return;
-    }
-
-    rayTracer_.setSurfaceSource(sourceData.positions, sourceData.normals,
-                                sourceData.weights, sourceData.sourceArea,
-                                sourceData.sourceOffset);
-    rayTracer_.apply();
-    rayTracer_.normalizeResults();
-    auto desorptionResults = rayTracer_.getResults();
-    rayTracer_.clearSurfaceSource();
-
-    for (std::size_t dataIdx = 0; dataIdx < combinedResults.size(); ++dataIdx) {
-      for (std::size_t i = 0; i < combinedResults[dataIdx].size(); ++i) {
-        combinedResults[dataIdx][i] += desorptionResults[dataIdx][i];
-      }
     }
   }
 

@@ -81,9 +81,12 @@ public:
     }
   }
 
-  std::unordered_map<std::string, NumericType>
+  std::optional<std::unordered_map<std::string, NumericType>>
   getDiffusionCoefficients() const override {
-    return {{"Coverage", surfaceDiffusionCoefficient_}};
+    if (surfaceDiffusionCoefficient_ <= 0)
+      return std::nullopt;
+    return std::make_optional<std::unordered_map<std::string, NumericType>>(
+        {{"Coverage", surfaceDiffusionCoefficient_}});
   }
 };
 

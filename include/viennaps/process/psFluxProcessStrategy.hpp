@@ -73,6 +73,7 @@ public:
       PROCESS_CHECK(fluxEngine_->calculateSurfaceFluxes(context, fluxes));
     }
 
+    // copy fluxes to cell data
     mergeScalarData(context.diskMesh->getCellData(), fluxes);
 
     return ProcessResult::SUCCESS;
@@ -301,7 +302,7 @@ private:
           context, diffusionCoefficients.value(), fluxes));
     }
 
-    // Update coverages if needed
+    // Update coverages
     if (context.flags.useCoverages) {
       PROCESS_CHECK(updateCoverages(context, fluxes));
     }
