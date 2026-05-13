@@ -213,7 +213,7 @@ private:
               dt, context, context.model->getSurfaceModel()->getCoverages()));
         }
 
-        outputIntermediateResults(context, fluxes, pulseIteration);
+        outputIntermediatePulseResults(context, fluxes, pulseIteration);
 
         time += dt;
         pulseIteration++;
@@ -226,20 +226,28 @@ private:
         }
       }
 
-      // Calculate velocities in model
-      auto fluxes = viennals::PointData<NumericType>::New();
-      PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
-
       if (purgePulseTime > 0.) {
         if (!context.flags.hasSurfaceDesorption) {
           VIENNACORE_LOG_WARNING(
               "Purge pulse time specified but no surface desorption found. "
               "Skipping purge pulse.");
         } else {
-          fluxEngine_->calculateSurfaceFluxes(context, fluxes);
+          auto fluxes = viennals::PointData<NumericType>::New();
+          auto result = fluxEngine_->calculateSurfaceFluxes(context, fluxes);
+          if (result == ProcessResult::SUCCESS) {
+            const auto &[nodes, normals, materialIds] =
+                context.getDiskMeshData();
+            context.model->getSurfaceModel()->updateCoveragesFromDesorption(
+                fluxes, materialIds);
+            outputIntermediateResults(context, fluxes,
+                                      "_purge_" + std::to_string(cycle));
+          }
         }
       }
 
+      // Calculate velocities in model
+      auto fluxes = viennals::PointData<NumericType>::New();
+      PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
       auto velocities = calculateVelocities(context, fluxes);
       context.model->getVelocityField()->prepare(context.domain, velocities,
                                                  0.);
@@ -249,8 +257,8 @@ private:
 
       // print intermediate output
       if (Logger::hasIntermediate()) {
-        context.diskMesh->getCellData().insertReplacecalarData(*velocities,
-                                                               "velocities");
+        context.diskMesh->getCellData().insertReplaceScalarData(*velocities,
+                                                                "velocities");
         viennals::VTKWriter<NumericType>(
             context.diskMesh, context.getProcessName() + "_" +
                                   std::to_string(context.currentIteration) +
@@ -282,10 +290,10 @@ private:
     return ProcessResult::SUCCESS;
   }
 
-  void outputIntermediateResults(
+  static void outputIntermediateResults(
       ProcessContext<NumericType, D> &context,
       SmartPointer<viennals::PointData<NumericType>> const &fluxes,
-      const unsigned pulseIteration) {
+      std::string const &suffix = "") {
     if (Logger::hasIntermediate()) {
       auto const name = context.getProcessName();
       auto surfaceModel = context.model->getSurfaceModel();
@@ -295,10 +303,20 @@ private:
       if (auto surfaceData = surfaceModel->getSurfaceData())
         mergeScalarData(context.diskMesh->getCellData(), surfaceData);
       viennals::VTKWriter<NumericType>(
-          context.diskMesh, context.intermediateOutputPath + name + "_pulse_" +
-                                std::to_string(context.currentIteration) + "_" +
-                                std::to_string(pulseIteration) + ".vtp")
+          context.diskMesh, context.intermediateOutputPath + name + suffix)
           .apply();
+    }
+  }
+
+  static void outputIntermediatePulseResults(
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<viennals::PointData<NumericType>> const &fluxes,
+      const unsigned pulseIteration) {
+    if (Logger::hasIntermediate()) {
+      std::string suffix = "_pulse_" +
+                           std::to_string(context.currentIteration) + "_" +
+                           std::to_string(pulseIteration) + ".vtp";
+      outputIntermediateResults(context, fluxes, suffix);
     }
   }
 
@@ -320,12 +338,8 @@ private:
     assert(surfaceModel->getCoverages() != nullptr);
 
     assert(context.diskMesh != nullptr);
-    surfaceModel->setSurfaceCoordinates(context.diskMesh->getNodes());
-    assert(context.diskMesh->getCellData().getScalarData("MaterialIds") !=
-           nullptr);
-    auto const &materialIds =
-        *context.diskMesh->getCellData().getScalarData("MaterialIds");
-
+    const auto &[nodes, normals, materialIds] = context.getDiskMeshData();
+    surfaceModel->setSurfaceCoordinates(nodes);
     surfaceModel->updateCoverages(fluxes, materialIds);
   }
 

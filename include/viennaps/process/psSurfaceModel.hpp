@@ -48,6 +48,10 @@ public:
   updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
                   const std::vector<NumericType> &materialIds) {}
 
+  virtual void updateCoveragesFromDesorption(
+      SmartPointer<viennals::PointData<NumericType>> desorptionFluxes,
+      const std::vector<NumericType> &materialIds) {}
+
   virtual std::optional<std::vector<NumericType>>
   getDesorptionWeights(const std::vector<NumericType> &materialIds) const {
     return std::nullopt;

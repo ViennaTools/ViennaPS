@@ -224,7 +224,7 @@ public:
       // No active desorption sources, skip ray tracing
       VIENNACORE_LOG_DEBUG(
           "No active desorption sources found. Skipping ray tracing.");
-      return ProcessResult::SUCCESS;
+      return ProcessResult::INVALID_INPUT;
     }
 
     rayTracer_.setSurfaceSource(sourceData.positions, sourceData.normals,
@@ -234,13 +234,8 @@ public:
     rayTracer_.normalizeResults();
     auto desorptionResults = rayTracer_.getResults();
 
-    auto desorptionFlux = viennals::PointData<NumericType>{};
-    copyResultsToPointData(desorptionFlux,
-                           context.rayTracingParams.smoothingNeighbors,
+    copyResultsToPointData(*fluxes, context.rayTracingParams.smoothingNeighbors,
                            desorptionResults);
-
-    // combine desorption flux with existing fluxes
-    this->combineFluxes(*fluxes, desorptionFlux);
 
     rayTracer_.clearSurfaceSource();
     this->timer_.finish();

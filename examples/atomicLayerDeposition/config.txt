@@ -12,6 +12,7 @@ topSpace = 0.
 
 # Cycles
 pulseTime = 0.1
+purgePulseTime = 0.05
 coverageTimeStep=0.01
 growthPerCycle = 0.000112
 numCycles=10
@@ -26,7 +27,7 @@ mass = 28.02
 # Atomistic
 inFlux = 2e6 # 1e19
 stickingProbability = 5e-5
-evFlux = 0 # 6.5 # 1e19
+evFlux = 2.5 # 1e19
 s0 = 3.36
 
 # Simulation

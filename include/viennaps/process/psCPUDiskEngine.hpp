@@ -151,7 +151,7 @@ public:
       // No active desorption sources, skip ray tracing
       VIENNACORE_LOG_DEBUG(
           "No active desorption sources found. Skipping ray tracing.");
-      return ProcessResult::SUCCESS;
+      return ProcessResult::INVALID_INPUT;
     }
 
     viennaray::TracingData<NumericType> rayTracingData;
@@ -166,17 +166,13 @@ public:
     auto source = std::make_shared<DesorptionSource<NumericType, D>>(
         std::move(sourceData), context.rayTracingParams.raysPerPoint);
 
-    auto desorptionFlux = viennals::PointData<NumericType>::New();
     rayTracer_.setSource(source);
-    runRayTracer(context, desorptionFlux);
+    runRayTracer(context, fluxes);
 
     // move coverages back in the model
     if (context.flags.useCoverages) {
       moveRayDataToPointData(surfaceModel->getCoverages(), rayTracingData);
     }
-
-    // combine desorption flux with existing fluxes
-    this->combineFluxes(*fluxes, *desorptionFlux);
 
     // reset source
     if (auto source = model_->getSource()) {

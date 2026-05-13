@@ -70,7 +70,11 @@ public:
 
     // Calculate desorption fluxes
     if (context.flags.hasSurfaceDesorption) {
-      PROCESS_CHECK(fluxEngine_->calculateSurfaceFluxes(context, fluxes));
+      auto desorptionFlux = viennals::PointData<NumericType>::New();
+      if (fluxEngine_->calculateSurfaceFluxes(context, desorptionFlux) ==
+          ProcessResult::SUCCESS) {
+        fluxEngine_->combineFluxes(*fluxes, *desorptionFlux);
+      }
     }
 
     // copy fluxes to cell data
@@ -291,7 +295,11 @@ private:
 
     // Calculate desorption fluxes
     if (context.flags.hasSurfaceDesorption) {
-      PROCESS_CHECK(fluxEngine_->calculateSurfaceFluxes(context, fluxes));
+      auto desorptionFlux = viennals::PointData<NumericType>::New();
+      if (fluxEngine_->calculateSurfaceFluxes(context, desorptionFlux) ==
+          ProcessResult::SUCCESS) {
+        fluxEngine_->combineFluxes(*fluxes, *desorptionFlux);
+      }
     }
 
     // Calculate surface diffusion of fluxes

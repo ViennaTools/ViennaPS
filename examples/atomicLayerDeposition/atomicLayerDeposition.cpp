@@ -85,19 +85,34 @@ int main(int argc, char **argv) {
                                                params.get("diameter"));
   std::cout << "Mean free path: " << gasMFP << " um" << std::endl;
 
+  ps::SingleParticleALDParams alpModelParams;
+  alpModelParams.stickingProbability = params.get("stickingProbability");
+  alpModelParams.gasMeanFreePath = gasMFP;
+  alpModelParams.growthPerCycle = params.get("growthPerCycle");
+  alpModelParams.totalCycles = params.get<int>("totalCycles");
+  alpModelParams.numCycles = params.get<int>("numCycles");
+  alpModelParams.evaporationFlux = params.get("evFlux");
+  alpModelParams.incomingFlux = params.get("inFlux");
+  alpModelParams.s0 = params.get("s0");
+  alpModelParams.purgePulseTime = params.get("purgePulseTime");
+  alpModelParams.coverageDiffusionCoefficient = 100.0;
+
   auto model = ps::SmartPointer<ps::SingleParticleALD<NumericType, D>>::New(
-      params.get("stickingProbability"), params.get("numCycles"),
-      params.get("growthPerCycle"), params.get("totalCycles"),
-      params.get("coverageTimeStep"), params.get("evFlux"),
-      params.get("inFlux"), params.get("s0"), 100.0, gasMFP);
+      alpModelParams);
 
   ps::AtomicLayerProcessParameters alpParams;
   alpParams.numCycles = params.get<unsigned>("numCycles");
   alpParams.pulseTime = params.get("pulseTime");
   alpParams.coverageTimeStep = params.get("coverageTimeStep");
+  alpParams.purgePulseTime = params.get("purgePulseTime");
+
+  ps::RayTracingParameters rayTracingParams;
+  rayTracingParams.raysPerPoint = 1000;
+  rayTracingParams.maxReflections = 100000;
 
   ps::Process<NumericType, D> ALP(domain, model);
   ALP.setParameters(alpParams);
+  ALP.setParameters(rayTracingParams);
   ALP.apply();
 
   MeasureProfile<NumericType, D>(domain, params.get("gapHeight") / 2.)
