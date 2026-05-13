@@ -35,8 +35,11 @@ class GPUTriangleEngine final : public FluxEngine<NumericType, D> {
 public:
   explicit GPUTriangleEngine(std::shared_ptr<DeviceContext> deviceContext)
       : deviceContext_(deviceContext), rayTracer_(deviceContext) {
-    surfaceMesh_ = MeshType::New();
     elementKdTree_ = KDTreeType::New();
+    surfaceMesh_ = MeshType::New();
+
+    postProcessing_.setElementKdTree(elementKdTree_);
+    postProcessing_.setSurfaceMesh(surfaceMesh_);
   }
 
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {
@@ -93,6 +96,12 @@ public:
     }
     rayTracer_.setParameters(model_->getProcessDataDPtr());
     rayTracerInitialized_ = true;
+
+    postProcessing_.setDataLabels(model_->getParticleDataLabels());
+    postProcessing_.setConversionRadius(
+        context.domain->getGridDelta() *
+        (context.rayTracingParams.smoothingNeighbors + 1));
+    postProcessing_.setDiskMesh(context.diskMesh);
 
     return ProcessResult::SUCCESS;
   }
@@ -209,27 +218,14 @@ public:
       rayTracer_.setElementData(d_coverages, numCov);
     }
 
-    std::vector<NumericType> desorptionWeights;
-    if (auto materialIds =
-            context.diskMesh->getCellData().getScalarData("MaterialIds")) {
-      desorptionWeights = model_->getSurfaceModel()
-                              ->getDesorptionWeights(*materialIds)
-                              .value_or(std::vector<NumericType>{});
-    }
-
     // run the ray tracer
-    rayTracer_.clearSurfaceSource();
     rayTracer_.apply(); // device detach point here
     ++this->fluxCalculationsCount_;
 
     // Prepare post-processing
     assert(elementKdTree_ && "Element KDTree not initialized.");
-    PostProcessingType postProcessing(
-        model_->getParticleDataLabels(), fluxes, elementKdTree_,
-        context.diskMesh, surfaceMesh_,
-        context.domain->getGridDelta() *
-            (context.rayTracingParams.smoothingNeighbors + 1));
-    postProcessing.prepare();
+    postProcessing_.setPointData(fluxes);
+    postProcessing_.prepare();
 
     rayTracer_.normalizeResults(); // device sync point here
     auto combinedResults = rayTracer_.getResults();
@@ -238,8 +234,8 @@ public:
     saveResultsToPointData(surfaceMesh_->getCellData(), combinedResults);
     context.triangleMesh = surfaceMesh_;
 
-    postProcessing.setElementDataArrays(std::move(combinedResults));
-    postProcessing.convert(); // run post-processing
+    postProcessing_.setElementDataArrays(std::move(combinedResults));
+    postProcessing_.convert(); // run post-processing
 
     if (Logger::hasDebug()) {
       if (context.flags.useCoverages) {
@@ -318,19 +314,16 @@ public:
 
     // Prepare post-processing
     auto desorptionFlux = viennals::PointData<NumericType>::New();
-    PostProcessingType postProcessing(
-        model_->getParticleDataLabels(), desorptionFlux, elementKdTree_,
-        context.diskMesh, surfaceMesh_,
-        context.domain->getGridDelta() *
-            (context.rayTracingParams.smoothingNeighbors + 1));
-    postProcessing.prepare();
+    postProcessing_.setPointData(desorptionFlux);
+    postProcessing_.prepare(true);
 
     rayTracer_.normalizeResults();
     auto desorptionResults = rayTracer_.getResults();
     saveResultsToPointData(surfaceMesh_->getCellData(), desorptionResults);
 
-    postProcessing.setElementDataArrays(std::move(desorptionResults));
-    postProcessing.convert(); // run post-processing
+    postProcessing_.setElementDataArrays(std::move(desorptionResults));
+    postProcessing_.validate();
+    postProcessing_.convert(); // run post-processing
 
     if (Logger::hasDebug()) {
       viennals::VTKWriter<float>(
@@ -410,6 +403,7 @@ private:
   std::shared_ptr<DeviceContext> deviceContext_;
   viennaray::gpu::TraceTriangle<NumericType, D> rayTracer_;
   SmartPointer<gpu::ProcessModelGPU<NumericType, D>> model_;
+  PostProcessingType postProcessing_;
 
   KDTreeType elementKdTree_;
   MeshType surfaceMesh_;
