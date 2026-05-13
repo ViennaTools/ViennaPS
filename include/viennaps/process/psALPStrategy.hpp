@@ -56,14 +56,6 @@ public:
   }
 
 private:
-  ProcessResult
-  calculateFluxes(ProcessContext<NumericType, D> &context,
-                  SmartPointer<viennals::PointData<NumericType>> &fluxes) {
-    PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
-    PROCESS_CHECK(fluxEngine_->calculateSurfaceFluxes(context, fluxes));
-    return ProcessResult::SUCCESS;
-  }
-
   static ProcessResult
   validateContext(const ProcessContext<NumericType, D> &context) {
     if (!context.model->getSurfaceModel()) {
@@ -204,8 +196,8 @@ private:
         context.model->getSurfaceModel()->setTimeStep(dt);
 
         // Calculate fluxes
-        auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-        PROCESS_CHECK(calculateFluxes(context, fluxes));
+        auto fluxes = viennals::PointData<NumericType>::New();
+        PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
 
         // Calculate surface diffusion of fluxes
         if (surfaceDiffusionSolver_.isActive()) {
@@ -234,15 +226,20 @@ private:
         }
       }
 
+      // Calculate velocities in model
+      auto fluxes = viennals::PointData<NumericType>::New();
+      PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
+
       if (purgePulseTime > 0.) {
-        VIENNACORE_LOG_WARNING(
-            "Purge pulses are not implemented yet. Skipping purge step.");
-        /// TODO: Implement purge step
+        if (!context.flags.hasSurfaceDesorption) {
+          VIENNACORE_LOG_WARNING(
+              "Purge pulse time specified but no surface desorption found. "
+              "Skipping purge pulse.");
+        } else {
+          fluxEngine_->calculateSurfaceFluxes(context, fluxes);
+        }
       }
 
-      // Calculate velocities in model
-      auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-      PROCESS_CHECK(calculateFluxes(context, fluxes));
       auto velocities = calculateVelocities(context, fluxes);
       context.model->getVelocityField()->prepare(context.domain, velocities,
                                                  0.);
@@ -252,12 +249,12 @@ private:
 
       // print intermediate output
       if (Logger::hasIntermediate()) {
-        const auto name = context.getProcessName();
-        context.diskMesh->getCellData().insertNextScalarData(*velocities,
-                                                             "velocities");
+        context.diskMesh->getCellData().insertReplacecalarData(*velocities,
+                                                               "velocities");
         viennals::VTKWriter<NumericType>(
-            context.diskMesh,
-            name + "_" + std::to_string(context.currentIteration) + ".vtp")
+            context.diskMesh, context.getProcessName() + "_" +
+                                  std::to_string(context.currentIteration) +
+                                  ".vtp")
             .apply();
       }
 
@@ -348,6 +345,7 @@ private:
       SmartPointer<viennals::PointData<NumericType>> targets) {
     if (timeStep <= 0.)
       return ProcessResult::SUCCESS;
+
     auto diffusionCoefficientsOpt =
         context.model->getSurfaceModel()->getDiffusionCoefficients();
     assert(diffusionCoefficientsOpt.has_value() &&

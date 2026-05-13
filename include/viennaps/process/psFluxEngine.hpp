@@ -28,7 +28,7 @@ public:
       ProcessContext<NumericType, D> &context,
       viennacore::SmartPointer<viennals::PointData<NumericType>> &fluxes) = 0;
 
-  // Flux from surface to surface (e.g. desorption flux)
+  // Flux from surface to surface (e.g. desorption flux), add to source fluxes
   virtual ProcessResult calculateSurfaceFluxes(
       ProcessContext<NumericType, D> &context,
       viennacore::SmartPointer<viennals::PointData<NumericType>> &fluxes) = 0;

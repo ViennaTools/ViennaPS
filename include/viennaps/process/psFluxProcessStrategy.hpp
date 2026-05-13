@@ -65,7 +65,7 @@ public:
     PROCESS_CHECK(fluxEngine_->updateSurface(context));
 
     // Calculate source fluxes
-    auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+    auto fluxes = viennals::PointData<NumericType>::New();
     PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
 
     // Calculate desorption fluxes
