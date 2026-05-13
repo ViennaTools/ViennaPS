@@ -11,7 +11,7 @@
 //   psProcess<T, D>(domain, model, /*duration=*/0.).apply();
 //
 // The process does not move any level sets; it only stamps the profile into
-// the domain's cell set (concentration + optional damage fields).
+// the domain's cell set (dopant concentration + optional damage fields).
 //
 // Prerequisites: the domain must have a cell set initialised before apply().
 
@@ -66,7 +66,7 @@ class IonImplantation : public ProcessModelBase<NumericType, D> {
 
   SmartPointer<ImplantCallback> callback_;
 
-  // Helper: convert ViennaPS Material vector to legacy int IDs for csImplant
+  // Helper: convert ViennaPS Material values to cell-set material IDs.
   static std::vector<int> toIntIds(const std::vector<Material> &materials) {
     std::vector<int> ids;
     ids.reserve(materials.size());
@@ -125,14 +125,24 @@ public:
     callback_->implant().setScreenMaterials(toIntIds(materials));
   }
 
-  // Cell-set field name for the deposited concentration (default "concentration")
+  // Cell-set field name for the deposited concentration.
   void setConcentrationLabel(const std::string &label) {
     callback_->implant().setConcentrationLabel(label);
   }
 
-  // Cell-set field name for accumulated damage (default "Damage")
+  // Cell-set field name for accumulated damage.
   void setDamageLabel(const std::string &label) {
     callback_->implant().setDamageLabel(label);
+  }
+
+  // Cell-set field name for damage from the last implant step.
+  void setLastDamageLabel(const std::string &label) {
+    callback_->implant().setLastDamageLabel(label);
+  }
+
+  // Cell-set field name for optional beam-hit diagnostics.
+  void setBeamHitsLabel(const std::string &label) {
+    callback_->implant().setBeamHitsLabel(label);
   }
 
   // When true, convert the stored concentration from length-unit⁻³ to cm⁻³

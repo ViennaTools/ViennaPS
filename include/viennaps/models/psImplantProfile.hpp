@@ -2,25 +2,26 @@
 
 // Implant profile models for ViennaPS.
 //
-// This header imports the ViennaCS profile-model layer (depth + lateral
+// This header defines the ViennaPS profile-model layer (depth + lateral
 // concentration/damage profiles computed from Pearson IV moments or calibrated
-// lookup tables) and re-exports the types in the viennaps namespace.
+// lookup tables) on top of the ViennaCS cell-set implant model interface.
 //
 // The models are pure profile functions: given (depth, offset) they return a
 // normalized concentration or damage density. They carry no ViennaPS process-
-// framework dependency and are used by psIonImplantation and psAnneal.
+// framework dependency and are consumed by psIonImplantation.
 //
 // Dependencies resolved via the ViennaCS target; build ViennaPS with
-//   -DVIENNAPS_VIENNACS_SOURCE=/path/to/ViennaCS_ionimplantation
+//   -DVIENNAPS_VIENNACS_SOURCE=/path/to/ViennaCS
 // to use a local development branch instead of the published ViennaCS release.
 
 #include <csImplantModel.hpp>
-#include <models/csImplantDamage.hpp>
-#include <models/csImplantPearson.hpp>
-#include <models/csImplantTable.hpp>
+
+#include "psImplantConstants.hpp"
+#include "psImplantDamage.hpp"
+#include "psImplantPearson.hpp"
+#include "psImplantTable.hpp"
 
 #include "../materials/psMaterial.hpp"
-
 #include <algorithm>
 #include <string>
 
@@ -29,69 +30,65 @@ namespace viennaps {
 // Abstract base: a normalized depth/lateral profile integrating to 1.
 // getProfile(depth, offset) == getDepthProfile(depth) * getLateralProfile(offset, depth)
 template <typename NumericType, int D>
-using ImplantProfileModel = viennacs::ImplantModel<NumericType, D>;
+using ImplantProfileModel = ImplantModel<NumericType, D>;
 
 // Pearson IV moment parameters { mu, sigma, gamma, beta }
 template <typename NumericType>
-using PearsonIVParameters = viennacs::constants::PearsonIVParameters<NumericType>;
+using PearsonIVParameters = viennaps::constants::PearsonIVParameters<NumericType>;
 
 // Lateral straggle model selector and its parameter bundle
-using LateralStraggleModel = viennacs::LateralStraggleModel;
+using LateralStraggleModel = viennaps::LateralStraggleModel;
 template <typename NumericType>
-using LateralStraggleParameters = viennacs::LateralStraggleParameters<NumericType>;
+using LateralStraggleParameters = viennaps::LateralStraggleParameters<NumericType>;
 
 // Single Pearson IV dopant depth profile + Gaussian lateral profile
 template <typename NumericType, int D>
-using ImplantPearsonIV = viennacs::ImplantPearsonIV<NumericType, D>;
+using ImplantPearsonIV = viennaps::ImplantPearsonIV<NumericType, D>;
 
 // Pearson IV + exponential channeling tail
 template <typename NumericType, int D>
-using ImplantPearsonIVChanneling = viennacs::ImplantPearsonIVChanneling<NumericType, D>;
+using ImplantPearsonIVChanneling = viennaps::ImplantPearsonIVChanneling<NumericType, D>;
 
 // Weighted sum of two Pearson IV components (amorphous head + channeling tail)
 template <typename NumericType, int D>
-using ImplantDualPearsonIV = viennacs::ImplantDualPearsonIV<NumericType, D>;
+using ImplantDualPearsonIV = viennaps::ImplantDualPearsonIV<NumericType, D>;
 
 // Hobler-style damage depth profile (Gaussian + exponential bulk decay)
 template <typename NumericType, int D>
-using ImplantDamageHobler = viennacs::ImplantDamageHobler<NumericType, D>;
+using ImplantDamageHobler = viennaps::ImplantDamageHobler<NumericType, D>;
 
 // Table-driven model types (data-file backed lookup + interpolation)
 template <typename NumericType>
-using ImplantTableEntry = viennacs::tables::ImplantTableEntry<NumericType>;
+using ImplantTableEntry = viennaps::tables::ImplantTableEntry<NumericType>;
 
 template <typename NumericType>
-using ImplantRecipe = viennacs::tables::ImplantRecipe<NumericType>;
+using ImplantRecipe = viennaps::tables::ImplantRecipe<NumericType>;
 
 template <typename NumericType>
-using DamageTableEntry = viennacs::tables::DamageTableEntry<NumericType>;
+using DamageTableEntry = viennaps::tables::DamageTableEntry<NumericType>;
 
 template <typename NumericType>
-using DamageRecipe = viennacs::tables::DamageRecipe<NumericType>;
+using DamageRecipe = viennaps::tables::DamageRecipe<NumericType>;
 
 template <typename NumericType>
-using ImplantTable = viennacs::tables::ImplantTable<NumericType>;
+using ImplantTable = viennaps::tables::ImplantTable<NumericType>;
 
 template <typename NumericType>
-using DamageTable = viennacs::tables::DamageTable<NumericType>;
+using DamageTable = viennaps::tables::DamageTable<NumericType>;
 
 template <typename NumericType, int D>
-using TableDrivenImplantModel = viennacs::tables::TableDrivenImplantModel<NumericType, D>;
+using ImplantTableModel = viennaps::tables::ImplantTableModel<NumericType, D>;
 
 template <typename NumericType, int D>
-using RecipeDrivenImplantModel = viennacs::tables::RecipeDrivenImplantModel<NumericType, D>;
+using ImplantRecipeModel = viennaps::tables::ImplantRecipeModel<NumericType, D>;
 
 template <typename NumericType, int D>
-using TableDrivenDamageModel = viennacs::tables::TableDrivenDamageModel<NumericType, D>;
+using DamageTableModel = viennaps::tables::DamageTableModel<NumericType, D>;
 
 template <typename NumericType, int D>
-using RecipeDrivenDamageModel = viennacs::tables::RecipeDrivenDamageModel<NumericType, D>;
+using DamageRecipeModel = viennaps::tables::DamageRecipeModel<NumericType, D>;
 
-// Convenience accessor for the vsclib data root (set once at startup).
-using viennacs::processutil::getVsclibRoot;
-using viennacs::processutil::setVsclibRoot;
-
-// Map a ViennaPS Material to the lowercase canonical name used in the ViennaCS
+// Map a ViennaPS Material to the lowercase canonical name used in the ViennaPS
 // implant data tables. Falls back to the built-in material name string for
 // materials not explicitly listed.
 [[nodiscard]] inline std::string implantMaterialName(Material material) {

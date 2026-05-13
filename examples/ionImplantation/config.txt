@@ -3,12 +3,12 @@ xExtent=100.0
 topSpace=15.0
 substrateDepth=100.0
 
-openingWidth=15.0
+openingWidth=80.0
 maskHeight=10.0
 oxideThickness=2.0
 
-# Example target: B, 10 keV, Si(100), 7 degree tilt
-species=B
+# Example target: P, 10 keV, Si(100), 7 degree tilt
+species=P
 material=Si
 energyKeV=10.0
 rotationDeg=0.0
@@ -17,13 +17,8 @@ doseCm2=1.0e15
 doseControl=WaferDose
 substrateType=crystalline
 screenThickness=2.0
-damageLevel=0.0
 
-# If projectedRange/depthSigma/skewness/... are omitted, the example will try
-# to load defaults from data/implant/implant_moments.csv using the species,
-# material, energyKeV, tilt (angle), rotationDeg, and substrateType fields.
-
-# Representative random-component parameters for B in Si at 10 keV.
+# Representative random-component parameters for P in Si at 10 keV.
 # Units in this example are nm.
 projectedRange=31.0
 depthSigma=11.0
@@ -33,7 +28,7 @@ lateralSigma=5.0
 lateralMu=0.0
 
 # Optional crystalline-Si dual-Pearson tail. Set substrateType=amorphous to disable.
-# These are representative heuristic values for B, 10 keV, Si(100), 7 degree tilt.
+# These are representative heuristic values for P, 10 keV, Si(100), 7 degree tilt.
 headFraction=0.97
 tailProjectedRange=85.0
 tailDepthSigma=28.0
@@ -42,12 +37,41 @@ tailKurtosis=4.0
 tailLateralSigma=6.0
 tailLateralMu=0.0
 
+# Representative damage parameters for P in Si at 10 keV.
+# Units in this example are nm, except damageDefectsPerIon.
+damageProjectedRange=26.9
+damageVerticalSigma=18.44
+damageLambda=24.4
+damageDefectsPerIon=142.9
+damageLateralSigma=13.2
+damageLateralDeltaSigma=-0.02
+
 # Anneal: 3-step ramp schedule (ramp-up, soak, ramp-down)
 # Temperatures in Kelvin. N+1 temperatures for N steps → ramp between each pair.
 # Step 1:  9 s  ramp   600°C → 1050°C  (~50°C/s ramp-up)
 # Step 2:  5 s  soak   1050°C           (isothermal peak)
 # Step 3:  9 s  ramp   1050°C → 600°C  (~50°C/s ramp-down)
 annealMode=implicit
+annealImplicitMaxIterations=400
+annealImplicitTolerance=1.0e-6
+annealImplicitRelaxation=1.0
 annealStepDurations=9.0,5.0,9.0
 annealTemperatures=873.15,1323.15,1323.15,873.15
 annealDefectCoupling=1
+
+# Manual anneal calibration. Diffusivities use the current length unit^2/s.
+annealParameterSource=manual
+annealD0=1.23e13
+annealEa=3.566
+annealInterstitialDiffusivity=9.242174584051406e8
+annealVacancyDiffusivity=4.1788570753803325e5
+annealRecombinationRate=0.0
+annealInterstitialSinkRate=0.0
+annealVacancySinkRate=0.0
+annealScoreIFactor=1.0
+annealScoreVFactor=0.0
+annealScoreDFactor=1.0
+annealTedFromScoreDFactor=0
+annealSolidActivation=1
+annealSolidSolubilityC0=1.521e2
+annealSolidSolubilityEa=0.7102

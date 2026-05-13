@@ -14,14 +14,13 @@
 //   model->setBlockingMaterials({Material::Air});
 //   psProcess<T, D>(domain, model, /*duration=*/0.).apply();
 //
-// The process does not move any level sets; it only evolves scalar fields
-// (dopant concentration, optional active_concentration, optional I/V defect
-// fields) inside the domain's cell set.
+// The process evolves scalar fields (dopant concentration, optional active 
+// concentration, optional I/V defect fields) inside the domain's cell set.
 //
-// Prerequisites: the domain must have a cell set with a concentration field
+// Prerequisites: the domain must have a cell set with a dopant concentration field
 // initialised before apply().
 
-#include "psImplantProfile.hpp"              // pulls in using viennacs::processutil
+#include "../materials/psMaterial.hpp"
 #include "../process/psAdvectionCallback.hpp"
 #include "../process/psProcessModel.hpp"
 
@@ -41,8 +40,8 @@ template <class NumericType, int D>
 class Anneal : public ProcessModelBase<NumericType, D> {
 
   // -----------------------------------------------------------------------
-  // Inner callback: holds the configured csAnneal and runs it once the
-  // domain's cell set is accessible.
+  // Adapter callback: runs the configured ViennaCS anneal solver once the
+  // process domain exposes its cell set.
   // -----------------------------------------------------------------------
   class AnnealCallback : public AdvectionCallback<NumericType, D> {
     viennacs::Anneal<NumericType, D> anneal_;
@@ -67,8 +66,8 @@ class Anneal : public ProcessModelBase<NumericType, D> {
 
   SmartPointer<AnnealCallback> callback_;
 
-  // Convert ViennaPS Material objects to the integer legacy IDs that
-  // csAnneal / csDiffusionSolver use to identify cell-set materials.
+  // Convert ViennaPS Material objects to the integer IDs used by cell-set
+  // material fields.
   static std::vector<int> toIntIds(const std::vector<Material> &materials) {
     std::vector<int> ids;
     ids.reserve(materials.size());
@@ -148,10 +147,11 @@ public:
   void setMode(AnnealMode mode) { callback_->anneal().setMode(mode); }
 
   // GaussSeidel-mode iteration options.
-  void setImplicitSolverOptions(int maxIterations,
-                                NumericType relativeTolerance) {
+  void setImplicitSolverOptions(int maxIterations, NumericType relativeTolerance,
+                                NumericType relaxation = NumericType(1)) {
     callback_->anneal().setImplicitSolverOptions(maxIterations,
-                                                  relativeTolerance);
+                                                  relativeTolerance,
+                                                  relaxation);
   }
 
   // ── Material roles ───────────────────────────────────────────────────────
@@ -168,7 +168,7 @@ public:
 
   // ── Field names ──────────────────────────────────────────────────────────
 
-  // Cell-set field name for the dopant concentration (default "concentration").
+  // Cell-set field name for the dopant concentration.
   void setSpeciesLabel(const std::string &label) {
     callback_->anneal().setSpeciesLabel(label);
   }
@@ -205,8 +205,8 @@ public:
   }
 
   void setDamageLabels(const std::string &damageLabel,
-                        const std::string &damageLastImpLabel) {
-    callback_->anneal().setDamageLabels(damageLabel, damageLastImpLabel);
+                       const std::string &lastDamageLabel) {
+    callback_->anneal().setDamageLabels(damageLabel, lastDamageLabel);
   }
 
   void setDefectLabels(const std::string &interstitialLabel,
@@ -223,6 +223,12 @@ public:
                            NumericType vacancyFraction) {
     callback_->anneal().setDefectPartition(interstitialFraction,
                                             vacancyFraction);
+  }
+
+  void setDefectPartitionFromDamageFactors(NumericType interstitialFactor,
+                                           NumericType vacancyFactor) {
+    callback_->anneal().setDefectPartitionFromDamageFactors(interstitialFactor,
+                                                            vacancyFactor);
   }
 
   void setDefectDiffusivities(NumericType Di, NumericType Dv) {
@@ -264,6 +270,13 @@ public:
                                                     normalization);
   }
 
+  void setDefectEnhancedDiffusionFromDamageFactor(
+      NumericType damageFactor, NumericType coefficientScale = NumericType(0.5),
+      NumericType normalization = NumericType(1e20)) {
+    callback_->anneal().setDefectEnhancedDiffusionFromDamageFactor(
+        damageFactor, coefficientScale, normalization);
+  }
+
   // ── Defect clustering ────────────────────────────────────────────────────
 
   void enableDefectClustering(bool enable = true) {
@@ -281,24 +294,6 @@ public:
 
   void setDefectClusterInitFraction(NumericType fraction) {
     callback_->anneal().setDefectClusterInitFraction(fraction);
-  }
-
-  // ── CSV-based parameterisation ────────────────────────────────────────────
-
-  // Load calibrated diffusivity / defect / solubility parameters from a CSV.
-  // If csvFilePath is empty, uses the built-in vsclib path.
-  void loadAnnealingCSV(const std::string &csvFilePath = "") {
-    callback_->anneal().loadAnnealingCSV(csvFilePath);
-  }
-
-  // Species name for CSV lookup (e.g. "boron").
-  void setDopantName(const std::string &name) {
-    callback_->anneal().setDopantName(name);
-  }
-
-  // Substrate material name for CSV lookup (e.g. "silicon").
-  void setSubstrateMaterial(const std::string &mat) {
-    callback_->anneal().setSubstrateMaterial(mat);
   }
 
   // ── Diagnostics ──────────────────────────────────────────────────────────
