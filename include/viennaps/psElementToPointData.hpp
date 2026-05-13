@@ -1,9 +1,6 @@
 #pragma once
 
-#include "psPreCompileMacros.hpp"
-
 #include <lsMesh.hpp>
-#include <rayParticle.hpp>
 #include <vcKDTree.hpp>
 
 #include <algorithm>
@@ -186,6 +183,7 @@ public:
   }
 
   void apply() {
+    validate();
     prepare();
     convert();
   }

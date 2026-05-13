@@ -3,21 +3,16 @@
 #ifdef VIENNACORE_COMPILE_GPU
 
 #include "../psCreateSurfaceMesh.hpp"
-#include "../psDomain.hpp"
 #include "../psElementToPointData.hpp"
 #include "../psPointToElementData.hpp"
+
 #include "psDesorptionSource.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
 
 #include <vcContext.hpp>
 
-#include <lsMesh.hpp>
-
 #include <gpu/raygTraceTriangle.hpp>
-
-#include <cassert>
-#include <cmath>
 
 namespace viennaps {
 
