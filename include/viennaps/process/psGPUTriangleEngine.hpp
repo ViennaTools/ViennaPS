@@ -163,15 +163,7 @@ public:
       auto const &pointMaterialIds =
           *context.diskMesh->getCellData().getScalarData("MaterialIds");
       std::vector<int> elementMaterialIds;
-      auto &pointKdTree = context.translationField->getKdTree();
-      if (!pointKdTree) {
-        pointKdTree = KDTreeType::New();
-        context.translationField->setKdTree(pointKdTree);
-      }
-      if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
-        pointKdTree->setPoints(context.diskMesh->nodes);
-        pointKdTree->build();
-      }
+      auto pointKdTree = context.getPointKdTree();
       PointToElementDataSingle<NumericType, NumericType, int, float>(
           pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
           .apply();
@@ -198,15 +190,7 @@ public:
       assert(context.diskMesh);
       assert(context.translationField);
       auto numCov = coverages->getScalarDataSize();
-      auto &pointKdTree = context.translationField->getKdTree();
-      if (!pointKdTree) {
-        pointKdTree = KDTreeType::New();
-        context.translationField->setKdTree(pointKdTree);
-      }
-      if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
-        pointKdTree->setPoints(context.diskMesh->nodes);
-        pointKdTree->build();
-      }
+      auto pointKdTree = context.getPointKdTree();
       gpu::PointToElementData<NumericType, float>(d_coverages, coverages,
                                                   *pointKdTree, surfaceMesh_)
           .apply();
@@ -270,17 +254,8 @@ public:
       return ProcessResult::INVALID_INPUT;
     }
 
-    auto &pointKdTree = context.translationField->getKdTree();
-    if (!pointKdTree) {
-      pointKdTree = KDTreeType::New();
-      context.translationField->setKdTree(pointKdTree);
-    }
-    if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
-      pointKdTree->setPoints(context.diskMesh->nodes);
-      pointKdTree->build();
-    }
-
     // Map desorption weights from disk mesh nodes to surface mesh elements
+    auto pointKdTree = context.getPointKdTree();
     assert(surfaceMesh_ && "Surface mesh not initialized.");
     std::vector<float> elementWeights;
     PointToElementDataSingle<NumericType, NumericType, float, float>(
@@ -298,6 +273,8 @@ public:
         static_cast<float>(context.domain->getGridDelta()));
     if (!sourceData.hasSource) {
       // No active desorption sources, skip ray tracing
+      VIENNACORE_LOG_DEBUG(
+          "No active desorption sources found. Skipping ray tracing.");
       return ProcessResult::SUCCESS;
     }
 
@@ -329,18 +306,7 @@ public:
     }
 
     // combine desorption flux with existing fluxes
-    for (std::size_t dataIdx = 0; dataIdx < fluxes->getScalarDataSize();
-         ++dataIdx) {
-      auto fluxData = fluxes->getScalarData(dataIdx);
-      auto desorptionData = desorptionFlux->getScalarData(dataIdx);
-      assert(fluxData);
-      assert(desorptionData);
-      assert(fluxData->size() == desorptionData->size());
-
-      for (std::size_t i = 0; i < fluxData->size(); ++i) {
-        (*fluxData)[i] += (*desorptionData)[i];
-      }
-    }
+    this->combineFluxes(*fluxes, *desorptionFlux);
 
     // reset ray tracer surface source
     rayTracer_.clearSurfaceSource();

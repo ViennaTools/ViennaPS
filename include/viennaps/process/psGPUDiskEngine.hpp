@@ -2,7 +2,6 @@
 
 #ifdef VIENNACORE_COMPILE_GPU
 
-#include "../psDomain.hpp"
 #include "psDesorptionSource.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
@@ -84,8 +83,7 @@ public:
     auto &diskMesh = context.diskMesh;
     assert(diskMesh != nullptr);
 
-    auto const &points = diskMesh->getNodes();
-    auto const &normals = *diskMesh->getCellData().getVectorData("Normals");
+    const auto &[points, normals, materialIds] = context.getDiskMeshData();
 
     // TODO: make this conversion to float prettier
     auto convertToFloat = [](const std::vector<Vec3D<NumericType>> &input) {
@@ -127,8 +125,6 @@ public:
     rayTracer_.setGeometry(diskMeshRay);
 
     if (model_->useMaterialIds()) {
-      auto const &materialIds =
-          *diskMesh->getCellData().getScalarData("MaterialIds");
       rayTracer_.setMaterialIds(materialIds);
     }
     assert(context.diskMesh->nodes.size() > 0);
@@ -175,14 +171,9 @@ public:
     rayTracer_.clearSurfaceSource();
     rayTracer_.apply();
     rayTracer_.normalizeResults();
-    auto combinedResults = rayTracer_.getResults();
-
-    if (desorptionWeights.size() == context.diskMesh->getNodes().size()) {
-      addDesorptionFlux(context, desorptionWeights, combinedResults);
-    }
-
-    downloadResultsToPointData(
-        *fluxes, context.rayTracingParams.smoothingNeighbors, combinedResults);
+    auto fluxResults = rayTracer_.getResults();
+    copyResultsToPointData(*fluxes, context.rayTracingParams.smoothingNeighbors,
+                           fluxResults);
     ++this->fluxCalculationsCount_;
 
     // output
@@ -192,9 +183,9 @@ public:
         downloadCoverages(d_coverages, context.diskMesh->getCellData(),
                           coverages, context.diskMesh->getNodes().size());
       }
-      downloadResultsToPointData(context.diskMesh->getCellData(),
-                                 context.rayTracingParams.smoothingNeighbors,
-                                 combinedResults);
+      copyResultsToPointData(context.diskMesh->getCellData(),
+                             context.rayTracingParams.smoothingNeighbors,
+                             fluxResults);
       viennals::VTKWriter<NumericType>(
           context.diskMesh,
           context.intermediateOutputPath + context.getProcessName() + "_flux_" +
@@ -209,9 +200,52 @@ public:
   }
 
   ProcessResult calculateSurfaceFluxes(
-      ProcessContext<NumericType, D> &,
-      SmartPointer<viennals::PointData<NumericType>> &) override {
-    return ProcessResult::NOT_IMPLEMENTED;
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+
+    this->timer_.start();
+
+    const auto &[nodes, normals, materialIds] = context.getDiskMeshData();
+    const auto desorptionWeights = model_->getSurfaceModel()
+                                       ->getDesorptionWeights(materialIds)
+                                       .value_or(std::vector<NumericType>{});
+
+    if (desorptionWeights.size() != nodes.size()) {
+      VIENNACORE_LOG_WARNING(
+          "Desorption weights size does not match number of mesh nodes. "
+          "Skipping surface flux calculation.");
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    auto sourceData = makeDiskDesorptionSourceData<float, NumericType, D>(
+        nodes, normals, desorptionWeights, context.domain->getGridDelta(),
+        static_cast<NumericType>(diskRadius_), true);
+    if (!sourceData.hasSource) {
+      // No active desorption sources, skip ray tracing
+      VIENNACORE_LOG_DEBUG(
+          "No active desorption sources found. Skipping ray tracing.");
+      return ProcessResult::SUCCESS;
+    }
+
+    rayTracer_.setSurfaceSource(sourceData.positions, sourceData.normals,
+                                sourceData.weights, sourceData.sourceArea,
+                                sourceData.sourceOffset);
+    rayTracer_.apply();
+    rayTracer_.normalizeResults();
+    auto desorptionResults = rayTracer_.getResults();
+
+    auto desorptionFlux = viennals::PointData<NumericType>{};
+    copyResultsToPointData(desorptionFlux,
+                           context.rayTracingParams.smoothingNeighbors,
+                           desorptionResults);
+
+    // combine desorption flux with existing fluxes
+    this->combineFluxes(*fluxes, desorptionFlux);
+
+    rayTracer_.clearSurfaceSource();
+    this->timer_.finish();
+
+    return ProcessResult::SUCCESS;
   }
 
 private:
@@ -238,7 +272,7 @@ private:
     delete[] temp;
   }
 
-  void downloadResultsToPointData(
+  void copyResultsToPointData(
       viennals::PointData<NumericType> &pointData, int smoothingNeighbors,
       std::vector<std::vector<viennaray::gpu::ResultType>> results) {
     const auto numRates = rayTracer_.getNumberOfRates();
@@ -260,38 +294,6 @@ private:
         pointData.insertReplaceScalarData(std::move(diskFluxCasted), name);
       }
       offset += particles[pIdx].dataLabels.size();
-    }
-  }
-
-  void addDesorptionFlux(
-      ProcessContext<NumericType, D> &context,
-      const std::vector<NumericType> &desorptionWeights,
-      std::vector<std::vector<viennaray::gpu::ResultType>> &combinedResults) {
-    const auto &nodes = context.diskMesh->getNodes();
-    const auto normals =
-        context.diskMesh->getCellData().getVectorData("Normals");
-    assert(normals != nullptr);
-
-    auto sourceData = makeDiskDesorptionSourceData<float, NumericType, D>(
-        nodes, *normals, desorptionWeights, context.domain->getGridDelta(),
-        static_cast<NumericType>(diskRadius_), true);
-    if (!sourceData.hasSource) {
-      // No active desorption sources, skip ray tracing
-      return;
-    }
-
-    rayTracer_.setSurfaceSource(sourceData.positions, sourceData.normals,
-                                sourceData.weights, sourceData.sourceArea,
-                                sourceData.sourceOffset);
-    rayTracer_.apply();
-    rayTracer_.normalizeResults();
-    auto desorptionResults = rayTracer_.getResults();
-    rayTracer_.clearSurfaceSource();
-
-    for (std::size_t dataIdx = 0; dataIdx < combinedResults.size(); ++dataIdx) {
-      for (std::size_t i = 0; i < combinedResults[dataIdx].size(); ++i) {
-        combinedResults[dataIdx][i] += desorptionResults[dataIdx][i];
-      }
     }
   }
 

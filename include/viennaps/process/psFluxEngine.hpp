@@ -36,6 +36,24 @@ public:
   auto &getTimer() const { return timer_; }
   void resetTimer() { timer_.reset(); }
   auto getFluxCalculationsCount() const { return fluxCalculationsCount_; }
+
+  static void
+  combineFluxes(viennals::PointData<NumericType> &fluxes,
+                viennals::PointData<NumericType> &desorptionFluxes) {
+    assert(fluxes.getScalarDataSize() == desorptionFluxes.getScalarDataSize());
+#pragma omp parallel for
+    for (int dataIdx = 0; dataIdx < fluxes.getScalarDataSize(); ++dataIdx) {
+      auto fluxData = fluxes.getScalarData(dataIdx);
+      auto desorptionData = desorptionFluxes.getScalarData(dataIdx);
+      assert(fluxData);
+      assert(desorptionData);
+      assert(fluxData->size() == desorptionData->size());
+
+      for (std::size_t i = 0; i < fluxData->size(); ++i) {
+        (*fluxData)[i] += (*desorptionData)[i];
+      }
+    }
+  }
 };
 
 } // namespace viennaps

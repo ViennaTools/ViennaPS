@@ -71,16 +71,11 @@ public:
     assert(diskMesh != nullptr);
     assert(model_ != nullptr);
 
-    auto points = diskMesh->getNodes();
-    auto normals = *diskMesh->getCellData().getVectorData("Normals");
-    auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
-
+    const auto &[points, normals, materialIds] = context.getDiskMeshData();
     if (context.rayTracingParams.diskRadius == 0.) {
-      rayTracer_.setGeometry(points, normals,
-                             context.domain->getGrid().getGridDelta());
+      rayTracer_.setGeometry(points, normals, context.domain->getGridDelta());
     } else {
-      rayTracer_.setGeometry(points, normals,
-                             context.domain->getGrid().getGridDelta(),
+      rayTracer_.setGeometry(points, normals, context.domain->getGridDelta(),
                              context.rayTracingParams.diskRadius);
     }
     rayTracer_.setMaterialIds(materialIds);
@@ -96,18 +91,9 @@ public:
     this->timer_.start();
     viennaray::TracingData<NumericType> rayTracingData;
     auto surfaceModel = context.model->getSurfaceModel();
-    std::vector<NumericType> desorptionWeights;
 
     // move coverages to the ray tracer
     if (context.flags.useCoverages) {
-      if (auto materialIds =
-              context.diskMesh->getCellData().getScalarData("MaterialIds")) {
-        auto desorptionWeightOpt =
-            surfaceModel->getDesorptionWeights(*materialIds);
-        if (desorptionWeightOpt.has_value()) {
-          desorptionWeights = std::move(desorptionWeightOpt.value());
-        }
-      }
       rayTracingData = movePointDataToRayData(surfaceModel->getCoverages());
     }
 
@@ -125,7 +111,7 @@ public:
     if (context.flags.useCoverages || context.flags.useProcessParams)
       rayTracer_.setGlobalData(rayTracingData);
 
-    runRayTracer(context, fluxes, desorptionWeights);
+    runRayTracer(context, fluxes);
 
     // move coverages back in the model
     if (context.flags.useCoverages)
@@ -136,24 +122,80 @@ public:
   }
 
   ProcessResult calculateSurfaceFluxes(
-      ProcessContext<NumericType, D> &,
-      SmartPointer<viennals::PointData<NumericType>> &) override {
-    return ProcessResult::NOT_IMPLEMENTED;
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+
+    this->timer_.start();
+
+    const auto &[nodes, normals, materialIds] = context.getDiskMeshData();
+    const auto desorptionWeights = model_->getSurfaceModel()
+                                       ->getDesorptionWeights(materialIds)
+                                       .value_or(std::vector<NumericType>{});
+
+    if (desorptionWeights.size() != nodes.size()) {
+      VIENNACORE_LOG_WARNING(
+          "Desorption weights size does not match number of mesh nodes. "
+          "Skipping surface flux calculation.");
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    const auto gridDelta = context.domain->getGridDelta();
+    const auto diskRadius =
+        context.rayTracingParams.diskRadius == 0.
+            ? static_cast<NumericType>(gridDelta * rayInternal::DiskFactor<D>)
+            : static_cast<NumericType>(context.rayTracingParams.diskRadius);
+    auto sourceData = makeDiskDesorptionSourceData<NumericType, NumericType, D>(
+        context.diskMesh->getNodes(), normals, desorptionWeights, gridDelta,
+        diskRadius, true);
+    if (!sourceData.hasSource) {
+      // No active desorption sources, skip ray tracing
+      VIENNACORE_LOG_DEBUG(
+          "No active desorption sources found. Skipping ray tracing.");
+      return ProcessResult::SUCCESS;
+    }
+
+    viennaray::TracingData<NumericType> rayTracingData;
+    auto surfaceModel = context.model->getSurfaceModel();
+
+    // move coverages to the ray tracer
+    if (context.flags.useCoverages) {
+      rayTracingData = movePointDataToRayData(surfaceModel->getCoverages());
+      rayTracer_.setGlobalData(rayTracingData);
+    }
+
+    auto source = std::make_shared<DesorptionSource<NumericType, D>>(
+        std::move(sourceData), context.rayTracingParams.raysPerPoint);
+
+    auto desorptionFlux = viennals::PointData<NumericType>::New();
+    rayTracer_.setSource(source);
+    runRayTracer(context, desorptionFlux);
+
+    // move coverages back in the model
+    if (context.flags.useCoverages) {
+      moveRayDataToPointData(surfaceModel->getCoverages(), rayTracingData);
+    }
+
+    // combine desorption flux with existing fluxes
+    this->combineFluxes(*fluxes, *desorptionFlux);
+
+    // reset source
+    if (auto source = model_->getSource()) {
+      rayTracer_.setSource(source);
+    } else {
+      rayTracer_.resetSource();
+    }
+
+    this->timer_.finish();
+
+    return ProcessResult::SUCCESS;
   }
 
 private:
   void runRayTracer(ProcessContext<NumericType, D> const &context,
-                    SmartPointer<viennals::PointData<NumericType>> &fluxes,
-                    const std::vector<NumericType> &desorptionWeights) {
+                    SmartPointer<viennals::PointData<NumericType>> &fluxes) {
     assert(fluxes != nullptr);
     assert(model_ != nullptr);
     fluxes->clear();
-
-    const bool hasDesorption =
-        desorptionWeights.size() == context.diskMesh->getNodes().size();
-    const auto normals =
-        hasDesorption ? context.diskMesh->getCellData().getVectorData("Normals")
-                      : nullptr;
 
     unsigned particleIdx = 0;
     for (auto &particle : model_->getParticleTypes()) {
@@ -200,50 +242,6 @@ private:
       }
 
       model_->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
-
-      if (hasDesorption && normals != nullptr) {
-        const auto gridDelta = context.domain->getGrid().getGridDelta();
-        const auto diskRadius =
-            context.rayTracingParams.diskRadius == 0.
-                ? static_cast<NumericType>(gridDelta *
-                                           rayInternal::DiskFactor<D>)
-                : static_cast<NumericType>(context.rayTracingParams.diskRadius);
-        auto sourceData =
-            makeDiskDesorptionSourceData<NumericType, NumericType, D>(
-                context.diskMesh->getNodes(), *normals, desorptionWeights,
-                gridDelta, diskRadius, true);
-        if (sourceData.hasSource) {
-          auto source = std::make_shared<DesorptionSource<NumericType, D>>(
-              std::move(sourceData), context.rayTracingParams.raysPerPoint);
-
-          rayTracer_.setSource(source);
-          rayTracer_.apply();
-          ++this->fluxCalculationsCount_;
-
-          auto &desorptionData = rayTracer_.getLocalData();
-          for (int i = 0; i < numFluxes; ++i) {
-            auto desorptionFlux = std::move(desorptionData.getVectorData(i));
-            rayTracer_.normalizeFlux(
-                desorptionFlux, context.rayTracingParams.normalizationType);
-            if (context.rayTracingParams.smoothingNeighbors > 0) {
-              rayTracer_.smoothFlux(
-                  desorptionFlux, context.rayTracingParams.smoothingNeighbors);
-            }
-
-            assert(desorptionFlux.size() == particleFluxes[i].size());
-#pragma omp parallel for
-            for (std::size_t j = 0; j < desorptionFlux.size(); ++j) {
-              particleFluxes[i][j] += desorptionFlux[j];
-            }
-          }
-
-          if (auto source = model_->getSource()) {
-            rayTracer_.setSource(source);
-          } else {
-            rayTracer_.resetSource();
-          }
-        }
-      }
 
       for (int i = 0; i < numFluxes; ++i) {
         fluxes->insertNextScalarData(std::move(particleFluxes[i]),

@@ -143,7 +143,7 @@ public:
     auto const &pointMaterialIds =
         *context.diskMesh->getCellData().getScalarData("MaterialIds");
     std::vector<int> elementMaterialIds;
-    auto pointKdTree = getPointKdTree(context);
+    auto pointKdTree = context.getPointKdTree();
     PointToElementDataSingle<NumericType, NumericType, int, float>(
         pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
         .apply();
@@ -166,7 +166,7 @@ public:
     if (context.flags.useCoverages) {
       // Coverages are copied to elementData so there is no need to move them
       // back to the model
-      auto pointKdTree = getPointKdTree(context);
+      auto pointKdTree = context.getPointKdTree();
       viennals::PointData<NumericType> elementData;
       PointToElementData<NumericType, float>(
           elementData, surfaceModel->getCoverages(), *pointKdTree, surfaceMesh_,
@@ -217,13 +217,12 @@ public:
 
     this->timer_.start();
 
-    auto materialIds =
-        context.diskMesh->getCellData().getScalarData("MaterialIds");
+    const auto &[nodes, normals, materialIds] = context.getDiskMeshData();
     auto desorptionWeights = model_->getSurfaceModel()
-                                 ->getDesorptionWeights(*materialIds)
+                                 ->getDesorptionWeights(materialIds)
                                  .value_or(std::vector<NumericType>{});
 
-    if (desorptionWeights.size() != context.diskMesh->getNodes().size()) {
+    if (desorptionWeights.size() != nodes.size()) {
       VIENNACORE_LOG_WARNING(
           "Desorption weights size does not match number of mesh nodes. "
           "Skipping surface flux calculation.");
@@ -231,7 +230,7 @@ public:
     }
 
     // Map desorption weights from disk mesh nodes to surface mesh elements
-    auto pointKdTree = getPointKdTree(context);
+    auto pointKdTree = context.getPointKdTree();
     assert(surfaceMesh_ && "Surface mesh not initialized.");
     std::vector<NumericType> elementWeights;
     PointToElementDataSingle<NumericType, NumericType, NumericType, float>(
@@ -239,16 +238,18 @@ public:
         .apply();
 
     const auto &triangles = surfaceMesh_->triangles;
-    const auto &nodes = surfaceMesh_->nodes;
-    const auto meshNormals =
+    const auto &triangleNodes = surfaceMesh_->nodes;
+    const auto triangleNormals =
         surfaceMesh_->getCellData().getVectorData("Normals");
-    assert(meshNormals);
+    assert(triangleNormals);
 
     auto sourceData = makeTriangleDesorptionSourceData<NumericType>(
-        nodes, triangles, *meshNormals, elementWeights,
+        triangleNodes, triangles, *triangleNormals, elementWeights,
         static_cast<NumericType>(context.domain->getGridDelta()));
     if (!sourceData.hasSource) {
       // No active desorption sources, skip ray tracing
+      VIENNACORE_LOG_DEBUG(
+          "No active desorption sources found. Skipping ray tracing.");
       return ProcessResult::SUCCESS;
     }
 
@@ -267,18 +268,7 @@ public:
     postProcessing_.convert();
 
     // combine desorption flux with existing fluxes
-    for (std::size_t dataIdx = 0; dataIdx < fluxes->getScalarDataSize();
-         ++dataIdx) {
-      auto fluxData = fluxes->getScalarData(dataIdx);
-      auto desorptionData = desorptionFlux->getScalarData(dataIdx);
-      assert(fluxData);
-      assert(desorptionData);
-      assert(fluxData->size() == desorptionData->size());
-
-      for (std::size_t i = 0; i < fluxData->size(); ++i) {
-        (*fluxData)[i] += (*desorptionData)[i];
-      }
-    }
+    this->combineFluxes(*fluxes, *desorptionFlux);
 
     // reset source
     if (auto modelSource = model_->getSource()) {
@@ -381,19 +371,6 @@ private:
     }
 
     return std::move(rayData);
-  }
-
-  static auto getPointKdTree(ProcessContext<NumericType, D> &context) {
-    auto &pointKdTree = context.translationField->getKdTree();
-    if (!pointKdTree) {
-      pointKdTree = KDTreeType::New();
-      context.translationField->setKdTree(pointKdTree);
-    }
-    if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
-      pointKdTree->setPoints(context.diskMesh->nodes);
-      pointKdTree->build();
-    }
-    return pointKdTree;
   }
 
 private:
