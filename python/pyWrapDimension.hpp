@@ -160,19 +160,19 @@ class psParticle : public viennaray::Particle<psParticle<D>, T> {
 public:
   void surfaceCollision(T rayWeight, const Vec3D<T> &rayDir,
                         const Vec3D<T> &geomNormal, const unsigned int primID,
-                        const int materialID,
-                        viennaray::TracingData<T> &localData,
-                        const viennaray::TracingData<T> *globalData,
-                        RNG &Rng) final {
+                        const int materialID, PointData<T> &localData,
+                        const PointData<T> *globalData, RNG &Rng) final {
     PYBIND11_OVERRIDE(void, ClassName, surfaceCollision, rayWeight, rayDir,
                       geomNormal, primID, materialID, localData, globalData,
                       Rng);
   }
 
-  std::pair<T, Vec3D<T>> surfaceReflection(
-      T rayWeight, const Vec3D<T> &rayDir, const Vec3D<T> &geomNormal,
-      const unsigned int primID, const int materialID,
-      const viennaray::TracingData<T> *globalData, RNG &Rng) final {
+  std::pair<T, Vec3D<T>> surfaceReflection(T rayWeight, const Vec3D<T> &rayDir,
+                                           const Vec3D<T> &geomNormal,
+                                           const unsigned int primID,
+                                           const int materialID,
+                                           const PointData<T> *globalData,
+                                           RNG &Rng) final {
     using Pair = std::pair<T, Vec3D<T>>;
     PYBIND11_OVERRIDE(Pair, ClassName, surfaceReflection, rayWeight, rayDir,
                       geomNormal, primID, materialID, globalData, Rng);
@@ -203,16 +203,16 @@ public:
 //   void surfaceCollision(T rayWeight, const Vec3D<T> &rayDir,
 //                         const Vec3D<T> &geomNormal,
 //                         const unsigned int primID, const int materialID,
-//                         viennaray::TracingData<T> &localData,
-//                         const viennaray::TracingData<T> *globalData,
+//                         PointData<T> &localData,
+//                         const PointData<T> *globalData,
 //                         RNG &Rng) override final {
-//     localData.getVectorData(0)[primID] += rayWeight;
+//     (*localData.getScalarData(0))[primID] += rayWeight;
 //   }
 //   std::pair<T, Vec3D<T>>
 //   surfaceReflection(T rayWeight, const Vec3D<T> &rayDir,
 //                     const Vec3D<T> &geomNormal, const unsigned int
 //                     primID, const int materialID, const
-//                     viennaray::TracingData<T> *globalData, RNG &Rng)
+//                     PointData<T> *globalData, RNG &Rng)
 //                     override final {
 //     auto direction = rayReflectionDiffuse<T, D>(geomNormal, Rng);
 //     return {stickingProbability, direction};
@@ -238,16 +238,16 @@ public:
 //   void surfaceCollision(T rayWeight, const Vec3D<T> &rayDir,
 //                         const Vec3D<T> &geomNormal,
 //                         const unsigned int primID, const int materialID,
-//                         viennaray::TracingData<T> &localData,
-//                         const viennaray::TracingData<T> *globalData,
+//                         PointData<T> &localData,
+//                         const PointData<T> *globalData,
 //                         RNG &Rng) override final {
-//     localData.getVectorData(0)[primID] += rayWeight;
+//     (*localData.getScalarData(0))[primID] += rayWeight;
 //   }
 //   std::pair<T, Vec3D<T>>
 //   surfaceReflection(T rayWeight, const Vec3D<T> &rayDir,
 //                     const Vec3D<T> &geomNormal, const unsigned int
 //                     primID, const int materialID, const
-//                     viennaray::TracingData<T> *globalData, RNG &Rng)
+//                     PointData<T> *globalData, RNG &Rng)
 //                     override final {
 //     auto direction = rayReflectionSpecular<T>(rayDir, geomNormal);
 //     return {stickingProbability, direction};

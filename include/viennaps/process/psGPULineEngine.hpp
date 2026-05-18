@@ -156,9 +156,9 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateSourceFluxes(
-      ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+  ProcessResult
+  calculateSourceFluxes(ProcessContext<NumericType, D> &context,
+                        SmartPointer<PointData<NumericType>> &fluxes) override {
     this->timer_.start();
 
     std::vector<Vec3D<NumericType>> elementCenters(surfaceMesh_->lines.size());
@@ -243,20 +243,19 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateSurfaceFluxes(
-      ProcessContext<NumericType, D> &,
-      SmartPointer<viennals::PointData<NumericType>> &) override {
+  ProcessResult
+  calculateSurfaceFluxes(ProcessContext<NumericType, D> &,
+                         SmartPointer<PointData<NumericType>> &) override {
     VIENNACORE_LOG_WARNING(
         "Surface flux calculation not implemented for GPULineEngine.");
     return ProcessResult::NOT_IMPLEMENTED;
   }
 
 private:
-  static void
-  downloadCoverages(CudaBuffer &d_coverages,
-                    viennals::PointData<NumericType> &elementData,
-                    SmartPointer<viennals::PointData<NumericType>> &coverages,
-                    unsigned int numElements) {
+  static void downloadCoverages(CudaBuffer &d_coverages,
+                                PointData<NumericType> &elementData,
+                                SmartPointer<PointData<NumericType>> &coverages,
+                                unsigned int numElements) {
 
     auto numCov = coverages->getScalarDataSize();
     auto *temp = new float[numElements * numCov];
@@ -276,7 +275,7 @@ private:
   }
 
   void
-  downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
+  downloadResultsToPointData(PointData<NumericType> &pointData,
                              SmartPointer<viennals::Mesh<NumericType>> diskMesh,
                              int smoothingNeighbors, double gridDelta) {
     const auto numRates = rayTracer_.getNumberOfRates();

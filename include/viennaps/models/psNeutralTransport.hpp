@@ -104,7 +104,7 @@ public:
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
-      coverages = viennals::PointData<NumericType>::New();
+      coverages = PointData<NumericType>::New();
     } else {
       coverages->clear();
     }
@@ -118,7 +118,7 @@ public:
       return;
 
     if (surfaceData == nullptr) {
-      surfaceData = viennals::PointData<NumericType>::New();
+      surfaceData = PointData<NumericType>::New();
     } else {
       surfaceData->clear();
     }
@@ -140,7 +140,7 @@ public:
   }
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
+  calculateVelocities(SmartPointer<PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
     static_cast<void>(coordinates);
@@ -185,7 +185,7 @@ public:
     return velocity;
   }
 
-  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
+  void updateCoverages(SmartPointer<PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
     auto neutralFlux = fluxes->getScalarData(params.fluxLabel);
     auto coverage = coverages->getScalarData(params.coverageLabel);
@@ -560,24 +560,22 @@ public:
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
-                        const int,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
-                        RNG &) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
+                        const int, PointData<NumericType> &localData,
+                        const PointData<NumericType> *, RNG &) override final {
+    localData.addToScalarData(0, primID, rayWeight);
   }
 
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType, const Vec3D<NumericType> &,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &rngState) override final {
     NumericType sticking = params.etchFrontSticking;
     if (!MaterialMap::isMaterial(materialId, params.etchFrontMaterial)) {
       const auto theta = globalData == nullptr
                              ? NumericType(0.)
-                             : globalData->getVectorData(0)[primID];
+                             : globalData->getScalarData(0)->at(primID);
       sticking = params.zeroCoverageSticking * (1. - theta);
     }
 

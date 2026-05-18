@@ -23,7 +23,7 @@ public:
         ionRate_(ionRate), ionReactionOrder_(ionReactionOrder) {}
 
   SmartPointer<std::vector<NumericType>> calculateVelocities(
-      SmartPointer<viennals::PointData<NumericType>> rates,
+      SmartPointer<PointData<NumericType>> rates,
       const std::vector<std::array<NumericType, 3>> &coordinates,
       const std::vector<NumericType> &materialIDs) override {
     // define the surface reaction here
@@ -57,8 +57,7 @@ public:
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
-                    RNG &Rng) final {
+                    const PointData<NumericType> *globalData, RNG &Rng) final {
     auto cosTheta = getCosTheta(rayDir, geomNormal);
     NumericType incAngle = std::acos(cosTheta);
 
@@ -75,10 +74,10 @@ public:
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
+                        PointData<NumericType> &localData,
+                        const PointData<NumericType> *globalData,
                         RNG &Rng) final {
-    localData.getVectorData(0)[primID] += rayWeight;
+    localData.addToScalarData(0, primID, rayWeight);
   }
 
   NumericType getSourceDistributionPower() const final { return exponent_; }

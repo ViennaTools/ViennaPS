@@ -81,7 +81,7 @@ int main() {
         // TRACING
         timer.start();
         tracer.apply();
-        auto pointData = viennals::PointData<NumericType>::New();
+        auto pointData = PointData<NumericType>::New();
         ElementToPointData<NumericType, float, viennaray::gpu::ResultType> post(
             dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
             domain->getGridDelta() * 2.0f);
@@ -247,7 +247,7 @@ int main() {
 
   //       // POSTPROCESSING
   //       timer.start();
-  //       auto pointData = viennals::PointData<NumericType>::New();
+  //       auto pointData = PointData<NumericType>::New();
   //       postProcessLineData<NumericType, decltype(tracer)>(
   //           *pointData, diskMesh, 2, domain->getGridDelta(), tracer,
   //           elementKdTree, surfMesh);

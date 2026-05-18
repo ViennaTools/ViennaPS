@@ -265,7 +265,7 @@ void setupLineGeometry(
 
 template <typename NumericType, class TracerType>
 void postProcessLineData(
-    viennals::PointData<NumericType> &pointData,
+    PointData<NumericType> &pointData,
     SmartPointer<viennals::Mesh<NumericType>> diskMesh, int smoothingNeighbors,
     NumericType gridDelta, TracerType &rayTracer_,
     SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree_,

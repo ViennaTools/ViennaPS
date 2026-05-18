@@ -64,7 +64,7 @@ int main() {
 
         // POSTPROCESSING
         timer.start();
-        auto &flux = tracer.getLocalData().getVectorData(fluxLabel);
+        auto flux = std::move(*tracer.getLocalData().getScalarData(fluxLabel));
         tracer.normalizeFlux(flux);
         int smoothingNeighbors = 1;
         tracer.smoothFlux(flux, smoothingNeighbors);
@@ -136,13 +136,13 @@ int main() {
 
         // POSTPROCESSING
         timer.start();
-        auto pointData = viennals::PointData<NumericType>::New();
-        auto fluxResult = tracer.getLocalData().getVectorData(0);
+        auto pointData = PointData<NumericType>::New();
+        auto fluxResult = std::move(*tracer.getLocalData().getScalarData(0));
         tracer.normalizeFlux(fluxResult);
         std::vector<std::vector<NumericType>> fluxResultVec;
         fluxResultVec.push_back(std::move(fluxResult));
         if constexpr (particleType == 1) {
-          fluxResult = tracer.getLocalData().getVectorData(1);
+          fluxResult = std::move(*tracer.getLocalData().getScalarData(1));
           tracer.normalizeFlux(fluxResult);
           fluxResultVec.push_back(std::move(fluxResult));
         }

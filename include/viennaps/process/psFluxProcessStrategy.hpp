@@ -65,12 +65,12 @@ public:
     PROCESS_CHECK(fluxEngine_->updateSurface(context));
 
     // Calculate source fluxes
-    auto fluxes = viennals::PointData<NumericType>::New();
+    auto fluxes = PointData<NumericType>::New();
     PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
 
     // Calculate desorption fluxes
     if (context.flags.hasSurfaceDesorption) {
-      auto desorptionFlux = viennals::PointData<NumericType>::New();
+      auto desorptionFlux = PointData<NumericType>::New();
       if (fluxEngine_->calculateSurfaceFluxes(context, desorptionFlux) ==
           ProcessResult::SUCCESS) {
         fluxEngine_->combineFluxes(*fluxes, *desorptionFlux);
@@ -198,7 +198,7 @@ private:
               return false;
 
             // Calculate fluxes on the intermediate surface
-            auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+            auto fluxes = SmartPointer<PointData<NumericType>>::New();
             if (fluxEngine_->calculateSourceFluxes(context, fluxes) !=
                 ProcessResult::SUCCESS)
               return false;
@@ -290,12 +290,12 @@ private:
     PROCESS_CHECK(fluxEngine_->updateSurface(context));
 
     // Calculate fluxes from source plane to surface
-    auto fluxes = viennals::PointData<NumericType>::New();
+    auto fluxes = PointData<NumericType>::New();
     PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
 
     // Calculate desorption fluxes
     if (context.flags.hasSurfaceDesorption) {
-      auto desorptionFlux = viennals::PointData<NumericType>::New();
+      auto desorptionFlux = PointData<NumericType>::New();
       if (fluxEngine_->calculateSurfaceFluxes(context, desorptionFlux) ==
           ProcessResult::SUCCESS) {
         fluxEngine_->combineFluxes(*fluxes, *desorptionFlux);
@@ -383,7 +383,7 @@ private:
 
   SmartPointer<std::vector<NumericType>>
   calculateVelocities(const ProcessContext<NumericType, D> &context,
-                      SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+                      SmartPointer<PointData<NumericType>> &fluxes) {
     auto const &points = context.diskMesh->getNodes();
     assert(points.size() > 0);
     auto const &materialIds =
@@ -392,9 +392,8 @@ private:
                                                                  materialIds);
   }
 
-  ProcessResult
-  updateCoverages(ProcessContext<NumericType, D> &context,
-                  SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+  ProcessResult updateCoverages(ProcessContext<NumericType, D> &context,
+                                SmartPointer<PointData<NumericType>> &fluxes) {
     auto surfaceModel = context.model->getSurfaceModel();
     assert(surfaceModel != nullptr);
     assert(surfaceModel->getCoverages() != nullptr);
@@ -455,7 +454,7 @@ private:
       // save current coverages to compare with the new ones for convergence
       coverageManager_.saveCoverages(context);
 
-      auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
+      auto fluxes = SmartPointer<PointData<NumericType>>::New();
       PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
       // no desorption fluxes are calculated in coverage initialization
 
@@ -490,7 +489,7 @@ private:
   ProcessResult calculateSurfaceDiffusion(
       ProcessContext<NumericType, D> const &context,
       const std::unordered_map<std::string, NumericType> &diffusionCoefficients,
-      SmartPointer<viennals::PointData<NumericType>> targets) {
+      SmartPointer<PointData<NumericType>> targets) {
     if (context.timeStep <= 0.)
       return ProcessResult::SUCCESS;
     bool hasValidTarget = false;
@@ -545,19 +544,15 @@ private:
   }
 
   static void
-  mergeScalarData(viennals::PointData<NumericType> &scalarData,
-                  SmartPointer<viennals::PointData<NumericType>> dataToInsert) {
-    int numScalarData = dataToInsert->getScalarDataSize();
-    for (int i = 0; i < numScalarData; i++) {
-      scalarData.insertReplaceScalarData(*dataToInsert->getScalarData(i),
-                                         dataToInsert->getScalarDataLabel(i));
-    }
+  mergeScalarData(PointData<NumericType> &scalarData,
+                  SmartPointer<PointData<NumericType>> dataToInsert) {
+    scalarData.appendReplace(*dataToInsert);
   }
 
   void outputIntermediateResults(
       const ProcessContext<NumericType, D> &context,
       const SmartPointer<std::vector<NumericType>> &velocities,
-      const SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+      const SmartPointer<PointData<NumericType>> &fluxes) {
     auto const name = context.getProcessName();
     auto surfaceModel = context.model->getSurfaceModel();
     context.diskMesh->getCellData().insertNextScalarData(*velocities,

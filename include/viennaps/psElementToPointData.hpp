@@ -16,7 +16,7 @@ template <class NumericType, class MeshNT, class ResultType, bool d2 = true,
           bool d4 = true>
 class ElementToPointData {
   std::vector<std::string> dataLabels_;
-  SmartPointer<viennals::PointData<NumericType>> pointData_;
+  SmartPointer<PointData<NumericType>> pointData_;
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree_;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
@@ -38,8 +38,7 @@ public:
 
   ElementToPointData(
       const std::vector<std::string> &dataLabels,
-      SmartPointer<viennals::PointData<NumericType>>
-          pointData, // target point data
+      SmartPointer<PointData<NumericType>> pointData, // target point data
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
@@ -57,7 +56,7 @@ public:
     dataLabels_ = std::move(dataLabels);
   }
 
-  void setPointData(SmartPointer<viennals::PointData<NumericType>> pointData) {
+  void setPointData(SmartPointer<PointData<NumericType>> pointData) {
     pointData_ = pointData;
   }
 

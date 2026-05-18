@@ -84,38 +84,19 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateSourceFluxes(
-      ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+  ProcessResult
+  calculateSourceFluxes(ProcessContext<NumericType, D> &context,
+                        SmartPointer<PointData<NumericType>> &fluxes) override {
     assert(model_ != nullptr);
     this->timer_.start();
-    viennaray::TracingData<NumericType> rayTracingData;
-    auto surfaceModel = context.model->getSurfaceModel();
 
-    // move coverages to the ray tracer
+    // set coverages in the ray tracer
     if (context.flags.useCoverages) {
-      rayTracingData = movePointDataToRayData(surfaceModel->getCoverages());
+      rayTracer_.setGlobalData(model_->getSurfaceModel()->getCoverages());
     }
-
-    if (context.flags.useProcessParams) {
-      // store scalars in addition to coverages
-      auto processParams = surfaceModel->getProcessParameters();
-      NumericType numParams = processParams->getScalarData().size();
-      rayTracingData.setNumberOfScalarData(numParams);
-      for (size_t i = 0; i < numParams; ++i) {
-        rayTracingData.setScalarData(i, processParams->getScalarData(i),
-                                     processParams->getScalarDataLabel(i));
-      }
-    }
-
-    if (context.flags.useCoverages || context.flags.useProcessParams)
-      rayTracer_.setGlobalData(rayTracingData);
 
     runRayTracer(context, fluxes);
 
-    // move coverages back in the model
-    if (context.flags.useCoverages)
-      moveRayDataToPointData(surfaceModel->getCoverages(), rayTracingData);
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
@@ -123,7 +104,7 @@ public:
 
   ProcessResult calculateSurfaceFluxes(
       ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+      SmartPointer<PointData<NumericType>> &fluxes) override {
 
     this->timer_.start();
 
@@ -154,13 +135,9 @@ public:
       return ProcessResult::INVALID_INPUT;
     }
 
-    viennaray::TracingData<NumericType> rayTracingData;
-    auto surfaceModel = context.model->getSurfaceModel();
-
-    // move coverages to the ray tracer
+    // set coverages in the ray tracer
     if (context.flags.useCoverages) {
-      rayTracingData = movePointDataToRayData(surfaceModel->getCoverages());
-      rayTracer_.setGlobalData(rayTracingData);
+      rayTracer_.setGlobalData(model_->getSurfaceModel()->getCoverages());
     }
 
     auto source = std::make_shared<DesorptionSource<NumericType, D>>(
@@ -168,11 +145,6 @@ public:
 
     rayTracer_.setSource(source);
     runRayTracer(context, fluxes);
-
-    // move coverages back in the model
-    if (context.flags.useCoverages) {
-      moveRayDataToPointData(surfaceModel->getCoverages(), rayTracingData);
-    }
 
     // reset source
     if (auto source = model_->getSource()) {
@@ -188,7 +160,7 @@ public:
 
 private:
   void runRayTracer(ProcessContext<NumericType, D> const &context,
-                    SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+                    SmartPointer<PointData<NumericType>> &fluxes) {
     assert(fluxes != nullptr);
     assert(model_ != nullptr);
     fluxes->clear();
@@ -224,7 +196,7 @@ private:
       particleFluxLabels.reserve(numFluxes);
 
       for (int i = 0; i < numFluxes; ++i) {
-        auto flux = std::move(localData.getVectorData(i));
+        auto flux = std::move(*localData.getScalarData(i));
 
         // normalize and smooth
         rayTracer_.normalizeFlux(flux,
@@ -233,7 +205,7 @@ private:
           rayTracer_.smoothFlux(flux,
                                 context.rayTracingParams.smoothingNeighbors);
 
-        particleFluxLabels.push_back(localData.getVectorDataLabel(i));
+        particleFluxLabels.push_back(localData.getScalarDataLabel(i));
         particleFluxes.push_back(std::move(flux));
       }
 
@@ -246,29 +218,6 @@ private:
 
       ++particleIdx;
     }
-  }
-
-  static viennaray::TracingData<NumericType> movePointDataToRayData(
-      SmartPointer<viennals::PointData<NumericType>> pointData) {
-    viennaray::TracingData<NumericType> rayData;
-    const auto numData = pointData->getScalarDataSize();
-    rayData.setNumberOfVectorData(numData);
-    for (size_t i = 0; i < numData; ++i) {
-      auto label = pointData->getScalarDataLabel(i);
-      rayData.setVectorData(i, std::move(*pointData->getScalarData(label)),
-                            label);
-    }
-    return rayData;
-  }
-
-  static void moveRayDataToPointData(
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      viennaray::TracingData<NumericType> &rayData) {
-    pointData->clear();
-    const auto numData = rayData.getVectorData().size();
-    for (size_t i = 0; i < numData; ++i)
-      pointData->insertNextScalarData(std::move(rayData.getVectorData(i)),
-                                      rayData.getVectorDataLabel(i));
   }
 
 private:

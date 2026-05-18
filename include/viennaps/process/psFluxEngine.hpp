@@ -2,6 +2,7 @@
 
 #include "psProcessContext.hpp"
 
+#include <vcPointData.hpp>
 #include <vcTimer.hpp>
 
 namespace viennaps {
@@ -26,20 +27,19 @@ public:
   // Flux from source plane to surface
   virtual ProcessResult calculateSourceFluxes(
       ProcessContext<NumericType, D> &context,
-      viennacore::SmartPointer<viennals::PointData<NumericType>> &fluxes) = 0;
+      viennacore::SmartPointer<PointData<NumericType>> &fluxes) = 0;
 
   // Flux from surface to surface (e.g. desorption flux)
   virtual ProcessResult calculateSurfaceFluxes(
       ProcessContext<NumericType, D> &context,
-      viennacore::SmartPointer<viennals::PointData<NumericType>> &fluxes) = 0;
+      viennacore::SmartPointer<PointData<NumericType>> &fluxes) = 0;
 
   auto &getTimer() const { return timer_; }
   void resetTimer() { timer_.reset(); }
   auto getFluxCalculationsCount() const { return fluxCalculationsCount_; }
 
-  static void
-  combineFluxes(viennals::PointData<NumericType> &fluxes,
-                viennals::PointData<NumericType> &desorptionFluxes) {
+  static void combineFluxes(PointData<NumericType> &fluxes,
+                            PointData<NumericType> &desorptionFluxes) {
     assert(fluxes.getScalarDataSize() == desorptionFluxes.getScalarDataSize());
 #pragma omp parallel for
     for (int dataIdx = 0; dataIdx < fluxes.getScalarDataSize(); ++dataIdx) {

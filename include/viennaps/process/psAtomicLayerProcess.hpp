@@ -246,7 +246,7 @@ public:
       rayTracer.setGeometry(points, normals, gridDelta);
       rayTracer.setMaterialIds(materialIds);
 
-      auto fluxes = viennals::PointData<NumericType>::New();
+      auto fluxes = PointData<NumericType>::New();
       NumericType time = 0.;
       int pulseCounter = 0;
 
@@ -335,7 +335,7 @@ public:
               .print();
         }
 
-        auto purgeFluxes = viennals::PointData<NumericType>::New();
+        auto purgeFluxes = PointData<NumericType>::New();
 
         viennaray::Trace<NumericType, D> purgeTracer;
         purgeTracer.setSourceDirection(rayTracingParams_.sourceDirection);
@@ -410,8 +410,8 @@ private:
     writer.apply();
   }
 
-  viennaray::TracingData<NumericType> movePointDataToRayData(
-      SmartPointer<viennals::PointData<NumericType>> pointData) {
+  viennaray::TracingData<NumericType>
+  movePointDataToRayData(SmartPointer<PointData<NumericType>> pointData) {
     viennaray::TracingData<NumericType> rayData;
     const auto numData = pointData->getScalarDataSize();
     rayData.setNumberOfVectorData(numData);
@@ -424,9 +424,8 @@ private:
     return std::move(rayData);
   }
 
-  void moveRayDataToPointData(
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      viennaray::TracingData<NumericType> &rayData) {
+  void moveRayDataToPointData(SmartPointer<PointData<NumericType>> pointData,
+                              viennaray::TracingData<NumericType> &rayData) {
     pointData->clear();
     const auto numData = rayData.getVectorData().size();
     for (size_t i = 0; i < numData; ++i)

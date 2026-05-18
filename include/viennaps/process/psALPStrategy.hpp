@@ -196,7 +196,7 @@ private:
         context.model->getSurfaceModel()->setTimeStep(dt);
 
         // Calculate fluxes
-        auto fluxes = viennals::PointData<NumericType>::New();
+        auto fluxes = PointData<NumericType>::New();
         PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
 
         // Calculate surface diffusion of fluxes
@@ -232,7 +232,7 @@ private:
               "Purge pulse time specified but no surface desorption found. "
               "Skipping purge pulse.");
         } else {
-          auto fluxes = viennals::PointData<NumericType>::New();
+          auto fluxes = PointData<NumericType>::New();
           auto result = fluxEngine_->calculateSurfaceFluxes(context, fluxes);
           if (result == ProcessResult::SUCCESS) {
             const auto &[nodes, normals, materialIds] =
@@ -246,7 +246,7 @@ private:
       }
 
       // Calculate velocities in model
-      auto fluxes = viennals::PointData<NumericType>::New();
+      auto fluxes = PointData<NumericType>::New();
       PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
       auto velocities = calculateVelocities(context, fluxes);
       context.model->getVelocityField()->prepare(context.domain, velocities,
@@ -260,10 +260,10 @@ private:
         context.diskMesh->getCellData().insertReplaceScalarData(*velocities,
                                                                 "velocities");
         auto surfaceModel = context.model->getSurfaceModel();
-        mergeScalarData(context.diskMesh->getCellData(),
-                        surfaceModel->getCoverages());
+        context.diskMesh->getCellData().appendReplace(
+            *surfaceModel->getCoverages());
         if (auto surfaceData = surfaceModel->getSurfaceData())
-          mergeScalarData(context.diskMesh->getCellData(), surfaceData);
+          context.diskMesh->getCellData().appendReplace(*surfaceData);
         viennals::VTKWriter<NumericType>(
             context.diskMesh, context.getProcessName() + "_" +
                                   std::to_string(context.currentIteration) +
@@ -295,18 +295,18 @@ private:
     return ProcessResult::SUCCESS;
   }
 
-  static void outputIntermediateResults(
-      ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> const &fluxes,
-      std::string const &suffix = "") {
+  static void
+  outputIntermediateResults(ProcessContext<NumericType, D> &context,
+                            SmartPointer<PointData<NumericType>> const &fluxes,
+                            std::string const &suffix = "") {
     if (Logger::hasIntermediate()) {
       auto const name = context.getProcessName();
       auto surfaceModel = context.model->getSurfaceModel();
-      mergeScalarData(context.diskMesh->getCellData(),
-                      surfaceModel->getCoverages());
-      mergeScalarData(context.diskMesh->getCellData(), fluxes);
+      context.diskMesh->getCellData().appendReplace(
+          *surfaceModel->getCoverages());
+      context.diskMesh->getCellData().appendReplace(*fluxes);
       if (auto surfaceData = surfaceModel->getSurfaceData())
-        mergeScalarData(context.diskMesh->getCellData(), surfaceData);
+        context.diskMesh->getCellData().appendReplace(*surfaceData);
       viennals::VTKWriter<NumericType>(
           context.diskMesh, context.intermediateOutputPath + name + suffix)
           .apply();
@@ -315,7 +315,7 @@ private:
 
   static void outputIntermediatePulseResults(
       ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> const &fluxes,
+      SmartPointer<PointData<NumericType>> const &fluxes,
       const unsigned pulseIteration) {
     if (Logger::hasIntermediate()) {
       std::string suffix = "_pulse_" +
@@ -327,7 +327,7 @@ private:
 
   SmartPointer<std::vector<NumericType>>
   calculateVelocities(const ProcessContext<NumericType, D> &context,
-                      SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+                      SmartPointer<PointData<NumericType>> &fluxes) {
     auto const &points = context.diskMesh->getNodes();
     assert(points.size() > 0);
     auto const &materialIds =
@@ -337,7 +337,7 @@ private:
   }
 
   void updateCoverages(ProcessContext<NumericType, D> &context,
-                       SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+                       SmartPointer<PointData<NumericType>> &fluxes) {
     auto surfaceModel = context.model->getSurfaceModel();
     assert(surfaceModel != nullptr);
     assert(surfaceModel->getCoverages() != nullptr);
@@ -359,9 +359,10 @@ private:
     }
   }
 
-  ProcessResult calculateSurfaceDiffusion(
-      NumericType timeStep, const ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> targets) {
+  ProcessResult
+  calculateSurfaceDiffusion(NumericType timeStep,
+                            const ProcessContext<NumericType, D> &context,
+                            SmartPointer<PointData<NumericType>> targets) {
     if (timeStep <= 0.)
       return ProcessResult::SUCCESS;
 
@@ -416,16 +417,6 @@ private:
       }
     }
     return ProcessResult::SUCCESS;
-  }
-
-  static void
-  mergeScalarData(viennals::PointData<NumericType> &scalarData,
-                  SmartPointer<viennals::PointData<NumericType>> dataToInsert) {
-    int numScalarData = dataToInsert->getScalarDataSize();
-    for (int i = 0; i < numScalarData; i++) {
-      scalarData.insertReplaceScalarData(*dataToInsert->getScalarData(i),
-                                         dataToInsert->getScalarDataLabel(i));
-    }
   }
 
   void logProcessingTimes(const ProcessContext<NumericType, D> &context,

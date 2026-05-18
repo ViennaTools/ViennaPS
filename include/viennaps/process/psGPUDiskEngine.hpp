@@ -133,9 +133,9 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateSourceFluxes(
-      ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+  ProcessResult
+  calculateSourceFluxes(ProcessContext<NumericType, D> &context,
+                        SmartPointer<PointData<NumericType>> &fluxes) override {
 
     this->timer_.start();
 
@@ -201,7 +201,7 @@ public:
 
   ProcessResult calculateSurfaceFluxes(
       ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+      SmartPointer<PointData<NumericType>> &fluxes) override {
 
     this->timer_.start();
 
@@ -244,11 +244,10 @@ public:
   }
 
 private:
-  static void
-  downloadCoverages(CudaBuffer &d_coverages,
-                    viennals::PointData<NumericType> &elementData,
-                    SmartPointer<viennals::PointData<NumericType>> &coverages,
-                    unsigned int numElements) {
+  static void downloadCoverages(CudaBuffer &d_coverages,
+                                PointData<NumericType> &elementData,
+                                SmartPointer<PointData<NumericType>> &coverages,
+                                unsigned int numElements) {
 
     auto numCov = coverages->getScalarDataSize();
     auto *temp = new float[numElements * numCov];
@@ -268,7 +267,7 @@ private:
   }
 
   void copyResultsToPointData(
-      viennals::PointData<NumericType> &pointData, int smoothingNeighbors,
+      PointData<NumericType> &pointData, int smoothingNeighbors,
       std::vector<std::vector<viennaray::gpu::ResultType>> results) {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();

@@ -55,7 +55,7 @@ public:
 
   void initializeCoverages(unsigned numPoints) override {
     if (coverages == nullptr) {
-      coverages = viennals::PointData<NumericType>::New();
+      coverages = PointData<NumericType>::New();
     } else {
       coverages->clear();
     }
@@ -66,7 +66,7 @@ public:
   void setTimeStep(NumericType dt) override { dt_ = dt; }
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
+  calculateVelocities(SmartPointer<PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
 
@@ -86,7 +86,7 @@ public:
     return SmartPointer<std::vector<NumericType>>::New(std::move(depoRate));
   }
 
-  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
+  void updateCoverages(SmartPointer<PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
     // update coverages based on fluxes
     const auto numPoints = materialIds.size();
@@ -110,7 +110,7 @@ public:
   }
 
   void updateCoveragesFromDesorption(
-      SmartPointer<viennals::PointData<NumericType>> desorptionFluxes,
+      SmartPointer<PointData<NumericType>> desorptionFluxes,
       const std::vector<NumericType> &materialIds) override {
     const auto numPoints = materialIds.size();
     const auto ParticleFlux = desorptionFluxes->getScalarData("ParticleFlux");
@@ -160,8 +160,7 @@ public:
 
     assert(Coverage->size() == materialIds.size() && "Coverage size mismatch");
     for (size_t i = 0; i < materialIds.size(); ++i) {
-      desorptionWeights[i] = params_.evaporationFlux * Coverage->at(i) *
-                             params_.purgePulseTime / params_.s0;
+      desorptionWeights[i] = Coverage->at(i);
     }
 
     return desorptionWeights;
@@ -183,22 +182,19 @@ public:
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
+                        PointData<NumericType> &localData,
+                        const PointData<NumericType> *globalData,
                         RNG &Rng) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
+    localData.addToScalarData(0, primID, rayWeight);
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &Rng) override final {
-    assert(primID < globalData->getVectorData(1).size() &&
-           "PrimID out of bounds");
-
-    // H2O surface coverage
-    const auto &phi = globalData->getVectorData(0)[primID];
+    // surface coverage
+    const auto &phi = globalData->getScalarData(0)->at(primID);
     // Obtain the sticking probability
     NumericType S_eff = beta * std::max(NumericType(1.) - phi, NumericType(0.));
 

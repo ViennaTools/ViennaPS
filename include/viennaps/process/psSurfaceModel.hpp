@@ -2,7 +2,7 @@
 
 #include "psProcessParams.hpp"
 
-#include <lsPointData.hpp>
+#include <vcPointData.hpp>
 #include <vcSmartPointer.hpp>
 
 #include <vector>
@@ -13,8 +13,8 @@ using namespace viennacore;
 
 template <typename NumericType> class SurfaceModel {
 protected:
-  SmartPointer<viennals::PointData<NumericType>> coverages = nullptr;
-  SmartPointer<viennals::PointData<NumericType>> surfaceData = nullptr;
+  SmartPointer<PointData<NumericType>> coverages = nullptr;
+  SmartPointer<PointData<NumericType>> surfaceData = nullptr;
   SmartPointer<ProcessParams<NumericType>> processParams = nullptr;
 
 public:
@@ -38,18 +38,17 @@ public:
   virtual void setTimeStep(NumericType dt) {}
 
   virtual SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
+  calculateVelocities(SmartPointer<PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) {
     return nullptr;
   }
 
-  virtual void
-  updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
-                  const std::vector<NumericType> &materialIds) {}
+  virtual void updateCoverages(SmartPointer<PointData<NumericType>> fluxes,
+                               const std::vector<NumericType> &materialIds) {}
 
   virtual void updateCoveragesFromDesorption(
-      SmartPointer<viennals::PointData<NumericType>> desorptionFluxes,
+      SmartPointer<PointData<NumericType>> desorptionFluxes,
       const std::vector<NumericType> &materialIds) {}
 
   virtual std::optional<std::vector<NumericType>>
