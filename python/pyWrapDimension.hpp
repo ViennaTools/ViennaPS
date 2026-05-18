@@ -1163,12 +1163,8 @@ template <int D> void bindApi(py::module &module) {
   py::class_<SingleParticleALD<T, D>, SmartPointer<SingleParticleALD<T, D>>>(
       module, "SingleParticleALD", processModel)
       .def(py::init(&SmartPointer<SingleParticleALD<T, D>>::template New<
-                    T, int, T, int, T, T, T, T, T, T>),
-           py::arg("stickingProbability"), py::arg("numCycles"),
-           py::arg("growthPerCycle"), py::arg("totalCycles"),
-           py::arg("coverageTimeStep"), py::arg("evFlux"), py::arg("inFlux"),
-           py::arg("s0"), py::arg("surfaceDiffusionCoefficient") = 0.0,
-           py::arg("gasMFP") = -1.0);
+                    const SingleParticleALDParams &>),
+           py::arg("parameters"));
 
   // ***************************************************************************
   //                               GEOMETRIES

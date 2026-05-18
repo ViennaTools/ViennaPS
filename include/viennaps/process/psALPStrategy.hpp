@@ -259,6 +259,11 @@ private:
       if (Logger::hasIntermediate()) {
         context.diskMesh->getCellData().insertReplaceScalarData(*velocities,
                                                                 "velocities");
+        auto surfaceModel = context.model->getSurfaceModel();
+        mergeScalarData(context.diskMesh->getCellData(),
+                        surfaceModel->getCoverages());
+        if (auto surfaceData = surfaceModel->getSurfaceData())
+          mergeScalarData(context.diskMesh->getCellData(), surfaceData);
         viennals::VTKWriter<NumericType>(
             context.diskMesh, context.getProcessName() + "_" +
                                   std::to_string(context.currentIteration) +

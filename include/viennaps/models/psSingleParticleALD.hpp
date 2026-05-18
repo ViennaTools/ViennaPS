@@ -7,16 +7,16 @@ namespace viennaps {
 using namespace viennacore;
 
 struct SingleParticleALDParams {
-  double stickingProbability;  // particle sticking probability
-  double gasMeanFreePath = -1; // mean free path of the particles in the gas
+  double stickingProbability = 1; // particle sticking probability
+  double gasMeanFreePath = -1;    // mean free path of the particles in the gas
 
-  double growthPerCycle; // growth per cycle
-  int totalCycles;       // number of *real* cycles
-  int numCycles;         // number of cycles to simulate
+  double growthPerCycle = 0; // growth per cycle
+  int totalCycles = 0;       // number of *real* cycles
+  int numCycles = 0;         // number of cycles to simulate
 
-  double evaporationFlux; // evaporation flux
-  double incomingFlux;    // incoming flux
-  double s0;              // surface site density
+  double evaporationFlux = 0; // evaporation flux
+  double incomingFlux = 0;    // incoming flux
+  double s0 = 0;              // surface site density
   double coverageDiffusionCoefficient =
       0;                     // surface diffusion coefficient for coverage
   double purgePulseTime = 0; // time of purge pulse after each cycle

@@ -108,7 +108,6 @@ int main(int argc, char **argv) {
 
   ps::RayTracingParameters rayTracingParams;
   rayTracingParams.raysPerPoint = 1000;
-  rayTracingParams.maxReflections = 100000;
 
   ps::Process<NumericType, D> ALP(domain, model);
   ALP.setParameters(alpParams);

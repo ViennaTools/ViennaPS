@@ -935,7 +935,7 @@ class SelectiveEpitaxy(ProcessModel):
     def setMaterialRate(self, material: viennaps._core.Material, rate: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class SingleParticleALD(ProcessModel):
-    def __init__(self, stickingProbability: typing.SupportsFloat | typing.SupportsIndex, numCycles: typing.SupportsInt | typing.SupportsIndex, growthPerCycle: typing.SupportsFloat | typing.SupportsIndex, totalCycles: typing.SupportsInt | typing.SupportsIndex, coverageTimeStep: typing.SupportsFloat | typing.SupportsIndex, evFlux: typing.SupportsFloat | typing.SupportsIndex, inFlux: typing.SupportsFloat | typing.SupportsIndex, s0: typing.SupportsFloat | typing.SupportsIndex, surfaceDiffusionCoefficient: typing.SupportsFloat | typing.SupportsIndex = 0.0, gasMFP: typing.SupportsFloat | typing.SupportsIndex = -1.0) -> None:
+    def __init__(self, parameters: viennaps._core.SingleParticleALDParams) -> None:
         ...
 class SingleParticleProcess(ProcessModel):
     @typing.overload
