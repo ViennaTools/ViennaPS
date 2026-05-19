@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <vector>
@@ -282,7 +283,7 @@ public:
     // Step 3: surface diffusion (only when enabled and D0 > 0)
     if (params.Config.useSurfaceDiffusion && Ds > NumericType(0))
       applySurfaceDiffusion(*theta_phys, Gamma_HF_vec, k_act_ion_vec,
-                            chain, coordinates, Ds, k_des, k_r_direct);
+                            coordinates, Ds, k_des, k_r_direct);
 
     // Step 4: recompute theta_chem
     if (params.Config.usePhysisorption) {
@@ -454,89 +455,97 @@ private:
     return sidewall;
   }
 
-  // Solve steady-state surface diffusion PDE on 1D chain via Thomas algorithm.
+  // Surface diffusion of physisorbed HF, solved as a steady-state reaction-
+  // diffusion balance directly on the surface point cloud (mesh-free):
   //
-  // Boundary conditions (Dirichlet):
-  //   theta[0]   = local Langmuir value at open-surface end (chain start)
-  //   theta[M-1] = local Langmuir value at open-surface end (chain end)
+  //   Ds * Lap(theta) + Gamma*(1 - theta)
+  //                   - (k_des + k_act_ion + k_r_direct) * theta = 0
   //
-  // Interior (j = 1..M-2):
-  //   -alpha*theta[j-1] + (2*alpha + k_des + Gamma[j] + k_act[j])*theta[j]
-  //   - alpha*theta[j+1] = Gamma[j]
+  // The Laplacian Lap(theta_i) = sum_j w_ij (theta_j - theta_i) is taken over
+  // neighbouring surface points (w_ij = 1/d_ij^2). The balance is solved by
+  // Jacobi iteration; each update is a weighted average of the local Langmuir
+  // value and the neighbour average, so it is a positive, diagonally dominant
+  // contraction — unconditionally stable and strictly smoothing. Open mask-top
+  // points keep a high local coverage and act as natural diffusion sources, so
+  // no reconstructed 1D chain and no imposed boundary values are needed. The
+  // earlier chain + Dirichlet formulation injected geometry-reconstruction
+  // noise that destabilised the etch front at large Ds.
   void applySurfaceDiffusion(
       std::vector<NumericType> &theta_phys,
       const std::vector<NumericType> &Gamma_HF_vec,
       const std::vector<NumericType> &k_act_ion_vec,
-      const std::vector<size_t> &chain,
       const std::vector<Vec3D<NumericType>> &points,
       NumericType Ds, NumericType k_des, NumericType k_r_direct) const {
-    const size_t M = chain.size();
-    if (M < 3) return;
+    const size_t N = points.size();
+    if (N < 3)
+      return;
 
-    // Average arc-length spacing
-    NumericType avgDs = NumericType(0);
-    for (size_t j = 0; j + 1 < M; ++j) {
-      NumericType distSq = NumericType(0);
+    auto distSq = [&](size_t i, size_t j) {
+      NumericType s = NumericType(0);
       for (int d = 0; d < D; ++d) {
-        NumericType dd = points[chain[j + 1]][d] - points[chain[j]][d];
-        distSq += dd * dd;
+        const NumericType dd = points[i][d] - points[j][d];
+        s += dd * dd;
       }
-      avgDs += std::sqrt(distSq);
-    }
-    avgDs /= NumericType(M - 1);
-    if (avgDs < NumericType(1e-10)) return;
+      return s;
+    };
 
-    const NumericType alpha = Ds / (avgDs * avgDs);
+    // Neighbour radius from a robust estimate of the point spacing.
+    std::vector<NumericType> nnSq(N, std::numeric_limits<NumericType>::max());
+#pragma omp parallel for
+    for (size_t i = 0; i < N; ++i)
+      for (size_t j = 0; j < N; ++j)
+        if (j != i)
+          nnSq[i] = std::min(nnSq[i], distSq(i, j));
+    std::vector<NumericType> sortedNN(nnSq);
+    std::sort(sortedNN.begin(), sortedNN.end());
+    const NumericType medianNNSq = sortedNN[N / 2];
+    if (medianNNSq < NumericType(1e-20))
+      return;
+    const NumericType radiusSq = medianNNSq * NumericType(9); // (3x spacing)^2
 
-    // Save Dirichlet values at chain endpoints (local Langmuir equilibrium)
-    const NumericType bc_left  = theta_phys[chain[0]];
-    const NumericType bc_right = theta_phys[chain[M - 1]];
-
-    // Build tridiagonal system
-    std::vector<NumericType> a(M, -alpha);
-    std::vector<NumericType> b(M);
-    std::vector<NumericType> c(M, -alpha);
-    std::vector<NumericType> rhs(M);
-
-    // Dirichlet BC at endpoints
-    a[0]     = NumericType(0); b[0]     = NumericType(1);
-    c[0]     = NumericType(0); rhs[0]   = bc_left;
-    a[M - 1] = NumericType(0); b[M - 1] = NumericType(1);
-    c[M - 1] = NumericType(0); rhs[M - 1] = bc_right;
-
-    // Interior nodes: all theta_phys loss terms in diagonal
-    for (size_t j = 1; j + 1 < M; ++j) {
-      const size_t idx    = chain[j];
-      const NumericType G = Gamma_HF_vec[idx];
-      const NumericType K = k_act_ion_vec[idx];
-      b[j]   = NumericType(2) * alpha + k_des + G + K + k_r_direct;
-      rhs[j] = G;
-    }
-
-    // Thomas algorithm — forward sweep
-    std::vector<NumericType> c_prime(M), d_prime(M);
-    c_prime[0] = c[0] / b[0];
-    d_prime[0] = rhs[0] / b[0];
-
-    for (size_t j = 1; j < M; ++j) {
-      const NumericType denom = b[j] - a[j] * c_prime[j - 1];
-      const NumericType inv = (std::abs(denom) > NumericType(1e-30))
-                                  ? NumericType(1) / denom
-                                  : NumericType(0);
-      c_prime[j] = c[j] * inv;
-      d_prime[j] = (rhs[j] - a[j] * d_prime[j - 1]) * inv;
+    // Neighbour lists with inverse-square-distance weights.
+    std::vector<std::vector<size_t>> nbrIdx(N);
+    std::vector<std::vector<NumericType>> nbrW(N);
+    std::vector<NumericType> wSum(N, NumericType(0));
+#pragma omp parallel for
+    for (size_t i = 0; i < N; ++i) {
+      for (size_t j = 0; j < N; ++j) {
+        if (j == i)
+          continue;
+        const NumericType d2 = distSq(i, j);
+        if (d2 > radiusSq || d2 < NumericType(1e-20))
+          continue;
+        const NumericType w = NumericType(1) / d2;
+        nbrIdx[i].push_back(j);
+        nbrW[i].push_back(w);
+        wSum[i] += w;
+      }
     }
 
-    // Back substitution
-    theta_phys[chain[M - 1]] =
-        std::max(NumericType(0), std::min(d_prime[M - 1], NumericType(1)));
-
-    for (size_t j = M - 2; ; --j) {
-      theta_phys[chain[j]] =
-          std::max(NumericType(0),
-                   std::min(d_prime[j] - c_prime[j] * theta_phys[chain[j + 1]],
-                            NumericType(1)));
-      if (j == 0) break;
+    // Jacobi iteration of the steady-state balance. The update is a contraction
+    // (all coefficients positive, diagonally dominant) so it always converges.
+    std::vector<NumericType> next(theta_phys);
+    constexpr int maxIter = 1000;
+    for (int it = 0; it < maxIter; ++it) {
+#pragma omp parallel for
+      for (size_t i = 0; i < N; ++i) {
+        const NumericType G = Gamma_HF_vec[i];
+        const NumericType losses = k_des + k_act_ion_vec[i] + k_r_direct;
+        NumericType nbrSum = NumericType(0);
+        for (size_t n = 0; n < nbrIdx[i].size(); ++n)
+          nbrSum += nbrW[i][n] * theta_phys[nbrIdx[i][n]];
+        const NumericType denom = G + losses + Ds * wSum[i];
+        const NumericType val = (denom > NumericType(1e-30))
+                                    ? (G + Ds * nbrSum) / denom
+                                    : theta_phys[i];
+        next[i] = std::max(NumericType(0), std::min(val, NumericType(1)));
+      }
+      NumericType maxChange = NumericType(0);
+      for (size_t i = 0; i < N; ++i)
+        maxChange = std::max(maxChange, std::abs(next[i] - theta_phys[i]));
+      theta_phys.swap(next);
+      if (maxChange < NumericType(1e-5))
+        break;
     }
   }
 };
