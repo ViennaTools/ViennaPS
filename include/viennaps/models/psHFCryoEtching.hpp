@@ -359,7 +359,11 @@ private:
   const HFCryoParameters<NumericType> &params;
 
   // Nearest-neighbor chain ordering surface points as a 1D curve.
-  // Starts from the topmost point (open to plasma).
+  // Starts from a true endpoint of the open surface (leftmost point) so the
+  // greedy walk traverses the whole contour: mask top -> trench sidewall ->
+  // bottom -> opposite sidewall -> mask top. Starting in the interior (e.g.
+  // the topmost point) makes the walk cover only one flat strip and miss the
+  // trench entirely.
   std::vector<size_t>
   buildSurfaceChain(const std::vector<Vec3D<NumericType>> &points) const {
     const size_t N = points.size();
@@ -371,13 +375,15 @@ private:
 
     size_t start = 0;
     for (size_t i = 1; i < N; ++i)
-      if (points[i][D - 1] > points[start][D - 1])
+      if (points[i][0] < points[start][0] ||
+          (points[i][0] == points[start][0] &&
+           points[i][D - 1] > points[start][D - 1]))
         start = i;
 
     chain.push_back(start);
     visited[start] = true;
 
-    NumericType thresholdSq = NumericType(9);
+    NumericType thresholdSq = std::numeric_limits<NumericType>::max();
 
     for (size_t step = 1; step < N; ++step) {
       const size_t curr = chain.back();
@@ -400,8 +406,11 @@ private:
       if (best == N || bestDistSq > thresholdSq)
         break;
 
+      // Calibrate gap threshold from the first (typical) spacing. Generous
+      // factor so corners and into-trench turns survive, but a jump across
+      // the open trench mouth still breaks the chain.
       if (step == 1)
-        thresholdSq = bestDistSq * NumericType(4);
+        thresholdSq = bestDistSq * NumericType(36);
 
       chain.push_back(best);
       visited[best] = true;
