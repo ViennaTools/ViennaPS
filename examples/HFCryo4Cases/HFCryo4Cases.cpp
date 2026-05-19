@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -21,27 +22,29 @@ static constexpr double trenchWidth = 10.0;
 static constexpr double maskHeight  = 80.0;
 static constexpr double processTime = 400.0;
 
-static void saveMesh(SmartPointer<Domain<double, 2>> domain,
-                     const std::string &filename, double T) {
+// Writes the surface mesh and returns the etch depth: how far the deepest
+// point of the etch front sits below the original substrate surface (y = 0).
+static double saveMeshAndDepth(SmartPointer<Domain<double, 2>> domain,
+                               const std::string &filename, double T) {
   auto mesh = viennals::Mesh<double>::New();
   viennals::ToMultiSurfaceMesh<double, 2>(domain->getLevelSets(), mesh).apply();
 
   const size_t n = mesh->nodes.size();
   mesh->getPointData().insertNextScalarData(
       std::vector<double>(n, T), "Temperature_K");
-
   viennals::VTKWriter<double>(mesh, filename).apply();
+
+  double minY = 0.0;
+  for (size_t i = 0; i < n; ++i)
+    minY = std::min(minY, mesh->nodes[i][1]);
+  return -minY;
 }
 
-static void runCase(double T) {
-  std::cout << "  T=" << std::setw(3) << (int)T << "K ... ";
-  std::cout.flush();
-
+static double runCase(double T, bool useDiffusion) {
   auto domain = SmartPointer<Domain<double, 2>>::New(gridDelta, xExtent, yExtent);
   MakeTrench<double, 2>(domain, trenchWidth, 0.0, 0.0,
                         maskHeight, 0.0, false, Material::SiO2).apply();
 
-  // ── Parameters: all 3 features ON ───────────────────────────────────────────
   HFCryoParameters<double> params;
   params.temperature               = T;
   params.ionFlux                   = 3.0;
@@ -54,14 +57,14 @@ static void runCase(double T) {
   params.DirectReaction.A_r        = 1.0e4;
   params.DirectReaction.E_a        = 0.25;
   params.IonActivation.A_act       = 1.0;
-  params.Diffusion.D0              = 1.0e3;   // surface diffusion ON
+  params.Diffusion.D0              = 1.0e3;
   params.Diffusion.omega           = 0.25;
   params.Ions.meanEnergy           = 150.0;
   params.Ions.sigmaEnergy          = 10.0;
   params.Ions.exponent             = 600.0;
-  params.Config.useTemperatureDependence = true;  // feature 1: Arrhenius
-  params.Config.usePhysisorption         = true;  // feature 2: physisorption
-  params.Config.useSurfaceDiffusion      = true;  // feature 3: surface diffusion
+  params.Config.useTemperatureDependence = true;
+  params.Config.usePhysisorption         = true;
+  params.Config.useSurfaceDiffusion      = useDiffusion;  // toggled per run
   params.Config.T_ref                    = 300.0;
 
   auto model = SmartPointer<HFCryoEtching<double, 2>>::New(params);
@@ -78,9 +81,10 @@ static void runCase(double T) {
 
   process.apply();
 
-  const std::string fname = "HFCryo_T" + std::to_string((int)T) + "K.vtp";
-  saveMesh(domain, fname, T);
-  std::cout << "done -> " << fname << "\n";
+  const std::string tag   = useDiffusion ? "diffON" : "diffOFF";
+  const std::string fname =
+      "HFCryo_" + tag + "_T" + std::to_string((int)T) + "K.vtp";
+  return saveMeshAndDepth(domain, fname, T);
 }
 
 int main() {
@@ -90,17 +94,43 @@ int main() {
   units::Length::setUnit(units::Length::NANOMETER);
   units::Time::setUnit(units::Time::SECOND);
 
-  std::cout << "=== HF Cryo Etching: full model (Arrhenius + physisorption + surface diffusion) ===\n";
-  std::cout << "Geometry: " << trenchWidth << "nm trench, "
-            << maskHeight << "nm mask, " << processTime << "s process\n\n";
-
   const double Tlist[4] = {150., 200., 250., 300.};
 
-  for (double T : Tlist)
-    runCase(T);
+  std::cout << "=== HF Cryo Etching: surface diffusion OFF vs ON ===\n";
+  std::cout << "Geometry: " << trenchWidth << "nm trench, " << maskHeight
+            << "nm mask, " << processTime << "s process\n\n";
 
-  std::cout << "\n=== Done: 4 VTP files generated ===\n";
-  std::cout << "ParaView: open HFCryo_T*.vtp, Color by 'Temperature_K'\n";
+  double depthOff[4], depthOn[4];
 
+  std::cout << "--- Surface diffusion OFF ---\n";
+  for (int i = 0; i < 4; ++i) {
+    std::cout << "  T=" << std::setw(3) << (int)Tlist[i] << "K ... "
+              << std::flush;
+    depthOff[i] = runCase(Tlist[i], false);
+    std::cout << "depth = " << std::fixed << std::setprecision(1)
+              << depthOff[i] << " nm\n";
+  }
+
+  std::cout << "\n--- Surface diffusion ON ---\n";
+  for (int i = 0; i < 4; ++i) {
+    std::cout << "  T=" << std::setw(3) << (int)Tlist[i] << "K ... "
+              << std::flush;
+    depthOn[i] = runCase(Tlist[i], true);
+    std::cout << "depth = " << std::fixed << std::setprecision(1)
+              << depthOn[i] << " nm\n";
+  }
+
+  std::cout << "\n=== Summary: trench etch depth (nm) ===\n";
+  std::cout << "   T[K]    diffOFF     diffON      gain\n";
+  for (int i = 0; i < 4; ++i) {
+    const double gain =
+        depthOff[i] > 1e-9 ? (depthOn[i] / depthOff[i] - 1.0) * 100.0 : 0.0;
+    std::cout << "   " << std::setw(4) << (int)Tlist[i] << "   " << std::setw(8)
+              << std::setprecision(1) << depthOff[i] << "   " << std::setw(8)
+              << depthOn[i] << "   " << std::setw(7) << std::setprecision(1)
+              << gain << "%\n";
+  }
+
+  std::cout << "\n=== Done: 8 VTP files (HFCryo_diffOFF/ON_T*.vtp) ===\n";
   return 0;
 }
