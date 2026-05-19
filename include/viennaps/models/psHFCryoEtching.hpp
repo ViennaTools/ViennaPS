@@ -22,19 +22,22 @@ using namespace viennacore;
 //
 // Two-state adsorption + surface diffusion model:
 //
-//   Physisorbed HF (theta_phys) — solved via 1D diffusion PDE along surface:
-//     D_s * d²theta/ds² + Gamma_HF*(1-theta) - k_des*theta
-//                       - k_act*Gamma_ion*theta = 0
-//     BC: Dirichlet at chain ends (open surface = local Langmuir equilibrium)
+//   Physisorbed HF (theta_phys): local Langmuir balance of adsorption,
+//   desorption and reaction, optionally smoothed by surface diffusion. The
+//   diffusion is a steady-state reaction-diffusion balance solved mesh-free
+//   on the surface point cloud (see applySurfaceDiffusion).
 //
-//   Chemisorbed HF (theta_chem) — ion-activated, zero on sidewalls (Lill 2023):
-//     theta_chem = k_act * Gamma_ion * theta_phys / k_r   (bottom/non-sidewall)
-//     theta_chem = 0                                       (sidewall, per paper)
+//   Chemisorbed HF (theta_chem): ion-activated, zero on sidewalls (Lill 2023):
+//     theta_chem = min(k_act * Gamma_ion * theta_phys / k_r,  1 - theta_phys)
+//     theta_chem = 0  on sidewalls (no ion bombardment, per paper)
+//   theta_chem is NOT a separate etch term. It occupies surface sites and so
+//   lowers the HF sticking probability in the etchant ray tracing:
+//     S_eff = gamma_HF * (1 - theta_phys - theta_chem).
 //
-//   Etch rate:
-//     v = -(Y_ie * Gamma_ion * theta_phys
-//         + k_r  * theta_chem
-//         + Y_sp * Gamma_ion) / rho
+//   Etch rate (as implemented in calculateVelocities):
+//     v = -(Y_ie       * Gamma_ion * theta_phys   // ion-enhanced etching
+//         + k_r_direct * theta_phys               // direct thermal reaction
+//         + Y_sp       * Gamma_ion) / rho          // physical sputtering
 
 namespace impl {
 
