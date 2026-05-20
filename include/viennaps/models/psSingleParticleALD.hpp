@@ -9,17 +9,12 @@ using namespace viennacore;
 struct SingleParticleALDParams {
   double stickingProbability = 1; // particle sticking probability
   double gasMeanFreePath = -1;    // mean free path of the particles in the gas
-
-  double growthPerCycle = 0; // growth per cycle
-  int totalCycles = 0;       // number of *real* cycles
-  int numCycles = 0;         // number of cycles to simulate
-
-  double evaporationFlux = 0; // evaporation flux
-  double incomingFlux = 0;    // incoming flux
-  double s0 = 0;              // surface site density
+  double growthPerCycle = 0;      // growth per cycle
+  double evaporationFlux = 0;     // evaporation flux
+  double incomingFlux = 0;        // incoming flux
+  double s0 = 0;                  // surface site density
   double coverageDiffusionCoefficient =
-      0;                     // surface diffusion coefficient for coverage
-  double purgePulseTime = 0; // time of purge pulse after each cycle
+      0; // surface diffusion coefficient for coverage
 
   auto toProcessMetaData() const {
     std::unordered_map<std::string, std::vector<double>> processData;
@@ -27,14 +22,11 @@ struct SingleParticleALDParams {
     processData["stickingProbability"] = {stickingProbability};
     processData["gasMeanFreePath"] = {gasMeanFreePath};
     processData["growthPerCycle"] = {growthPerCycle};
-    processData["totalCycles"] = {static_cast<double>(totalCycles)};
-    processData["numCycles"] = {static_cast<double>(numCycles)};
     processData["evaporationFlux"] = {evaporationFlux};
     processData["incomingFlux"] = {incomingFlux};
     processData["s0"] = {s0};
     processData["coverageDiffusionCoefficient"] = {
         coverageDiffusionCoefficient};
-    processData["purgePulseTime"] = {purgePulseTime};
 
     return processData;
   }
@@ -76,11 +68,8 @@ public:
     auto Coverage = coverages->getScalarData("Coverage");
     assert(Coverage && Coverage->size() == numPoints);
 
-    const NumericType gpc =
-        params_.totalCycles / params_.numCycles * params_.growthPerCycle;
-
     for (std::size_t i = 0; i < numPoints; ++i) {
-      depoRate[i] = gpc * Coverage->at(i);
+      depoRate[i] = params_.growthPerCycle * Coverage->at(i);
     }
 
     return SmartPointer<std::vector<NumericType>>::New(std::move(depoRate));
@@ -141,7 +130,7 @@ public:
 
   std::optional<std::unordered_map<std::string, NumericType>>
   getDiffusionCoefficients() const override {
-    if (params_.coverageDiffusionCoefficient <= 0)
+    if (params_.coverageDiffusionCoefficient <= 0.0)
       return std::nullopt;
     return std::make_optional<std::unordered_map<std::string, NumericType>>(
         {{"Coverage", params_.coverageDiffusionCoefficient}});
@@ -150,7 +139,7 @@ public:
   std::optional<std::vector<NumericType>> getDesorptionWeights(
       const std::vector<NumericType> &materialIds) const override {
     std::vector<NumericType> desorptionWeights(materialIds.size(), 0.);
-    if (params_.evaporationFlux <= 0 || coverages == nullptr)
+    if (params_.evaporationFlux <= 0.0 || coverages == nullptr)
       return desorptionWeights;
 
     auto Coverage = coverages->getScalarData("Coverage");
@@ -184,11 +173,6 @@ public:
                         PointData<NumericType> &localData,
                         const PointData<NumericType> *globalData,
                         RNG &Rng) override final {
-    // // surface coverage
-    // const auto &phi = globalData->getScalarData(0)->at(primID);
-    // // Obtain the sticking probability
-    // NumericType S_eff = beta * std::max(NumericType(1.) - phi,
-    // NumericType(0.));
     localData.addToScalarData(0, primID, rayWeight);
   }
   std::pair<NumericType, Vec3D<NumericType>>
@@ -198,7 +182,7 @@ public:
                     const PointData<NumericType> *globalData,
                     RNG &Rng) override final {
     // surface coverage
-    const auto &phi = globalData->getScalarData(0)->at(primID);
+    const auto phi = globalData->getScalarData(0)->at(primID);
     // Obtain the sticking probability
     NumericType S_eff = beta * std::max(NumericType(1.) - phi, NumericType(0.));
 
@@ -225,7 +209,7 @@ public:
     if (params_.gasMeanFreePath > 0) {
       VIENNACORE_LOG_WARNING(
           "Mean free path > 0 specified for GPU SingleParticleALD model. "
-          "Currently only ballistic transport is supported.");
+          "Currently only ballistic transport is supported on GPU.");
       params_.gasMeanFreePath = -1;
     }
 

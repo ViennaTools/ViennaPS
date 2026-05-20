@@ -256,9 +256,8 @@ private:
                                             std::to_string(purgeIteration));
             }
 
-            const auto &[nodes, normals, materialIds] =
-                context.getDiskMeshData();
-            surfaceModel->updateCoveragesFromDesorption(fluxes, materialIds);
+            surfaceModel->updateCoveragesFromDesorption(
+                fluxes, std::get<2>(context.getDiskMeshData()));
 
             time += dt;
             purgeIteration++;

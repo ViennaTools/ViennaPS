@@ -578,16 +578,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("gasMeanFreePath",
                      &SingleParticleALDParams::gasMeanFreePath)
       .def_readwrite("growthPerCycle", &SingleParticleALDParams::growthPerCycle)
-      .def_readwrite("totalCycles", &SingleParticleALDParams::totalCycles)
-      .def_readwrite("numCycles", &SingleParticleALDParams::numCycles)
       .def_readwrite("evaporationFlux",
                      &SingleParticleALDParams::evaporationFlux)
       .def_readwrite("incomingFlux", &SingleParticleALDParams::incomingFlux)
       .def_readwrite("s0", &SingleParticleALDParams::s0)
       .def_readwrite("coverageDiffusionCoefficient",
-                     &SingleParticleALDParams::coverageDiffusionCoefficient)
-      .def_readwrite("purgePulseTime",
-                     &SingleParticleALDParams::purgePulseTime);
+                     &SingleParticleALDParams::coverageDiffusionCoefficient);
 
   // ***************************************************************************
   //                                 PROCESS
