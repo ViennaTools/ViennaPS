@@ -154,6 +154,7 @@ private:
     const auto numCycles = context.atomicLayerParams.numCycles;
     const auto pulseTime = context.atomicLayerParams.pulseTime;
     const auto purgePulseTime = context.atomicLayerParams.purgePulseTime;
+    const auto surfaceModel = context.model->getSurfaceModel();
 
     for (int cycle = 0; cycle < numCycles; ++cycle) {
       VIENNACORE_LOG_INFO("Cycle: " + std::to_string(cycle + 1) + "/" +
@@ -193,7 +194,7 @@ private:
 
         // Clamp last step to land exactly on pulseTime
         double dt = std::min(coverageTimeStep, pulseTime - time);
-        context.model->getSurfaceModel()->setTimeStep(dt);
+        surfaceModel->setTimeStep(dt);
 
         // Calculate fluxes
         auto fluxes = PointData<NumericType>::New();
@@ -210,7 +211,7 @@ private:
         // Calculate surface diffusion of coverages
         if (surfaceDiffusionSolver_.isActive()) {
           PROCESS_CHECK(calculateSurfaceDiffusion(
-              dt, context, context.model->getSurfaceModel()->getCoverages()));
+              dt, context, surfaceModel->getCoverages()));
         }
 
         outputIntermediatePulseResults(context, fluxes, pulseIteration);
@@ -232,15 +233,43 @@ private:
               "Purge pulse time specified but no surface desorption found. "
               "Skipping purge pulse.");
         } else {
-          auto fluxes = PointData<NumericType>::New();
-          auto result = fluxEngine_->calculateSurfaceFluxes(context, fluxes);
-          if (result == ProcessResult::SUCCESS) {
+          double time = 0.;
+          unsigned purgeIteration = 0;
+          const auto purgeTimeStep = context.atomicLayerParams.purgeTimeStep;
+
+          while (time < purgePulseTime - purgeTimeStep * 1e-4) {
+#ifdef VIENNATOOLS_PYTHON_BUILD
+            // Check for user interruption
+            if (PyErr_CheckSignals() != 0)
+              return ProcessResult::USER_INTERRUPTED;
+#endif
+            auto dt = std::min(purgeTimeStep, purgePulseTime - time);
+            surfaceModel->setTimeStep(dt);
+
+            auto fluxes = PointData<NumericType>::New();
+            auto result = fluxEngine_->calculateSurfaceFluxes(context, fluxes);
+
+            if (result == ProcessResult::SUCCESS) {
+              outputIntermediateResults(context, fluxes,
+                                        "_purge_" + std::to_string(cycle) +
+                                            "_" +
+                                            std::to_string(purgeIteration));
+            }
+
             const auto &[nodes, normals, materialIds] =
                 context.getDiskMeshData();
-            context.model->getSurfaceModel()->updateCoveragesFromDesorption(
-                fluxes, materialIds);
-            outputIntermediateResults(context, fluxes,
-                                      "_purge_" + std::to_string(cycle));
+            surfaceModel->updateCoveragesFromDesorption(fluxes, materialIds);
+
+            time += dt;
+            purgeIteration++;
+
+            if (Logger::hasInfo()) {
+              std::stringstream stream;
+              stream << std::fixed << std::setprecision(4)
+                     << "Purge pulse time: " << time << " / " << purgePulseTime
+                     << " " << units::Time::toShortString();
+              Logger::getInstance().addInfo(stream.str()).print();
+            }
           }
         }
       }
@@ -249,21 +278,19 @@ private:
       auto fluxes = PointData<NumericType>::New();
       PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
       auto velocities = calculateVelocities(context, fluxes);
-      context.model->getVelocityField()->prepare(context.domain, velocities,
-                                                 0.);
+      context.model->getVelocityField()->prepare(
+          context.domain, velocities, static_cast<NumericType>(cycle));
 
       // We don't move the coverages during the advection step, because they are
       // re-initialized each cycle
 
       // print intermediate output
       if (Logger::hasIntermediate()) {
-        context.diskMesh->getCellData().insertReplaceScalarData(*velocities,
-                                                                "velocities");
-        auto surfaceModel = context.model->getSurfaceModel();
-        context.diskMesh->getCellData().appendReplace(
-            *surfaceModel->getCoverages());
+        auto &cellData = context.diskMesh->getCellData();
+        cellData.insertReplaceScalarData(*velocities, "velocities");
+        cellData.appendReplace(*surfaceModel->getCoverages());
         if (auto surfaceData = surfaceModel->getSurfaceData())
-          context.diskMesh->getCellData().appendReplace(*surfaceData);
+          cellData.appendReplace(*surfaceData);
         viennals::VTKWriter<NumericType>(
             context.diskMesh, context.getProcessName() + "_" +
                                   std::to_string(context.currentIteration) +
@@ -302,11 +329,11 @@ private:
     if (Logger::hasIntermediate()) {
       auto const name = context.getProcessName();
       auto surfaceModel = context.model->getSurfaceModel();
-      context.diskMesh->getCellData().appendReplace(
-          *surfaceModel->getCoverages());
-      context.diskMesh->getCellData().appendReplace(*fluxes);
+      auto &cellData = context.diskMesh->getCellData();
+      cellData.appendReplace(*surfaceModel->getCoverages());
+      cellData.appendReplace(*fluxes);
       if (auto surfaceData = surfaceModel->getSurfaceData())
-        context.diskMesh->getCellData().appendReplace(*surfaceData);
+        cellData.appendReplace(*surfaceData);
       viennals::VTKWriter<NumericType>(
           context.diskMesh, context.intermediateOutputPath + name + suffix)
           .apply();

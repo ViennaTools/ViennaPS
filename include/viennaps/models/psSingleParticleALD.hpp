@@ -99,10 +99,11 @@ public:
            "Coverage size mismatch");
 
     for (size_t i = 0; i < numPoints; ++i) {
-      Coverage->at(i) += (params_.incomingFlux * params_.stickingProbability *
-                              ParticleFlux->at(i) * (1 - Coverage->at(i)) -
-                          params_.evaporationFlux * Coverage->at(i)) *
-                         dt_ / params_.s0;
+      Coverage->at(i) +=
+          (params_.incomingFlux * ParticleFlux->at(i) *
+               (1.0 - Coverage->at(i)) * params_.stickingProbability -
+           params_.evaporationFlux * Coverage->at(i)) *
+          dt_ / params_.s0;
 
       Coverage->at(i) =
           std::clamp(Coverage->at(i), NumericType(0.0), NumericType(1.0));
@@ -112,6 +113,9 @@ public:
   void updateCoveragesFromDesorption(
       SmartPointer<PointData<NumericType>> desorptionFluxes,
       const std::vector<NumericType> &materialIds) override {
+    if (!desorptionFluxes || desorptionFluxes->getScalarDataSize() == 0)
+      return;
+
     const auto numPoints = materialIds.size();
     const auto ParticleFlux = desorptionFluxes->getScalarData("ParticleFlux");
     auto Coverage = coverages->getScalarData("Coverage");
@@ -124,13 +128,11 @@ public:
     for (size_t i = 0; i < numPoints; ++i) {
       // desorption reduces coverage, while re-adsorption of desorbed particles
       // increases coverage
-      Coverage->at(i) -= params_.evaporationFlux * Coverage->at(i) *
-                         params_.purgePulseTime / params_.s0;
-
       Coverage->at(i) +=
-          (params_.evaporationFlux * params_.stickingProbability *
-           ParticleFlux->at(i) * (1 - Coverage->at(i))) *
-          params_.purgePulseTime / params_.s0;
+          (params_.evaporationFlux * ParticleFlux->at(i) *
+               (1.0 - Coverage->at(i)) * params_.stickingProbability -
+           params_.evaporationFlux * Coverage->at(i)) *
+          dt_ / params_.s0;
 
       Coverage->at(i) =
           std::clamp(Coverage->at(i), NumericType(0.0), NumericType(1.0));
@@ -148,10 +150,7 @@ public:
   std::optional<std::vector<NumericType>> getDesorptionWeights(
       const std::vector<NumericType> &materialIds) const override {
     std::vector<NumericType> desorptionWeights(materialIds.size(), 0.);
-    if (params_.evaporationFlux <= 0)
-      return desorptionWeights;
-
-    if (coverages == nullptr)
+    if (params_.evaporationFlux <= 0 || coverages == nullptr)
       return desorptionWeights;
 
     auto Coverage = coverages->getScalarData("Coverage");
@@ -185,6 +184,11 @@ public:
                         PointData<NumericType> &localData,
                         const PointData<NumericType> *globalData,
                         RNG &Rng) override final {
+    // // surface coverage
+    // const auto &phi = globalData->getScalarData(0)->at(primID);
+    // // Obtain the sticking probability
+    // NumericType S_eff = beta * std::max(NumericType(1.) - phi,
+    // NumericType(0.));
     localData.addToScalarData(0, primID, rayWeight);
   }
   std::pair<NumericType, Vec3D<NumericType>>

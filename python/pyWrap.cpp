@@ -691,6 +691,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &AtomicLayerProcessParameters::coverageTimeStep)
       .def_readwrite("purgePulseTime",
                      &AtomicLayerProcessParameters::purgePulseTime)
+      .def_readwrite("purgeTimeStep",
+                     &AtomicLayerProcessParameters::purgeTimeStep)
       .def("toMetaData", &AtomicLayerProcessParameters::toMetaData,
            "Convert the ALD process parameters to a metadata dict.")
       .def("toMetaDataString", &AtomicLayerProcessParameters::toMetaDataString,
@@ -733,6 +735,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                   "Calculate the mean free path of a gas molecule.");
   m_constants.def("gasMeanThermalVelocity", &constants::gasMeanThermalVelocity,
                   "Calculate the mean thermal velocity of a gas molecule.");
+  m_constants.def("molecularEffusionFlux", &constants::molecularEffusionFlux,
+                  "Calculate the molecular effusion flux of a gas.");
 
   // Utility functions
   auto m_util = module.def_submodule("util", "Utility functions.");

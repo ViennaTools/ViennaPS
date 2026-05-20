@@ -115,6 +115,7 @@ struct AtomicLayerProcessParameters {
   double pulseTime = 1.0;
   double coverageTimeStep = 1.0;
   double purgePulseTime = 0.0;
+  double purgeTimeStep = 1.0;
 
   auto toMetaData() const {
     std::unordered_map<std::string, std::vector<double>> metaData;
@@ -122,6 +123,7 @@ struct AtomicLayerProcessParameters {
     metaData["PulseTime"] = {pulseTime};
     metaData["CoverageTimeStep"] = {coverageTimeStep};
     metaData["PurgePulseTime"] = {purgePulseTime};
+    metaData["PurgeTimeStep"] = {purgeTimeStep};
     return metaData;
   }
 

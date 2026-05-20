@@ -6,10 +6,10 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
-import viennaps.d3
+from viennaps import d2
 from viennaps import d3
+import viennaps.d3
 from . import constants
 from . import gpu
 from . import util
@@ -85,6 +85,12 @@ class AtomicLayerProcessParameters:
         ...
     @purgePulseTime.setter
     def purgePulseTime(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def purgeTimeStep(self) -> float:
+        ...
+    @purgeTimeStep.setter
+    def purgeTimeStep(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class BuiltInMaterial(enum.IntEnum):
     """
