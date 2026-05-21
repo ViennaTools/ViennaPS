@@ -143,9 +143,8 @@ int main() {
         // MESHING
         timer.start();
         diskMesher.apply();
-        viennaray::DiskMesh mesh(
-            diskMesh->nodes, *diskMesh->getCellData().getVectorData("Normals"),
-            domain->getGridDelta());
+        viennaray::DiskMesh mesh(diskMesh->nodes, *diskMesh->getNormals(),
+                                 domain->getGridDelta());
         mesh.minimumExtent = diskMesh->minimumExtent;
         mesh.maximumExtent = diskMesh->maximumExtent;
         mesh.radius = static_cast<float>(domain->getGridDelta() *

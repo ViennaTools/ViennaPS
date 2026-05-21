@@ -155,9 +155,8 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
 
   auto getDiskMeshData() const {
     const auto &nodes = diskMesh->getNodes();
-    const auto normals = diskMesh->getCellData().getVectorData("Normals");
-    const auto materialIds =
-        diskMesh->getCellData().getScalarData("MaterialIds");
+    const auto normals = diskMesh->getNormals();
+    const auto materialIds = diskMesh->getMaterialIds();
     assert(normals && "Disk mesh must have normals.");
     assert(materialIds && "Disk mesh must have material IDs.");
     assert(nodes.size() == normals->size() &&

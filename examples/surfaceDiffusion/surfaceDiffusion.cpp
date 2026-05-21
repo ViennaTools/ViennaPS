@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
 
   PointCloud<NumericType> cloud;
   cloud.positions = flux->getNodes();
-  cloud.normals = *flux->getCellData().getVectorData("Normals");
+  cloud.normals = *flux->getNormals();
 
   using GraphSolver = SurfaceDiffusionSolver<NumericType>;
   using GraphStencil = SurfaceDiffusionStencil<NumericType>;

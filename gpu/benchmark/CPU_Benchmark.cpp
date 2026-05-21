@@ -48,9 +48,8 @@ int main() {
         // MESHING
         timer.start();
         mesher.apply();
-        const auto &materialIds =
-            *diskMesh->getCellData().getScalarData("MaterialIds");
-        const auto &normals = *diskMesh->getCellData().getVectorData("Normals");
+        const auto &materialIds = *diskMesh->getMaterialIds();
+        const auto &normals = *diskMesh->getNormals();
         tracer.setGeometry(diskMesh->nodes, normals, domain->getGridDelta());
         tracer.setMaterialIds(materialIds);
         timer.finish();

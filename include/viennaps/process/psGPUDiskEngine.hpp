@@ -159,16 +159,7 @@ public:
       rayTracer_.setElementData(d_coverages, numCov);
     }
 
-    std::vector<NumericType> desorptionWeights;
-    if (auto materialIds =
-            context.diskMesh->getCellData().getScalarData("MaterialIds")) {
-      desorptionWeights = model_->getSurfaceModel()
-                              ->getDesorptionWeights(*materialIds)
-                              .value_or(std::vector<NumericType>{});
-    }
-
     // run the ray tracer
-    rayTracer_.clearSurfaceSource();
     rayTracer_.apply();
     rayTracer_.normalizeResults();
     auto fluxResults = rayTracer_.getResults();

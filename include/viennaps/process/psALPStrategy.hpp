@@ -174,8 +174,7 @@ private:
         // setup surface diffusion stencil based on current surface geometry
         PointCloud<NumericType> cloud;
         cloud.positions = context.diskMesh->getNodes();
-        cloud.normals =
-            *context.diskMesh->getCellData().getVectorData("Normals");
+        cloud.normals = *context.diskMesh->getNormals();
 
         surfaceDiffusionSolver_.setStencil(SurfaceDiffusionStencil<NumericType>(
             std::move(cloud), context.surfaceDiffusionParams));
@@ -228,47 +227,46 @@ private:
       }
 
       if (purgePulseTime > 0.) {
-        if (!context.flags.hasSurfaceDesorption) {
-          VIENNACORE_LOG_WARNING(
-              "Purge pulse time specified but no surface desorption found. "
-              "Skipping purge pulse.");
-        } else {
-          double time = 0.;
-          unsigned purgeIteration = 0;
-          const auto purgeTimeStep = context.atomicLayerParams.purgeTimeStep;
+        double time = 0.;
+        unsigned purgeIteration = 0;
+        const auto purgeTimeStep = context.atomicLayerParams.purgeTimeStep;
 
-          while (time < purgePulseTime - purgeTimeStep * 1e-4) {
+        while (time < purgePulseTime - purgeTimeStep * 1e-4) {
 #ifdef VIENNATOOLS_PYTHON_BUILD
-            // Check for user interruption
-            if (PyErr_CheckSignals() != 0)
-              return ProcessResult::USER_INTERRUPTED;
+          // Check for user interruption
+          if (PyErr_CheckSignals() != 0)
+            return ProcessResult::USER_INTERRUPTED;
 #endif
-            auto dt = std::min(purgeTimeStep, purgePulseTime - time);
-            surfaceModel->setTimeStep(dt);
+          auto dt = std::min(purgeTimeStep, purgePulseTime - time);
+          surfaceModel->setTimeStep(dt);
 
-            auto fluxes = PointData<NumericType>::New();
-            auto result = fluxEngine_->calculateSurfaceFluxes(context, fluxes);
+          auto fluxes = PointData<NumericType>::New();
+          auto result = fluxEngine_->calculateSurfaceFluxes(context, fluxes);
 
-            if (result == ProcessResult::SUCCESS) {
-              outputIntermediateResults(context, fluxes,
-                                        "_purge_" + std::to_string(cycle) +
-                                            "_" +
-                                            std::to_string(purgeIteration));
-            }
+          if (result == ProcessResult::SUCCESS) {
+            outputIntermediateResults(context, fluxes,
+                                      "_purge_" + std::to_string(cycle) + "_" +
+                                          std::to_string(purgeIteration));
+          }
 
-            surfaceModel->updateCoveragesFromDesorption(
-                fluxes, std::get<2>(context.getDiskMeshData()));
+          surfaceModel->updateCoveragesFromDesorption(
+              fluxes, std::get<2>(context.getDiskMeshData()));
 
-            time += dt;
-            purgeIteration++;
+          // Calculate surface diffusion of coverages
+          if (surfaceDiffusionSolver_.isActive()) {
+            PROCESS_CHECK(calculateSurfaceDiffusion(
+                dt, context, surfaceModel->getCoverages()));
+          }
 
-            if (Logger::hasInfo()) {
-              std::stringstream stream;
-              stream << std::fixed << std::setprecision(4)
-                     << "Purge pulse time: " << time << " / " << purgePulseTime
-                     << " " << units::Time::toShortString();
-              Logger::getInstance().addInfo(stream.str()).print();
-            }
+          time += dt;
+          purgeIteration++;
+
+          if (Logger::hasInfo()) {
+            std::stringstream stream;
+            stream << std::fixed << std::setprecision(4)
+                   << "Purge pulse time: " << time << " / " << purgePulseTime
+                   << " " << units::Time::toShortString();
+            Logger::getInstance().addInfo(stream.str()).print();
           }
         }
       }
@@ -285,16 +283,10 @@ private:
 
       // print intermediate output
       if (Logger::hasIntermediate()) {
-        auto &cellData = context.diskMesh->getCellData();
-        cellData.insertReplaceScalarData(*velocities, "velocities");
-        cellData.appendReplace(*surfaceModel->getCoverages());
-        if (auto surfaceData = surfaceModel->getSurfaceData())
-          cellData.appendReplace(*surfaceData);
-        viennals::VTKWriter<NumericType>(
-            context.diskMesh, context.getProcessName() + "_" +
-                                  std::to_string(context.currentIteration) +
-                                  ".vtp")
-            .apply();
+        context.diskMesh->getCellData().insertReplaceScalarData(*velocities,
+                                                                "velocities");
+        outputIntermediateResults(context, nullptr,
+                                  "_" + std::to_string(cycle));
       }
 
       // Perform advection, updates processTime, reduces level set to width 1
@@ -323,16 +315,18 @@ private:
 
   static void
   outputIntermediateResults(ProcessContext<NumericType, D> &context,
-                            SmartPointer<PointData<NumericType>> const &fluxes,
+                            SmartPointer<PointData<NumericType>> const data,
                             std::string const &suffix = "") {
     if (Logger::hasIntermediate()) {
       auto const name = context.getProcessName();
       auto surfaceModel = context.model->getSurfaceModel();
       auto &cellData = context.diskMesh->getCellData();
-      cellData.appendReplace(*surfaceModel->getCoverages());
-      cellData.appendReplace(*fluxes);
+
+      cellData.appendReplaceData(*surfaceModel->getCoverages());
+      if (data)
+        cellData.appendReplaceData(*data);
       if (auto surfaceData = surfaceModel->getSurfaceData())
-        cellData.appendReplace(*surfaceData);
+        cellData.appendReplaceData(*surfaceData);
       viennals::VTKWriter<NumericType>(
           context.diskMesh, context.intermediateOutputPath + name + suffix)
           .apply();
@@ -341,13 +335,13 @@ private:
 
   static void outputIntermediatePulseResults(
       ProcessContext<NumericType, D> &context,
-      SmartPointer<PointData<NumericType>> const &fluxes,
+      SmartPointer<PointData<NumericType>> const &data,
       const unsigned pulseIteration) {
     if (Logger::hasIntermediate()) {
       std::string suffix = "_pulse_" +
                            std::to_string(context.currentIteration) + "_" +
                            std::to_string(pulseIteration) + ".vtp";
-      outputIntermediateResults(context, fluxes, suffix);
+      outputIntermediateResults(context, data, suffix);
     }
   }
 
@@ -356,8 +350,7 @@ private:
                       SmartPointer<PointData<NumericType>> &fluxes) {
     auto const &points = context.diskMesh->getNodes();
     assert(points.size() > 0);
-    auto const &materialIds =
-        *context.diskMesh->getCellData().getScalarData("MaterialIds");
+    auto const &materialIds = *context.diskMesh->getMaterialIds();
     return context.model->getSurfaceModel()->calculateVelocities(fluxes, points,
                                                                  materialIds);
   }

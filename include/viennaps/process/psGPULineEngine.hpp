@@ -130,8 +130,7 @@ public:
     surfaceMesh_->maximumExtent = lineMesh.maximumExtent;
 
     if (model_->useMaterialIds()) {
-      auto const &pointMaterialIds =
-          diskMesh->getCellData().getScalarData("MaterialIds");
+      auto const &pointMaterialIds = diskMesh->getMaterialIds();
       std::vector<int> lineMaterialIds(surfaceMesh_->lines.size());
       auto &pointKdTree = context.translationField->getKdTree();
       if (!pointKdTree) {
@@ -283,9 +282,8 @@ private:
     const auto numDisks = diskMesh->nodes.size();
     assert(numRates > 0);
     auto particles = rayTracer_.getParticles();
-    auto const &elementNormals =
-        *surfaceMesh_->getCellData().getVectorData("Normals");
-    auto const &normals = *diskMesh->getCellData().getVectorData("Normals");
+    auto const &elementNormals = *surfaceMesh_->getNormals();
+    auto const &normals = *diskMesh->getNormals();
     const auto numElements = surfaceMesh_->lines.size();
 
     NumericType conversionRadius = gridDelta * (smoothingNeighbors + 1);

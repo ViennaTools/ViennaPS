@@ -160,10 +160,9 @@ public:
     }
 
     if (model_->useMaterialIds()) {
-      auto const &pointMaterialIds =
-          *context.diskMesh->getCellData().getScalarData("MaterialIds");
-      std::vector<int> elementMaterialIds;
+      auto const &pointMaterialIds = *context.diskMesh->getMaterialIds();
       auto pointKdTree = context.getPointKdTree();
+      std::vector<int> elementMaterialIds;
       PointToElementDataSingle<NumericType, NumericType, int, float>(
           pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
           .apply();
@@ -241,8 +240,7 @@ public:
 
     this->timer_.start();
 
-    auto materialIds =
-        context.diskMesh->getCellData().getScalarData("MaterialIds");
+    auto materialIds = context.diskMesh->getMaterialIds();
     auto desorptionWeights = model_->getSurfaceModel()
                                  ->getDesorptionWeights(*materialIds)
                                  .value_or(std::vector<NumericType>{});
@@ -264,8 +262,7 @@ public:
 
     const auto &triangles = surfaceMesh_->triangles;
     const auto &nodes = surfaceMesh_->nodes;
-    const auto meshNormals =
-        surfaceMesh_->getCellData().getVectorData("Normals");
+    const auto meshNormals = surfaceMesh_->getNormals();
     assert(meshNormals);
 
     auto sourceData = makeTriangleDesorptionSourceData<float>(

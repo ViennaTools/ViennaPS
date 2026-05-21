@@ -495,7 +495,7 @@ private:
     bool hasValidTarget = false;
     for (const auto &[name, coefficient] : diffusionCoefficients) {
       if (auto target = targets->getScalarData(name, true); target != nullptr) {
-        hasValidTarget = true;
+        hasValidTarget = coefficient > 0.;
         break;
       }
     }
@@ -504,7 +504,7 @@ private:
 
     PointCloud<NumericType> cloud;
     cloud.positions = context.diskMesh->getNodes();
-    cloud.normals = *context.diskMesh->getCellData().getVectorData("Normals");
+    cloud.normals = *context.diskMesh->getNormals();
 
     using Solver = SurfaceDiffusionSolver<NumericType>;
     using Stencil = SurfaceDiffusionStencil<NumericType>;
@@ -516,17 +516,16 @@ private:
         continue;
 
       if (auto target = targets->getScalarData(name, true); target != nullptr) {
-        const double dt =
-            std::min(context.surfaceDiffusionParams.stabilityFactor *
-                         std::pow(context.domain->getGridDelta(), 2.0) /
-                         (4.0 * coefficient),
-                     context.timeStep);
+        double dt = std::min(context.surfaceDiffusionParams.stabilityFactor *
+                                 std::pow(context.domain->getGridDelta(), 2.0) /
+                                 (4.0 * coefficient),
+                             context.timeStep);
         VIENNACORE_LOG_DEBUG("Applying surface diffusion for " + name +
                              " with coefficient " +
                              std::to_string(coefficient) + " and time step " +
                              std::to_string(dt));
 
-        auto current = *target;
+        auto current = std::move(*target);
         double diffusionTime = 0.0;
         while (diffusionTime < context.timeStep) {
 #ifdef VIENNATOOLS_PYTHON_BUILD
@@ -536,6 +535,7 @@ private:
 #endif
           current = solver.stepExplicit(current, dt, coefficient);
           diffusionTime += dt;
+          dt = std::min(dt, context.timeStep - diffusionTime);
         }
         targets->insertReplaceScalarData(std::move(current), name);
       }
@@ -546,7 +546,7 @@ private:
   static void
   mergeScalarData(PointData<NumericType> &scalarData,
                   SmartPointer<PointData<NumericType>> dataToInsert) {
-    scalarData.appendReplace(*dataToInsert);
+    scalarData.appendReplaceData(*dataToInsert);
   }
 
   void outputIntermediateResults(

@@ -140,8 +140,7 @@ public:
       surfaceMesh_->maximumExtent = triangleMesh.maximumExtent;
     }
 
-    auto const &pointMaterialIds =
-        *context.diskMesh->getCellData().getScalarData("MaterialIds");
+    auto const &pointMaterialIds = *context.diskMesh->getMaterialIds();
     std::vector<int> elementMaterialIds;
     auto pointKdTree = context.getPointKdTree();
     PointToElementDataSingle<NumericType, NumericType, int, float>(
@@ -222,8 +221,7 @@ public:
 
     const auto &triangles = surfaceMesh_->triangles;
     const auto &triangleNodes = surfaceMesh_->nodes;
-    const auto triangleNormals =
-        surfaceMesh_->getCellData().getVectorData("Normals");
+    const auto triangleNormals = surfaceMesh_->getNormals();
     assert(triangleNormals);
 
     auto sourceData = makeTriangleDesorptionSourceData<NumericType>(
