@@ -25,6 +25,7 @@ class FluxProcessStrategy final : public ProcessStrategy<NumericType, D> {
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> kdTree_ = nullptr;
 
   Timer<> callbackTimer_{};
+  Timer<> diffusionTimer_{};
 
 public:
   DEFINE_CLASS_NAME(FluxProcessStrategy)
@@ -73,12 +74,12 @@ public:
       auto desorptionFlux = PointData<NumericType>::New();
       if (fluxEngine_->calculateSurfaceFluxes(context, desorptionFlux) ==
           ProcessResult::SUCCESS) {
-        fluxEngine_->combineFluxes(*fluxes, *desorptionFlux);
+        fluxes->mergeScalarData(*desorptionFlux);
       }
     }
 
     // copy fluxes to cell data
-    mergeScalarData(context.diskMesh->getCellData(), fluxes);
+    context.diskMesh->getCellData().appendReplaceData(*fluxes);
 
     return ProcessResult::SUCCESS;
   }
@@ -222,8 +223,25 @@ private:
 
     // reset timers
     callbackTimer_.reset();
+    diffusionTimer_.reset();
     fluxEngine_->resetTimer();
     advectionHandler_.resetTimer();
+
+    if (Logger::hasDebug()) {
+      // debug output
+      std::stringstream ss;
+      ss << "Flux Process: " << context.getProcessName() << "\n"
+         << "Grid Delta: " << context.domain->getGridDelta() << "\n"
+         << "Advection Parameters: "
+         << context.advectionParams.toMetaDataString() << "\n"
+         << "Ray Tracing Parameters: "
+         << context.rayTracingParams.toMetaDataString() << "\n";
+      if (context.flags.hasSurfaceDiffusion) {
+        ss << "Surface Diffusion Parameters: "
+           << context.surfaceDiffusionParams.toMetaDataString() << "\n";
+      }
+      Logger::getInstance().addDebug(ss.str()).print();
+    }
 
     return ProcessResult::SUCCESS;
   }
@@ -298,16 +316,13 @@ private:
       auto desorptionFlux = PointData<NumericType>::New();
       if (fluxEngine_->calculateSurfaceFluxes(context, desorptionFlux) ==
           ProcessResult::SUCCESS) {
-        fluxEngine_->combineFluxes(*fluxes, *desorptionFlux);
+        fluxes->mergeScalarData(*desorptionFlux);
       }
     }
 
     // Calculate surface diffusion of fluxes
-    if (auto diffusionCoefficients =
-            context.model->getSurfaceModel()->getDiffusionCoefficients();
-        diffusionCoefficients.has_value()) {
-      PROCESS_CHECK(calculateSurfaceDiffusion(
-          context, diffusionCoefficients.value(), fluxes));
+    if (context.flags.hasSurfaceDiffusion) {
+      PROCESS_CHECK(calculateSurfaceDiffusion(context, fluxes));
     }
 
     // Update coverages
@@ -386,8 +401,7 @@ private:
                       SmartPointer<PointData<NumericType>> &fluxes) {
     auto const &points = context.diskMesh->getNodes();
     assert(points.size() > 0);
-    auto const &materialIds =
-        *context.diskMesh->getCellData().getScalarData(materialIdsLabel);
+    auto const &materialIds = *context.diskMesh->getMaterialIds();
     return context.model->getSurfaceModel()->calculateVelocities(fluxes, points,
                                                                  materialIds);
   }
@@ -400,21 +414,17 @@ private:
 
     assert(context.diskMesh != nullptr);
     surfaceModel->setSurfaceCoordinates(context.diskMesh->getNodes());
-    assert(context.diskMesh->getCellData().getScalarData(materialIdsLabel) !=
-           nullptr);
-    auto const &materialIds =
-        *context.diskMesh->getCellData().getScalarData(materialIdsLabel);
+    assert(context.diskMesh->getMaterialIds() != nullptr);
+    auto const &materialIds = *context.diskMesh->getMaterialIds();
 
     surfaceModel->updateCoverages(fluxes, materialIds);
 
     // Calculate surface diffusion of coverages
-    if (auto diffusionCoefficients =
-            context.model->getSurfaceModel()->getDiffusionCoefficients();
-        diffusionCoefficients.has_value()) {
-      PROCESS_CHECK(calculateSurfaceDiffusion(context,
-                                              diffusionCoefficients.value(),
-                                              surfaceModel->getCoverages()));
+    if (context.flags.hasSurfaceDiffusion) {
+      PROCESS_CHECK(
+          calculateSurfaceDiffusion(context, surfaceModel->getCoverages()));
     }
+
     return ProcessResult::SUCCESS;
   }
 
@@ -461,16 +471,7 @@ private:
       PROCESS_CHECK(updateCoverages(context, fluxes));
 
       if (Logger::hasIntermediate()) {
-        auto coverages = context.model->getSurfaceModel()->getCoverages();
-        mergeScalarData(context.diskMesh->getCellData(), coverages);
-        mergeScalarData(context.diskMesh->getCellData(), fluxes);
-        if (auto surfaceData =
-                context.model->getSurfaceModel()->getSurfaceData())
-          mergeScalarData(context.diskMesh->getCellData(), surfaceData);
-        viennals::VTKWriter(context.diskMesh, name + "_covInit_" +
-                                                  std::to_string(iteration) +
-                                                  ".vtp")
-            .apply();
+        outputIntermediateResults(context, nullptr, fluxes, "_covInit_");
       }
 
       if (coverageManager_.checkCoveragesConvergence(context)) {
@@ -486,12 +487,19 @@ private:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateSurfaceDiffusion(
-      ProcessContext<NumericType, D> const &context,
-      const std::unordered_map<std::string, NumericType> &diffusionCoefficients,
-      SmartPointer<PointData<NumericType>> targets) {
+  ProcessResult
+  calculateSurfaceDiffusion(ProcessContext<NumericType, D> const &context,
+                            SmartPointer<PointData<NumericType>> targets) {
     if (context.timeStep <= 0.)
       return ProcessResult::SUCCESS;
+
+    assert(context.model->getSurfaceModel()
+               ->getDiffusionCoefficients()
+               .has_value());
+    const auto &diffusionCoefficients =
+        context.model->getSurfaceModel()->getDiffusionCoefficients().value();
+
+    diffusionTimer_.start();
     bool hasValidTarget = false;
     for (const auto &[name, coefficient] : diffusionCoefficients) {
       if (auto target = targets->getScalarData(name, true); target != nullptr) {
@@ -540,34 +548,37 @@ private:
         targets->insertReplaceScalarData(std::move(current), name);
       }
     }
-    return ProcessResult::SUCCESS;
-  }
+    diffusionTimer_.finish();
 
-  static void
-  mergeScalarData(PointData<NumericType> &scalarData,
-                  SmartPointer<PointData<NumericType>> dataToInsert) {
-    scalarData.appendReplaceData(*dataToInsert);
+    return ProcessResult::SUCCESS;
   }
 
   void outputIntermediateResults(
       const ProcessContext<NumericType, D> &context,
       const SmartPointer<std::vector<NumericType>> &velocities,
-      const SmartPointer<PointData<NumericType>> &fluxes) {
-    auto const name = context.getProcessName();
+      const SmartPointer<PointData<NumericType>> &fluxes,
+      const std::string &suffix = "_") {
     auto surfaceModel = context.model->getSurfaceModel();
-    context.diskMesh->getCellData().insertNextScalarData(*velocities,
-                                                         "velocities");
-    if (context.flags.useCoverages) {
-      mergeScalarData(context.diskMesh->getCellData(),
-                      surfaceModel->getCoverages());
+    if (velocities) {
+      context.diskMesh->getCellData().insertNextScalarData(*velocities,
+                                                           "velocities");
     }
-    if (auto surfaceData = surfaceModel->getSurfaceData())
-      mergeScalarData(context.diskMesh->getCellData(), surfaceData);
-    mergeScalarData(context.diskMesh->getCellData(), fluxes);
+    if (fluxes) {
+      context.diskMesh->getCellData().appendReplaceData(*fluxes);
+    }
+    if (auto coverages = surfaceModel->getCoverages()) {
+      context.diskMesh->getCellData().appendReplaceData(*coverages);
+    }
+    if (auto surfaceData = surfaceModel->getSurfaceData()) {
+      context.diskMesh->getCellData().appendReplaceData(*surfaceData);
+    }
+
+    auto const name = context.getProcessName();
     viennals::VTKWriter<NumericType>(
-        context.diskMesh, context.intermediateOutputPath + name + "_" +
+        context.diskMesh, context.intermediateOutputPath + name + suffix +
                               std::to_string(context.currentIteration) + ".vtp")
         .apply();
+
     if (context.domain->getCellSet()) {
       context.domain->getCellSet()->writeVTU(
           context.intermediateOutputPath + name + "_cellSet_" +
@@ -591,6 +602,13 @@ private:
       Logger::getInstance()
           .addTiming("Advection callback total time",
                      callbackTimer_.totalDuration * 1e-9,
+                     processTimer.totalDuration * 1e-9)
+          .print();
+    }
+    if (context.flags.hasSurfaceDiffusion) {
+      Logger::getInstance()
+          .addTiming("Surface diffusion total time",
+                     diffusionTimer_.totalDuration * 1e-9,
                      processTimer.totalDuration * 1e-9)
           .print();
     }

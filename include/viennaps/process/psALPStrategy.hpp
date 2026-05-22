@@ -124,9 +124,7 @@ private:
     PROCESS_CHECK(fluxEngine_->initialize(context));
 
     // Initialize surface diffusion solver
-    if (auto diffusionCoefficients =
-            context.model->getSurfaceModel()->getDiffusionCoefficients();
-        diffusionCoefficients.has_value() && !diffusionCoefficients->empty()) {
+    if (context.flags.hasSurfaceDiffusion) {
       surfaceDiffusionSolver_.setActive(true);
     }
 
@@ -141,6 +139,10 @@ private:
          << context.advectionParams.toMetaDataString() << "\n"
          << "Ray Tracing Parameters: "
          << context.rayTracingParams.toMetaDataString() << "\n";
+      if (context.flags.hasSurfaceDiffusion) {
+        ss << "Surface Diffusion Parameters: "
+           << context.surfaceDiffusionParams.toMetaDataString() << "\n";
+      }
       Logger::getInstance().addDebug(ss.str()).print();
     }
 

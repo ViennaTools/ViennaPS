@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 4.4.0)
+  VERSION 4.5.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Include guards
@@ -107,7 +107,6 @@ include("cmake/cpm.cmake")
 CPMAddPackage(
   NAME ViennaCore
   VERSION 2.2.1
-  GIT_TAG point-data
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -119,8 +118,7 @@ CPMAddPackage(
 
 CPMAddPackage(
   NAME ViennaRay
-  VERSION 4.2.0
-  GIT_TAG point-data
+  VERSION 4.3.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")

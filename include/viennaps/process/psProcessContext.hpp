@@ -53,6 +53,7 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
     bool isAnalytic = false;
     bool isGeometric = false;
     bool domainHasPeriodicBoundaries = false;
+    bool hasSurfaceDiffusion = false;
     bool hasSurfaceDesorption = false;
   } flags;
 
@@ -82,6 +83,8 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
       auto materialIds = std::vector<NumericType>{};
       auto desorptionWeights = surfaceModel->getDesorptionWeights(materialIds);
       flags.hasSurfaceDesorption = desorptionWeights.has_value();
+      auto diffusionCoefficients = surfaceModel->getDiffusionCoefficients();
+      flags.hasSurfaceDiffusion = diffusionCoefficients.has_value();
     }
   }
 
