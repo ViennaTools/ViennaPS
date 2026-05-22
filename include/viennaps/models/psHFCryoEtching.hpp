@@ -64,8 +64,9 @@ public:
 
     NumericType f_ie = 1.;
     if (cosTheta < 0.5)
-      f_ie = std::max(NumericType(3) - NumericType(6) * angle / NumericType(M_PI),
-                      NumericType(0));
+      f_ie =
+          std::max(NumericType(3) - NumericType(6) * angle / NumericType(M_PI),
+                   NumericType(0));
 
     const NumericType sqrtE = std::sqrt(E);
 
@@ -73,9 +74,9 @@ public:
         params.SiO2.A_sp *
         std::max(sqrtE - std::sqrt(params.SiO2.Eth_sp), NumericType(0));
 
-    const NumericType Y_ie =
-        params.SiO2.A_ie *
-        std::max(sqrtE - sqrt_E_th_ie, NumericType(0)) * f_ie;
+    const NumericType Y_ie = params.SiO2.A_ie *
+                             std::max(sqrtE - sqrt_E_th_ie, NumericType(0)) *
+                             f_ie;
 
     localData.getVectorData(0)[primID] += Y_sp * rayWeight;
     localData.getVectorData(1)[primID] += Y_ie * rayWeight;
@@ -83,9 +84,8 @@ public:
 
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType, const Vec3D<NumericType> &rayDir,
-                    const Vec3D<NumericType> &geomNormal,
-                    const unsigned int, const int,
-                    const viennaray::TracingData<NumericType> *,
+                    const Vec3D<NumericType> &geomNormal, const unsigned int,
+                    const int, const viennaray::TracingData<NumericType> *,
                     RNG &rng) override {
     const NumericType cosTheta = -DotProduct(rayDir, geomNormal);
     const NumericType incAngle =
@@ -105,7 +105,8 @@ public:
   }
 
   void initNew(RNG &rng) override {
-    E = initNormalDistEnergy(rng, params.Ions.meanEnergy, params.Ions.sigmaEnergy);
+    E = initNormalDistEnergy(rng, params.Ions.meanEnergy,
+                             params.Ions.sigmaEnergy);
   }
 
   NumericType getSourceDistributionPower() const override {
@@ -159,7 +160,8 @@ public:
     const NumericType S_eff =
         params.gamma_HF * std::max(NumericType(1) - occupied, NumericType(0));
     auto dir = viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rng);
-    return {NumericType(1) - S_eff, dir};  // reflected weight = 1 - sticking prob
+    return {NumericType(1) - S_eff,
+            dir}; // reflected weight = 1 - sticking prob
   }
 
   NumericType getSourceDistributionPower() const override { return 1.; }
@@ -172,7 +174,8 @@ private:
   const HFCryoParameters<NumericType> &params;
 };
 
-// ── Surface model ─────────────────────────────────────────────────────────────
+// ── Surface model
+// ─────────────────────────────────────────────────────────────
 template <typename NumericType, int D>
 class HFCryoSurfaceModel : public SurfaceModel<NumericType> {
 public:
@@ -210,19 +213,19 @@ public:
   // Called first; result is used as Dirichlet BC at chain endpoints.
   void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
                        const std::vector<NumericType> &) override {
-    const auto numPoints   = rates->getScalarData(0)->size();
+    const auto numPoints = rates->getScalarData(0)->size();
     const auto etchantFlux = rates->getScalarData("etchantFlux");
-    const auto ionActFlux  = rates->getScalarData("ionActivationFlux");
+    const auto ionActFlux = rates->getScalarData("ionActivationFlux");
 
     auto theta_phys = coverages->getScalarData("physCoverage");
     auto theta_chem = coverages->getScalarData("chemCoverage");
     theta_phys->resize(numPoints);
     theta_chem->resize(numPoints);
 
-    const NumericType k_des      = params.effective_k_des();
-    const NumericType k_r        = params.effective_k_r();
+    const NumericType k_des = params.effective_k_des();
+    const NumericType k_r = params.effective_k_r();
     const NumericType k_r_direct = params.effective_k_r_direct();
-    const NumericType A_act      = params.IonActivation.A_act;
+    const NumericType A_act = params.IonActivation.A_act;
 
 #pragma omp parallel for
     for (size_t i = 0; i < numPoints; ++i) {
@@ -237,16 +240,17 @@ public:
         theta_chem->at(i) = NumericType(0);
       } else {
         // Two-state: physisorbed + ion-activated chemisorbed
-        const NumericType k_act_ion = ionActFlux->at(i) * params.ionFlux * A_act;
+        const NumericType k_act_ion =
+            ionActFlux->at(i) * params.ionFlux * A_act;
         const NumericType denom = Gamma_HF + k_des + k_act_ion + k_r_direct;
         theta_phys->at(i) = (denom > NumericType(1e-30))
                                 ? std::min(Gamma_HF / denom, NumericType(1))
                                 : NumericType(0);
         const NumericType num_chem = k_act_ion * theta_phys->at(i);
-        theta_chem->at(i) = (k_r > NumericType(1e-30))
-                                ? std::min(num_chem / k_r,
-                                           NumericType(1) - theta_phys->at(i))
-                                : NumericType(0);
+        theta_chem->at(i) =
+            (k_r > NumericType(1e-30))
+                ? std::min(num_chem / k_r, NumericType(1) - theta_phys->at(i))
+                : NumericType(0);
       }
     }
   }
@@ -255,24 +259,25 @@ public:
   calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
-    // Step 1: local coverage (no diffusion) — also serves as Dirichlet BC values
+    // Step 1: local coverage (no diffusion) — also serves as Dirichlet BC
+    // values
     updateCoverages(rates, materialIds);
 
     const auto numPoints = rates->getScalarData(0)->size();
 
     const auto etchantFlux = rates->getScalarData("etchantFlux");
-    const auto ionActFlux  = rates->getScalarData("ionActivationFlux");
+    const auto ionActFlux = rates->getScalarData("ionActivationFlux");
 
-    const NumericType k_des      = params.effective_k_des();
-    const NumericType k_r        = params.effective_k_r();
+    const NumericType k_des = params.effective_k_des();
+    const NumericType k_r = params.effective_k_r();
     const NumericType k_r_direct = params.effective_k_r_direct();
     const NumericType A_act = params.IonActivation.A_act;
-    const NumericType Ds    = params.D_s();
+    const NumericType Ds = params.D_s();
 
     std::vector<NumericType> Gamma_HF_vec(numPoints);
     std::vector<NumericType> k_act_ion_vec(numPoints);
     for (size_t i = 0; i < numPoints; ++i) {
-      Gamma_HF_vec[i]  = etchantFlux->at(i) * params.etchantFlux;
+      Gamma_HF_vec[i] = etchantFlux->at(i) * params.etchantFlux;
       k_act_ion_vec[i] = ionActFlux->at(i) * params.ionFlux * A_act;
     }
 
@@ -280,7 +285,7 @@ public:
     auto theta_chem = coverages->getScalarData("chemCoverage");
 
     // Step 2: build surface chain + sidewall flags
-    const auto chain    = buildSurfaceChain(coordinates);
+    const auto chain = buildSurfaceChain(coordinates);
     const auto sidewall = buildSidewallFlags(chain, coordinates);
 
     // Step 3: surface diffusion (only when enabled and D0 > 0)
@@ -297,10 +302,10 @@ public:
           continue;
         }
         const NumericType num_chem = k_act_ion_vec[i] * theta_phys->at(i);
-        theta_chem->at(i) = (k_r > NumericType(1e-30))
-                                ? std::min(num_chem / k_r,
-                                           NumericType(1) - theta_phys->at(i))
-                                : NumericType(0);
+        theta_chem->at(i) =
+            (k_r > NumericType(1e-30))
+                ? std::min(num_chem / k_r, NumericType(1) - theta_phys->at(i))
+                : NumericType(0);
       }
     } else {
       // Single coverage: no chemisorption
@@ -308,7 +313,7 @@ public:
     }
 
     // Step 5: etch rate
-    const auto ionSputterFlux    = rates->getScalarData("ionSputterFlux");
+    const auto ionSputterFlux = rates->getScalarData("ionSputterFlux");
     const auto ionActivationFlux = rates->getScalarData("ionActivationFlux");
     const NumericType unitConversion =
         units::Time::convertSecond() / units::Length::convertNanometer();
@@ -336,14 +341,13 @@ public:
       // Ion-enhanced etching: Y_ie * Gamma_ion * theta_phys (or single theta)
       // Pure chemical: k_r_direct * theta_phys (only when usePhysisorption,
       //   otherwise the concept of "physisorbed" HF is not defined)
-      const NumericType ionEnhanced  =
+      const NumericType ionEnhanced =
           ionActivationFlux->at(i) * params.ionFlux * theta_phys->at(i);
       const NumericType pureChemical = k_r_direct * theta_phys->at(i);
-      const NumericType sputter      = ionSputterFlux->at(i) * params.ionFlux;
+      const NumericType sputter = ionSputterFlux->at(i) * params.ionFlux;
 
       etchRate[i] = -(1. / params.SiO2.rho) *
-                    (ionEnhanced + pureChemical + sputter) *
-                    unitConversion;
+                    (ionEnhanced + pureChemical + sputter) * unitConversion;
 
       if (Logger::hasIntermediate()) {
         chRate->at(i) = ionEnhanced + pureChemical;
@@ -371,7 +375,8 @@ private:
   std::vector<size_t>
   buildSurfaceChain(const std::vector<Vec3D<NumericType>> &points) const {
     const size_t N = points.size();
-    if (N == 0) return {};
+    if (N == 0)
+      return {};
 
     std::vector<bool> visited(N, false);
     std::vector<size_t> chain;
@@ -395,7 +400,8 @@ private:
       size_t best = N;
 
       for (size_t j = 0; j < N; ++j) {
-        if (visited[j]) continue;
+        if (visited[j])
+          continue;
         NumericType distSq = NumericType(0);
         for (int d = 0; d < D; ++d) {
           NumericType dd = points[j][d] - points[curr][d];
@@ -440,15 +446,17 @@ private:
           tang[d] = points[chain[1]][d] - points[chain[0]][d];
       else if (j == M - 1)
         for (int d = 0; d < D; ++d)
-          tang[d] = points[chain[M-1]][d] - points[chain[M-2]][d];
+          tang[d] = points[chain[M - 1]][d] - points[chain[M - 2]][d];
       else
         for (int d = 0; d < D; ++d)
-          tang[d] = points[chain[j+1]][d] - points[chain[j-1]][d];
+          tang[d] = points[chain[j + 1]][d] - points[chain[j - 1]][d];
 
       NumericType len = NumericType(0);
-      for (int d = 0; d < D; ++d) len += tang[d] * tang[d];
+      for (int d = 0; d < D; ++d)
+        len += tang[d] * tang[d];
       len = std::sqrt(len);
-      if (len < NumericType(1e-10)) continue;
+      if (len < NumericType(1e-10))
+        continue;
 
       // Sidewall: tangent mostly vertical (height component > 0.7)
       const NumericType vertFrac = std::abs(tang[D - 1]) / len;
@@ -473,12 +481,12 @@ private:
   // no reconstructed 1D chain and no imposed boundary values are needed. The
   // earlier chain + Dirichlet formulation injected geometry-reconstruction
   // noise that destabilised the etch front at large Ds.
-  void applySurfaceDiffusion(
-      std::vector<NumericType> &theta_phys,
-      const std::vector<NumericType> &Gamma_HF_vec,
-      const std::vector<NumericType> &k_act_ion_vec,
-      const std::vector<Vec3D<NumericType>> &points,
-      NumericType Ds, NumericType k_des, NumericType k_r_direct) const {
+  void applySurfaceDiffusion(std::vector<NumericType> &theta_phys,
+                             const std::vector<NumericType> &Gamma_HF_vec,
+                             const std::vector<NumericType> &k_act_ion_vec,
+                             const std::vector<Vec3D<NumericType>> &points,
+                             NumericType Ds, NumericType k_des,
+                             NumericType k_r_direct) const {
     const size_t N = points.size();
     if (N < 3)
       return;
@@ -555,7 +563,8 @@ private:
 
 } // namespace impl
 
-// ── Public process model ──────────────────────────────────────────────────────
+// ── Public process model
+// ──────────────────────────────────────────────────────
 template <typename NumericType, int D>
 class HFCryoEtching final : public ProcessModelCPU<NumericType, D> {
 public:
@@ -580,12 +589,12 @@ private:
       VIENNACORE_LOG_ERROR("Units have not been set.");
     }
 
-    auto ion     = std::make_unique<impl::HFCryoIon<NumericType, D>>(params);
-    auto etchant = std::make_unique<impl::HFCryoEtchant<NumericType, D>>(params);
+    auto ion = std::make_unique<impl::HFCryoIon<NumericType, D>>(params);
+    auto etchant =
+        std::make_unique<impl::HFCryoEtchant<NumericType, D>>(params);
     auto surfModel =
         SmartPointer<impl::HFCryoSurfaceModel<NumericType, D>>::New(params);
-    auto velField =
-        SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
