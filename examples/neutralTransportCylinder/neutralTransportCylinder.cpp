@@ -37,8 +37,8 @@ void printBottomTransmissionProbabilityTriangles(
 
   const float tol = static_cast<float>(gridDelta);
   const float bottomRMax = static_cast<float>(bottomRadius) + tol;
-  const double topArea = M_PI * static_cast<double>(topRadius) *
-                         static_cast<double>(topRadius);
+  const double topArea =
+      M_PI * static_cast<double>(topRadius) * static_cast<double>(topRadius);
 
   struct TriangleInfo {
     float cx = 0.f;
@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
   if (params.m.find("maxReflections") != params.m.end()) {
     rayTracingParams.maxReflections = params.get<unsigned>("maxReflections");
   }
-  
+
   ps::AdvectionParameters advectionParams;
   advectionParams.spatialScheme =
       ps::util::convertSpatialScheme(params.get<std::string>("spatialScheme"));
