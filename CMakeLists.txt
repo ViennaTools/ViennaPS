@@ -130,11 +130,23 @@ CPMAddPackage(
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}")
 
-CPMAddPackage(
-  NAME ViennaCS
-  VERSION 2.0.1
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
-  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+set(VIENNAPS_VIENNACS_SOURCE
+    ""
+    CACHE PATH "Local ViennaCS source directory override (use a development branch instead of the published release)")
+
+if(VIENNAPS_VIENNACS_SOURCE)
+  message(STATUS "[ViennaPS] Using local ViennaCS from: ${VIENNAPS_VIENNACS_SOURCE}")
+  CPMAddPackage(
+    NAME ViennaCS
+    SOURCE_DIR "${VIENNAPS_VIENNACS_SOURCE}"
+    EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+else()
+  CPMAddPackage(
+    NAME ViennaCS
+    VERSION 2.0.1
+    GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
+    EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
+endif()
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaCore ViennaLS ViennaRay ViennaCS)
 
