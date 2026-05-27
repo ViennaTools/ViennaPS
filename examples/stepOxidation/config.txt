@@ -1,0 +1,38 @@
+# Step oxidation example configuration.
+# Lengths are in micrometers, time is in hours, pressure is in atm.
+#
+# dimensions: 2 (default) or 3. For 3D, zExtent (default: xExtent) sets
+# the half-depth of the domain; the step is extruded symmetrically in Z.
+#
+# Grid sizing guide (the Cartesian solve scales as N^D):
+#   2D: gridDelta=0.025 is fine (~24k points across domain)
+#   3D: gridDelta=0.025 -> ~24M points (too slow/large for most setups)
+#       gridDelta=0.05  ->  ~3M points (practical for 3D, fits default limit)
+#       gridDelta=0.1   -> ~384k points (fast 3D test)
+# Override the solver limit with maxGridPoints if needed.
+
+numThreads=8
+dimensions=3
+
+gridDelta=0.1
+xExtent=4.
+yMin=-2.
+yMax=4.
+# zExtent=4.  # 3D only; defaults to xExtent if omitted
+# maxGridPoints=10000000  # raise if solver aborts with "exceeds maxGridPoints"
+
+stepX=0.
+# stepZ=0.  # 3D only: Z position of the second step wall (default: same as stepX).
+#            # The raised platform occupies x>stepX AND z>stepZ (one quadrant).
+leftSiTop=0.
+rightSiTop=1.
+oxideThickness=0.
+
+oxidationTime=0.05
+timeStep=0.01
+temperature=1000.
+pressure=1.
+oxidant=wet
+orientation=100
+
+outputPrefix=ps_step_oxidation
