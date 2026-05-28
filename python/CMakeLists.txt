@@ -59,6 +59,20 @@ target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ViennaPS)
 target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME}
                            PRIVATE VIENNAPS_MODULE_NAME=${VIENNAPS_PYTHON_MODULE_NAME})
 
+if(APPLE AND VIENNAPS_PACKAGE_PYTHON)
+  # Do not install viennaps.libs manually on macOS. These build-tree rpaths only
+  # let delocate resolve VTK/Embree/TBB @rpath dependencies during wheel repair;
+  # delocate then vendors the dylibs into viennaps/.dylibs and strips them.
+  foreach(DEPENDENCY_TARGET VTK::CommonCore embree tbb)
+    if(TARGET ${DEPENDENCY_TARGET})
+      set_property(
+        TARGET ${VIENNAPS_PYTHON_MODULE_NAME}
+        APPEND
+        PROPERTY INSTALL_RPATH "$<TARGET_FILE_DIR:${DEPENDENCY_TARGET}>")
+    endif()
+  endforeach()
+endif()
+
 # To prevent symbol clashes when multiple python scripts which use VTK modules are loaded, the modules have to be initialized here
 if(VIENNALS_VTK_RENDERING)
   # We need to find VTK again here to get the proper module targets
@@ -116,8 +130,9 @@ add_dependencies(${PROJECT_NAME} ${VIENNAPS_PYTHON_MODULE_NAME})
 
 set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/${VIENNAPS_PYTHON_PACKAGE_NAME}.libs")
 
-if(VIENNAPS_PACKAGE_PYTHON OR MSVC)
-  # Copy the required libraries to the lib folder, this is required for packaging and on Windows
+if((VIENNAPS_PACKAGE_PYTHON AND NOT APPLE) OR MSVC)
+  # macOS wheels let delocate own dylib vendoring to avoid duplicate copies.
+  # Other package builds still need this staged dependency folder.
   viennacore_setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
   viennacore_setup_vtk_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
   viennacore_setup_tbb_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
