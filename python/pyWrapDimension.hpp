@@ -103,6 +103,20 @@ PYBIND11_DECLARE_HOLDER_TYPE(Types, SmartPointer<Types>)
 // constructors with custom enum need lambda to work: seems to be an issue
 // with implicit move constructor
 
+inline void bindPsOxidationSharedTypes(py::module &module) {
+  py::native_enum<OxidantType>(module, "OxidantType", "enum.IntEnum")
+      .value("Dry", OxidantType::Dry)
+      .value("Wet", OxidantType::Wet)
+      .finalize();
+
+  py::native_enum<SiliconOrientation>(module, "SiliconOrientation",
+                                      "enum.IntEnum")
+      .value("Si100", SiliconOrientation::Si100)
+      .value("Si111", SiliconOrientation::Si111)
+      .value("PolySi", SiliconOrientation::PolySi)
+      .finalize();
+}
+
 // define trampoline classes for interface functions
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
 // WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
@@ -1108,17 +1122,6 @@ template <int D> void bindApi(py::module &module) {
           py::arg("b"), py::arg("n"));
 
   // Thermal Oxidation (Deal-Grove, LOCOS)
-  py::native_enum<OxidantType>(module, "OxidantType", "enum.IntEnum")
-      .value("Dry", OxidantType::Dry)
-      .value("Wet", OxidantType::Wet)
-      .finalize();
-
-  py::native_enum<SiliconOrientation>(module, "SiliconOrientation", "enum.IntEnum")
-      .value("Si100", SiliconOrientation::Si100)
-      .value("Si111", SiliconOrientation::Si111)
-      .value("PolySi", SiliconOrientation::PolySi)
-      .finalize();
-
   py::class_<Oxidation<T, D>, SmartPointer<Oxidation<T, D>>>(
       module, "Oxidation", processModel)
       .def(py::init(&SmartPointer<Oxidation<T, D>>::template New<>))

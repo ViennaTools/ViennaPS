@@ -221,13 +221,39 @@ void run(const ps::util::Parameters &params) {
 
   domain->saveSurfaceMesh(outputPrefix + "_stack_after.vtp");
 
+  // The volume mesh extractor assigns materials by layer order and expects
+  // every upper material level set to wrap all lower materials. Oxidation keeps
+  // the Si/SiO2 and SiO2/ambient interfaces as independent moving level sets,
+  // so build wrapped copies for volume output and leave the live geometry
+  // untouched.
+  {
+    const auto &levelSets = domain->getLevelSets();
+    if (levelSets.size() >= 2) {
+      auto siCopy = ls::Domain<NumericType, D>::New(levelSets[0]);
+      auto oxCopy = ls::Domain<NumericType, D>::New(levelSets[1]);
+      ls::BooleanOperation<NumericType, D>(
+          oxCopy, siCopy, ls::BooleanOperationEnum::UNION)
+          .apply();
+
+      auto volumeDomain = ps::Domain<NumericType, D>::New();
+      volumeDomain->insertNextLevelSetAsMaterial(siCopy, ps::Material::Si,
+                                                 false);
+      volumeDomain->insertNextLevelSetAsMaterial(oxCopy, ps::Material::SiO2,
+                                                 false);
+      volumeDomain->saveVolumeMesh(outputPrefix + "_stack_after");
+    } else {
+      domain->saveVolumeMesh(outputPrefix + "_stack_after");
+    }
+  }
+
   std::cout << "Planar Deal-Grove estimate for " << oxidationTime
             << " hr oxidation at " << temperature << " C: "
             << model->estimatePlanarOxideThickness(oxideThickness)
             << " um oxide thickness." << std::endl;
 
   std::cout << "Wrote " << outputPrefix << "_stack_initial.vtp and "
-            << outputPrefix << "_stack_after.vtp" << std::endl;
+            << outputPrefix << "_stack_after.vtp and "
+            << outputPrefix << "_stack_after_volume.vtu" << std::endl;
 }
 
 // ---------------------------------------------------------------------------

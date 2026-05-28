@@ -137,8 +137,8 @@ if(VIENNAPS_VIENNALS_SOURCE)
 else()
   CPMAddPackage(
     NAME ViennaLS
-    VERSION 5.7.1
     GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
+    GIT_TAG oxidation
     EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
     OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}")
 endif()
@@ -156,8 +156,8 @@ if(VIENNAPS_VIENNACS_SOURCE)
 else()
   CPMAddPackage(
     NAME ViennaCS
-    VERSION 2.0.1
     GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
+    GIT_TAG implant
     EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 endif()
 

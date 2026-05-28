@@ -25,7 +25,10 @@ import sys
 import os
 import viennals
 import viennals.d2 as ls
-import viennaps2d as vps
+import viennaps as vps
+
+viennals.setDimension(2)
+vps.setDimension(2)
 
 # ── Default parameters (match locosOxidation/config.txt) ─────────────────────
 cfg = {
@@ -159,9 +162,6 @@ model.setPressure(pressure)
 model.setOrientation(orientation)
 model.setTimeStep(time_step)
 model.setMaxGridPoints(max_grid_points)
-
-# Provide Si3N4 mask visco-elastic parameters for LOCOS mask bending.
-model.setMaskParameters(ls.OxidationProcessPresets.siliconNitrideMask1000C())
 
 est = model.estimatePlanarOxideThickness(pad_oxide_thickness)
 print(

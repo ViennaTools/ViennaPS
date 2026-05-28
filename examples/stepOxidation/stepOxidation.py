@@ -19,7 +19,10 @@ Coordinate convention:
 import sys
 import viennals
 import viennals.d2 as ls
-import viennaps2d as vps
+import viennaps as vps
+
+viennals.setDimension(2)
+vps.setDimension(2)
 
 # ── Default parameters (match stepOxidation/config.txt) ─────────────────────
 cfg = {
@@ -152,8 +155,30 @@ vps.Process(domain, model, 0.0).apply()
 
 domain.saveSurfaceMesh(output_prefix + "_after.vtp")
 
+# The volume mesh extractor assigns materials by layer order and expects each
+# upper material level set to wrap all lower materials. Oxidation keeps the
+# Si/SiO2 and SiO2/ambient interfaces independent, so wrap deep copies for
+# volume output and leave the live geometry untouched.
+level_sets = domain.getLevelSets()
+if len(level_sets) >= 2:
+    si_copy = ls.Domain(level_sets[0])
+    ox_copy = ls.Domain(level_sets[1])
+    ls.BooleanOperation(
+        ox_copy, si_copy, viennals.BooleanOperationEnum.UNION
+    ).apply()
+
+    vol_domain = vps.Domain()
+    vol_domain.insertNextLevelSetAsMaterial(si_copy, vps.Material.Si, False)
+    vol_domain.insertNextLevelSetAsMaterial(ox_copy, vps.Material.SiO2, False)
+    vol_domain.saveVolumeMesh(output_prefix + "_after")
+else:
+    domain.saveVolumeMesh(output_prefix + "_after")
+
 print(
     f"Planar Deal-Grove estimate for {oxidation_time} hr at {temperature} °C: "
     f"{model.estimatePlanarOxideThickness(oxide_thickness):.4f} µm oxide."
 )
-print(f"Wrote {output_prefix}_initial.vtp and {output_prefix}_after.vtp")
+print(
+    f"Wrote {output_prefix}_initial.vtp, {output_prefix}_after.vtp, "
+    f"and {output_prefix}_after_volume.vtu"
+)

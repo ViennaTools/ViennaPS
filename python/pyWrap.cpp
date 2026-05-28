@@ -19,6 +19,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.def("gpuAvailable", &gpuAvailable,
              "Check if ViennaPS was compiled with GPU support.");
 
+  bindPsOxidationSharedTypes(module);
+
   // Logger
   py::class_<Logger, SmartPointer<Logger>>(module, "Logger", py::module_local())
       .def_static("setLogLevel", &Logger::setLogLevel)
