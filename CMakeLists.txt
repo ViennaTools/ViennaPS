@@ -23,6 +23,7 @@ option(VIENNAPS_PRECOMPILE_HEADERS "Enable precompiled headers" OFF)
 option(VIENNAPS_STATIC_BUILD "Build ViennaPS as static library" OFF)
 option(VIENNAPS_ENABLE_SANITIZER "Enable sanitizers" OFF)
 option(VIENNAPS_ENABLE_CLANG_TIDY "Run clang-tidy during build" OFF)
+option(VIENNAPS_VTK_RENDERING "Enable VTK rendering support" ON)
 
 option(VIENNAPS_USE_GPU "Enable GPU support" OFF)
 
@@ -67,6 +68,10 @@ endif()
 
 if(VIENNAPS_BUILD_PYTHON)
   set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
+
+  if(APPLE)
+    set(VIENNAPS_VTK_RENDERING OFF)
+  endif()
 endif()
 
 if(MSVC)
@@ -125,10 +130,11 @@ CPMAddPackage(
 
 CPMAddPackage(
   NAME ViennaLS
-  VERSION 5.7.2
+  VERSION 5.7.3
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
-  OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}")
+  OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}"
+          "VIENNALS_VTK_RENDERING ${VIENNAPS_VTK_RENDERING}")
 
 CPMAddPackage(
   NAME ViennaCS
