@@ -3,8 +3,12 @@
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
 
+#include <lsGeometricAdvect.hpp>
+#include <lsMakeGeometry.hpp>
+
 #include <vcTestAsserts.hpp>
 
+#include <array>
 #include <cmath>
 
 namespace ps = viennaps;
@@ -55,7 +59,71 @@ void testOxidationCallbackCreatesNativeOxide() {
                  ps::Material::SiO2)
 }
 
+// Verify that psOxidation activates LOCOS physics when a Si3N4 layer is present
+// and that all three level sets (Si, SiO2, Si3N4) are preserved after the step.
+void testLocosOxidationPreservesLayers() {
+  namespace ls = viennals;
+
+  constexpr T gridDelta = 0.1;
+  constexpr T xExtent = 1.5;
+  constexpr T yMin = -0.5;
+  constexpr T yMax = 1.5;
+  constexpr T padOxide = 0.15;
+  constexpr T maskThick = 0.2;
+
+  double bounds[2 * D] = {-xExtent, xExtent, yMin, yMax};
+  ls::Domain<T, D>::BoundaryType bc[D] = {
+      ls::Domain<T, D>::BoundaryType::REFLECTIVE_BOUNDARY,
+      ls::Domain<T, D>::BoundaryType::INFINITE_BOUNDARY};
+
+  // Si substrate (plane at y = 0).
+  auto siLS = ls::Domain<T, D>::New(bounds, bc, gridDelta);
+  ls::MakeGeometry<T, D>(siLS, ls::Plane<T, D>::New(
+      ls::VectorType<T, D>{0., 0.}, ls::VectorType<T, D>{0., 1.})).apply();
+
+  // Pad oxide (geometrically expanded from Si surface).
+  auto oxLS = ls::Domain<T, D>::New(siLS);
+  auto sphere =
+      ls::SmartPointer<ls::SphereDistribution<viennahrle::CoordType, D>>::New(
+          padOxide);
+  ls::GeometricAdvect<T, D>(oxLS, sphere).apply();
+
+  // Si3N4 mask covering x < 0, sitting on top of pad oxide.
+  auto maskLS = ls::Domain<T, D>::New(bounds, bc, gridDelta);
+  ls::MakeGeometry<T, D> maskGeom(
+      maskLS, ls::Box<T, D>::New(ls::VectorType<T, D>{-xExtent, padOxide - 1e-6},
+                                 ls::VectorType<T, D>{0., padOxide + maskThick}));
+  maskGeom.setIgnoreBoundaryConditions(std::array<bool, D>{false, true});
+  maskGeom.apply();
+
+  auto domain = ps::Domain<T, D>::New();
+  domain->insertNextLevelSetAsMaterial(siLS, ps::Material::Si, false);
+  domain->insertNextLevelSetAsMaterial(oxLS, ps::Material::SiO2, false);
+  domain->insertNextLevelSetAsMaterial(maskLS, ps::Material::Si3N4, false);
+
+  VC_TEST_ASSERT(domain->getNumberOfLevelSets() == 3)
+
+  auto model = ps::SmartPointer<ps::Oxidation<T, D>>::New();
+  model->setTemperature(1000.);
+  model->setTime(0.02);
+  model->setOxidant(ps::OxidantType::Wet);
+  model->setTimeStep(0.02);
+  model->setMaxGridPoints(200000);
+
+  ps::Process<T, D>(domain, model, T(0)).apply();
+
+  // All three level sets must survive the LOCOS step.
+  VC_TEST_ASSERT(domain->getNumberOfLevelSets() == 3)
+  VC_TEST_ASSERT(domain->getMaterialMap()->getMaterialAtIdx(0) ==
+                 ps::Material::Si)
+  VC_TEST_ASSERT(domain->getMaterialMap()->getMaterialAtIdx(1) ==
+                 ps::Material::SiO2)
+  VC_TEST_ASSERT(domain->getMaterialMap()->getMaterialAtIdx(2) ==
+                 ps::Material::Si3N4)
+}
+
 int main() {
   testDealGroveEstimateWet1000C();
   testOxidationCallbackCreatesNativeOxide();
+  testLocosOxidationPreservesLayers();
 }

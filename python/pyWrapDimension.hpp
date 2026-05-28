@@ -61,6 +61,7 @@
 #include <models/psIonBeamEtching.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psMultiParticleProcess.hpp>
+#include <models/psOxidation.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6C4F8Etching.hpp>
 #include <models/psSF6O2Etching.hpp>
@@ -1105,6 +1106,72 @@ template <int D> void bindApi(py::module &module) {
           py::arg("trenchWidth"), py::arg("trenchDepth"),
           py::arg("depositionRate"), py::arg("bottomMed"), py::arg("a"),
           py::arg("b"), py::arg("n"));
+
+  // Thermal Oxidation (Deal-Grove, LOCOS)
+  py::native_enum<OxidantType>(module, "OxidantType", "enum.IntEnum")
+      .value("Dry", OxidantType::Dry)
+      .value("Wet", OxidantType::Wet)
+      .finalize();
+
+  py::native_enum<SiliconOrientation>(module, "SiliconOrientation", "enum.IntEnum")
+      .value("Si100", SiliconOrientation::Si100)
+      .value("Si111", SiliconOrientation::Si111)
+      .value("PolySi", SiliconOrientation::PolySi)
+      .finalize();
+
+  py::class_<Oxidation<T, D>, SmartPointer<Oxidation<T, D>>>(
+      module, "Oxidation", processModel)
+      .def(py::init(&SmartPointer<Oxidation<T, D>>::template New<>))
+      .def("setTemperature", &Oxidation<T, D>::setTemperature,
+           py::arg("temperatureC"),
+           "Oxidation temperature in °C (800–1200 °C).")
+      .def("setTime", &Oxidation<T, D>::setTime, py::arg("timeHr"),
+           "Total oxidation time in hours.")
+      .def("setOxidant", &Oxidation<T, D>::setOxidant, py::arg("oxidant"),
+           "Oxidant species: OxidantType.Dry (O₂) or OxidantType.Wet (H₂O).")
+      .def("setPressure", &Oxidation<T, D>::setPressure, py::arg("pressureAtm"),
+           "Ambient pressure in atm (scales B and B/A linearly).")
+      .def("setOrientation", &Oxidation<T, D>::setOrientation,
+           py::arg("orientation"),
+           "Crystal orientation: Si100, Si111, or PolySi.")
+      .def("setTimeStep", &Oxidation<T, D>::setTimeStep, py::arg("dtHr"),
+           "Duration of each explicit time step in hours. Default: time/20.")
+      .def("setInitialOxideThickness",
+           &Oxidation<T, D>::setInitialOxideThickness, py::arg("thicknessUm"),
+           "Native-oxide seed thickness in µm when no SiO2 layer exists.")
+      .def("setTransferCoefficient",
+           &Oxidation<T, D>::setTransferCoefficient, py::arg("coefficient"),
+           "Gas-transfer coefficient in µm/hr.")
+      .def("setReactionActivationVolume",
+           &Oxidation<T, D>::setReactionActivationVolume, py::arg("volume"),
+           "Stress-coupling activation volume for interface reaction rate (m³).")
+      .def("setDiffusionActivationVolume",
+           &Oxidation<T, D>::setDiffusionActivationVolume, py::arg("volume"),
+           "Stress-coupling activation volume for oxide diffusivity (m³).")
+      .def("setMaxGridPoints", &Oxidation<T, D>::setMaxGridPoints,
+           py::arg("maxGridPoints"),
+           "Maximum Cartesian grid points for the diffusion/mechanics solve.")
+      .def("setCouplingIterations", &Oxidation<T, D>::setCouplingIterations,
+           py::arg("iterations"))
+      .def("setCouplingTolerance", &Oxidation<T, D>::setCouplingTolerance,
+           py::arg("tolerance"))
+      .def("setSiliconMaterial", &Oxidation<T, D>::setSiliconMaterial,
+           py::arg("mat"), "Override which material is treated as silicon.")
+      .def("setOxideMaterial", &Oxidation<T, D>::setOxideMaterial,
+           py::arg("mat"), "Override which material is treated as oxide.")
+      .def("setMaskMaterial", &Oxidation<T, D>::setMaskMaterial, py::arg("mat"),
+           "Material treated as the oxidation mask (activates LOCOS physics).")
+      .def("setMaskParameters", &Oxidation<T, D>::setMaskParameters,
+           py::arg("params"),
+           "Viscous-elasticity parameters for the mask layer.")
+      .def("setMaskCouplingIterations",
+           &Oxidation<T, D>::setMaskCouplingIterations, py::arg("iterations"))
+      .def("setMaskCouplingTolerance",
+           &Oxidation<T, D>::setMaskCouplingTolerance, py::arg("tolerance"))
+      .def("estimatePlanarOxideThickness",
+           &Oxidation<T, D>::estimatePlanarOxideThickness,
+           py::arg("initialOxideThickness") = T(0),
+           "Deal-Grove planar oxide thickness estimate in µm.");
 
   // Oxide Regrowth
   py::class_<OxideRegrowth<T, D>, SmartPointer<OxideRegrowth<T, D>>>(

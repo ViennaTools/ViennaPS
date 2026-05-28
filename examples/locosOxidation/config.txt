@@ -1,0 +1,33 @@
+# LOCOS oxidation example configuration.
+# Lengths are in micrometers, time is in hours, pressure is in atm.
+#
+# Geometry:
+#   Si substrate + pad oxide (padOxideThickness) + Si3N4 mask box.
+#   The mask covers x < maskEdge (default 0); the open window is x > maskEdge.
+#   Bird's-beak oxide grows laterally under the mask edges.
+#
+# Grid sizing guide:
+#   gridDelta=0.025 -> ~100k nodes (high-quality bird's beak)
+#   gridDelta=0.05  ->  ~25k nodes (default, good quality)
+#   gridDelta=0.1   ->   ~6k nodes (fast test)
+
+numThreads=16
+
+gridDelta=0.05
+xExtent=4.
+yMin=-1.
+yMax=2.
+
+padOxideThickness=0.15
+maskThickness=0.3
+maskEdge=0.
+
+oxidationTime=1.0
+timeStep=0.1
+temperature=1000.
+pressure=1.
+oxidant=wet
+orientation=100
+
+# maxGridPoints=5000000
+outputPrefix=ps_locos

@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+"""
+LOCOS (Local Oxidation of Silicon) Example (ViennaPS)
+======================================================
+Simulates the bird's-beak oxide profile that forms when a Si3N4 pad
+mask constrains lateral oxidation at its edges.
+
+Geometry (2-D cross-section):
+    · Si substrate at y = 0
+    · Pad SiO2 layer of thickness padOxideThickness grown on Si
+    · Si3N4 mask box covering x < maskEdge, sitting on the pad oxide
+
+The ViennaPS Oxidation model auto-detects Si3N4 and activates LOCOS
+physics: mask-bending + constrained-ambient advection.  The simulation
+time-steps in increments of timeStep hours, saving a surface mesh after
+each step.
+
+Usage:
+    python locosOxidation.py [config.txt]
+
+All lengths are in micrometers, time in hours, pressure in atm.
+"""
+
+import sys
+import os
+import viennals
+import viennals.d2 as ls
+import viennaps2d as vps
+
+# ── Default parameters (match locosOxidation/config.txt) ─────────────────────
+cfg = {
+    "numThreads":          16,
+    "gridDelta":           0.05,
+    "xExtent":             4.0,
+    "yMin":               -1.0,
+    "yMax":                2.0,
+    "padOxideThickness":   0.15,
+    "maskThickness":       0.3,
+    "maskEdge":            0.0,
+    "oxidationTime":       1.0,
+    "timeStep":            0.1,
+    "temperature":      1000.0,
+    "pressure":            1.0,
+    "oxidant":           "wet",
+    "orientation":       "100",
+    "maxGridPoints":  5000000,
+    "outputPrefix":   "ps_locos",
+}
+
+
+def _parse_config(path: str) -> None:
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                eq = line.find("=")
+                if eq < 0:
+                    continue
+                key, val = line[:eq].strip(), line[eq + 1:].strip()
+                if key in cfg:
+                    t = type(cfg[key])
+                    cfg[key] = t(val)
+    except FileNotFoundError:
+        pass
+
+
+def _parse_oxidant(s: str):
+    s = s.lower()
+    if s in ("wet", "h2o"):
+        return vps.OxidantType.Wet
+    if s in ("dry", "o2"):
+        return vps.OxidantType.Dry
+    raise ValueError(f"Unknown oxidant '{s}'. Use wet/H2O or dry/O2.")
+
+
+def _parse_orientation(s: str):
+    s = s.lower()
+    if s in ("100", "<100>", "si100"):
+        return vps.SiliconOrientation.Si100
+    if s in ("111", "<111>", "si111"):
+        return vps.SiliconOrientation.Si111
+    if s in ("poly", "polysi"):
+        return vps.SiliconOrientation.PolySi
+    raise ValueError(f"Unknown orientation '{s}'. Use 100, 111, or poly.")
+
+
+# ── Config file ───────────────────────────────────────────────────────────────
+config_file = sys.argv[1] if len(sys.argv) > 1 else "config.txt"
+_parse_config(config_file)
+
+viennals.setNumThreads(cfg["numThreads"])
+vps.Logger.setLogLevel(vps.LogLevel.ERROR)
+
+grid_delta          = cfg["gridDelta"]
+x_extent            = cfg["xExtent"]
+y_min               = cfg["yMin"]
+y_max               = cfg["yMax"]
+pad_oxide_thickness = cfg["padOxideThickness"]
+mask_thickness      = cfg["maskThickness"]
+mask_edge           = cfg["maskEdge"]
+oxidation_time      = cfg["oxidationTime"]
+time_step           = cfg["timeStep"]
+temperature         = cfg["temperature"]
+pressure            = cfg["pressure"]
+oxidant             = _parse_oxidant(cfg["oxidant"])
+orientation         = _parse_orientation(cfg["orientation"])
+max_grid_points     = cfg["maxGridPoints"]
+output_prefix       = cfg["outputPrefix"]
+
+# Tiny offset so Cartesian stencils unambiguously see the mask/oxide interface.
+mask_contact_eps = 1.0e-6
+
+# ── Domain bounds and boundary conditions ────────────────────────────────────
+BC = viennals.BoundaryConditionEnum
+bounds = [-x_extent, x_extent, y_min, y_max]
+bcs    = [BC.REFLECTIVE_BOUNDARY, BC.INFINITE_BOUNDARY]
+
+# ── Build level sets ──────────────────────────────────────────────────────────
+
+# Si substrate: flat plane at y = 0.
+si_ls = ls.Domain(bounds, bcs, grid_delta)
+ls.MakeGeometry(si_ls, ls.Plane([0.0, 0.0], [0.0, 1.0])).apply()
+
+# Pad SiO2: geometrically advance Si surface by padOxideThickness.
+oxide_ls = ls.Domain(si_ls)
+ls.GeometricAdvect(
+    oxide_ls, ls.SphereDistribution(pad_oxide_thickness)
+).apply()
+
+# Si3N4 mask: rectangular box covering x ∈ [-xExtent, maskEdge],
+# y ∈ [pad_oxide_top - eps, pad_oxide_top + maskThickness].
+pad_oxide_top = pad_oxide_thickness
+mask_ls = ls.Domain(bounds, bcs, grid_delta)
+mask_geom = ls.MakeGeometry(
+    mask_ls,
+    ls.Box(
+        [-x_extent, pad_oxide_top - mask_contact_eps],
+        [mask_edge,  pad_oxide_top + mask_thickness],
+    ),
+)
+mask_geom.setIgnoreBoundaryConditions([False, True, False])  # ignore INFINITE y boundary
+mask_geom.apply()
+
+# ── Assemble ViennaPS domain ──────────────────────────────────────────────────
+domain = vps.Domain()
+domain.insertNextLevelSetAsMaterial(si_ls,    vps.Material.Si,    False)
+domain.insertNextLevelSetAsMaterial(oxide_ls, vps.Material.SiO2,  False)
+domain.insertNextLevelSetAsMaterial(mask_ls,  vps.Material.Si3N4, False)
+
+domain.saveSurfaceMesh(f"{output_prefix}_step_0001.vtp")
+
+# ── Oxidation model ───────────────────────────────────────────────────────────
+model = vps.Oxidation()
+model.setTemperature(temperature)
+model.setOxidant(oxidant)
+model.setPressure(pressure)
+model.setOrientation(orientation)
+model.setTimeStep(time_step)
+model.setMaxGridPoints(max_grid_points)
+
+# Provide Si3N4 mask visco-elastic parameters for LOCOS mask bending.
+model.setMaskParameters(ls.OxidationProcessPresets.siliconNitrideMask1000C())
+
+est = model.estimatePlanarOxideThickness(pad_oxide_thickness)
+print(
+    f"Planar Deal-Grove estimate for {oxidation_time} hr at {temperature} °C: "
+    f"{est:.4f} µm total oxide thickness."
+)
+
+# ── Time-stepping loop ────────────────────────────────────────────────────────
+elapsed = 0.0
+step    = 1
+time_eps = 1.0e-9 * oxidation_time
+
+while oxidation_time - elapsed > time_eps:
+    dt = min(time_step, oxidation_time - elapsed)
+    if dt <= 0.0:
+        break
+
+    model.setTime(dt)
+    model.setTimeStep(dt)
+    vps.Process(domain, model, 0.0).apply()
+
+    elapsed += dt
+    step    += 1
+
+    fname = f"{output_prefix}_step_{step:04d}.vtp"
+    domain.saveSurfaceMesh(fname)
+    print(f"Wrote {fname} at t = {elapsed:.4f} hr.")
+
+# ── Final output ───────────────────────────────────────────────────────────────
+# The simulation level sets move independently (not wrapped), which is required
+# for LOCOS but means the volume mesh extractor cannot assign materials by layer
+# order without explicit wrapping.  Do everything on deep copies so the live
+# level sets remain usable.
+#
+#   Surface mesh: union ox + mask copies to close the sub-cell contact gap.
+#   Volume mesh:  wrap copies so each LS encloses all lower ones:
+#                   oxCopy  = UNION(Si, SiO2)   → SiO2 outer boundary wraps Si
+#                   mskCopy = UNION(ox, Si3N4)  → Si3N4 outer boundary wraps Si+SiO2
+
+if len(domain.getLevelSets()) >= 3:
+    raw = domain.getLevelSets()
+
+    # Deep copies (copy constructor)
+    si_copy  = ls.Domain(raw[0])
+    ox_copy  = ls.Domain(raw[1])
+    msk_copy = ls.Domain(raw[2])
+
+    # Surface mesh: close the oxide/mask gap
+    ox_surf  = ls.Domain(raw[1])
+    msk_surf = ls.Domain(raw[2])
+    ls.BooleanOperation(ox_surf, msk_surf, viennals.BooleanOperationEnum.UNION).apply()
+
+    surf_domain = vps.Domain()
+    surf_domain.insertNextLevelSetAsMaterial(si_copy,  vps.Material.Si,    False)
+    surf_domain.insertNextLevelSetAsMaterial(ox_surf,  vps.Material.SiO2,  False)
+    surf_domain.insertNextLevelSetAsMaterial(msk_surf, vps.Material.Si3N4, False)
+    surf_domain.saveSurfaceMesh(f"{output_prefix}_after.vtp")
+
+    # Volume mesh: wrap so material regions are correctly filled by layer order
+    ls.BooleanOperation(ox_copy,  si_copy,  viennals.BooleanOperationEnum.UNION).apply()
+    ls.BooleanOperation(msk_copy, ox_copy,  viennals.BooleanOperationEnum.UNION).apply()
+
+    vol_domain = vps.Domain()
+    vol_domain.insertNextLevelSetAsMaterial(si_copy,  vps.Material.Si,    False)
+    vol_domain.insertNextLevelSetAsMaterial(ox_copy,  vps.Material.SiO2,  False)
+    vol_domain.insertNextLevelSetAsMaterial(msk_copy, vps.Material.Si3N4, False)
+    vol_domain.saveVolumeMesh(f"{output_prefix}_after")
+else:
+    domain.saveSurfaceMesh(f"{output_prefix}_after.vtp")
+
+print(f"Wrote {output_prefix}_after.vtp and {output_prefix}_after_volume.vtu "
+      f"({step} time steps, elapsed = {elapsed:.4f} hr)")

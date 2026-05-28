@@ -11,10 +11,10 @@
 #       gridDelta=0.1   -> ~384k points (fast 3D test)
 # Override the solver limit with maxGridPoints if needed.
 
-numThreads=8
-dimensions=3
+numThreads=16
+dimensions=2
 
-gridDelta=0.1
+gridDelta=0.05
 xExtent=4.
 yMin=-2.
 yMax=4.

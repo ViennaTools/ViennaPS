@@ -6,8 +6,6 @@
 #include <lsBooleanOperation.hpp>
 #include <lsGeometricAdvect.hpp>
 #include <lsMakeGeometry.hpp>
-#include <lsToSurfaceMesh.hpp>
-#include <lsVTKWriter.hpp>
 
 #include <algorithm>
 #include <array>
@@ -131,16 +129,6 @@ ps::SmartPointer<ls::Domain<NumericType, D>> makeStepLevelSet(
   return step;
 }
 
-template <int D>
-void writeSurface(ps::SmartPointer<ls::Domain<NumericType, D>> levelSet,
-                  const std::string &fileName) {
-  auto mesh = ls::Mesh<NumericType>::New();
-  auto surfaceMesh = ls::ToSurfaceMesh<NumericType, D>(levelSet, mesh);
-  surfaceMesh.setSharpCorners(false);
-  surfaceMesh.apply();
-  ls::VTKWriter<NumericType>(mesh, fileName).apply();
-}
-
 // ---------------------------------------------------------------------------
 // Simulation driver
 // ---------------------------------------------------------------------------
@@ -148,7 +136,7 @@ void writeSurface(ps::SmartPointer<ls::Domain<NumericType, D>> levelSet,
 template <int D>
 void run(const ps::util::Parameters &params) {
   omp_set_num_threads(params.get<int>("numThreads"));
-  ps::Logger::setLogLevel(ps::LogLevel::INFO);
+  ps::Logger::setLogLevel(ps::LogLevel::ERROR);
 
   const NumericType gridDelta      = params.get("gridDelta");
   const NumericType xExtent        = params.get("xExtent");
@@ -199,8 +187,6 @@ void run(const ps::util::Parameters &params) {
   auto domain = ps::Domain<NumericType, D>::New();
   domain->insertNextLevelSetAsMaterial(siInterface, ps::Material::Si);
 
-  writeSurface<D>(siInterface, outputPrefix + "_si_initial.vtp");
-
   if (oxideThickness > NumericType(0)) {
     auto ambientInterface =
         ls::Domain<NumericType, D>::New(siInterface);
@@ -210,8 +196,9 @@ void run(const ps::util::Parameters &params) {
     ls::GeometricAdvect<NumericType, D>(ambientInterface, initialOxide).apply();
     domain->insertNextLevelSetAsMaterial(ambientInterface, ps::Material::SiO2,
                                          false);
-    writeSurface<D>(ambientInterface, outputPrefix + "_ambient_initial.vtp");
   }
+
+  domain->saveSurfaceMesh(outputPrefix + "_stack_initial.vtp");
 
   auto model = ps::SmartPointer<ps::Oxidation<NumericType, D>>::New();
   model->setTemperature(temperature);
@@ -232,8 +219,6 @@ void run(const ps::util::Parameters &params) {
 
   ps::Process<NumericType, D>(domain, model, NumericType(0)).apply();
 
-  writeSurface<D>(domain->getLevelSets()[0], outputPrefix + "_si_after.vtp");
-  writeSurface<D>(domain->getLevelSets()[1], outputPrefix + "_ambient_after.vtp");
   domain->saveSurfaceMesh(outputPrefix + "_stack_after.vtp");
 
   std::cout << "Planar Deal-Grove estimate for " << oxidationTime
@@ -241,12 +226,8 @@ void run(const ps::util::Parameters &params) {
             << model->estimatePlanarOxideThickness(oxideThickness)
             << " um oxide thickness." << std::endl;
 
-  std::cout << "Wrote " << outputPrefix << "_si_initial.vtp";
-  if (oxideThickness > NumericType(0))
-    std::cout << ", " << outputPrefix << "_ambient_initial.vtp";
-  std::cout << ", " << outputPrefix << "_si_after.vtp, " << outputPrefix
-            << "_ambient_after.vtp, and " << outputPrefix << "_stack_after.vtp"
-            << std::endl;
+  std::cout << "Wrote " << outputPrefix << "_stack_initial.vtp and "
+            << outputPrefix << "_stack_after.vtp" << std::endl;
 }
 
 // ---------------------------------------------------------------------------
