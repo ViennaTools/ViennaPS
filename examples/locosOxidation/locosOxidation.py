@@ -11,9 +11,9 @@ Geometry (2-D cross-section):
     · Si3N4 mask box covering x < maskEdge, sitting on the pad oxide
 
 The ViennaPS Oxidation model auto-detects Si3N4 and activates LOCOS
-physics: mask-bending + constrained-ambient advection.  The simulation
-time-steps in increments of timeStep hours, saving a surface mesh after
-each step.
+physics: mask-bending + constrained-ambient advection. The example saves a
+surface mesh every timeStep hours; the model may use smaller CFL-limited
+internal physics steps between saved meshes.
 
 Usage:
     python locosOxidation.py [config.txt]
@@ -37,7 +37,7 @@ cfg = {
     "xExtent":             4.0,
     "yMin":               -1.0,
     "yMax":                2.0,
-    "padOxideThickness":   0.15,
+    "padOxideThickness":   0.05,
     "maskThickness":       0.3,
     "maskEdge":            0.0,
     "oxidationTime":       1.0,
@@ -94,7 +94,7 @@ config_file = sys.argv[1] if len(sys.argv) > 1 else "config.txt"
 _parse_config(config_file)
 
 viennals.setNumThreads(cfg["numThreads"])
-vps.Logger.setLogLevel(vps.LogLevel.ERROR)
+vps.Logger.setLogLevel(vps.LogLevel.INFO)
 
 grid_delta          = cfg["gridDelta"]
 x_extent            = cfg["xExtent"]
@@ -138,9 +138,13 @@ pad_oxide_top = pad_oxide_thickness
 mask_ls = ls.Domain(bounds, bcs, grid_delta)
 mask_geom = ls.MakeGeometry(
     mask_ls,
+    # ls.Box(
+    #     [-x_extent, pad_oxide_top - mask_contact_eps],
+    #     [mask_edge,  pad_oxide_top + mask_thickness],
+    # ),
     ls.Box(
-        [-x_extent, pad_oxide_top - mask_contact_eps],
-        [mask_edge,  pad_oxide_top + mask_thickness],
+        [-x_extent/2., pad_oxide_top - mask_contact_eps],
+        [x_extent/2.,  pad_oxide_top + mask_thickness],
     ),
 )
 mask_geom.setIgnoreBoundaryConditions([False, True, False])  # ignore INFINITE y boundary
@@ -152,8 +156,6 @@ domain.insertNextLevelSetAsMaterial(si_ls,    vps.Material.Si,    False)
 domain.insertNextLevelSetAsMaterial(oxide_ls, vps.Material.SiO2,  False)
 domain.insertNextLevelSetAsMaterial(mask_ls,  vps.Material.Si3N4, False)
 
-domain.saveSurfaceMesh(f"{output_prefix}_step_0001.vtp")
-
 # ── Oxidation model ───────────────────────────────────────────────────────────
 model = vps.Oxidation()
 model.setTemperature(temperature)
@@ -163,6 +165,8 @@ model.setOrientation(orientation)
 model.setTimeStep(time_step)
 model.setMaxGridPoints(max_grid_points)
 
+model.saveSurfaceMesh(domain, f"{output_prefix}_step_000.vtp")
+
 est = model.estimatePlanarOxideThickness(pad_oxide_thickness)
 print(
     f"Planar Deal-Grove estimate for {oxidation_time} hr at {temperature} °C: "
@@ -171,7 +175,7 @@ print(
 
 # ── Time-stepping loop ────────────────────────────────────────────────────────
 elapsed = 0.0
-step    = 1
+step    = 0
 time_eps = 1.0e-9 * oxidation_time
 
 while oxidation_time - elapsed > time_eps:
@@ -186,51 +190,13 @@ while oxidation_time - elapsed > time_eps:
     elapsed += dt
     step    += 1
 
-    fname = f"{output_prefix}_step_{step:04d}.vtp"
-    domain.saveSurfaceMesh(fname)
+    fname = f"{output_prefix}_step_{step:03d}.vtp"
+    model.saveSurfaceMesh(domain, fname)
     print(f"Wrote {fname} at t = {elapsed:.4f} hr.")
 
 # ── Final output ───────────────────────────────────────────────────────────────
-# The simulation level sets move independently (not wrapped), which is required
-# for LOCOS but means the volume mesh extractor cannot assign materials by layer
-# order without explicit wrapping.  Do everything on deep copies so the live
-# level sets remain usable.
-#
-#   Surface mesh: union ox + mask copies to close the sub-cell contact gap.
-#   Volume mesh:  wrap copies so each LS encloses all lower ones:
-#                   oxCopy  = UNION(Si, SiO2)   → SiO2 outer boundary wraps Si
-#                   mskCopy = UNION(ox, Si3N4)  → Si3N4 outer boundary wraps Si+SiO2
-
-if len(domain.getLevelSets()) >= 3:
-    raw = domain.getLevelSets()
-
-    # Deep copies (copy constructor)
-    si_copy  = ls.Domain(raw[0])
-    ox_copy  = ls.Domain(raw[1])
-    msk_copy = ls.Domain(raw[2])
-
-    # Surface mesh: close the oxide/mask gap
-    ox_surf  = ls.Domain(raw[1])
-    msk_surf = ls.Domain(raw[2])
-    ls.BooleanOperation(ox_surf, msk_surf, viennals.BooleanOperationEnum.UNION).apply()
-
-    surf_domain = vps.Domain()
-    surf_domain.insertNextLevelSetAsMaterial(si_copy,  vps.Material.Si,    False)
-    surf_domain.insertNextLevelSetAsMaterial(ox_surf,  vps.Material.SiO2,  False)
-    surf_domain.insertNextLevelSetAsMaterial(msk_surf, vps.Material.Si3N4, False)
-    surf_domain.saveSurfaceMesh(f"{output_prefix}_after.vtp")
-
-    # Volume mesh: wrap so material regions are correctly filled by layer order
-    ls.BooleanOperation(ox_copy,  si_copy,  viennals.BooleanOperationEnum.UNION).apply()
-    ls.BooleanOperation(msk_copy, ox_copy,  viennals.BooleanOperationEnum.UNION).apply()
-
-    vol_domain = vps.Domain()
-    vol_domain.insertNextLevelSetAsMaterial(si_copy,  vps.Material.Si,    False)
-    vol_domain.insertNextLevelSetAsMaterial(ox_copy,  vps.Material.SiO2,  False)
-    vol_domain.insertNextLevelSetAsMaterial(msk_copy, vps.Material.Si3N4, False)
-    vol_domain.saveVolumeMesh(f"{output_prefix}_after")
-else:
-    domain.saveSurfaceMesh(f"{output_prefix}_after.vtp")
+model.saveSurfaceMesh(domain, f"{output_prefix}_after.vtp")
+model.saveVolumeMesh(domain, f"{output_prefix}_after")
 
 print(f"Wrote {output_prefix}_after.vtp and {output_prefix}_after_volume.vtu "
       f"({step} time steps, elapsed = {elapsed:.4f} hr)")

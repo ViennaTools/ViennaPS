@@ -29,6 +29,8 @@ rightSiTop=1.
 oxideThickness=0.
 
 oxidationTime=0.05
+# Maximum internal oxidation step. The model automatically subcycles below this
+# value when the CFL limit is smaller.
 timeStep=0.01
 temperature=1000.
 pressure=1.

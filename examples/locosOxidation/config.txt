@@ -13,16 +13,18 @@
 
 numThreads=16
 
-gridDelta=0.05
+gridDelta=0.01
 xExtent=4.
 yMin=-1.
 yMax=2.
 
-padOxideThickness=0.15
+padOxideThickness=0.05
 maskThickness=0.3
 maskEdge=0.
 
 oxidationTime=1.0
+# Output interval and maximum internal oxidation step. The model automatically
+# subcycles below this value when the CFL limit is smaller.
 timeStep=0.1
 temperature=1000.
 pressure=1.
@@ -31,3 +33,7 @@ orientation=100
 
 # maxGridPoints=5000000
 outputPrefix=ps_locos
+
+mechanicsIterations=2
+pressureIterations=150
+stokesIterations=50

@@ -152,8 +152,8 @@ equation:
 
 The Engquist–Osher spatial scheme and forward-Euler temporal scheme are used
 by default. Because the velocity depends on the current level-set geometry (via
-the oxide thickness), the time step must be short enough that the geometry does
-not change dramatically in one step — the `timeStep` parameter controls this.
+the oxide thickness), the oxidation model automatically subcycles so the
+coupled fields are recomputed before the interfaces move too far.
 
 ---
 
@@ -167,7 +167,7 @@ The `ps::Oxidation<T,D>` class orchestrates the entire workflow above. It:
 3. Constructs an `OxidationDiffusion` velocity field and an
    `OxidationDeformation` velocity field (both from ViennaLS).
 4. Wraps them in an `OxidationModel` coupling loop.
-5. Calls `ps::Process` to advance the two level-set interfaces by `timeStep`.
+5. Advances the two level-set interfaces using CFL-limited internal substeps.
 6. Repeats until the total `time` has elapsed.
 
 The Si material is automatically identified by its `Material::Si` tag; SiO₂
@@ -183,7 +183,7 @@ If a `Material::Si3N4` layer is present, LOCOS physics activate automatically
 auto model = ps::SmartPointer<ps::Oxidation<double, 2>>::New();
 model->setTemperature(1000.);          // °C
 model->setTime(0.05);                   // hr
-model->setTimeStep(0.01);               // hr per advection step
+model->setTimeStep(0.01);               // hr; maximum internal oxidation step
 model->setOxidant(ps::OxidantType::Wet);
 model->setPressure(1.0);                // atm
 model->setOrientation(ps::SiliconOrientation::Si100);
@@ -284,18 +284,17 @@ on geometry, giving locally enhanced or reduced reaction rates.
 
 ### `setTimeStep(dt)` — hr
 
-Each call to `ps::Process` advances the two interfaces by `dt` hours using a
-single forward-Euler level-set advection step. The maximum stable `dt` is
-determined by the CFL condition:
+`dt` is a user cap on the internal oxidation step, not a forced advection
+duration. Each internal step solves diffusion, deformation, and interface
+coupling on the current geometry, then clamps the actual advection time to:
 
 ```
-dt ≤ C_CFL · gridDelta / max_velocity
+actual_dt ≤ min(dt, C_CFL · gridDelta / max_velocity, remaining_time)
 ```
 
-For the default grid (Δx = 0.05 µm) and typical wet oxidation velocities
-(~0.1 µm/hr at the step corner), `dt = 0.01 hr` satisfies CFL with margin.
-Larger `dt` can cause the level set to skip over features; smaller `dt` gives
-more accurate results at proportionally higher cost.
+If `dt` is larger than the CFL-limited value, the model automatically performs
+multiple smaller internal substeps before returning. Smaller `dt` can still be
+used to force more frequent physics updates.
 
 ### `setMaxGridPoints(N)` — integer
 

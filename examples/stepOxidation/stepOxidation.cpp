@@ -61,6 +61,9 @@ ps::SiliconOrientation parseOrientation(const std::string &value) {
 //   dim 0 = X  — lateral step direction (REFLECTIVE boundary)
 //   dim 1 = Y  — height / growth direction (INFINITE boundary)
 //   dim 2 = Z  — depth / extrusion direction, 3D only (REFLECTIVE boundary)
+//
+// `timeStep` is a maximum internal oxidation step; the model automatically
+// subcycles below it when the CFL limit is smaller.
 // ---------------------------------------------------------------------------
 
 template <int D>
@@ -197,9 +200,6 @@ void run(const ps::util::Parameters &params) {
     domain->insertNextLevelSetAsMaterial(ambientInterface, ps::Material::SiO2,
                                          false);
   }
-
-  domain->saveSurfaceMesh(outputPrefix + "_stack_initial.vtp");
-
   auto model = ps::SmartPointer<ps::Oxidation<NumericType, D>>::New();
   model->setTemperature(temperature);
   model->setTime(oxidationTime);
@@ -217,34 +217,13 @@ void run(const ps::util::Parameters &params) {
       model->setMaxGridPoints(static_cast<std::size_t>(std::stoull(it->second)));
   }
 
+  model->saveSurfaceMesh(domain, outputPrefix + "_stack_initial.vtp");
+
   ps::Process<NumericType, D>(domain, model, NumericType(0)).apply();
 
-  domain->saveSurfaceMesh(outputPrefix + "_stack_after.vtp");
-
-  // The volume mesh extractor assigns materials by layer order and expects
-  // every upper material level set to wrap all lower materials. Oxidation keeps
-  // the Si/SiO2 and SiO2/ambient interfaces as independent moving level sets,
-  // so build wrapped copies for volume output and leave the live geometry
-  // untouched.
-  {
-    const auto &levelSets = domain->getLevelSets();
-    if (levelSets.size() >= 2) {
-      auto siCopy = ls::Domain<NumericType, D>::New(levelSets[0]);
-      auto oxCopy = ls::Domain<NumericType, D>::New(levelSets[1]);
-      ls::BooleanOperation<NumericType, D>(
-          oxCopy, siCopy, ls::BooleanOperationEnum::UNION)
-          .apply();
-
-      auto volumeDomain = ps::Domain<NumericType, D>::New();
-      volumeDomain->insertNextLevelSetAsMaterial(siCopy, ps::Material::Si,
-                                                 false);
-      volumeDomain->insertNextLevelSetAsMaterial(oxCopy, ps::Material::SiO2,
-                                                 false);
-      volumeDomain->saveVolumeMesh(outputPrefix + "_stack_after");
-    } else {
-      domain->saveVolumeMesh(outputPrefix + "_stack_after");
-    }
-  }
+  model->saveSurfaceMesh(domain, outputPrefix + "_stack_after.vtp");
+  model->saveVolumeMesh(domain, outputPrefix + "_stack_after");
+  
 
   std::cout << "Planar Deal-Grove estimate for " << oxidationTime
             << " hr oxidation at " << temperature << " C: "

@@ -14,6 +14,9 @@
 //   padOxideThickness, maskThickness, maskEdge,
 //   oxidationTime, timeStep, temperature, pressure, oxidant, orientation,
 //   maxGridPoints, outputPrefix
+//
+// `timeStep` controls the output cadence and the maximum oxidation substep.
+// The model automatically uses smaller CFL-limited physics steps if needed.
 
 #include <array>
 #include <cmath>
@@ -76,7 +79,7 @@ struct Config {
   NumericType xExtent = 4.;
   NumericType yMin = -1.;
   NumericType yMax = 2.;
-  NumericType padOxideThickness = 0.15;
+  NumericType padOxideThickness = 0.05;
   NumericType maskThickness = 0.2;
   NumericType maskEdge = 0.;
   NumericType oxidationTime = 0.35;
@@ -87,6 +90,9 @@ struct Config {
   std::string orientation = "100";
   std::size_t maxGridPoints = 5000000;
   std::string outputPrefix = "ps_locos";
+  int mechanicsIterations = 2;
+  int pressureIterations = 500;
+  int stokesIterations = 100;
 };
 
 Config parseConfig(const std::string &filename) {
@@ -122,6 +128,9 @@ Config parseConfig(const std::string &filename) {
     else if (key == "orientation")  cfg.orientation = val;
     else if (key == "maxGridPoints")cfg.maxGridPoints = std::stoull(val);
     else if (key == "outputPrefix") cfg.outputPrefix = val;
+    else if (key == "mechanicsIterations") cfg.mechanicsIterations = std::stoi(val);
+    else if (key == "pressureIterations") cfg.pressureIterations = std::stoi(val);
+    else if (key == "stokesIterations") cfg.stokesIterations = std::stoi(val);
   }
   return cfg;
 }
@@ -129,7 +138,7 @@ Config parseConfig(const std::string &filename) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 int main() {
-  ps::Logger::setLogLevel(ps::LogLevel::ERROR);
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
   const auto cfg = parseConfig("config.txt");
   omp_set_num_threads(cfg.numThreads);
 
@@ -153,7 +162,7 @@ int main() {
   // The tiny contact epsilon places the mask bottom numerically below the oxide
   // top so Cartesian stencils unambiguously hit the mask boundary.
   auto maskLS =
-      makeMask(bounds, bc, cfg.gridDelta, -cfg.xExtent, cfg.maskEdge,
+      makeMask(bounds, bc, cfg.gridDelta, -cfg.xExtent/2., cfg.xExtent/2.,
                cfg.padOxideThickness - maskContactEpsilon,
                cfg.padOxideThickness + cfg.maskThickness);
 
@@ -163,9 +172,6 @@ int main() {
   domain->insertNextLevelSetAsMaterial(siLS, ps::Material::Si, false);
   domain->insertNextLevelSetAsMaterial(oxLS, ps::Material::SiO2, false);
   domain->insertNextLevelSetAsMaterial(maskLS, ps::Material::Si3N4, false);
-
-  // domain->saveSurfaceMesh(cfg.outputPrefix + "_stack_initial.vtp");
-  domain->saveSurfaceMesh(cfg.outputPrefix + "_stack_step_0001.vtp");
 
   // ── Oxidation model ───────────────────────────────────────────────────────
 
@@ -179,10 +185,15 @@ int main() {
                             : ps::SiliconOrientation::Si100);
   model->setTimeStep(cfg.timeStep);
   model->setMaxGridPoints(cfg.maxGridPoints);
+  model->setMechanicsIterations(cfg.mechanicsIterations);
+  model->setPressureIterations(cfg.pressureIterations);
+  model->setStokesIterations(cfg.stokesIterations);
 
   // LOCOS: mask material is already Si3N4 (default); just set parameters.
   model->setMaskParameters(
       viennals::OxidationMaterials<NumericType>::siliconNitrideMask1000C());
+
+  model->saveSurfaceMesh(domain, cfg.outputPrefix + "_stack_step_000.vtp");
 
   const NumericType est =
       model->estimatePlanarOxideThickness(cfg.padOxideThickness);
@@ -191,7 +202,7 @@ int main() {
             << " C: " << est << " um total oxide thickness.\n";
 
   NumericType elapsed = 0.;
-  unsigned step = 1;
+  unsigned step = 0;
   const NumericType timeEps = 1e-9 * cfg.oxidationTime;
   while (cfg.oxidationTime - elapsed > timeEps) {
     NumericType dt = cfg.timeStep;
@@ -208,60 +219,15 @@ int main() {
     ++step;
 
     std::ostringstream filename;
-    filename << cfg.outputPrefix << "_stack_step_" << std::setw(4)
+    filename << cfg.outputPrefix << "_stack_step_" << std::setw(3)
              << std::setfill('0') << step << ".vtp";
-    domain->saveSurfaceMesh(filename.str());
+    model->saveSurfaceMesh(domain, filename.str());
     std::cout << "Wrote " << filename.str() << " at t = " << elapsed
               << " hr.\n";
   }
 
   // ── Final output ──────────────────────────────────────────────────────────
-  // The simulation level sets move independently (wrapLowerLevelSet = false),
-  // which is required for LOCOS but means neither the surface mesh extractor
-  // nor the volume mesh extractor sees the correct layered geometry directly.
-  //
-  // Surface mesh: union copies of the oxide and mask level sets to close the
-  // sub-cell SDF-offset gap at their shared contact face before extraction.
-  //
-  // Volume mesh: the extractor assigns materials by layer order — it expects
-  // each level set to enclose all lower ones.  Wrap copies (Si ⊂ oxide ⊂ mask)
-  // so that material regions are correctly filled.  Do all of this on copies
-  // so the live level sets are untouched for any further simulation steps.
-  {
-    const auto &ls_ = domain->getLevelSets();
-
-    // Deep copies of each level set.
-    LevelSet siCopy  = ls::Domain<NumericType, D>::New(ls_[0]);
-    LevelSet oxCopy  = ls::Domain<NumericType, D>::New(ls_[1]);
-    LevelSet mskCopy = ls::Domain<NumericType, D>::New(ls_[2]);
-
-    // Surface mesh: close the oxide/mask gap with a simple union of ox and mask.
-    {
-      LevelSet oxSurf  = ls::Domain<NumericType, D>::New(ls_[1]);
-      LevelSet mskSurf = ls::Domain<NumericType, D>::New(ls_[2]);
-      ls::BooleanOperation<NumericType, D>(oxSurf, mskSurf,
-                                           ls::BooleanOperationEnum::UNION).apply();
-      auto surfDomain = ps::Domain<NumericType, D>::New();
-      surfDomain->insertNextLevelSetAsMaterial(siCopy,  ps::Material::Si,    false);
-      surfDomain->insertNextLevelSetAsMaterial(oxSurf,  ps::Material::SiO2,  false);
-      surfDomain->insertNextLevelSetAsMaterial(mskSurf, ps::Material::Si3N4, false);
-      surfDomain->saveSurfaceMesh(cfg.outputPrefix + "_stack_after.vtp");
-    }
-
-    // Volume mesh: wrap so that each LS encloses all lower ones.
-    //   oxCopy  = UNION(Si, SiO2)   → SiO2 outer boundary wraps Si
-    //   mskCopy = UNION(ox, Si3N4)  → Si3N4 outer boundary wraps Si + SiO2
-    ls::BooleanOperation<NumericType, D>(oxCopy,  siCopy,
-                                         ls::BooleanOperationEnum::UNION).apply();
-    ls::BooleanOperation<NumericType, D>(mskCopy, oxCopy,
-                                         ls::BooleanOperationEnum::UNION).apply();
-
-    auto volDomain = ps::Domain<NumericType, D>::New();
-    volDomain->insertNextLevelSetAsMaterial(siCopy,  ps::Material::Si,    false);
-    volDomain->insertNextLevelSetAsMaterial(oxCopy,  ps::Material::SiO2,  false);
-    volDomain->insertNextLevelSetAsMaterial(mskCopy, ps::Material::Si3N4, false);
-    volDomain->saveVolumeMesh(cfg.outputPrefix + "_stack_after");
-  }
+  model->saveVolumeMesh(domain, cfg.outputPrefix + "_stack_after");
 
   std::cout << "Wrote " << cfg.outputPrefix << "_stack_initial.vtp, "
             << step << " time-step files, "

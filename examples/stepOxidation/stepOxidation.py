@@ -10,6 +10,8 @@ Usage:
 
 If a config file is given its key=value pairs override the defaults below.
 All lengths are in micrometers, time in hours, pressure in atm.
+The timeStep setting is a maximum internal oxidation step; CFL-limited
+subcycling is automatic.
 
 Coordinate convention:
     dim 0 = X  — lateral step direction (REFLECTIVE boundary)
@@ -139,8 +141,6 @@ if oxide_thickness > 0.0:
     ).apply()
     domain.insertNextLevelSetAsMaterial(ambient_ls, vps.Material.SiO2, False)
 
-domain.saveSurfaceMesh(output_prefix + "_initial.vtp")
-
 # ── Oxidation model ───────────────────────────────────────────────────────────
 model = vps.Oxidation()
 model.setTemperature(temperature)
@@ -151,28 +151,12 @@ model.setPressure(pressure)
 model.setOrientation(orientation)
 model.setInitialOxideThickness(oxide_thickness)
 
+model.saveSurfaceMesh(domain, output_prefix + "_initial.vtp")
+
 vps.Process(domain, model, 0.0).apply()
 
-domain.saveSurfaceMesh(output_prefix + "_after.vtp")
-
-# The volume mesh extractor assigns materials by layer order and expects each
-# upper material level set to wrap all lower materials. Oxidation keeps the
-# Si/SiO2 and SiO2/ambient interfaces independent, so wrap deep copies for
-# volume output and leave the live geometry untouched.
-level_sets = domain.getLevelSets()
-if len(level_sets) >= 2:
-    si_copy = ls.Domain(level_sets[0])
-    ox_copy = ls.Domain(level_sets[1])
-    ls.BooleanOperation(
-        ox_copy, si_copy, viennals.BooleanOperationEnum.UNION
-    ).apply()
-
-    vol_domain = vps.Domain()
-    vol_domain.insertNextLevelSetAsMaterial(si_copy, vps.Material.Si, False)
-    vol_domain.insertNextLevelSetAsMaterial(ox_copy, vps.Material.SiO2, False)
-    vol_domain.saveVolumeMesh(output_prefix + "_after")
-else:
-    domain.saveVolumeMesh(output_prefix + "_after")
+model.saveSurfaceMesh(domain, output_prefix + "_after.vtp")
+model.saveVolumeMesh(domain, output_prefix + "_after")
 
 print(
     f"Planar Deal-Grove estimate for {oxidation_time} hr at {temperature} °C: "

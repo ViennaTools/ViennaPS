@@ -258,7 +258,7 @@ model->setTemperature(1000.);          // °C
 model->setOxidant(ps::OxidantType::Wet);
 model->setPressure(1.0);               // atm
 model->setOrientation(ps::SiliconOrientation::Si100);
-model->setTimeStep(0.1);               // hr per LOCOS step
+model->setTimeStep(0.1);               // hr; max internal step/output cadence
 model->setMaskParameters(
     ls::OxidationMaterials<double>::siliconNitrideMask1000C());
 
@@ -332,7 +332,7 @@ gridDelta = 0.05 µm
 | `oxidant` | — | `Wet` or `Dry`; sets pre-exponentials |
 | `pressure` | 1.0 atm | Scales C* (equilibrium concentration) |
 | `orientation` | `Si100` | Crystal anisotropy factor on k |
-| `timeStep` | — | hr per LOCOS step; must satisfy CFL |
+| `timeStep` | — | hr between saved shapes and maximum internal oxidation step; the model subcycles below this if CFL requires it |
 | `maxGridPoints` | 5×10⁶ | Limits memory for the Cartesian solve |
 
 ### Mask parameters (`setMaskParameters`)
@@ -391,15 +391,17 @@ oxide thickness to within ~5%, serving as a sanity check.
 
 ## Time-Stepping Considerations
 
-LOCOS requires **multiple time steps** because:
+LOCOS requires **multiple physical updates** because:
 1. The geometry changes substantially over 1 hr (the oxide thickness grows from
-   padOxideThickness to ~0.5 µm), so a single large step would violate CFL.
-2. Each LOCOS step re-solves the mask bending with the current oxide geometry;
-   using many steps lets the mask shape evolve gradually and accurately.
+   padOxideThickness to ~0.5 µm), so the coupled diffusion/mechanics/contact
+   fields must be refreshed as the interfaces move.
+2. Each internal LOCOS step re-solves the mask bending with the current oxide
+   geometry; subcycling lets the mask shape evolve gradually and accurately.
 
-Recommended: `timeStep = 0.05–0.1 hr`. Finer steps give marginally better
-accuracy but proportionally higher cost. The included example uses
-`timeStep = 0.1 hr` as a practical default.
+The example's `timeStep` controls how often a VTP snapshot is saved and caps
+the internal oxidation step. If this value is larger than the CFL-limited step,
+the model automatically performs smaller internal substeps before returning.
+The included example uses `timeStep = 0.1 hr` as a practical output cadence.
 
 The example saves a surface mesh after each step, allowing animation of the
 bird's beak development in ParaView.

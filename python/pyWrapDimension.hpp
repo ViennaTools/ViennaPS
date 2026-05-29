@@ -1174,7 +1174,13 @@ template <int D> void bindApi(py::module &module) {
       .def("estimatePlanarOxideThickness",
            &Oxidation<T, D>::estimatePlanarOxideThickness,
            py::arg("initialOxideThickness") = T(0),
-           "Deal-Grove planar oxide thickness estimate in µm.");
+           "Deal-Grove planar oxide thickness estimate in µm.")
+      .def("saveSurfaceMesh", &Oxidation<T, D>::saveSurfaceMesh,
+           py::arg("domain"), py::arg("fileName"),
+           "Extracts and saves a mathematically wrapped surface mesh.")
+      .def("saveVolumeMesh", &Oxidation<T, D>::saveVolumeMesh,
+           py::arg("domain"), py::arg("baseName"),
+           "Extracts and saves a mathematically wrapped volume mesh.");
 
   // Oxide Regrowth
   py::class_<OxideRegrowth<T, D>, SmartPointer<OxideRegrowth<T, D>>>(

@@ -43,6 +43,7 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <string>
 
 namespace viennaps {
 
@@ -74,8 +75,8 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   OxidantType oxidant_ = OxidantType::Dry;
   NumericType pressure_ = 1.;
   SiliconOrientation orientation_ = SiliconOrientation::Si100;
-  NumericType timeStep_ = 0.;   // 0 = auto-CFL
-  NumericType cflFactor_ = NumericType(0.5);
+  NumericType timeStep_ = 0.;   // 0 = no user cap; internal steps remain CFL-limited
+  NumericType cflFactor_ = NumericType(0.499);
   NumericType initialOxideThickness_ = NumericType(0.002); // µm (2 nm)
   NumericType transferCoefficient_ = NumericType(100);
   NumericType reactionActivationVolume_ = NumericType(1.76e-35);
@@ -96,6 +97,9 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   viennahrle::Index<D> maskBendingMaxIndex_{};
   unsigned maskCouplingIterations_ = 8;
   NumericType maskCouplingTolerance_ = NumericType(2e-2);
+  unsigned mechanicsIterations_ = 2;
+  unsigned pressureIterations_ = 500;
+  unsigned stokesIterations_ = 100;
 
   // Thin wrapper: forwards applyPreAdvect to Oxidation::doApplyPreAdvect.
   // Nested classes in C++ have full access to enclosing-class private members.
@@ -131,17 +135,17 @@ public:
     orientation_ = orientation;
   }
 
-  // Set the duration of each explicit process time step in hours.
-  // In each step, velocities are computed on the current geometry, and then the
-  // interfaces are advected for this duration.
-  // Default (0): automatic CFL-based stepping — after each solve the maximum
-  // velocity is queried and dt = cflFactor * gridDelta / maxVelocity.
+  // Set the maximum duration of an internal oxidation step in hours.
+  // The model always recomputes diffusion/mechanics/contact on CFL-limited
+  // internal substeps. A positive value caps those internal steps; it does not
+  // force the interfaces to move by this amount if the CFL limit is smaller.
+  // Default (0): no user cap, only the CFL limit and remaining process time.
   void setTimeStep(NumericType dtHr) { timeStep_ = dtHr; }
 
-  // Courant number used for auto-CFL time stepping (default 0.5).
-  // Ignored when an explicit timeStep has been set.
+  // Courant number used for CFL-limited internal stepping (default 0.499).
+  // The actual internal step is min(user timeStep cap, CFL step, remaining).
   void setCFLFactor(NumericType factor) {
-    cflFactor_ = std::max(factor, NumericType(1e-3));
+    cflFactor_ = std::clamp(factor, NumericType(1e-3), NumericType(0.499));
   }
 
   // Thickness of the auto-created native oxide if no SiO2 layer exists (µm)
@@ -238,6 +242,141 @@ public:
     maskCouplingTolerance_ = tolerance;
   }
 
+  void setMechanicsIterations(unsigned iterations) {
+    mechanicsIterations_ = std::max(1u, iterations);
+  }
+
+  void setPressureIterations(unsigned iterations) {
+    pressureIterations_ = std::max(1u, iterations);
+  }
+
+  void setStokesIterations(unsigned iterations) {
+    stokesIterations_ = std::max(1u, iterations);
+  }
+
+  // Extracts and saves a mathematically wrapped surface mesh.
+  // The mechanics solvers require the level sets to be independent
+  // (wrapLowerLevelSet = false), but visualization extractors require
+  // layered materials to explicitly enclose all lower layers. These methods
+  // perform the necessary deep copies and boolean union operations to safely
+  // output the layered meshes without mutating the active simulation state.
+  void saveSurfaceMesh(SmartPointer<Domain<NumericType, D>> domain,
+                       const std::string &fileName) const {
+    namespace ls = viennals;
+
+    auto &levelSets = domain->getLevelSets();
+    auto matMap = domain->getMaterialMap();
+
+    if (levelSets.empty() || !matMap) {
+      Logger::getInstance()
+          .addWarning("Oxidation: domain has no level sets or material map.")
+          .print();
+      return;
+    }
+
+    // Find Si, SiO2, and optional mask level-set indices.
+    int siIdx = -1, sio2Idx = -1, maskIdx = -1;
+    for (int i = static_cast<int>(levelSets.size()) - 1; i >= 0; --i) {
+      const auto mat = matMap->getMaterialAtIdx(i);
+      if (siIdx < 0 &&
+          (mat == siliconMaterial_ || mat == Material::BulkSi ||
+           mat == Material::PolySi || mat == Material::aSi))
+        siIdx = i;
+      if (sio2Idx < 0 && mat == oxideMaterial_)
+        sio2Idx = i;
+      if (maskIdx < 0 && mat == maskMaterial_)
+        maskIdx = i;
+    }
+
+    if (siIdx < 0 || sio2Idx < 0) {
+      Logger::getInstance()
+          .addWarning("Oxidation: missing Silicon or Oxide layer for surface mesh extraction.")
+          .print();
+      return;
+    }
+
+    // Deep copies of the base simulation level sets
+    auto siCopy = ls::Domain<NumericType, D>::New(levelSets[siIdx]);
+    auto oxSurf = ls::Domain<NumericType, D>::New(levelSets[sio2Idx]);
+
+    if (maskIdx >= 0) {
+      auto mskSurf = ls::Domain<NumericType, D>::New(levelSets[maskIdx]);
+      ls::BooleanOperation<NumericType, D>(oxSurf, mskSurf,
+                                           ls::BooleanOperationEnum::UNION).apply();
+      auto surfDomain = SmartPointer<Domain<NumericType, D>>::New();
+      surfDomain->insertNextLevelSetAsMaterial(siCopy, matMap->getMaterialAtIdx(siIdx), false);
+      surfDomain->insertNextLevelSetAsMaterial(oxSurf, matMap->getMaterialAtIdx(sio2Idx), false);
+      surfDomain->insertNextLevelSetAsMaterial(mskSurf, matMap->getMaterialAtIdx(maskIdx), false);
+      surfDomain->saveSurfaceMesh(fileName);
+    } else {
+      // Standard geometry (no mask)
+      auto surfDomain = SmartPointer<Domain<NumericType, D>>::New();
+      surfDomain->insertNextLevelSetAsMaterial(siCopy, matMap->getMaterialAtIdx(siIdx), false);
+      surfDomain->insertNextLevelSetAsMaterial(oxSurf, matMap->getMaterialAtIdx(sio2Idx), false);
+      surfDomain->saveSurfaceMesh(fileName);
+    }
+  }
+
+  // Extracts and saves a mathematically wrapped volume mesh.
+  void saveVolumeMesh(SmartPointer<Domain<NumericType, D>> domain,
+                      const std::string &baseName) const {
+    namespace ls = viennals;
+
+    auto &levelSets = domain->getLevelSets();
+    auto matMap = domain->getMaterialMap();
+
+    if (levelSets.empty() || !matMap) {
+      Logger::getInstance()
+          .addWarning("Oxidation: domain has no level sets or material map.")
+          .print();
+      return;
+    }
+
+    int siIdx = -1, sio2Idx = -1, maskIdx = -1;
+    for (int i = static_cast<int>(levelSets.size()) - 1; i >= 0; --i) {
+      const auto mat = matMap->getMaterialAtIdx(i);
+      if (siIdx < 0 &&
+          (mat == siliconMaterial_ || mat == Material::BulkSi ||
+           mat == Material::PolySi || mat == Material::aSi))
+        siIdx = i;
+      if (sio2Idx < 0 && mat == oxideMaterial_)
+        sio2Idx = i;
+      if (maskIdx < 0 && mat == maskMaterial_)
+        maskIdx = i;
+    }
+
+    if (siIdx < 0 || sio2Idx < 0) {
+      Logger::getInstance()
+          .addWarning("Oxidation: missing Silicon or Oxide layer for volume mesh extraction.")
+          .print();
+      return;
+    }
+
+    auto siCopy = ls::Domain<NumericType, D>::New(levelSets[siIdx]);
+    auto oxCopy = ls::Domain<NumericType, D>::New(levelSets[sio2Idx]);
+
+    if (maskIdx >= 0) {
+      auto mskCopy = ls::Domain<NumericType, D>::New(levelSets[maskIdx]);
+      ls::BooleanOperation<NumericType, D>(oxCopy, siCopy,
+                                           ls::BooleanOperationEnum::UNION).apply();
+      ls::BooleanOperation<NumericType, D>(mskCopy, oxCopy,
+                                           ls::BooleanOperationEnum::UNION).apply();
+
+      auto volDomain = SmartPointer<Domain<NumericType, D>>::New();
+      volDomain->insertNextLevelSetAsMaterial(siCopy, matMap->getMaterialAtIdx(siIdx), false);
+      volDomain->insertNextLevelSetAsMaterial(oxCopy, matMap->getMaterialAtIdx(sio2Idx), false);
+      volDomain->insertNextLevelSetAsMaterial(mskCopy, matMap->getMaterialAtIdx(maskIdx), false);
+      volDomain->saveVolumeMesh(baseName);
+    } else {
+      ls::BooleanOperation<NumericType, D>(oxCopy, siCopy,
+                                           ls::BooleanOperationEnum::UNION).apply();
+      auto volDomain = SmartPointer<Domain<NumericType, D>>::New();
+      volDomain->insertNextLevelSetAsMaterial(siCopy, matMap->getMaterialAtIdx(siIdx), false);
+      volDomain->insertNextLevelSetAsMaterial(oxCopy, matMap->getMaterialAtIdx(sio2Idx), false);
+      volDomain->saveVolumeMesh(baseName);
+    }
+  }
+
 private:
   bool doApplyPreAdvect(NumericType /*processTime*/,
                         SmartPointer<Domain<NumericType, D>> domainPtr) {
@@ -276,6 +415,14 @@ private:
       return false;
     }
 
+    if (temperature_ < NumericType(700) || temperature_ > NumericType(1200))
+      Logger::getInstance()
+          .addWarning("Oxidation: temperature " +
+                      std::to_string(temperature_) +
+                      " °C is outside the calibrated Deal-Grove range "
+                      "[700, 1200] °C — rate constants may be inaccurate.")
+          .print();
+
     auto reactionInterface = levelSets[siIdx];
 
     // If no oxide layer exists, create a thin native oxide on top of Si.
@@ -286,10 +433,20 @@ private:
       ambientInterface =
           SmartPointer<ls::Domain<NumericType, D>>::New(reactionInterface);
       if (initialOxideThickness_ > NumericType(0)) {
+        Logger::getInstance()
+            .addInfo("Oxidation: no SiO₂ layer found; seeding " +
+                     std::to_string(initialOxideThickness_) +
+                     " µm native oxide.")
+            .print();
         auto sphere = SmartPointer<
             ls::SphereDistribution<viennahrle::CoordType, D>>::New(
             initialOxideThickness_);
         ls::GeometricAdvect<NumericType, D>(ambientInterface, sphere).apply();
+      } else {
+        Logger::getInstance()
+            .addInfo("Oxidation: no SiO₂ layer found; inserting "
+                     "zero-thickness oxide seed.")
+            .print();
       }
       domain.insertNextLevelSetAsMaterial(ambientInterface, oxideMaterial_,
                                           false);
@@ -302,11 +459,6 @@ private:
       maxIndex = solveMaxIndex_;
     }
 
-    // Fixed step when the user called setTimeStep(); otherwise auto-CFL.
-    // For auto-CFL the first step uses a conservative analytical estimate
-    // (time/20 or one grid cell at the expected planar velocity), then each
-    // subsequent step is re-derived from the actual solved max velocity.
-    const bool autoStep = (timeStep_ <= NumericType(0));
     const NumericType gridDelta =
         reactionInterface->getGrid().getGridDelta();
 
@@ -317,23 +469,35 @@ private:
       return cflFactor_ * gridDelta / maxVel;
     };
 
-    // Seed dt: analytical estimate from Deal-Grove for auto mode, or the
-    // user value for fixed mode.
-    NumericType dt;
-    if (!autoStep) {
-      dt = timeStep_;
-    } else {
-      const auto rates = computeDealGroveRates();
-      const NumericType boa = rates.BoA;  // max Si velocity ≈ B/A (µm/hr)
-      dt = cflStep(boa > NumericType(0) ? boa : NumericType(0));
-    }
+    const auto rates = computeDealGroveRates();
+    const NumericType initialVelocityEstimate =
+        rates.BoA > NumericType(0) ? rates.BoA : NumericType(0);
+    const NumericType seedStep = cflStep(initialVelocityEstimate);
+    const NumericType userStepCap =
+        timeStep_ > NumericType(0) ? timeStep_
+                                   : std::numeric_limits<NumericType>::max();
 
     auto oxParams = computeOxParams();
-    auto defParams = computeDefParams(dt);
 
     ls::OxidationCouplingParameters<NumericType> coupling;
     coupling.maxIterations = couplingIterations_;
     coupling.tolerance = couplingTolerance_;
+
+    if (Logger::hasInfo()) {
+      const std::string mode = (maskIdx >= 0) ? "LOCOS" : "standard";
+      const std::string oxStr = (oxidant_ == OxidantType::Wet) ? "wet" : "dry";
+      const NumericType initDt = std::min(userStepCap, seedStep);
+      Logger::getInstance()
+          .addInfo("Oxidation: starting " + mode + " simulation"
+                   ", T=" + std::to_string(temperature_) + " °C"
+                   ", " + oxStr + " oxidation"
+                   ", B=" + std::to_string(rates.B) + " µm²/hr"
+                   ", B/A=" + std::to_string(rates.BoA) + " µm/hr"
+                   ", Δx=" + std::to_string(gridDelta) + " µm"
+                   ", total=" + std::to_string(time_) + " hr"
+                   ", initial_dt≤" + std::to_string(initDt) + " hr")
+          .print();
+    }
 
     if (maskIdx >= 0) {
       // ── LOCOS path ─────────────────────────────────────────────────────────
@@ -360,20 +524,35 @@ private:
       locos->setMaskCouplingTolerance(maskCouplingTolerance_);
 
       NumericType time = 0.;
+      unsigned substep = 0;
+      NumericType nextStepEstimate = seedStep;
       const NumericType timeEps = NumericType(1e-9) * time_;
       while (time_ - time > timeEps) {
-        if (time + dt > time_)
-          dt = time_ - time;
-        if (dt <= NumericType(0))
+        NumericType requestedDt =
+            std::min({userStepCap, nextStepEstimate, time_ - time});
+        if (requestedDt <= NumericType(0))
           break;
 
-        auto stepDefParams = defParams;
-        stepDefParams.stressTimeStep = dt;
-        locos->setDeformationParameters(stepDefParams);
+        locos->setDeformationParameters(computeDefParams(requestedDt));
 
-        locos->apply(dt);
-        time += dt;
+        logCFLStepStart("LOCOS", substep + 1, time, requestedDt);
+
+        const NumericType actualDt =
+            locos->applyCFLLimited(requestedDt, cflFactor_);
+        if (actualDt <= NumericType(0))
+          break;
+
+        logCFLStep("LOCOS", ++substep, time, requestedDt, actualDt);
+
+        time += actualDt;
+        nextStepEstimate = std::min(userStepCap, actualDt);
       }
+      if (Logger::hasInfo())
+        Logger::getInstance()
+            .addInfo("Oxidation: LOCOS complete — " +
+                     std::to_string(substep) + " substep(s), " +
+                     std::to_string(time) + " hr simulated.")
+            .print();
     } else {
       // ── Standard (non-LOCOS) path ──────────────────────────────────────────
 
@@ -382,6 +561,7 @@ private:
       if (useSolveBounds_)
         diffField->setSolveBounds(minIndex, maxIndex);
 
+      auto defParams = computeDefParams(std::min(userStepCap, seedStep));
       auto defField = ls::OxidationDeformation<NumericType, D>::New(
           reactionInterface, ambientInterface, diffField, oxParams, defParams);
       if (useSolveBounds_)
@@ -409,32 +589,97 @@ private:
           ls::TemporalSchemeEnum::FORWARD_EULER);
 
       NumericType time = 0.;
+      unsigned substep = 0;
+      NumericType nextStepEstimate = seedStep;
       const NumericType timeEps = NumericType(1e-9) * time_;
       while (time_ - time > timeEps) {
-        if (time + dt > time_)
-          dt = time_ - time;
-        if (dt <= NumericType(0))
+        NumericType requestedDt =
+            std::min({userStepCap, nextStepEstimate, time_ - time});
+        if (requestedDt <= NumericType(0))
           break;
 
-        defParams.stressTimeStep = dt;
+        defParams.stressTimeStep = requestedDt;
         defField->setDeformationParameters(defParams);
+
+        logCFLStepStart("Oxidation", substep + 1, time, requestedDt);
 
         coupledModel->apply();
 
-        ambientAdvect.setAdvectionTime(dt);
+        NumericType maxVelocity = maxCoupledVelocity(diffField, defField);
+        NumericType actualDt = std::min(requestedDt, cflStep(maxVelocity));
+        if (actualDt < requestedDt * (NumericType(1) - NumericType(1e-8))) {
+          defParams.stressTimeStep = actualDt;
+          defField->setDeformationParameters(defParams);
+          coupledModel->apply();
+        }
+
+        logCFLStep("Oxidation", ++substep, time, requestedDt, actualDt,
+                   maxVelocity);
+
+        ambientAdvect.setAdvectionTime(actualDt);
         ambientAdvect.apply();
 
-        reactionAdvect.setAdvectionTime(dt);
+        reactionAdvect.setAdvectionTime(actualDt);
         reactionAdvect.apply();
 
         diffField->markGeometryChanged();
         defField->markGeometryChanged();
 
-        time += dt;
+        time += actualDt;
+        nextStepEstimate = std::min(userStepCap, actualDt);
       }
+      if (Logger::hasInfo())
+        Logger::getInstance()
+            .addInfo("Oxidation: simulation complete — " +
+                     std::to_string(substep) + " substep(s), " +
+                     std::to_string(time) + " hr simulated.")
+            .print();
     }
 
     return true;
+  }
+
+  NumericType maxCoupledVelocity(
+      SmartPointer<viennals::OxidationDiffusion<NumericType, D>> diffField,
+      SmartPointer<viennals::OxidationDeformation<NumericType, D>> defField)
+      const {
+    NumericType maxVelocity = diffField->getDissipationAlpha(0, -1, {});
+    for (unsigned d = 0; d < D; ++d)
+      maxVelocity =
+          std::max(maxVelocity, defField->getDissipationAlpha(d, -1, {}));
+    return maxVelocity;
+  }
+
+  void logCFLStep(const std::string &label, unsigned substep,
+                  NumericType elapsed, NumericType requestedDt,
+                  NumericType actualDt,
+                  NumericType maxVelocity = NumericType(-1)) const {
+    if (!Logger::hasInfo())
+      return;
+
+    std::string message = label + " CFL substep " + std::to_string(substep) +
+                          ": t=" + std::to_string(elapsed) +
+                          " hr, requested_dt=" +
+                          std::to_string(requestedDt) +
+                          " hr, actual_dt=" + std::to_string(actualDt) +
+                          " hr";
+    if (maxVelocity >= NumericType(0))
+      message += ", max_velocity=" + std::to_string(maxVelocity) + " um/hr";
+    if (actualDt < requestedDt * (NumericType(1) - NumericType(1e-8)))
+      message += " (CFL-limited)";
+    Logger::getInstance().addInfo(message).print();
+  }
+
+  void logCFLStepStart(const std::string &label, unsigned substep,
+                       NumericType elapsed, NumericType requestedDt) const {
+    if (!Logger::hasInfo())
+      return;
+
+    Logger::getInstance()
+        .addInfo(label + " CFL substep " + std::to_string(substep) +
+                 ": starting solve at t=" + std::to_string(elapsed) +
+                 " hr, requested_dt=" + std::to_string(requestedDt) + " hr")
+        .print();
   }
 
   // Map process conditions → OxidationParameters.
@@ -470,10 +715,10 @@ private:
     p.bulkModulus = NumericType(7.5e8);     // Pa
     p.shearModulus = NumericType(3e10);     // Pa
     p.stressTimeStep = dt;
-    p.mechanicsIterations = 2;
+    p.mechanicsIterations = mechanicsIterations_;
     p.mechanicsTolerance = NumericType(1e-7);
-    p.pressureIterations = 500;
-    p.stokesIterations = 100;
+    p.pressureIterations = pressureIterations_;
+    p.stokesIterations = stokesIterations_;
     p.pressureTolerance = NumericType(1e-6);
     p.stokesTolerance = NumericType(1e-7);
     p.tolerance = NumericType(1e-7);
