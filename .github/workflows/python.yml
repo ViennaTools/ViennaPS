@@ -91,7 +91,7 @@ jobs:
           $toolchain = "${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake".Replace('\', '/')
 
           .\venv\Scripts\python -m pip install --upgrade pip
-          .\venv\Scripts\python -m pip install . -v `
+          .\venv\Scripts\python -m pip install . `
             --config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE="$toolchain" `
             --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows"
           .\venv\Scripts\python -c "import viennaps; print(viennaps.__doc__)"
@@ -100,18 +100,18 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           python -m venv venv
-          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . -v
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . 
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 🐍 Build and check Python Module (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           python -m venv venv
-          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . -v
-          ./venv/bin/python -c "import viennals; print(viennals.__file__)"
-          otool -L ./venv/lib/python3.14/site-packages/viennals/_core*.so
-          otool -L ./venv/lib/python3.14/site-packages/viennaps/_core*.so
-          DYLD_PRINT_LIBRARIES=1 ./venv/bin/python -c "import viennals; import viennaps"
+          ./venv/bin/python -m pip install --upgrade pip
+          git clone --depth 1 --branch v5.7.3 https://github.com/ViennaTools/ViennaLS.git ViennaLS
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install ./ViennaLS
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . --no-deps
+          SITE_PACKAGES=$(./venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["platlib"])')
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 📦 Upload Artifact
