@@ -61,6 +61,7 @@
 #include <models/psIonBeamEtching.hpp>
 #include <models/psIsotropicProcess.hpp>
 #include <models/psMultiParticleProcess.hpp>
+#include <models/psNeutralTransport.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6C4F8Etching.hpp>
 #include <models/psSF6O2Etching.hpp>
@@ -159,19 +160,19 @@ class psParticle : public viennaray::Particle<psParticle<D>, T> {
 public:
   void surfaceCollision(T rayWeight, const Vec3D<T> &rayDir,
                         const Vec3D<T> &geomNormal, const unsigned int primID,
-                        const int materialID,
-                        viennaray::TracingData<T> &localData,
-                        const viennaray::TracingData<T> *globalData,
-                        RNG &Rng) final {
+                        const int materialID, PointData<T> &localData,
+                        const PointData<T> *globalData, RNG &Rng) final {
     PYBIND11_OVERRIDE(void, ClassName, surfaceCollision, rayWeight, rayDir,
                       geomNormal, primID, materialID, localData, globalData,
                       Rng);
   }
 
-  std::pair<T, Vec3D<T>> surfaceReflection(
-      T rayWeight, const Vec3D<T> &rayDir, const Vec3D<T> &geomNormal,
-      const unsigned int primID, const int materialID,
-      const viennaray::TracingData<T> *globalData, RNG &Rng) final {
+  std::pair<T, Vec3D<T>> surfaceReflection(T rayWeight, const Vec3D<T> &rayDir,
+                                           const Vec3D<T> &geomNormal,
+                                           const unsigned int primID,
+                                           const int materialID,
+                                           const PointData<T> *globalData,
+                                           RNG &Rng) final {
     using Pair = std::pair<T, Vec3D<T>>;
     PYBIND11_OVERRIDE(Pair, ClassName, surfaceReflection, rayWeight, rayDir,
                       geomNormal, primID, materialID, globalData, Rng);
@@ -202,16 +203,16 @@ public:
 //   void surfaceCollision(T rayWeight, const Vec3D<T> &rayDir,
 //                         const Vec3D<T> &geomNormal,
 //                         const unsigned int primID, const int materialID,
-//                         viennaray::TracingData<T> &localData,
-//                         const viennaray::TracingData<T> *globalData,
+//                         PointData<T> &localData,
+//                         const PointData<T> *globalData,
 //                         RNG &Rng) override final {
-//     localData.getVectorData(0)[primID] += rayWeight;
+//     (*localData.getScalarData(0))[primID] += rayWeight;
 //   }
 //   std::pair<T, Vec3D<T>>
 //   surfaceReflection(T rayWeight, const Vec3D<T> &rayDir,
 //                     const Vec3D<T> &geomNormal, const unsigned int
 //                     primID, const int materialID, const
-//                     viennaray::TracingData<T> *globalData, RNG &Rng)
+//                     PointData<T> *globalData, RNG &Rng)
 //                     override final {
 //     auto direction = rayReflectionDiffuse<T, D>(geomNormal, Rng);
 //     return {stickingProbability, direction};
@@ -237,16 +238,16 @@ public:
 //   void surfaceCollision(T rayWeight, const Vec3D<T> &rayDir,
 //                         const Vec3D<T> &geomNormal,
 //                         const unsigned int primID, const int materialID,
-//                         viennaray::TracingData<T> &localData,
-//                         const viennaray::TracingData<T> *globalData,
+//                         PointData<T> &localData,
+//                         const PointData<T> *globalData,
 //                         RNG &Rng) override final {
-//     localData.getVectorData(0)[primID] += rayWeight;
+//     (*localData.getScalarData(0))[primID] += rayWeight;
 //   }
 //   std::pair<T, Vec3D<T>>
 //   surfaceReflection(T rayWeight, const Vec3D<T> &rayDir,
 //                     const Vec3D<T> &geomNormal, const unsigned int
 //                     primID, const int materialID, const
-//                     viennaray::TracingData<T> *globalData, RNG &Rng)
+//                     PointData<T> *globalData, RNG &Rng)
 //                     override final {
 //     auto direction = rayReflectionSpecular<T>(rayDir, geomNormal);
 //     return {stickingProbability, direction};
@@ -794,6 +795,17 @@ template <int D> void bindApi(py::module &module) {
            py::arg("label") = "ionFlux")
       .def("setRateFunction", &MultiParticleProcess<T, D>::setRateFunction);
 
+  // Neutral Transport
+  py::class_<NeutralTransport<T, D>, SmartPointer<NeutralTransport<T, D>>>(
+      module, "NeutralTransport", processModel)
+      .def(py::init<>())
+      .def(py::init(&SmartPointer<NeutralTransport<T, D>>::template New<
+                    const NeutralTransportParameters<T> &>),
+           py::arg("parameters"))
+      .def("setParameters", &NeutralTransport<T, D>::setParameters)
+      .def("getParameters", &NeutralTransport<T, D>::getParameters,
+           py::return_value_policy::reference_internal);
+
   // TEOS Deposition
   py::class_<TEOSDeposition<T, D>, SmartPointer<TEOSDeposition<T, D>>>(
       module, "TEOSDeposition", processModel)
@@ -1151,11 +1163,8 @@ template <int D> void bindApi(py::module &module) {
   py::class_<SingleParticleALD<T, D>, SmartPointer<SingleParticleALD<T, D>>>(
       module, "SingleParticleALD", processModel)
       .def(py::init(&SmartPointer<SingleParticleALD<T, D>>::template New<
-                    T, int, T, int, T, T, T, T, T>),
-           py::arg("stickingProbability"), py::arg("numCycles"),
-           py::arg("growthPerCycle"), py::arg("totalCycles"),
-           py::arg("coverageTimeStep"), py::arg("evFlux"), py::arg("inFlux"),
-           py::arg("s0"), py::arg("gasMFP"));
+                    const SingleParticleALDParams &>),
+           py::arg("parameters"));
 
   // ***************************************************************************
   //                               GEOMETRIES
@@ -1320,6 +1329,8 @@ template <int D> void bindApi(py::module &module) {
                } else if (py::isinstance<AtomicLayerProcessParameters>(arg)) {
                  process.setParameters(
                      arg.cast<AtomicLayerProcessParameters>());
+               } else if (py::isinstance<SurfaceDiffusionParameters>(arg)) {
+                 process.setParameters(arg.cast<SurfaceDiffusionParameters>());
                } else {
                  throw py::type_error(
                      "Unsupported parameter type for Process constructor");
@@ -1365,7 +1376,12 @@ template <int D> void bindApi(py::module &module) {
            py::overload_cast<const AtomicLayerProcessParameters &>(
                &ProcessTD::setParameters),
            py::arg("parameters"),
-           "Set the atomic layer parameters for the process.");
+           "Set the atomic layer parameters for the process.")
+      .def("setParameters",
+           py::overload_cast<const SurfaceDiffusionParameters &>(
+               &ProcessTD::setParameters),
+           py::arg("parameters"),
+           "Set the surface diffusion parameters for the process.");
 
   // ***************************************************************************
   //                                   VISUALIZATION

@@ -38,7 +38,7 @@ public:
   }
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+  calculateVelocities(SmartPointer<PointData<NumericType>> rates,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
 
@@ -83,9 +83,8 @@ public:
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
-                        RNG &) override final {
+                        PointData<NumericType> &localData,
+                        const PointData<NumericType> *, RNG &) override final {
     NumericType flux = rayWeight;
 
     if (B_sp_ >= 0.) {
@@ -100,12 +99,12 @@ public:
           std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0.));
     }
 
-    localData.getVectorData(0)[primID] += flux;
+    localData.addToScalarData(0, primID, flux);
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal, const unsigned int,
-                    const int, const viennaray::TracingData<NumericType> *,
+                    const int, const PointData<NumericType> *,
                     RNG &rngState) override final {
 
     auto cosTheta = getCosTheta(rayDir, geomNormal);
@@ -181,16 +180,14 @@ public:
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
-                        RNG &) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
+                        PointData<NumericType> &localData,
+                        const PointData<NumericType> *, RNG &) override final {
+    localData.addToScalarData(0, primID, rayWeight);
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal, const unsigned int,
-                    const int materialId,
-                    const viennaray::TracingData<NumericType> *,
+                    const int materialId, const PointData<NumericType> *,
                     RNG &rngState) override final {
     auto sticking = materialSticking_.get(Material::fromLegacyId(materialId));
     auto direction =

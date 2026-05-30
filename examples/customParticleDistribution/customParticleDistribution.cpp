@@ -142,18 +142,18 @@ public:
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
-                        RNG &) override {
-    localData.getVectorData(0)[primID] +=
-        std::max(std::sqrt(energy_) - std::sqrt(thresholdEnergy_), 0.);
+                        PointData<NumericType> &localData,
+                        const PointData<NumericType> *, RNG &) override {
+    localData.addToScalarData(
+        0, primID,
+        std::max(std::sqrt(energy_) - std::sqrt(thresholdEnergy_), 0.));
   }
 
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &rngState) override {
 
     NumericType incAngle = std::acos(-DotProduct(rayDir, geomNormal));
@@ -199,7 +199,7 @@ template <typename NumericType>
 class CustomSurfaceModel : public SurfaceModel<NumericType> {
 public:
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
+  calculateVelocities(SmartPointer<PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
     auto velocity =

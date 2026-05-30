@@ -5,6 +5,8 @@
 #include "psProcessParams.hpp"
 #include "psTranslationField.hpp"
 
+#include <vcKDTree.hpp>
+
 namespace viennaps {
 
 enum class ProcessResult {
@@ -32,11 +34,13 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
   RayTracingParameters rayTracingParams;
   CoverageParameters coverageParams;
   AtomicLayerProcessParameters atomicLayerParams;
+  SurfaceDiffusionParameters surfaceDiffusionParams;
   std::string intermediateOutputPath = "";
 
   // Simulation state
   unsigned currentIteration = 0;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh;
+  SmartPointer<viennals::Mesh<float>> triangleMesh; // set by triangle engines
   SmartPointer<TranslationField<NumericType, D>> translationField;
 
   // Computed flags (derived from model state)
@@ -49,6 +53,8 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
     bool isAnalytic = false;
     bool isGeometric = false;
     bool domainHasPeriodicBoundaries = false;
+    bool hasSurfaceDiffusion = false;
+    bool hasSurfaceDesorption = false;
   } flags;
 
   void updateFlags() {
@@ -71,6 +77,14 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
         flags.domainHasPeriodicBoundaries = true;
         break;
       }
+    }
+
+    if (auto surfaceModel = model->getSurfaceModel()) {
+      auto materialIds = std::vector<NumericType>{};
+      auto desorptionWeights = surfaceModel->getDesorptionWeights(materialIds);
+      flags.hasSurfaceDesorption = desorptionWeights.has_value();
+      auto diffusionCoefficients = surfaceModel->getDiffusionCoefficients();
+      flags.hasSurfaceDiffusion = diffusionCoefficients.has_value();
     }
   }
 
@@ -126,6 +140,34 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
                TemporalScheme::RUNGE_KUTTA_2ND_ORDER ||
            advectionParams.temporalScheme ==
                TemporalScheme::RUNGE_KUTTA_3RD_ORDER;
+  }
+
+  auto getPointKdTree() {
+    auto &pointKdTree = translationField->getKdTree();
+    if (!pointKdTree) {
+      pointKdTree = viennacore::SmartPointer<
+          viennacore::KDTree<NumericType, std::array<NumericType, 3>>>::New();
+      translationField->setKdTree(pointKdTree);
+    }
+    if (pointKdTree->getNumberOfPoints() != diskMesh->nodes.size()) {
+      pointKdTree->setPoints(diskMesh->nodes);
+      pointKdTree->build();
+    }
+    return pointKdTree;
+  }
+
+  auto getDiskMeshData() const {
+    const auto &nodes = diskMesh->getNodes();
+    const auto normals = diskMesh->getNormals();
+    const auto materialIds = diskMesh->getMaterialIds();
+    assert(normals && "Disk mesh must have normals.");
+    assert(materialIds && "Disk mesh must have material IDs.");
+    assert(nodes.size() == normals->size() &&
+           "Number of disk mesh nodes must match number of normals.");
+    assert(nodes.size() == materialIds->size() &&
+           "Number of disk mesh nodes must match number of material IDs.");
+
+    return std::tie(nodes, *normals, *materialIds);
   }
 };
 

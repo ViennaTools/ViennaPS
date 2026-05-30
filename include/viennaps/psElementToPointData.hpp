@@ -1,9 +1,6 @@
 #pragma once
 
-#include "psPreCompileMacros.hpp"
-
 #include <lsMesh.hpp>
-#include <rayParticle.hpp>
 #include <vcKDTree.hpp>
 
 #include <algorithm>
@@ -18,12 +15,12 @@ using namespace viennacore;
 template <class NumericType, class MeshNT, class ResultType, bool d2 = true,
           bool d4 = true>
 class ElementToPointData {
-  const std::vector<std::string> dataLabels_;
-  SmartPointer<viennals::PointData<NumericType>> pointData_;
+  std::vector<std::string> dataLabels_;
+  SmartPointer<PointData<NumericType>> pointData_;
   SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree_;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
-  const NumericType conversionRadius_;
+  NumericType conversionRadius_;
 
   struct CloseElements {
     std::vector<size_t> indices;
@@ -37,10 +34,11 @@ class ElementToPointData {
   static constexpr bool discard4 = d4;
 
 public:
+  ElementToPointData() = default;
+
   ElementToPointData(
       const std::vector<std::string> &dataLabels,
-      SmartPointer<viennals::PointData<NumericType>>
-          pointData, // target point data
+      SmartPointer<PointData<NumericType>> pointData, // target point data
       SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
@@ -49,18 +47,43 @@ public:
         elementKdTree_(elementKdTree), diskMesh_(diskMesh),
         surfaceMesh_(surfMesh), conversionRadius_(conversionRadius) {}
 
-  void setElementDataArrays(
-      std::vector<std::vector<ResultType>> &&elementDataArrays) {
+  void
+  setElementDataArrays(std::vector<std::vector<ResultType>> elementDataArrays) {
     elementDataArrays_ = std::move(elementDataArrays);
   }
 
-  void prepare() {
+  void setDataLabels(std::vector<std::string> dataLabels) {
+    dataLabels_ = std::move(dataLabels);
+  }
+
+  void setPointData(SmartPointer<PointData<NumericType>> pointData) {
+    pointData_ = pointData;
+  }
+
+  void setConversionRadius(NumericType radius) { conversionRadius_ = radius; }
+
+  void setDiskMesh(SmartPointer<viennals::Mesh<NumericType>> diskMesh) {
+    diskMesh_ = diskMesh;
+  }
+
+  void setSurfaceMesh(SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh) {
+    surfaceMesh_ = surfaceMesh;
+  }
+
+  void setElementKdTree(
+      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree) {
+    elementKdTree_ = elementKdTree;
+  }
+
+  void prepare(bool skipBuild = false) {
     const auto numData = dataLabels_.size();
     const auto &points = diskMesh_->nodes;
     const auto numPoints = points.size();
     const auto numElements = elementKdTree_->getNumberOfPoints();
     const auto normals = diskMesh_->cellData.getVectorData("Normals");
     const auto elementNormals = surfaceMesh_->cellData.getVectorData("Normals");
+    assert(normals && elementNormals);
+    assert(elementNormals->size() == numElements);
 
     // prepare point data container
     pointData_->clear();
@@ -69,14 +92,19 @@ public:
       pointData_->insertNextScalarData(std::move(data), label);
     }
 
+    if (skipBuild)
+      return;
+
+    closeElements_.clear();
     closeElements_.resize(numPoints);
+    const auto lookupRadius_ = conversionRadius_;
 
 #pragma omp parallel for schedule(static)
     for (unsigned i = 0; i < numPoints; i++) {
 
       // we have to use the squared distance here
       auto closeElements =
-          elementKdTree_->findNearestWithinRadius(points[i], conversionRadius_)
+          elementKdTree_->findNearestWithinRadius(points[i], lookupRadius_)
               .value();
 
       std::vector<double> weights(closeElements.size(), 0.);
@@ -154,8 +182,41 @@ public:
   }
 
   void apply() {
+    validate();
     prepare();
     convert();
+  }
+
+  bool validate() const {
+    if (!pointData_) {
+      VIENNACORE_LOG_ERROR("ElementToPointData: PointData pointer is not set.");
+      return false;
+    }
+    if (!elementKdTree_) {
+      VIENNACORE_LOG_ERROR(
+          "ElementToPointData: Element KDTree pointer is not set.");
+      return false;
+    }
+    if (!diskMesh_) {
+      VIENNACORE_LOG_ERROR("ElementToPointData: Disk mesh pointer is not set.");
+      return false;
+    }
+    if (!surfaceMesh_) {
+      VIENNACORE_LOG_ERROR(
+          "ElementToPointData: Surface mesh pointer is not set.");
+      return false;
+    }
+    if (dataLabels_.empty()) {
+      VIENNACORE_LOG_ERROR("ElementToPointData: No data labels provided.");
+      return false;
+    }
+    if (elementDataArrays_.size() != dataLabels_.size()) {
+      VIENNACORE_LOG_ERROR(
+          "ElementToPointData: Number of element data arrays does not match "
+          "number of data labels.");
+      return false;
+    }
+    return true;
   }
 
 private:

@@ -96,11 +96,22 @@ jobs:
             --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows"
           .\venv\Scripts\python -c "import viennaps; print(viennaps.__doc__)"
 
-      - name: 🐍 Build and check Python Module (Other)
-        if: ${{ matrix.os != 'windows-latest' }}
+      - name: 🐍 Build and check Python Module (Linux)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           python -m venv venv
-          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install .
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . 
+          ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
+
+      - name: 🐍 Build and check Python Module (macOS)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          python -m venv venv
+          ./venv/bin/python -m pip install --upgrade pip
+          git clone --depth 1 --branch v5.7.3 https://github.com/ViennaTools/ViennaLS.git ViennaLS
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install ./ViennaLS
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . --no-deps
+          SITE_PACKAGES=$(./venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["platlib"])')
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 📦 Upload Artifact

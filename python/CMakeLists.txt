@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 project(ViennaPS_Python LANGUAGES CXX)
 
 add_custom_target(${PROJECT_NAME} ALL)
@@ -59,6 +59,20 @@ target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ViennaPS)
 target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME}
                            PRIVATE VIENNAPS_MODULE_NAME=${VIENNAPS_PYTHON_MODULE_NAME})
 
+if(APPLE AND VIENNAPS_PACKAGE_PYTHON)
+  # Do not install viennaps.libs manually on macOS. These build-tree rpaths only
+  # let delocate resolve VTK/Embree/TBB @rpath dependencies during wheel repair;
+  # delocate then vendors the dylibs into viennaps/.dylibs and strips them.
+  foreach(DEPENDENCY_TARGET VTK::CommonCore embree tbb)
+    if(TARGET ${DEPENDENCY_TARGET})
+      set_property(
+        TARGET ${VIENNAPS_PYTHON_MODULE_NAME}
+        APPEND
+        PROPERTY INSTALL_RPATH "$<TARGET_FILE_DIR:${DEPENDENCY_TARGET}>")
+    endif()
+  endforeach()
+endif()
+
 # To prevent symbol clashes when multiple python scripts which use VTK modules are loaded, the modules have to be initialized here
 if(VIENNALS_VTK_RENDERING)
   # We need to find VTK again here to get the proper module targets
@@ -100,11 +114,19 @@ if(VIENNAPS_USE_GPU)
 endif()
 
 # Install into site-packages/<pkg>/  (RELATIVE path!)
-install(
-  TARGETS ${VIENNAPS_PYTHON_MODULE_NAME}
-  LIBRARY DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
-  RUNTIME DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
-  ARCHIVE DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
+if(WIN32)
+  install(
+    TARGETS ${VIENNAPS_PYTHON_MODULE_NAME} RUNTIME_DEPENDENCY_SET viennaps_python_runtime_deps
+    LIBRARY DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
+    RUNTIME DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
+    ARCHIVE DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
+else()
+  install(
+    TARGETS ${VIENNAPS_PYTHON_MODULE_NAME}
+    LIBRARY DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
+    RUNTIME DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
+    ARCHIVE DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
+endif()
 
 # Package files
 install(FILES ${PROJECT_SOURCE_DIR}/__init__.py DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
@@ -117,13 +139,45 @@ add_dependencies(${PROJECT_NAME} ${VIENNAPS_PYTHON_MODULE_NAME})
 set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/${VIENNAPS_PYTHON_PACKAGE_NAME}.libs")
 
 if(VIENNAPS_PACKAGE_PYTHON OR MSVC)
-  # Copy the required libraries to the lib folder, this is required for packaging and on Windows
-  viennacore_setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
-  viennacore_setup_vtk_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
-  viennacore_setup_tbb_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+  # macOS wheels let delocate own dylib vendoring to avoid duplicate copies.
+  # Other package builds still need this staged dependency folder.
+  if(NOT APPLE AND NOT WIN32)
+    viennacore_setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+    viennacore_setup_vtk_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+    viennacore_setup_tbb_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+  endif()
 endif()
 
-install(
-  DIRECTORY ${VIENNAPS_LIB_FOLDER}
-  DESTINATION .
-  OPTIONAL)
+if(WIN32)
+  set(VIENNAPS_RUNTIME_DEPENDENCY_DIRS)
+  foreach(DEPENDENCY_TARGET VTK::CommonCore embree tbb)
+    if(TARGET ${DEPENDENCY_TARGET})
+      list(APPEND VIENNAPS_RUNTIME_DEPENDENCY_DIRS "$<TARGET_FILE_DIR:${DEPENDENCY_TARGET}>")
+    endif()
+  endforeach()
+
+  install(
+    RUNTIME_DEPENDENCY_SET
+    viennaps_python_runtime_deps
+    DESTINATION
+    ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs
+    DIRECTORIES
+    ${VIENNAPS_RUNTIME_DEPENDENCY_DIRS}
+    PRE_EXCLUDE_REGEXES
+    "api-ms-"
+    "ext-ms-"
+    "^python[0-9]+\\.dll$"
+    POST_EXCLUDE_REGEXES
+    "[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\][Ss][Yy][Ss][Tt][Ee][Mm]32[/\\\\]"
+    "[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\][Ss][Yy][Ss][Ww][Oo][Ww]64[/\\\\]"
+    "[/\\\\][Ww][Ii][Nn][Ss][Xx][Ss][/\\\\]"
+    "[/\\\\]Python[0-9]+[/\\\\]"
+    "[/\\\\]python[0-9]+\\.dll$"
+    "[/\\\\]vcruntime[0-9]+.*\\.dll$"
+    "[/\\\\]msvcp[0-9]+.*\\.dll$")
+else()
+  install(
+    DIRECTORY ${VIENNAPS_LIB_FOLDER}
+    DESTINATION .
+    OPTIONAL)
+endif()

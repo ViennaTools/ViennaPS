@@ -104,7 +104,8 @@ public:
     ToDiskMesh<T, D>(domain, mesh).apply();
 
     const auto &points = mesh->nodes;
-    auto materialIds = mesh->getCellData().getScalarData("MaterialIds");
+    auto materialIds = mesh->getMaterialIds();
+    assert(materialIds);
 
     // save points where the surface is etched before advection
     nodes.clear();

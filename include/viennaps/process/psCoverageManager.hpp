@@ -6,7 +6,7 @@ namespace viennaps {
 
 VIENNAPS_TEMPLATE_ND(NumericType, D) class CoverageManager {
   std::ofstream covMetricFile_;
-  SmartPointer<viennals::PointData<NumericType>> previousCoverages_;
+  SmartPointer<PointData<NumericType>> previousCoverages_;
 
 public:
   CoverageManager() = default;
@@ -29,7 +29,7 @@ public:
   }
 
   void saveCoverages(ProcessContext<NumericType, D> const &context) {
-    previousCoverages_ = SmartPointer<viennals::PointData<NumericType>>::New(
+    previousCoverages_ = SmartPointer<PointData<NumericType>>::New(
         *context.model->getSurfaceModel()->getCoverages());
   }
 
@@ -64,9 +64,9 @@ public:
   }
 
 private:
-  static std::vector<NumericType> calculateCoverageDeltaMetric(
-      SmartPointer<viennals::PointData<NumericType>> updated,
-      SmartPointer<viennals::PointData<NumericType>> previous) {
+  static std::vector<NumericType>
+  calculateCoverageDeltaMetric(SmartPointer<PointData<NumericType>> updated,
+                               SmartPointer<PointData<NumericType>> previous) {
 
     assert(updated->getScalarDataSize() == previous->getScalarDataSize());
     std::vector<NumericType> delta(updated->getScalarDataSize(), 0.);

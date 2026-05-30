@@ -83,6 +83,10 @@ public:
     context_.atomicLayerParams = p;
   }
 
+  void setParameters(const SurfaceDiffusionParameters &p) {
+    context_.surfaceDiffusionParams = p;
+  }
+
   void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }
 
   void setIntermediateOutputPath(const std::string &path) {
@@ -136,6 +140,12 @@ public:
     strategy->calculateFlux(context_);
 
     return context_.diskMesh;
+  }
+
+  // Returns the per-triangle flux mesh from the last calculateFlux() call.
+  // Only populated when using a triangle flux engine; null otherwise.
+  SmartPointer<viennals::Mesh<float>> getTriangleMesh() const {
+    return context_.triangleMesh;
   }
 
 private:

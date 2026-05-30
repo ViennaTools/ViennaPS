@@ -14,18 +14,18 @@ public:
                         const viennaray::Vec3D<NumericType> &rayDir,
                         const viennaray::Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
+                        viennaray::PointData<NumericType> &localData,
+                        const viennaray::PointData<NumericType> *globalData,
                         viennaray::RNG &rngState) final {
     // collect data for this hit
-    localData.getVectorData(0)[primID] += rayWeight;
+    localData.addToScalarData(0, primID, rayWeight);
   }
   std::pair<NumericType, viennaray::Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight,
                     const viennaray::Vec3D<NumericType> &rayDir,
                     const viennaray::Vec3D<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const viennaray::PointData<NumericType> *globalData,
                     viennaray::RNG &rngState) final {
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);

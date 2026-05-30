@@ -1,4 +1,5 @@
 build/
+build-cpu/
 cmake-build*
 .vscode
 .vs

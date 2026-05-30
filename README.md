@@ -130,7 +130,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@4.4.0")
+  CPMAddPackage("gh:viennatools/viennaps@4.5.0")
   ```
 
 * With a local installation
@@ -155,7 +155,7 @@ cmake -B build -DVIENNALS_PRECOMPILE_HEADERS=ON
 
 If ViennaPS was built with shared libraries and you use ViennaPS in your project (see above), CMake will automatically link them to your project.
 
-## GPU Acceleration (Experimental)
+## GPU Acceleration
 
 As of version 3.4.0, ViennaPS supports GPU acceleration for the ray tracing part of the library. This feature is still experimental. Details on how to enable GPU functionality can be found in the [documentation](https://viennatools.github.io/ViennaPS/inst/gpu.html).
 
