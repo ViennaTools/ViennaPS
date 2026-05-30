@@ -166,6 +166,7 @@ if(WIN32)
     PRE_EXCLUDE_REGEXES
     "api-ms-"
     "ext-ms-"
+    "^python[0-9]+\\.dll$"
     POST_EXCLUDE_REGEXES
     "[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\][Ss][Yy][Ss][Tt][Ee][Mm]32[/\\\\]"
     "[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\][Ss][Yy][Ss][Ww][Oo][Ww]64[/\\\\]"
