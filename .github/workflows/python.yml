@@ -91,7 +91,7 @@ jobs:
           $toolchain = "${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake".Replace('\', '/')
 
           .\venv\Scripts\python -m pip install --upgrade pip
-          .\venv\Scripts\python -m pip install . `
+          .\venv\Scripts\python -m pip install . -v `
             --config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE="$toolchain" `
             --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows"
           .\venv\Scripts\python -c "import viennaps; print(viennaps.__doc__)"
@@ -100,7 +100,7 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           python -m venv venv
-          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install .
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . -v
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 📦 Upload Artifact

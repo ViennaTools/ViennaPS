@@ -134,6 +134,7 @@ if(VIENNAPS_PACKAGE_PYTHON OR MSVC)
   # macOS wheels let delocate own dylib vendoring to avoid duplicate copies.
   # Other package builds still need this staged dependency folder.
   if(NOT APPLE)
+    message(STATUS "Setting up dependency folder for python package at ${VIENNAPS_LIB_FOLDER}")
     viennacore_setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
     viennacore_setup_vtk_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
     viennacore_setup_tbb_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
