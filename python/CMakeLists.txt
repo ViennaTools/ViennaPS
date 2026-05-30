@@ -130,12 +130,14 @@ add_dependencies(${PROJECT_NAME} ${VIENNAPS_PYTHON_MODULE_NAME})
 
 set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/${VIENNAPS_PYTHON_PACKAGE_NAME}.libs")
 
-if((VIENNAPS_PACKAGE_PYTHON AND NOT APPLE) OR MSVC)
+if(VIENNAPS_PACKAGE_PYTHON OR MSVC)
   # macOS wheels let delocate own dylib vendoring to avoid duplicate copies.
   # Other package builds still need this staged dependency folder.
-  viennacore_setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
-  viennacore_setup_vtk_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
-  viennacore_setup_tbb_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+  if(NOT APPLE)
+    viennacore_setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+    viennacore_setup_vtk_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+    viennacore_setup_tbb_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+  endif()
 endif()
 
 install(

@@ -493,11 +493,10 @@ private:
     if (context.timeStep <= 0.)
       return ProcessResult::SUCCESS;
 
-    assert(context.model->getSurfaceModel()
-               ->getDiffusionCoefficients()
-               .has_value());
-    const auto &diffusionCoefficients =
-        context.model->getSurfaceModel()->getDiffusionCoefficients().value();
+    auto diffusionCoefficientsOpt =
+        context.model->getSurfaceModel()->getDiffusionCoefficients();
+    assert(diffusionCoefficientsOpt.has_value());
+    const auto &diffusionCoefficients = diffusionCoefficientsOpt.value();
 
     diffusionTimer_.start();
     bool hasValidTarget = false;
