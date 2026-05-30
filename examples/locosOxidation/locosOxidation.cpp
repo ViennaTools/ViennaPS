@@ -93,6 +93,8 @@ struct Config {
   int mechanicsIterations = 2;
   int pressureIterations = 500;
   int stokesIterations = 100;
+  int couplingIterations = 8;
+  NumericType couplingTolerance = 1e-6;
 };
 
 Config parseConfig(const std::string &filename) {
@@ -131,6 +133,8 @@ Config parseConfig(const std::string &filename) {
     else if (key == "mechanicsIterations") cfg.mechanicsIterations = std::stoi(val);
     else if (key == "pressureIterations") cfg.pressureIterations = std::stoi(val);
     else if (key == "stokesIterations") cfg.stokesIterations = std::stoi(val);
+    else if (key == "couplingIterations") cfg.couplingIterations = std::stoi(val);
+    else if (key == "couplingTolerance") cfg.couplingTolerance = std::stod(val);
   }
   return cfg;
 }
@@ -138,7 +142,7 @@ Config parseConfig(const std::string &filename) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 int main() {
-  ps::Logger::setLogLevel(ps::LogLevel::INFO);
+  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
   const auto cfg = parseConfig("config.txt");
   omp_set_num_threads(cfg.numThreads);
 
@@ -171,7 +175,12 @@ int main() {
   auto domain = ps::Domain<NumericType, D>::New();
   domain->insertNextLevelSetAsMaterial(siLS, ps::Material::Si, false);
   domain->insertNextLevelSetAsMaterial(oxLS, ps::Material::SiO2, false);
-  domain->insertNextLevelSetAsMaterial(maskLS, ps::Material::Si3N4, false);
+
+  // Only add mask if thickness is positive. Setting maskThickness <= 0 disables
+  // LOCOS physics and uses standard oxidation instead.
+  if (cfg.maskThickness > NumericType(0)) {
+    domain->insertNextLevelSetAsMaterial(maskLS, ps::Material::Si3N4, false);
+  }
 
   // ── Oxidation model ───────────────────────────────────────────────────────
 
@@ -188,12 +197,15 @@ int main() {
   model->setMechanicsIterations(cfg.mechanicsIterations);
   model->setPressureIterations(cfg.pressureIterations);
   model->setStokesIterations(cfg.stokesIterations);
+  model->setCouplingIterations(cfg.couplingIterations);
+  model->setCouplingTolerance(cfg.couplingTolerance);
 
   // LOCOS: mask material is already Si3N4 (default); just set parameters.
   model->setMaskParameters(
       viennals::OxidationMaterials<NumericType>::siliconNitrideMask1000C());
 
   model->saveSurfaceMesh(domain, cfg.outputPrefix + "_stack_step_000.vtp");
+  model->saveVolumeMesh(domain, cfg.outputPrefix + "_stack_step_000");
 
   const NumericType est =
       model->estimatePlanarOxideThickness(cfg.padOxideThickness);
@@ -220,8 +232,9 @@ int main() {
 
     std::ostringstream filename;
     filename << cfg.outputPrefix << "_stack_step_" << std::setw(3)
-             << std::setfill('0') << step << ".vtp";
-    model->saveSurfaceMesh(domain, filename.str());
+             << std::setfill('0') << step;// << ".vtp";
+    model->saveSurfaceMesh(domain, filename.str() + ".vtp");
+    model->saveVolumeMesh(domain, filename.str());
     std::cout << "Wrote " << filename.str() << " at t = " << elapsed
               << " hr.\n";
   }

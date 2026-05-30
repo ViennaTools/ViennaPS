@@ -97,9 +97,9 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   viennahrle::Index<D> maskBendingMaxIndex_{};
   unsigned maskCouplingIterations_ = 8;
   NumericType maskCouplingTolerance_ = NumericType(2e-2);
-  unsigned mechanicsIterations_ = 2;
+  unsigned mechanicsIterations_ = 10;
   unsigned pressureIterations_ = 500;
-  unsigned stokesIterations_ = 100;
+  unsigned stokesIterations_ = 200;
 
   // Thin wrapper: forwards applyPreAdvect to Oxidation::doApplyPreAdvect.
   // Nested classes in C++ have full access to enclosing-class private members.

@@ -48,6 +48,8 @@ cfg = {
     "orientation":       "100",
     "maxGridPoints":  5000000,
     "outputPrefix":   "ps_locos",
+    "couplingIterations":  8,
+    "couplingTolerance":   1e-6,
 }
 
 
@@ -154,7 +156,11 @@ mask_geom.apply()
 domain = vps.Domain()
 domain.insertNextLevelSetAsMaterial(si_ls,    vps.Material.Si,    False)
 domain.insertNextLevelSetAsMaterial(oxide_ls, vps.Material.SiO2,  False)
-domain.insertNextLevelSetAsMaterial(mask_ls,  vps.Material.Si3N4, False)
+
+# Only add mask if thickness is positive. Setting maskThickness <= 0 disables
+# LOCOS physics and uses standard oxidation instead.
+if mask_thickness > 0.0:
+    domain.insertNextLevelSetAsMaterial(mask_ls,  vps.Material.Si3N4, False)
 
 # ── Oxidation model ───────────────────────────────────────────────────────────
 model = vps.Oxidation()
@@ -164,6 +170,8 @@ model.setPressure(pressure)
 model.setOrientation(orientation)
 model.setTimeStep(time_step)
 model.setMaxGridPoints(max_grid_points)
+model.setCouplingIterations(cfg["couplingIterations"])
+model.setCouplingTolerance(cfg["couplingTolerance"])
 
 model.saveSurfaceMesh(domain, f"{output_prefix}_step_000.vtp")
 
