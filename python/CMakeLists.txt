@@ -166,13 +166,13 @@ if(WIN32)
     PRE_EXCLUDE_REGEXES
     "api-ms-"
     "ext-ms-"
-    "^python[0-9]+\\.dll$"
+    "^python[0-9]+[a-z]*\\.dll$"
     POST_EXCLUDE_REGEXES
     "[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\][Ss][Yy][Ss][Tt][Ee][Mm]32[/\\\\]"
     "[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\][Ss][Yy][Ss][Ww][Oo][Ww]64[/\\\\]"
     "[/\\\\][Ww][Ii][Nn][Ss][Xx][Ss][/\\\\]"
     "[/\\\\]Python[0-9]+[/\\\\]"
-    "[/\\\\]python[0-9]+\\.dll$"
+    "[/\\\\]python[0-9]+[a-z]*\\.dll$"
     "[/\\\\]vcruntime[0-9]+.*\\.dll$"
     "[/\\\\]msvcp[0-9]+.*\\.dll$")
 else()
