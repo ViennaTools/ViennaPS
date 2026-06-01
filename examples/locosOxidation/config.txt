@@ -14,12 +14,12 @@
 numThreads=16
 
 gridDelta=0.01
-xExtent=1..
+xExtent=1.
 yMin=-1.
 yMax=2.
 
-padOxideThickness=0.05
-maskThickness=0.03
+padOxideThickness=0.03
+maskThickness=0.05
 maskEdge=0.
 
 oxidationTime=0.1
@@ -39,3 +39,5 @@ pressureIterations=2000
 stokesIterations=1000
 couplingIterations=30
 couplingTolerance=1e-4
+maskCouplingIterations=30
+maskCouplingTolerance=0.04

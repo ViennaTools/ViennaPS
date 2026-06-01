@@ -207,7 +207,12 @@ void run(const ps::util::Parameters &params) {
   model->setOxidant(oxidant);
   model->setPressure(pressure);
   model->setOrientation(orientation);
-  model->setInitialOxideThickness(oxideThickness);
+  // Only override the native-oxide seed thickness when the caller
+  // provides a pre-grown oxide. When oxideThickness == 0 there is no SiO2
+  // layer in the domain, so the model seeds a default 2 nm native oxide;
+  // setting the seed to 0 would leave no oxide volume for the solver.
+  if (oxideThickness > NumericType(0))
+    model->setInitialOxideThickness(oxideThickness);
 
   // maxGridPoints limits the Cartesian solve grid. Memory scales as N³ in 3D,
   // so either set a higher value here or coarsen gridDelta for 3D runs.

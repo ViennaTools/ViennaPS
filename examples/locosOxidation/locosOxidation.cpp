@@ -95,6 +95,8 @@ struct Config {
   int stokesIterations = 100;
   int couplingIterations = 8;
   NumericType couplingTolerance = 1e-6;
+  int maskCouplingIterations = 8;
+  NumericType maskCouplingTolerance = 0.02;
 };
 
 Config parseConfig(const std::string &filename) {
@@ -135,6 +137,8 @@ Config parseConfig(const std::string &filename) {
     else if (key == "stokesIterations") cfg.stokesIterations = std::stoi(val);
     else if (key == "couplingIterations") cfg.couplingIterations = std::stoi(val);
     else if (key == "couplingTolerance") cfg.couplingTolerance = std::stod(val);
+    else if (key == "maskCouplingIterations") cfg.maskCouplingIterations = std::stoi(val);
+    else if (key == "maskCouplingTolerance") cfg.maskCouplingTolerance = std::stod(val);
   }
   return cfg;
 }
@@ -142,7 +146,7 @@ Config parseConfig(const std::string &filename) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 int main() {
-  ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
+  ps::Logger::setLogLevel(ps::LogLevel::INFO);
   const auto cfg = parseConfig("config.txt");
   omp_set_num_threads(cfg.numThreads);
 
@@ -199,6 +203,8 @@ int main() {
   model->setStokesIterations(cfg.stokesIterations);
   model->setCouplingIterations(cfg.couplingIterations);
   model->setCouplingTolerance(cfg.couplingTolerance);
+  model->setMaskCouplingIterations(cfg.maskCouplingIterations);
+  model->setMaskCouplingTolerance(cfg.maskCouplingTolerance);
 
   // LOCOS: mask material is already Si3N4 (default); just set parameters.
   model->setMaskParameters(

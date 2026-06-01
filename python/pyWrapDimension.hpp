@@ -1139,6 +1139,8 @@ template <int D> void bindApi(py::module &module) {
            "Crystal orientation: Si100, Si111, or PolySi.")
       .def("setTimeStep", &Oxidation<T, D>::setTimeStep, py::arg("dtHr"),
            "Duration of each explicit time step in hours. Default: time/20.")
+      .def("setCFLFactor", &Oxidation<T, D>::setCFLFactor, py::arg("factor"),
+           "Courant number for CFL-limited internal stepping (default 0.499).")
       .def("setInitialOxideThickness",
            &Oxidation<T, D>::setInitialOxideThickness, py::arg("thicknessUm"),
            "Native-oxide seed thickness in µm when no SiO2 layer exists.")
@@ -1158,6 +1160,47 @@ template <int D> void bindApi(py::module &module) {
            py::arg("iterations"))
       .def("setCouplingTolerance", &Oxidation<T, D>::setCouplingTolerance,
            py::arg("tolerance"))
+      .def("setMechanicsIterations", &Oxidation<T, D>::setMechanicsIterations,
+           py::arg("iterations"),
+           "Maximum iterations for the viscous mechanics solve.")
+      .def("setPressureIterations", &Oxidation<T, D>::setPressureIterations,
+           py::arg("iterations"),
+           "Maximum iterations for the pressure Poisson solve.")
+      .def("setStokesIterations", &Oxidation<T, D>::setStokesIterations,
+           py::arg("iterations"),
+           "Maximum iterations for the Stokes velocity solve.")
+      .def(
+          "setSolveBounds",
+          [](Oxidation<T, D> &model,
+             std::array<viennahrle::IndexType, D> passedMinIndex,
+             std::array<viennahrle::IndexType, D> passedMaxIndex) {
+            viennahrle::Index<D> minIndex{};
+            viennahrle::Index<D> maxIndex{};
+            for (unsigned i = 0; i < D; ++i) {
+              minIndex[i] = passedMinIndex[i];
+              maxIndex[i] = passedMaxIndex[i];
+            }
+            model.setSolveBounds(minIndex, maxIndex);
+          },
+          py::arg("minIndex"), py::arg("maxIndex"),
+          "Cartesian index bounds for the diffusion/deformation solve.")
+      .def("clearSolveBounds", &Oxidation<T, D>::clearSolveBounds)
+      .def(
+          "setMaskBendingBounds",
+          [](Oxidation<T, D> &model,
+             std::array<viennahrle::IndexType, D> passedMinIndex,
+             std::array<viennahrle::IndexType, D> passedMaxIndex) {
+            viennahrle::Index<D> minIndex{};
+            viennahrle::Index<D> maxIndex{};
+            for (unsigned i = 0; i < D; ++i) {
+              minIndex[i] = passedMinIndex[i];
+              maxIndex[i] = passedMaxIndex[i];
+            }
+            model.setMaskBendingBounds(minIndex, maxIndex);
+          },
+          py::arg("minIndex"), py::arg("maxIndex"),
+          "Cartesian index bounds for the mask bending solve.")
+      .def("clearMaskBendingBounds", &Oxidation<T, D>::clearMaskBendingBounds)
       .def("setSiliconMaterial", &Oxidation<T, D>::setSiliconMaterial,
            py::arg("mat"), "Override which material is treated as silicon.")
       .def("setOxideMaterial", &Oxidation<T, D>::setOxideMaterial,

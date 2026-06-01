@@ -26,6 +26,7 @@
 #include <lsAdvect.hpp>
 #include <lsBooleanOperation.hpp>
 #include <lsGeometricAdvect.hpp>
+#include <lsInterior.hpp>
 #include <lsLOCOSOxidation.hpp>
 #include <lsOxidationDeformation.hpp>
 #include <lsOxidationDiffusion.hpp>
@@ -470,14 +471,20 @@ private:
     };
 
     const auto rates = computeDealGroveRates();
-    const NumericType initialVelocityEstimate =
-        rates.BoA > NumericType(0) ? rates.BoA : NumericType(0);
-    const NumericType seedStep = cflStep(initialVelocityEstimate);
+    auto oxParams = computeOxParams();
+    // B/A is the total oxide growth rate, but the CFL limit is set by the
+    // faster of the two surfaces: the ambient interface moves at
+    // (β−1)/β × B/A while the reaction interface moves at B/A/β.
+    // Using B/A directly over-constrains the seed step by ~β/(β−1) ≈ 1.8×.
+    const NumericType beta = oxParams.expansionCoefficient;
+    const NumericType maxSurfaceVelocity =
+        (rates.BoA > NumericType(0) && beta > NumericType(1))
+            ? rates.BoA * (beta - NumericType(1)) / beta
+            : (rates.BoA > NumericType(0) ? rates.BoA : NumericType(0));
+    const NumericType seedStep = cflStep(maxSurfaceVelocity);
     const NumericType userStepCap =
         timeStep_ > NumericType(0) ? timeStep_
                                    : std::numeric_limits<NumericType>::max();
-
-    auto oxParams = computeOxParams();
 
     ls::OxidationCouplingParameters<NumericType> coupling;
     coupling.maxIterations = couplingIterations_;
@@ -545,7 +552,12 @@ private:
         logCFLStep("LOCOS", ++substep, time, requestedDt, actualDt);
 
         time += actualDt;
-        nextStepEstimate = std::min(userStepCap, actualDt);
+        // Use the solved max velocity (not actualDt) so the next request
+        // reflects the actual CFL limit rather than the conservative seed.
+        const NumericType maxV = locos->getLastMaxVelocity();
+        nextStepEstimate = (maxV > NumericType(0))
+                               ? std::min(userStepCap, cflStep(maxV))
+                               : std::min(userStepCap, actualDt);
       }
       if (Logger::hasInfo())
         Logger::getInstance()
@@ -616,11 +628,17 @@ private:
         logCFLStep("Oxidation", ++substep, time, requestedDt, actualDt,
                    maxVelocity);
 
+        diffField->markSolved();
+        diffField->writePersistentFields();
+        defField->writeFieldsToLevelSet();
+
         ambientAdvect.setAdvectionTime(actualDt);
         ambientAdvect.apply();
 
         reactionAdvect.setAdvectionTime(actualDt);
         reactionAdvect.apply();
+
+        ls::Interior<NumericType, D>(ambientInterface).apply();
 
         diffField->markGeometryChanged();
         defField->markGeometryChanged();
