@@ -43,6 +43,7 @@ cfg = {
     "pressure":        1.0,
     "oxidant":       "wet",
     "orientation":   "100",
+    "maxGridPoints": 5000000,
     "outputPrefix":  "ps_step_oxidation",
 }
 
@@ -106,6 +107,7 @@ temperature     = cfg["temperature"]
 pressure        = cfg["pressure"]
 oxidant         = _parse_oxidant(cfg["oxidant"])
 orientation     = _parse_orientation(cfg["orientation"])
+max_grid_points = cfg["maxGridPoints"]
 output_prefix   = cfg["outputPrefix"]
 
 # ── Domain bounds and boundary conditions ────────────────────────────────────
@@ -149,7 +151,11 @@ model.setTimeStep(time_step)
 model.setOxidant(oxidant)
 model.setPressure(pressure)
 model.setOrientation(orientation)
-model.setInitialOxideThickness(oxide_thickness)
+model.setMaxGridPoints(max_grid_points)
+# Only override the native-oxide seed thickness when a pre-grown oxide is
+# present.  Passing 0 would leave no oxide volume for the solver to start from.
+if oxide_thickness > 0.0:
+    model.setInitialOxideThickness(oxide_thickness)
 
 model.saveSurfaceMesh(domain, output_prefix + "_initial.vtp")
 

@@ -23,16 +23,12 @@
 // If no SiO2 level set is present, a thin native-oxide layer is created
 // automatically and appended to the top of the level-set stack.
 
-#include <lsAdvect.hpp>
 #include <lsBooleanOperation.hpp>
 #include <lsGeometricAdvect.hpp>
-#include <lsInterior.hpp>
-#include <lsLOCOSOxidation.hpp>
+#include <lsOxidation.hpp>
 #include <lsOxidationDeformation.hpp>
 #include <lsOxidationDiffusion.hpp>
-#include <lsOxidationMask.hpp>
 #include <lsOxidationMaterials.hpp>
-#include <lsOxidationModel.hpp>
 
 #include <hrleSparseIterator.hpp>
 
@@ -453,13 +449,6 @@ private:
                                           false);
     }
 
-    // Optional user override for the Cartesian solve bounds.
-    viennahrle::Index<D> minIndex, maxIndex;
-    if (useSolveBounds_) {
-      minIndex = solveMinIndex_;
-      maxIndex = solveMaxIndex_;
-    }
-
     const NumericType gridDelta =
         reactionInterface->getGrid().getGridDelta();
 
@@ -506,166 +495,68 @@ private:
           .print();
     }
 
-    if (maskIdx >= 0) {
-      // ── LOCOS path ─────────────────────────────────────────────────────────
-      auto maskInterface = levelSets[maskIdx];
+    const std::string modeLabel = (maskIdx >= 0) ? "LOCOS" : "Oxidation";
 
-      auto locos = ls::LOCOSOxidation<NumericType, D>::New(
-          reactionInterface, ambientInterface, maskInterface);
-      locos->setOxidationParameters(oxParams);
-      locos->setCouplingParameters(coupling);
+    auto locos = ls::Oxidation<NumericType, D>::New(
+        reactionInterface, ambientInterface);
+    locos->setOxidationParameters(oxParams);
+    locos->setCouplingParameters(coupling);
+    if (useSolveBounds_)
+      locos->setSolveBounds(solveMinIndex_, solveMaxIndex_);
+
+    if (maskIdx >= 0) {
+      auto maskLS = levelSets[maskIdx];
+      locos->setMaskInterface(maskLS);
       locos->setMaskParameters(maskParams_);
-      if (useSolveBounds_)
-        locos->setSolveBounds(solveMinIndex_, solveMaxIndex_);
       {
         viennahrle::Index<D> mbMin{}, mbMax{};
         if (useMaskBendingBounds_) {
           mbMin = maskBendingMinIndex_;
           mbMax = maskBendingMaxIndex_;
         } else {
-          std::tie(mbMin, mbMax) = computeLevelSetBounds(maskInterface, 4);
+          std::tie(mbMin, mbMax) = computeLevelSetBounds(maskLS, 4);
         }
         locos->setMaskBendingBounds(mbMin, mbMax);
       }
       locos->setMaskCouplingIterations(maskCouplingIterations_);
       locos->setMaskCouplingTolerance(maskCouplingTolerance_);
-
-      NumericType time = 0.;
-      unsigned substep = 0;
-      NumericType nextStepEstimate = seedStep;
-      const NumericType timeEps = NumericType(1e-9) * time_;
-      while (time_ - time > timeEps) {
-        NumericType requestedDt =
-            std::min({userStepCap, nextStepEstimate, time_ - time});
-        if (requestedDt <= NumericType(0))
-          break;
-
-        locos->setDeformationParameters(computeDefParams(requestedDt));
-
-        logCFLStepStart("LOCOS", substep + 1, time, requestedDt);
-
-        const NumericType actualDt =
-            locos->applyCFLLimited(requestedDt, cflFactor_);
-        if (actualDt <= NumericType(0))
-          break;
-
-        logCFLStep("LOCOS", ++substep, time, requestedDt, actualDt);
-
-        time += actualDt;
-        // Use the solved max velocity (not actualDt) so the next request
-        // reflects the actual CFL limit rather than the conservative seed.
-        const NumericType maxV = locos->getLastMaxVelocity();
-        nextStepEstimate = (maxV > NumericType(0))
-                               ? std::min(userStepCap, cflStep(maxV))
-                               : std::min(userStepCap, actualDt);
-      }
-      if (Logger::hasInfo())
-        Logger::getInstance()
-            .addInfo("Oxidation: LOCOS complete — " +
-                     std::to_string(substep) + " substep(s), " +
-                     std::to_string(time) + " hr simulated.")
-            .print();
-    } else {
-      // ── Standard (non-LOCOS) path ──────────────────────────────────────────
-
-      auto diffField = ls::OxidationDiffusion<NumericType, D>::New(
-          reactionInterface, ambientInterface, oxParams);
-      if (useSolveBounds_)
-        diffField->setSolveBounds(minIndex, maxIndex);
-
-      auto defParams = computeDefParams(std::min(userStepCap, seedStep));
-      auto defField = ls::OxidationDeformation<NumericType, D>::New(
-          reactionInterface, ambientInterface, diffField, oxParams, defParams);
-      if (useSolveBounds_)
-        defField->setSolveBounds(minIndex, maxIndex);
-
-      auto coupledModel = ls::OxidationModel<NumericType, D>::New(
-          diffField, defField, coupling);
-      if (useSolveBounds_)
-        coupledModel->setSolveBounds(minIndex, maxIndex);
-
-      ls::Advect<NumericType, D> ambientAdvect;
-      ambientAdvect.insertNextLevelSet(ambientInterface);
-      ambientAdvect.setVelocityField(defField);
-      ambientAdvect.setSpatialScheme(
-          ls::SpatialSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
-      ambientAdvect.setTemporalScheme(
-          ls::TemporalSchemeEnum::FORWARD_EULER);
-
-      ls::Advect<NumericType, D> reactionAdvect;
-      reactionAdvect.insertNextLevelSet(reactionInterface);
-      reactionAdvect.setVelocityField(diffField);
-      reactionAdvect.setSpatialScheme(
-          ls::SpatialSchemeEnum::ENGQUIST_OSHER_1ST_ORDER);
-      reactionAdvect.setTemporalScheme(
-          ls::TemporalSchemeEnum::FORWARD_EULER);
-
-      NumericType time = 0.;
-      unsigned substep = 0;
-      NumericType nextStepEstimate = seedStep;
-      const NumericType timeEps = NumericType(1e-9) * time_;
-      while (time_ - time > timeEps) {
-        NumericType requestedDt =
-            std::min({userStepCap, nextStepEstimate, time_ - time});
-        if (requestedDt <= NumericType(0))
-          break;
-
-        defParams.stressTimeStep = requestedDt;
-        defField->setDeformationParameters(defParams);
-
-        logCFLStepStart("Oxidation", substep + 1, time, requestedDt);
-
-        coupledModel->apply();
-
-        NumericType maxVelocity = maxCoupledVelocity(diffField, defField);
-        NumericType actualDt = std::min(requestedDt, cflStep(maxVelocity));
-        if (actualDt < requestedDt * (NumericType(1) - NumericType(1e-8))) {
-          defParams.stressTimeStep = actualDt;
-          defField->setDeformationParameters(defParams);
-          coupledModel->apply();
-        }
-
-        logCFLStep("Oxidation", ++substep, time, requestedDt, actualDt,
-                   maxVelocity);
-
-        diffField->markSolved();
-        diffField->writePersistentFields();
-        defField->writeFieldsToLevelSet();
-
-        ambientAdvect.setAdvectionTime(actualDt);
-        ambientAdvect.apply();
-
-        reactionAdvect.setAdvectionTime(actualDt);
-        reactionAdvect.apply();
-
-        ls::Interior<NumericType, D>(ambientInterface).apply();
-
-        diffField->markGeometryChanged();
-        defField->markGeometryChanged();
-
-        time += actualDt;
-        nextStepEstimate = std::min(userStepCap, actualDt);
-      }
-      if (Logger::hasInfo())
-        Logger::getInstance()
-            .addInfo("Oxidation: simulation complete — " +
-                     std::to_string(substep) + " substep(s), " +
-                     std::to_string(time) + " hr simulated.")
-            .print();
     }
 
-    return true;
-  }
+    NumericType time = 0.;
+    unsigned substep = 0;
+    NumericType nextStepEstimate = seedStep;
+    const NumericType timeEps = NumericType(1e-9) * time_;
+    while (time_ - time > timeEps) {
+      NumericType requestedDt =
+          std::min({userStepCap, nextStepEstimate, time_ - time});
+      if (requestedDt <= NumericType(0))
+        break;
 
-  NumericType maxCoupledVelocity(
-      SmartPointer<viennals::OxidationDiffusion<NumericType, D>> diffField,
-      SmartPointer<viennals::OxidationDeformation<NumericType, D>> defField)
-      const {
-    NumericType maxVelocity = diffField->getDissipationAlpha(0, -1, {});
-    for (unsigned d = 0; d < D; ++d)
-      maxVelocity =
-          std::max(maxVelocity, defField->getDissipationAlpha(d, -1, {}));
-    return maxVelocity;
+      locos->setDeformationParameters(computeDefParams(requestedDt));
+
+      logCFLStepStart(modeLabel, substep + 1, time, requestedDt);
+
+      const NumericType actualDt =
+          locos->applyCFLLimited(requestedDt, cflFactor_);
+      if (actualDt <= NumericType(0))
+        break;
+
+      logCFLStep(modeLabel, ++substep, time, requestedDt, actualDt);
+
+      time += actualDt;
+      const NumericType maxV = locos->getLastMaxVelocity();
+      nextStepEstimate = (maxV > NumericType(0))
+                             ? std::min(userStepCap, cflStep(maxV))
+                             : std::min(userStepCap, actualDt);
+    }
+    if (Logger::hasInfo())
+      Logger::getInstance()
+          .addInfo("Oxidation: " + modeLabel + " complete — " +
+                   std::to_string(substep) + " substep(s), " +
+                   std::to_string(time) + " hr simulated.")
+          .print();
+
+    return true;
   }
 
   void logCFLStep(const std::string &label, unsigned substep,

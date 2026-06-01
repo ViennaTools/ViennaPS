@@ -46,10 +46,15 @@ cfg = {
     "pressure":            1.0,
     "oxidant":           "wet",
     "orientation":       "100",
-    "maxGridPoints":  5000000,
-    "outputPrefix":   "ps_locos",
-    "couplingIterations":  8,
-    "couplingTolerance":   1e-6,
+    "maxGridPoints":          5000000,
+    "outputPrefix":           "ps_locos",
+    "mechanicsIterations":    2,
+    "pressureIterations":     500,
+    "stokesIterations":       100,
+    "couplingIterations":     8,
+    "couplingTolerance":      1e-6,
+    "maskCouplingIterations": 8,
+    "maskCouplingTolerance":  0.02,
 }
 
 
@@ -170,8 +175,14 @@ model.setPressure(pressure)
 model.setOrientation(orientation)
 model.setTimeStep(time_step)
 model.setMaxGridPoints(max_grid_points)
+model.setMechanicsIterations(cfg["mechanicsIterations"])
+model.setPressureIterations(cfg["pressureIterations"])
+model.setStokesIterations(cfg["stokesIterations"])
 model.setCouplingIterations(cfg["couplingIterations"])
 model.setCouplingTolerance(cfg["couplingTolerance"])
+model.setMaskCouplingIterations(cfg["maskCouplingIterations"])
+model.setMaskCouplingTolerance(cfg["maskCouplingTolerance"])
+model.setMaskParameters(viennals.OxidationMaterials.siliconNitrideMask1000C())
 
 model.saveSurfaceMesh(domain, f"{output_prefix}_step_000.vtp")
 
