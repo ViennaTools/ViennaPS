@@ -223,6 +223,7 @@ void run(const ps::util::Parameters &params) {
   }
 
   model->saveSurfaceMesh(domain, outputPrefix + "_stack_initial.vtp");
+  model->saveVolumeMesh(domain, outputPrefix + "_stack_initial");
 
   ps::Process<NumericType, D>(domain, model, NumericType(0)).apply();
 

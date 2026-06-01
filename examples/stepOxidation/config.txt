@@ -26,9 +26,9 @@ stepX=0.
 #            # The raised platform occupies x>stepX AND z>stepZ (one quadrant).
 leftSiTop=0.
 rightSiTop=1.
-oxideThickness=0.
+oxideThickness=0.05   # must be >= gridDelta; sub-grid seeds produce no oxide nodes
 
-oxidationTime=0.05
+oxidationTime=0.1
 # Maximum internal oxidation step. The model automatically subcycles below this
 # value when the CFL limit is smaller.
 timeStep=0.01
