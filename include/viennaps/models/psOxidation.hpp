@@ -47,7 +47,7 @@ namespace viennaps {
 using namespace viennacore;
 
 enum class OxidantType { Dry, Wet };
-enum class SiliconOrientation { Si100, Si111, PolySi };
+enum class SiliconOrientation { Si100, Si110, Si111, PolySi };
 
 template <class NumericType, int D>
 class Oxidation : public ProcessModelBase<NumericType, D> {
@@ -507,7 +507,11 @@ private:
     if (maskIdx >= 0) {
       auto maskLS = levelSets[maskIdx];
       locos->setMaskInterface(maskLS);
-      locos->setMaskParameters(maskParams_);
+      // Sync simulation temperature so OxidationMaskBending's Arrhenius
+      // viscosity scaling uses the correct temperature, not the preset's default.
+      auto activeMaskParams = maskParams_;
+      activeMaskParams.temperature = temperature_ + NumericType(273.15);
+      locos->setMaskParameters(activeMaskParams);
       {
         viennahrle::Index<D> mbMin{}, mbMax{};
         if (useMaskBendingBounds_) {
@@ -608,19 +612,52 @@ private:
     p.temperature = T_K;
     p.reactionActivationVolume = reactionActivationVolume_;
     p.diffusionActivationVolume = diffusionActivationVolume_;
-    p.reactionRateRatio111 = NumericType(1);     // orientation encoded in B/A choice
+    // Continuous crystal-axis correction applied per-face by OxidationDiffusion:
+    //   k(n) = k_base × [1 + (ratio − 1) × (1 − (n · axis)²)]
+    // k_base is the B/A for the chosen bulk orientation; ratio is the B/A of
+    // faces perpendicular to the wafer normal divided by k_base. crystalAxis
+    // points along the wafer normal (y = surface-normal convention in 2D).
+    // Ratios derived from the (100):(110):(111) = 1 : 1.45 : 1.68 ladder.
+    p.crystalAxis = {NumericType(0), NumericType(1), NumericType(0)};
+    switch (orientation_) {
+      case SiliconOrientation::Si100:
+        // Perpendicular faces are (110)-like: 1.45× faster than (100).
+        p.reactionRateRatio111 = NumericType(1.45);
+        break;
+      case SiliconOrientation::Si110:
+        // Perpendicular faces are (100)-like: 1/1.45 ≈ 0.690× of (110).
+        p.reactionRateRatio111 = NumericType(1) / NumericType(1.45);
+        break;
+      case SiliconOrientation::Si111:
+        // Perpendicular faces are (100)-like: 1/1.68 ≈ 0.595× of (111).
+        p.reactionRateRatio111 = NumericType(1) / NumericType(1.68);
+        break;
+      default: // PolySi — isotropic
+        p.reactionRateRatio111 = NumericType(1);
+        break;
+    }
     p.maxGridPoints = maxGridPoints_;
     p.maxIterations = 10000;
     p.tolerance = NumericType(1e-7);
     return p;
   }
 
-  // Oxide mechanics parameters (SiO2 at ~1000 °C).
-  // Source: Plummer, Deal & Griffin, Silicon VLSI Technology (2000), Table 6.2.
+  // Oxide mechanics: viscosity follows Arrhenius (Irene, J. Electrochem. Soc.
+  // 125, 1708 (1978)); bulk and shear moduli treated as temperature-independent.
   viennals::OxidationDeformationParameters<NumericType>
   computeDefParams(NumericType dt) const {
+    const NumericType T_K = temperature_ + NumericType(273.15);
+    // η(T) = η_ref × exp(Ea/kB × (1/T − 1/T_ref))
+    // η_ref = 1×10¹⁰ Pa·hr at T_ref = 1000 °C, Ea = 1.5 eV (Irene 1978)
+    static constexpr NumericType etaRef  = NumericType(1e10);
+    static constexpr NumericType etaEa   = NumericType(1.5);     // eV
+    static constexpr NumericType etaTref = NumericType(1273.15); // K
+    const NumericType viscosity =
+        etaRef * std::exp(etaEa / kB_ *
+                          (NumericType(1) / T_K - NumericType(1) / etaTref));
+
     viennals::OxidationDeformationParameters<NumericType> p;
-    p.viscosity = NumericType(1e10);        // Pa·hr
+    p.viscosity = viscosity;
     p.bulkModulus = NumericType(7.5e8);     // Pa
     p.shearModulus = NumericType(3e10);     // Pa
     p.stressTimeStep = dt;
@@ -667,8 +704,20 @@ private:
     return {lo, hi};
   }
 
-  // Select the appropriate Deal-Grove row.
-  // PolySi: isotropic, use <100> rates as a conservative baseline.
+  // Deal-Grove Arrhenius table.
+  // B (parabolic) is orientation-independent. B/A (linear) pre-exponentials
+  // differ by orientation; activation energies are the same for all.
+  //
+  // Dry B/A has a well-established two-regime Arrhenius break near 950 °C:
+  //   T > 950 °C: E_a = 2.00 eV  (Massoud, Plummer & Irene, J. Electrochem.
+  //               Soc. 132, 2685 (1985), Table III — Si(100) and Si(111))
+  //   T < 950 °C: E_a = 2.30 eV  (ibid., low-T fit; BoA0 scaled to match
+  //               orientation via the same 1.68 / 1.45 ratios)
+  // Wet B/A: single-regime suffices — the two-regime effect is less pronounced
+  //   and less well-established for H₂O (Deal, J. Electrochem. Soc. 125, 576
+  //   (1978), Table I).
+  // Si(110): BoA0 = 1.45 × BoA0(100) in both regimes (Massoud 1985).
+  // PolySi: isotropic; (100) rates used as conservative baseline.
   struct DealGroveRates {
     NumericType B = 0.;   // µm²/hr
     NumericType BoA = 0.; // µm/hr
@@ -684,18 +733,36 @@ private:
 
   DealGroveRow dealGroveRow() const {
     if (oxidant_ == OxidantType::Dry) {
+      if (temperature_ < NumericType(950)) {
+        // Low-T regime (<950 °C): higher activation energy 2.30 eV.
+        if (orientation_ == SiliconOrientation::Si111)
+          return {NumericType(772), NumericType(1.23),
+                  NumericType(5.82e7), NumericType(2.30)};
+        if (orientation_ == SiliconOrientation::Si110)
+          return {NumericType(772), NumericType(1.23),
+                  NumericType(5.02e7), NumericType(2.30)}; // 3.46e7 × 1.45
+        return   {NumericType(772), NumericType(1.23),
+                  NumericType(3.46e7), NumericType(2.30)}; // Si100 / PolySi
+      }
+      // High-T regime (≥950 °C): standard activation energy 2.00 eV.
       if (orientation_ == SiliconOrientation::Si111)
         return {NumericType(772), NumericType(1.23),
                 NumericType(6.23e6), NumericType(2.00)};
+      if (orientation_ == SiliconOrientation::Si110)
+        return {NumericType(772), NumericType(1.23),
+                NumericType(5.38e6), NumericType(2.00)}; // 3.71e6 × 1.45
       return   {NumericType(772), NumericType(1.23),
-                NumericType(3.71e6), NumericType(2.00)};
+                NumericType(3.71e6), NumericType(2.00)}; // Si100 / PolySi
     }
-    // Wet
+    // Wet: single-regime for all orientations.
     if (orientation_ == SiliconOrientation::Si111)
       return {NumericType(386), NumericType(0.78),
               NumericType(1.63e8), NumericType(2.05)};
+    if (orientation_ == SiliconOrientation::Si110)
+      return {NumericType(386), NumericType(0.78),
+              NumericType(1.41e8), NumericType(2.05)}; // 9.70e7 × 1.45
     return   {NumericType(386), NumericType(0.78),
-              NumericType(9.70e7), NumericType(2.05)};
+              NumericType(9.70e7), NumericType(2.05)}; // Si100 / PolySi
   }
 };
 
