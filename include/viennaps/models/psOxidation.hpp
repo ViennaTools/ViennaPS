@@ -28,7 +28,7 @@
 #include <lsOxidation.hpp>
 #include <lsOxidationDeformation.hpp>
 #include <lsOxidationDiffusion.hpp>
-#include <lsOxidationMaterials.hpp>
+#include <lsOxidationPresets.hpp>
 
 #include <hrleSparseIterator.hpp>
 
@@ -88,7 +88,7 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   Material oxideMaterial_ = Material::SiO2;
   Material maskMaterial_ = Material::Si3N4;
   viennals::OxidationMaskParameters<NumericType> maskParams_ =
-      viennals::OxidationMaterials<NumericType>::siliconNitrideMask1000C();
+      viennals::OxidationPresets<NumericType>::siliconNitrideMask1000C();
   bool useMaskBendingBounds_ = false;
   viennahrle::Index<D> maskBendingMinIndex_{};
   viennahrle::Index<D> maskBendingMaxIndex_{};

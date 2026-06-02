@@ -566,7 +566,7 @@ model->setPressure(1.0);               // atm
 model->setOrientation(ps::SiliconOrientation::Si100);
 model->setTimeStep(0.1);               // hr; max internal step and output cadence
 model->setMaskParameters(
-    ls::OxidationMaterials<double>::siliconNitrideMask1000C());
+    ls::lsOxidationPresets<double>::siliconNitrideMask1000C());
 model->setMaskCouplingIterations(30);
 model->setMaskCouplingTolerance(0.04);
 
@@ -790,7 +790,7 @@ bird's beak profile and the nitride deflection.
 | `lsOxidationDeformation.hpp` | Stokes deformation field (harmonic + pressure + Stokes) |
 | `lsOxidationModel.hpp` | Pressure–concentration coupling loop |
 | `lsOxidationMask.hpp` | Mask bending solver and constrained ambient velocity |
-| `lsOxidationMaterials.hpp` | Calibrated material presets (wet/dry 1000 °C) |
+| `lsOxidationPresets.hpp` | Calibrated material presets (wet/dry 1000 °C) |
 | `psOxidation.hpp` | ViennaPS wrapper; Deal-Grove Arrhenius lookup; material detection |
 
 ---

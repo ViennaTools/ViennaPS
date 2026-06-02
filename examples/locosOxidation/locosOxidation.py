@@ -182,7 +182,7 @@ model.setCouplingIterations(cfg["couplingIterations"])
 model.setCouplingTolerance(cfg["couplingTolerance"])
 model.setMaskCouplingIterations(cfg["maskCouplingIterations"])
 model.setMaskCouplingTolerance(cfg["maskCouplingTolerance"])
-model.setMaskParameters(viennals.OxidationMaterials.siliconNitrideMask1000C())
+model.setMaskParameters(viennals.OxidationPresets.siliconNitrideMask1000C())
 
 model.saveSurfaceMesh(domain, f"{output_prefix}_step_000.vtp")
 

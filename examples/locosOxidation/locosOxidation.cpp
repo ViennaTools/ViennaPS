@@ -208,7 +208,7 @@ int main() {
 
   // LOCOS: mask material is already Si3N4 (default); just set parameters.
   model->setMaskParameters(
-      viennals::OxidationMaterials<NumericType>::siliconNitrideMask1000C());
+      viennals::OxidationPresets<NumericType>::siliconNitrideMask1000C());
 
   model->saveSurfaceMesh(domain, cfg.outputPrefix + "_stack_step_000.vtp");
   model->saveVolumeMesh(domain, cfg.outputPrefix + "_stack_step_000");
