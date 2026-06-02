@@ -133,15 +133,26 @@ Convergence: `max |C_new − C_old| < tolerance` (default 10⁻⁷).
 
 **Crystal-orientation reaction rate:**
 
-On faces other than (100) the reaction rate is modulated by
+The selected wafer orientation sets the baseline Deal-Grove `B/A` value. The
+local surface normal then applies a continuous per-face correction:
 
 ```
-k(n̂) = k_eff · [1 + (r₁₁₁ − 1) · (1 − (n̂ · ê₁₀₀)²)]
+k(n̂) = k_base · [1 + (r − 1) · (1 − (n̂ · ê_axis)²)]
 ```
 
-where `r₁₁₁ = reactionRateRatio111` (= 1.0 → isotropic) and `ê₁₀₀` is the
-wafer crystallographic axis (`crystalAxis`). The local Si normal `n̂` is
-computed from the gradient of φ\_Si at each boundary node.
+where `ê_axis` is the wafer normal (`crystalAxis`) and `r` is the ratio between
+the perpendicular-face `B/A` and the baseline wafer `B/A`. The built-in rates use
+the ladder `(100):(110):(111) = 1 : 1.45 : 1.68`, so the per-face ratios are:
+
+| Wafer orientation | Baseline `B/A` | Perpendicular-face ratio `r` |
+|---|---|---|
+| `Si100` | (100) | 1.45 |
+| `Si110` | (110) | 1 / 1.45 |
+| `Si111` | (111) | 1 / 1.68 |
+| `PolySi` | (100), isotropic | 1 |
+
+The local Si normal `n̂` is computed from the gradient of φ\_Si at each boundary
+node.
 
 **Reaction and expansion velocities:**
 
@@ -641,12 +652,18 @@ gridDelta = 0.01 µm
 | `temperature` | — | °C; sets k, D via Arrhenius fits to Deal-Grove data |
 | `oxidant` | — | `Wet` (H₂O) or `Dry` (O₂); changes pre-exponentials |
 | `pressure` | 1.0 atm | Scales C\* proportionally (B and B/A both linear in pressure) |
-| `orientation` | `Si100` | Crystal anisotropy factor on k (see r₁₁₁ above) |
+| `orientation` | `Si100` | `Si100`, `Si110`, `Si111`, or `PolySi`; selects the baseline `B/A` and crystal-axis correction |
 | `timeStep` | — | hr; caps each internal oxidation substep and saved shape cadence |
 | `setCFLFactor` | 0.499 | Courant number; `actual_dt ≤ cflFactor · Δx / max_vel` |
 | `maxGridPoints` | 5×10⁶ | Memory limit for the Cartesian oxide solve grid |
 | `couplingIterations` | 8 | Max iterations for diffusion–deformation coupling loop |
 | `couplingTolerance` | 10⁻⁶ | Relative pressure convergence threshold |
+
+For dry oxidation, the built-in Deal-Grove `B/A` table uses two Arrhenius
+regimes split at 950 °C: `E_a = 2.30 eV` below 950 °C and `E_a = 2.00 eV` at or
+above 950 °C. Wet oxidation uses a single `B/A` activation energy. `B` is treated
+as orientation-independent; `B/A` carries the `(100):(110):(111)` orientation
+ratios.
 
 ### Oxidation parameters (inside ViennaLS, set by `psOxidation`)
 
@@ -666,7 +683,7 @@ gridDelta = 0.01 µm
 
 | Parameter | Value | Meaning |
 |---|---|---|
-| `viscosity` η | 10¹⁰ Pa·hr | Effective oxide viscosity at 1000 °C |
+| `viscosity` η | Arrhenius; 10¹⁰ Pa·hr at 1000 °C | Effective oxide viscosity, using `E_a = 1.5 eV` |
 | `bulkModulus` K | 7.5×10⁸ Pa | p ← divergence coupling coefficient |
 | `shearModulus` G | 3×10¹⁰ Pa | Maxwell deviatoric relaxation |
 | `stressTimeStep` Δt | per substep | Maxwell relaxation time step |
@@ -681,7 +698,7 @@ gridDelta = 0.01 µm
 |---|---|---|
 | `referenceViscosity` η\_ref | 5×10¹¹ Pa·hr | Creep viscosity at referenceTemperature |
 | `referenceTemperature` | 1273.15 K | Reference temperature for Arrhenius law |
-| `creepActivationEnergy` E\_a | 0 J/mol | Arrhenius exponent; 0 = temperature-independent |
+| `creepActivationEnergy` E\_a | 3.86×10⁵ J/mol | Arrhenius exponent, approximately 4 eV |
 | `poissonRatio` ν | 0.27 | Si₃N₄ Poisson's ratio; sets λ/μ in Lamé equation |
 | `unilateralContact` | true | Oxide can push but not pull the mask |
 | `relaxation` | 1.0 | Bending Jacobi under-relaxation |
