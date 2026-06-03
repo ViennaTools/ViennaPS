@@ -13,7 +13,7 @@
 
 numThreads=16
 
-gridDelta=0.01
+gridDelta=0.001
 xExtent=1.
 yMin=-1.
 yMax=2.
@@ -34,16 +34,16 @@ orientation=100
 # maxGridPoints=5000000
 outputPrefix=ps_locos
 
-mechanicsIterations=8
-mechanicsTolerance=0.02
 pressureIterations=500
 pressureTolerance=1e-3
 stokesIterations=500
 stokesTolerance=1e-3
+mechanicsIterations=300
+mechanicsTolerance=1e-2
 couplingIterations=30
-couplingTolerance=5e-3
+couplingTolerance=5e-2
 maskCouplingIterations=30
-maskCouplingTolerance=0.04
+maskCouplingTolerance=4e-2
 
 # Log verbosity: error | warning | info (default) | timing | intermediate | debug
 # Set to "timing" to print per-phase wall-time breakdowns alongside normal output.

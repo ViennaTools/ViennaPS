@@ -26,6 +26,8 @@
 #include <lsBooleanOperation.hpp>
 #include <lsGeometricAdvect.hpp>
 #include <lsOxidation.hpp>
+#include <lsToMesh.hpp>
+#include <lsVTKWriter.hpp>
 #include <lsOxidationDeformation.hpp>
 #include <lsOxidationDiffusion.hpp>
 #include <lsOxidationPresets.hpp>
@@ -94,7 +96,7 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   viennahrle::Index<D> maskBendingMaxIndex_{};
   unsigned maskCouplingIterations_ = 8;
   NumericType maskCouplingTolerance_ = NumericType(2e-2);
-  unsigned mechanicsIterations_ = 10;
+  unsigned mechanicsIterations_ = 200;
   unsigned pressureIterations_ = 500;
   unsigned stokesIterations_ = 200;
   NumericType pressureTolerance_ = NumericType(1e-6);
@@ -108,16 +110,22 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
     toleranceWarningEmitted_ = true;
 
     // Each outer loop can only converge as tightly as the loop beneath it.
-    // Warn if a coarser-level tolerance is set tighter than a finer-level one.
-    if (mechanicsTolerance_ < pressureTolerance_)
+    // The mechanics coupling residual is contaminated by solver noise at the
+    // level of max(pressureTolerance, stokesTolerance).  mechanicsTolerance
+    // must be at least 5× looser to avoid the solver stagnating at the noise
+    // floor (which causes hundreds of wasted iterations with no progress).
+    const NumericType solverFloor =
+        std::max(pressureTolerance_, stokesTolerance_);
+    if (mechanicsTolerance_ < NumericType(5) * solverFloor)
       Logger::getInstance()
           .addWarning("Oxidation: mechanicsTolerance (" +
                       std::to_string(mechanicsTolerance_) +
-                      ") is tighter than pressureTolerance (" +
-                      std::to_string(pressureTolerance_) +
-                      "). The mechanics loop cannot converge more precisely than "
-                      "the pressure BiCGSTAB solver — mechanicsTolerance will "
-                      "never be reached.")
+                      ") is less than 5× max(pressureTolerance, stokesTolerance) ("
+                      + std::to_string(solverFloor) +
+                      "). The mechanics coupling residual cannot go below the "
+                      "solver noise floor — solveMechanics will stall without "
+                      "converging. Set mechanicsTolerance >= " +
+                      std::to_string(NumericType(5) * solverFloor) + ".")
           .print();
 
     if (couplingTolerance_ < mechanicsTolerance_)
@@ -409,6 +417,29 @@ public:
       volDomain->insertNextLevelSetAsMaterial(siCopy, matMap->getMaterialAtIdx(siIdx), false);
       volDomain->insertNextLevelSetAsMaterial(oxCopy, matMap->getMaterialAtIdx(sio2Idx), false);
       volDomain->saveVolumeMesh(baseName);
+    }
+
+    // Write warm-restart fields (OxVelocity, OxPressure, OxConcentration,
+    // OxStressR0-R2) from the original level sets as companion point-cloud
+    // files alongside the volume mesh.  Uses the pre-Boolean-op level sets so
+    // the pointData arrays are intact; lsToMesh + lsVTKWriter propagate them
+    // faithfully, unlike lsWriteVisualizationMesh which strips all point data.
+    const auto &oxLS = levelSets[sio2Idx];
+    if (oxLS->getPointData().getScalarDataSize() > 0 ||
+        oxLS->getPointData().getVectorDataSize() > 0) {
+      auto oxFieldMesh = ls::SmartPointer<ls::Mesh<NumericType>>::New();
+      ls::ToMesh<NumericType, D>(oxLS, oxFieldMesh).apply();
+      ls::VTKWriter<NumericType>(oxFieldMesh,
+                                 baseName + "_oxide_fields.vtp").apply();
+    }
+    if (maskIdx >= 0) {
+      const auto &maskLS = levelSets[maskIdx];
+      if (maskLS->getPointData().getVectorDataSize() > 0) {
+        auto maskFieldMesh = ls::SmartPointer<ls::Mesh<NumericType>>::New();
+        ls::ToMesh<NumericType, D>(maskLS, maskFieldMesh).apply();
+        ls::VTKWriter<NumericType>(maskFieldMesh,
+                                   baseName + "_mask_fields.vtp").apply();
+      }
     }
   }
 
