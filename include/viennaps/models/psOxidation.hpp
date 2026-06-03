@@ -97,6 +97,40 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   unsigned mechanicsIterations_ = 10;
   unsigned pressureIterations_ = 500;
   unsigned stokesIterations_ = 200;
+  NumericType pressureTolerance_ = NumericType(1e-6);
+  NumericType stokesTolerance_ = NumericType(1e-7);
+  NumericType mechanicsTolerance_ = NumericType(1e-7);
+  bool toleranceWarningEmitted_ = false;
+
+  void validateTolerances() {
+    if (toleranceWarningEmitted_)
+      return;
+    toleranceWarningEmitted_ = true;
+
+    // Each outer loop can only converge as tightly as the loop beneath it.
+    // Warn if a coarser-level tolerance is set tighter than a finer-level one.
+    if (mechanicsTolerance_ < pressureTolerance_)
+      Logger::getInstance()
+          .addWarning("Oxidation: mechanicsTolerance (" +
+                      std::to_string(mechanicsTolerance_) +
+                      ") is tighter than pressureTolerance (" +
+                      std::to_string(pressureTolerance_) +
+                      "). The mechanics loop cannot converge more precisely than "
+                      "the pressure BiCGSTAB solver — mechanicsTolerance will "
+                      "never be reached.")
+          .print();
+
+    if (couplingTolerance_ < mechanicsTolerance_)
+      Logger::getInstance()
+          .addWarning("Oxidation: couplingTolerance (" +
+                      std::to_string(couplingTolerance_) +
+                      ") is tighter than mechanicsTolerance (" +
+                      std::to_string(mechanicsTolerance_) +
+                      "). The diffusion–deformation coupling cannot converge "
+                      "more precisely than the mechanics solve — couplingTolerance "
+                      "will never be reached.")
+          .print();
+  }
 
   // Thin wrapper: forwards applyPreAdvect to Oxidation::doApplyPreAdvect.
   // Nested classes in C++ have full access to enclosing-class private members.
@@ -246,6 +280,10 @@ public:
   void setPressureIterations(unsigned iterations) {
     pressureIterations_ = std::max(1u, iterations);
   }
+
+  void setPressureTolerance(NumericType tol) { pressureTolerance_ = tol; }
+  void setStokesTolerance(NumericType tol) { stokesTolerance_ = tol; }
+  void setMechanicsTolerance(NumericType tol) { mechanicsTolerance_ = tol; }
 
   void setStokesIterations(unsigned iterations) {
     stokesIterations_ = std::max(1u, iterations);
@@ -419,6 +457,8 @@ private:
                       " °C is outside the calibrated Deal-Grove range "
                       "[700, 1200] °C — rate constants may be inaccurate.")
           .print();
+
+    validateTolerances();
 
     auto reactionInterface = levelSets[siIdx];
 
@@ -662,11 +702,11 @@ private:
     p.shearModulus = NumericType(3e10);     // Pa
     p.stressTimeStep = dt;
     p.mechanicsIterations = mechanicsIterations_;
-    p.mechanicsTolerance = NumericType(1e-7);
+    p.mechanicsTolerance = mechanicsTolerance_;
     p.pressureIterations = pressureIterations_;
     p.stokesIterations = stokesIterations_;
-    p.pressureTolerance = NumericType(1e-6);
-    p.stokesTolerance = NumericType(1e-7);
+    p.pressureTolerance = pressureTolerance_;
+    p.stokesTolerance = stokesTolerance_;
     p.tolerance = NumericType(1e-7);
     p.maxGridPoints = maxGridPoints_;
     return p;
