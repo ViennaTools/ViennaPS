@@ -25,7 +25,7 @@ maskEdge=0.
 oxidationTime=0.1
 # Output interval and maximum internal oxidation step. The model automatically
 # subcycles below this value when the CFL limit is smaller.
-timeStep=0.1
+timeStep=0.01
 temperature=1000.
 pressure=1.
 oxidant=wet
@@ -34,10 +34,17 @@ orientation=100
 # maxGridPoints=5000000
 outputPrefix=ps_locos
 
-mechanicsIterations=30
-pressureIterations=2000
-stokesIterations=1000
+mechanicsIterations=8
+mechanicsTolerance=0.02
+pressureIterations=500
+pressureTolerance=1e-3
+stokesIterations=500
+stokesTolerance=1e-3
 couplingIterations=30
-couplingTolerance=1e-4
+couplingTolerance=5e-3
 maskCouplingIterations=30
 maskCouplingTolerance=0.04
+
+# Log verbosity: error | warning | info (default) | timing | intermediate | debug
+# Set to "timing" to print per-phase wall-time breakdowns alongside normal output.
+logLevel=timing

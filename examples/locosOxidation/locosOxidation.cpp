@@ -91,12 +91,17 @@ struct Config {
   std::size_t maxGridPoints = 5000000;
   std::string outputPrefix = "ps_locos";
   int mechanicsIterations = 2;
+  NumericType mechanicsTolerance = 1e-7;
   int pressureIterations = 500;
+  NumericType pressureTolerance = 1e-3;  // 1e-8 is unachievable with Jacobi; 1e-3 works with ILU(0)
   int stokesIterations = 100;
+  NumericType stokesTolerance = 1e-3;
   int couplingIterations = 8;
   NumericType couplingTolerance = 1e-6;
   int maskCouplingIterations = 8;
   NumericType maskCouplingTolerance = 0.02;
+  // "debug", "timing", "intermediate", "info" (default), "warning", "error"
+  std::string logLevel = "info";
 };
 
 Config parseConfig(const std::string &filename) {
@@ -132,13 +137,17 @@ Config parseConfig(const std::string &filename) {
     else if (key == "orientation")  cfg.orientation = val;
     else if (key == "maxGridPoints")cfg.maxGridPoints = std::stoull(val);
     else if (key == "outputPrefix") cfg.outputPrefix = val;
-    else if (key == "mechanicsIterations") cfg.mechanicsIterations = std::stoi(val);
-    else if (key == "pressureIterations") cfg.pressureIterations = std::stoi(val);
+    else if (key == "mechanicsIterations")  cfg.mechanicsIterations  = std::stoi(val);
+    else if (key == "mechanicsTolerance")   cfg.mechanicsTolerance   = std::stod(val);
+    else if (key == "pressureIterations")   cfg.pressureIterations   = std::stoi(val);
+    else if (key == "pressureTolerance")    cfg.pressureTolerance    = std::stod(val);
     else if (key == "stokesIterations") cfg.stokesIterations = std::stoi(val);
+    else if (key == "stokesTolerance")  cfg.stokesTolerance  = std::stod(val);
     else if (key == "couplingIterations") cfg.couplingIterations = std::stoi(val);
     else if (key == "couplingTolerance") cfg.couplingTolerance = std::stod(val);
     else if (key == "maskCouplingIterations") cfg.maskCouplingIterations = std::stoi(val);
     else if (key == "maskCouplingTolerance") cfg.maskCouplingTolerance = std::stod(val);
+    else if (key == "logLevel")              cfg.logLevel = val;
   }
   return cfg;
 }
@@ -146,8 +155,19 @@ Config parseConfig(const std::string &filename) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 int main() {
-  ps::Logger::setLogLevel(ps::LogLevel::INFO);
   const auto cfg = parseConfig("config.txt");
+
+  // Apply log level from config (controls verbosity including timing output).
+  {
+    const auto &lv = cfg.logLevel;
+    if      (lv == "debug")        ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
+    else if (lv == "timing")       ps::Logger::setLogLevel(ps::LogLevel::TIMING);
+    else if (lv == "intermediate") ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
+    else if (lv == "info")         ps::Logger::setLogLevel(ps::LogLevel::INFO);
+    else if (lv == "warning")      ps::Logger::setLogLevel(ps::LogLevel::WARNING);
+    else if (lv == "error")        ps::Logger::setLogLevel(ps::LogLevel::ERROR);
+    else                           ps::Logger::setLogLevel(ps::LogLevel::INFO);
+  }
   omp_set_num_threads(cfg.numThreads);
 
   const NumericType maskContactEpsilon = 1.e-6; // µm: mask bottom offset from oxide top
@@ -199,8 +219,11 @@ int main() {
   model->setTimeStep(cfg.timeStep);
   model->setMaxGridPoints(cfg.maxGridPoints);
   model->setMechanicsIterations(cfg.mechanicsIterations);
+  model->setMechanicsTolerance(cfg.mechanicsTolerance);
   model->setPressureIterations(cfg.pressureIterations);
+  model->setPressureTolerance(cfg.pressureTolerance);
   model->setStokesIterations(cfg.stokesIterations);
+  model->setStokesTolerance(cfg.stokesTolerance);
   model->setCouplingIterations(cfg.couplingIterations);
   model->setCouplingTolerance(cfg.couplingTolerance);
   model->setMaskCouplingIterations(cfg.maskCouplingIterations);
