@@ -249,7 +249,7 @@ private:
   NumericType energy_;
   NumericType redepositionWeight_;
 
-  const IBEParameters<NumericType> &params_;
+  const IBEParameters<NumericType> params_;
   const NumericType inflectAngle_; // in rad
   const NumericType minAngle_;     // in rad
   const NumericType A_;

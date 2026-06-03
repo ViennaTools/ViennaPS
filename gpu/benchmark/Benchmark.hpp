@@ -8,10 +8,10 @@
 #include <rayParticle.hpp>
 
 #define MAKE_GEO Trench
-#define DEFAULT_GRID_DELTA 0.1
+#define DEFAULT_GRID_DELTA 0.25
 #define DEFAULT_STICKING 0.1
 #define DIM 3
-#define FIXED_RAYS true
+#define FIXED_RAYS false
 
 using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 using namespace viennaps;

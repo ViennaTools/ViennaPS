@@ -12,6 +12,8 @@ int main() {
   constexpr int D = DIM;
   auto context = DeviceContext::createContext();
 
+  constexpr bool preparePost = true;
+
   CudaBuffer deviceParamsBuffer;
   if constexpr (particleType == 1) {
     auto deviceParams = getDeviceParams();
@@ -85,7 +87,8 @@ int main() {
         ElementToPointData<NumericType, float, viennaray::gpu::ResultType> post(
             dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
             domain->getGridDelta() * 2.0f);
-        post.prepare();
+        if constexpr (preparePost)
+          post.prepare();
         tracer.syncStreams();
         timer.finish();
         file << timer.currentDuration << ";";
@@ -94,6 +97,8 @@ int main() {
         timer.start();
         tracer.normalizeResults();
         post.setElementDataArrays(tracer.getResults());
+        if constexpr (!preparePost)
+          post.prepare();
         post.convert();
         timer.finish();
         file << timer.currentDuration << ";";

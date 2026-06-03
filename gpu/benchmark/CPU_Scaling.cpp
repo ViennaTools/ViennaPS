@@ -7,16 +7,17 @@
 #include "Benchmark.hpp"
 
 int main() {
-  omp_set_num_threads(16);
   using NumericType = float;
   constexpr int D = DIM;
 
-  auto particle = makeCPUParticle<NumericType, D>();
+  const std::vector<int> numThreadsList = {1, 2, 4, 8, 16};
   std::string fluxLabel = particleType == 0 ? "flux" : "ionFlux";
+  auto particle = makeCPUParticle<NumericType, D>();
 
   if constexpr (runDisk) { // Disk
-    std::ofstream file("CPU_Benchmark_Disk.txt");
-    file << "Meshing;Tracing;Postprocessing;GridDelta\n";
+    std::ofstream file(std::string("CPU_Scaling_Disk_") +
+                       std::to_string(particleType) + ".txt");
+    file << "Meshing;Tracing;Postprocessing;RayTraced;NumThreads\n";
 
     viennaray::TraceDisk<NumericType, D> tracer;
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
@@ -27,9 +28,10 @@ int main() {
 
     std::cout << "Starting Disk Benchmark\n";
 
-    for (int i = 0; i < gridDeltaValues.size(); i++) {
-      std::cout << "  Grid Delta: " << gridDeltaValues[i] << "\n";
-      auto domain = MAKE_GEO<NumericType>(gridDeltaValues[i]);
+    for (int i = 0; i < numThreadsList.size(); i++) {
+      std::cout << "  T: " << numThreadsList[i] << "\n";
+      omp_set_num_threads(numThreadsList[i]);
+      auto domain = MAKE_GEO<NumericType>();
 
       auto diskMesh = viennals::Mesh<NumericType>::New();
       auto translator = SmartPointer<TranslatorType>::New();
@@ -66,8 +68,8 @@ int main() {
         tracer.smoothFlux(flux, smoothingNeighbors);
         timer.finish();
         file << timer.currentDuration << ";";
-
-        file << gridDeltaValues[i] << "\n";
+        file << tracer.getRayTraceInfo().totalRaysTraced << ";";
+        file << numThreadsList[i] << "\n";
       }
     }
 
@@ -75,8 +77,9 @@ int main() {
   }
 
   if constexpr (runTriangle) { // Triangle
-    std::ofstream file("CPU_Benchmark_Triangle.txt");
-    file << "Meshing;Tracing;Postprocessing;GridDelta\n";
+    std::ofstream file(std::string("CPU_Scaling_Triangle_") +
+                       std::to_string(particleType) + ".txt");
+    file << "Meshing;Tracing;Postprocessing;RayTraced;NumThreads\n";
 
     std::cout << "Starting Triangle Benchmark\n";
 
@@ -89,9 +92,10 @@ int main() {
 
     const auto &dataLabels = particle->getLocalDataLabels();
 
-    for (int i = 0; i < gridDeltaValues.size(); i++) {
-      std::cout << "  Grid Delta: " << gridDeltaValues[i] << "\n";
-      auto domain = MAKE_GEO<NumericType>(gridDeltaValues[i]);
+    for (int i = 0; i < numThreadsList.size(); i++) {
+      std::cout << "  T: " << numThreadsList[i] << "\n";
+      omp_set_num_threads(numThreadsList[i]);
+      auto domain = MAKE_GEO<NumericType>();
 
       auto diskMesh = viennals::Mesh<NumericType>::New();
       auto translator = SmartPointer<TranslatorType>::New();
@@ -133,7 +137,8 @@ int main() {
         // POSTPROCESSING
         timer.start();
         auto pointData = PointData<NumericType>::New();
-        auto fluxResult = std::move(*tracer.getLocalData().getScalarData(0));
+        auto fluxResult =
+            std::move(*tracer.getLocalData().getScalarData(fluxLabel));
         tracer.normalizeFlux(fluxResult);
         std::vector<std::vector<NumericType>> fluxResultVec;
         fluxResultVec.push_back(std::move(fluxResult));
@@ -149,8 +154,8 @@ int main() {
         post.apply();
         timer.finish();
         file << timer.currentDuration << ";";
-
-        file << gridDeltaValues[i] << "\n";
+        file << tracer.getRayTraceInfo().totalRaysTraced << ";";
+        file << numThreadsList[i] << "\n";
       }
     }
     file.close();
