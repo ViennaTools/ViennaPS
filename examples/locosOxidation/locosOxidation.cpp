@@ -19,6 +19,7 @@
 // The model automatically uses smaller CFL-limited physics steps if needed.
 
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -155,6 +156,9 @@ Config parseConfig(const std::string &filename) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 int main() {
+  using Clock = std::chrono::steady_clock;
+  const auto wallStart = Clock::now();
+  std::chrono::duration<double> meshWriteTime{0.};
   const auto cfg = parseConfig("config.txt");
 
   // Apply log level from config (controls verbosity including timing output).
@@ -233,8 +237,12 @@ int main() {
   model->setMaskParameters(
       viennals::OxidationPresets<NumericType>::siliconNitrideMask1000C());
 
-  model->saveSurfaceMesh(domain, cfg.outputPrefix + "_stack_step_000.vtp");
-  model->saveVolumeMesh(domain, cfg.outputPrefix + "_stack_step_000");
+  {
+    const auto meshWriteStart = Clock::now();
+    model->saveSurfaceMesh(domain, cfg.outputPrefix + "_stack_step_000.vtp");
+    model->saveVolumeMesh(domain, cfg.outputPrefix + "_stack_step_000");
+    meshWriteTime += Clock::now() - meshWriteStart;
+  }
 
   const NumericType est =
       model->estimatePlanarOxideThickness(cfg.padOxideThickness);
@@ -262,19 +270,34 @@ int main() {
     std::ostringstream filename;
     filename << cfg.outputPrefix << "_stack_step_" << std::setw(3)
              << std::setfill('0') << step;// << ".vtp";
-    model->saveSurfaceMesh(domain, filename.str() + ".vtp");
-    model->saveVolumeMesh(domain, filename.str());
+    {
+      const auto meshWriteStart = Clock::now();
+      model->saveSurfaceMesh(domain, filename.str() + ".vtp");
+      model->saveVolumeMesh(domain, filename.str());
+      meshWriteTime += Clock::now() - meshWriteStart;
+    }
     std::cout << "Wrote " << filename.str() << " at t = " << elapsed
               << " hr.\n";
   }
 
   // ── Final output ──────────────────────────────────────────────────────────
-  model->saveVolumeMesh(domain, cfg.outputPrefix + "_stack_after");
+  {
+    const auto meshWriteStart = Clock::now();
+    model->saveVolumeMesh(domain, cfg.outputPrefix + "_stack_after");
+    meshWriteTime += Clock::now() - meshWriteStart;
+  }
 
   std::cout << "Wrote " << cfg.outputPrefix << "_stack_initial.vtp, "
             << step << " time-step files, "
             << cfg.outputPrefix << "_stack_after.vtp, and "
             << cfg.outputPrefix << "_stack_after_volume.vtu\n";
+
+  const auto wallEnd = Clock::now();
+  const std::chrono::duration<double> wallTime =
+      (wallEnd - wallStart) - meshWriteTime;
+  std::cout << "Total LOCOS wall time excluding mesh writes: "
+            << std::fixed << std::setprecision(3)
+            << wallTime.count() << " s\n";
 
   return 0;
 }

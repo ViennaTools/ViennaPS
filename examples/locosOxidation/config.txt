@@ -13,7 +13,7 @@
 
 numThreads=16
 
-gridDelta=0.001
+gridDelta=0.0025
 xExtent=1.
 yMin=-1.
 yMax=2.
@@ -47,4 +47,4 @@ maskCouplingTolerance=4e-2
 
 # Log verbosity: error | warning | info (default) | timing | intermediate | debug
 # Set to "timing" to print per-phase wall-time breakdowns alongside normal output.
-logLevel=timing
+logLevel=info
