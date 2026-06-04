@@ -1,4 +1,5 @@
 build/
+build_dbg/
 cmake-build*
 .vscode
 .vs

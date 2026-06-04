@@ -297,8 +297,11 @@ public:
     // Resolve AUTO only when GPU is available — CPU fallback is deferred to
     // apply() so that callback-only and geometric models never touch the flux
     // engine path at all.
+    // hasGPUModel() is checked FIRST to short-circuit before gpuAvailable(),
+    // which has the expensive (and potentially crashing) side effect of trying
+    // to initialise an OptiX device context.
     if (fluxEngineType_ == FluxEngineType::AUTO &&
-        gpuAvailable() && context_.model->hasGPUModel()) {
+        context_.model->hasGPUModel() && gpuAvailable()) {
       fluxEngineType_ = context_.flags.domainHasPeriodicBoundaries
                             ? FluxEngineType::GPU_DISK
                             : FluxEngineType::GPU_TRIANGLE;

@@ -50,6 +50,7 @@ using namespace viennacore;
 
 enum class OxidantType { Dry, Wet };
 enum class SiliconOrientation { Si100, Si110, Si111, PolySi };
+using GpuMode = viennals::GpuMode;
 
 template <class NumericType, int D>
 class Oxidation : public ProcessModelBase<NumericType, D> {
@@ -96,6 +97,7 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   viennahrle::Index<D> maskBendingMaxIndex_{};
   unsigned maskCouplingIterations_ = 8;
   NumericType maskCouplingTolerance_ = NumericType(2e-2);
+  GpuMode gpuMode_ = GpuMode::Auto;
   unsigned mechanicsIterations_ = 200;
   unsigned pressureIterations_ = 500;
   unsigned stokesIterations_ = 200;
@@ -280,6 +282,12 @@ public:
   void setMaskCouplingTolerance(NumericType tolerance) {
     maskCouplingTolerance_ = tolerance;
   }
+
+  /// Select the BiCGSTAB solver back-end.
+  ///   GpuMode::Auto — GPU when node count >= threshold (default)
+  ///   GpuMode::Gpu  — always GPU (falls back to CPU if allocation fails)
+  ///   GpuMode::Cpu  — always CPU
+  void setGpuMode(GpuMode mode) { gpuMode_ = mode; }
 
   void setMechanicsIterations(unsigned iterations) {
     mechanicsIterations_ = std::max(1u, iterations);
@@ -570,6 +578,7 @@ private:
 
     auto locos = ls::Oxidation<NumericType, D>::New(
         reactionInterface, ambientInterface);
+    locos->setGpuMode(gpuMode_);
     locos->setOxidationParameters(oxParams);
     locos->setCouplingParameters(coupling);
     if (useSolveBounds_)

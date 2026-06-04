@@ -12,8 +12,9 @@
 #   gridDelta=0.1   ->   ~6k nodes (fast test)
 
 numThreads=16
+useGpu=cpu
 
-gridDelta=0.0025
+gridDelta=0.005
 xExtent=1.
 yMin=-1.
 yMax=2.

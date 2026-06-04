@@ -101,6 +101,8 @@ struct Config {
   NumericType couplingTolerance = 1e-6;
   int maskCouplingIterations = 8;
   NumericType maskCouplingTolerance = 0.02;
+  // "auto" (default, GPU when n>=threshold), "gpu" (always GPU), "cpu" (always CPU)
+  std::string useGpu = "auto";
   // "debug", "timing", "intermediate", "info" (default), "warning", "error"
   std::string logLevel = "info";
 };
@@ -148,6 +150,7 @@ Config parseConfig(const std::string &filename) {
     else if (key == "couplingTolerance") cfg.couplingTolerance = std::stod(val);
     else if (key == "maskCouplingIterations") cfg.maskCouplingIterations = std::stoi(val);
     else if (key == "maskCouplingTolerance") cfg.maskCouplingTolerance = std::stod(val);
+    else if (key == "useGpu")                cfg.useGpu = val;
     else if (key == "logLevel")              cfg.logLevel = val;
   }
   return cfg;
@@ -232,6 +235,10 @@ int main() {
   model->setCouplingTolerance(cfg.couplingTolerance);
   model->setMaskCouplingIterations(cfg.maskCouplingIterations);
   model->setMaskCouplingTolerance(cfg.maskCouplingTolerance);
+
+  if      (cfg.useGpu == "gpu") model->setGpuMode(ps::GpuMode::Gpu);
+  else if (cfg.useGpu == "cpu") model->setGpuMode(ps::GpuMode::Cpu);
+  // else "auto": leave the default (GpuMode::Auto = GPU when n >= threshold)
 
   // LOCOS: mask material is already Si3N4 (default); just set parameters.
   model->setMaskParameters(
