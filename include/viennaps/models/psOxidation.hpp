@@ -264,6 +264,22 @@ public:
     maskParams_ = std::move(params);
   }
 
+  // Inner traction-mask solve controls.  These update the stored mask
+  // parameters directly; call them after setMaskParameters() when overriding a
+  // complete parameter object.
+  void setMaskTractionIterations(unsigned iterations) {
+    maskParams_.maxIterations = std::max(1u, iterations);
+  }
+
+  void setMaskTractionTolerance(NumericType tolerance) {
+    maskParams_.tolerance = std::max(tolerance, NumericType(1e-12));
+  }
+
+  void setMaskTractionRelaxation(NumericType relaxation) {
+    maskParams_.relaxation =
+        std::clamp(relaxation, NumericType(0.01), NumericType(1));
+  }
+
   // Explicit Cartesian index bounds for the mask bending solve.
   // When not set, bounds are auto-computed from the mask level-set narrow band.
   void setMaskBendingBounds(const viennahrle::Index<D> &minIdx,

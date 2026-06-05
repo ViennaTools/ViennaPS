@@ -18,6 +18,7 @@
 // `timeStep` controls the output cadence and the maximum oxidation substep.
 // The model automatically uses smaller CFL-limited physics steps if needed.
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -101,6 +102,16 @@ struct Config {
   NumericType couplingTolerance = 1e-6;
   int maskCouplingIterations = 8;
   NumericType maskCouplingTolerance = 0.02;
+  NumericType maskReferenceViscosity = -1.; // Pa·hr; <0 uses preset
+  NumericType maskPoissonRatio = 0.27;
+  // Mask contact mode: "traction" (default) or "kinematic" (legacy).
+  std::string maskContactMode = "traction";
+  int maskTractionIterations = 10000;
+  NumericType maskTractionTolerance = 2e-4;
+  NumericType maskTractionRelaxation = 0.9;
+  int maskAnchorBoundaryDirection = 0; // x direction in this 2D LOCOS setup
+  int maskAnchorBoundarySide = -1;     // -1: far-left mask edge; 0 disables
+  unsigned maskAnchorBoundaryLayers = 1;
   // "auto" (default, GPU when n>=threshold), "gpu" (always GPU), "cpu" (always CPU)
   std::string useGpu = "auto";
   // "jacobi" matches the CPU diffusion preconditioner; "ilu0" is experimental.
@@ -152,6 +163,15 @@ Config parseConfig(const std::string &filename) {
     else if (key == "couplingTolerance") cfg.couplingTolerance = std::stod(val);
     else if (key == "maskCouplingIterations") cfg.maskCouplingIterations = std::stoi(val);
     else if (key == "maskCouplingTolerance") cfg.maskCouplingTolerance = std::stod(val);
+    else if (key == "maskReferenceViscosity") cfg.maskReferenceViscosity = std::stod(val);
+    else if (key == "maskPoissonRatio") cfg.maskPoissonRatio = std::stod(val);
+    else if (key == "maskContactMode") cfg.maskContactMode = val;
+    else if (key == "maskTractionIterations") cfg.maskTractionIterations = std::stoi(val);
+    else if (key == "maskTractionTolerance") cfg.maskTractionTolerance = std::stod(val);
+    else if (key == "maskTractionRelaxation") cfg.maskTractionRelaxation = std::stod(val);
+    else if (key == "maskAnchorBoundaryDirection") cfg.maskAnchorBoundaryDirection = std::stoi(val);
+    else if (key == "maskAnchorBoundarySide") cfg.maskAnchorBoundarySide = std::stoi(val);
+    else if (key == "maskAnchorBoundaryLayers") cfg.maskAnchorBoundaryLayers = std::stoul(val);
     else if (key == "useGpu")                cfg.useGpu = val;
     else if (key == "gpuPreconditioner")     cfg.gpuPreconditioner = val;
     else if (key == "logLevel")              cfg.logLevel = val;
@@ -200,7 +220,7 @@ int main() {
   // The tiny contact epsilon places the mask bottom numerically below the oxide
   // top so Cartesian stencils unambiguously hit the mask boundary.
   auto maskLS =
-      makeMask(bounds, bc, cfg.gridDelta, -cfg.xExtent/2., cfg.xExtent/2.,
+      makeMask(bounds, bc, cfg.gridDelta, -cfg.xExtent, cfg.maskEdge,
                cfg.padOxideThickness - maskContactEpsilon,
                cfg.padOxideThickness + cfg.maskThickness);
 
@@ -248,8 +268,21 @@ int main() {
     model->setGpuPreconditioner(ps::GpuPreconditioner::Jacobi);
 
   // LOCOS: mask material is already Si3N4 (default); just set parameters.
-  model->setMaskParameters(
-      viennals::OxidationPresets<NumericType>::siliconNitrideMask1000C());
+  auto maskParams =
+      viennals::OxidationPresets<NumericType>::siliconNitrideMask1000C();
+  if (cfg.maskReferenceViscosity > NumericType(0))
+    maskParams.referenceViscosity = cfg.maskReferenceViscosity;
+  maskParams.poissonRatio = cfg.maskPoissonRatio;
+  maskParams.contactMode =
+      (cfg.maskContactMode == "kinematic") ? 0 : 1;
+  maskParams.anchorBoundaryDirection = cfg.maskAnchorBoundaryDirection;
+  maskParams.anchorBoundarySide = cfg.maskAnchorBoundarySide;
+  maskParams.anchorBoundaryLayers = cfg.maskAnchorBoundaryLayers;
+  model->setMaskParameters(maskParams);
+  model->setMaskTractionIterations(
+      static_cast<unsigned>(std::max(1, cfg.maskTractionIterations)));
+  model->setMaskTractionTolerance(cfg.maskTractionTolerance);
+  model->setMaskTractionRelaxation(cfg.maskTractionRelaxation);
 
   {
     const auto meshWriteStart = Clock::now();

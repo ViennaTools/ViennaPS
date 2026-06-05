@@ -55,6 +55,15 @@ cfg = {
     "couplingTolerance":      1e-6,
     "maskCouplingIterations": 8,
     "maskCouplingTolerance":  0.02,
+    "maskReferenceViscosity": 5.0e11,
+    "maskPoissonRatio":       0.27,
+    "maskContactMode":        "traction",
+    "maskTractionIterations":  10000,
+    "maskTractionTolerance":   2.0e-4,
+    "maskTractionRelaxation":  0.9,
+    "maskAnchorBoundaryDirection": 0,
+    "maskAnchorBoundarySide": -1,
+    "maskAnchorBoundaryLayers": 1,
 }
 
 
@@ -147,13 +156,9 @@ pad_oxide_top = pad_oxide_thickness
 mask_ls = ls.Domain(bounds, bcs, grid_delta)
 mask_geom = ls.MakeGeometry(
     mask_ls,
-    # ls.Box(
-    #     [-x_extent, pad_oxide_top - mask_contact_eps],
-    #     [mask_edge,  pad_oxide_top + mask_thickness],
-    # ),
     ls.Box(
-        [-x_extent/2., pad_oxide_top - mask_contact_eps],
-        [x_extent/2.,  pad_oxide_top + mask_thickness],
+        [-x_extent, pad_oxide_top - mask_contact_eps],
+        [mask_edge,  pad_oxide_top + mask_thickness],
     ),
 )
 mask_geom.setIgnoreBoundaryConditions([False, True, False])  # ignore INFINITE y boundary
@@ -184,7 +189,17 @@ model.setCouplingIterations(cfg["couplingIterations"])
 model.setCouplingTolerance(cfg["couplingTolerance"])
 model.setMaskCouplingIterations(cfg["maskCouplingIterations"])
 model.setMaskCouplingTolerance(cfg["maskCouplingTolerance"])
-model.setMaskParameters(viennals.OxidationPresets.siliconNitrideMask1000C())
+mask_params = viennals.OxidationPresets.siliconNitrideMask1000C()
+mask_params.referenceViscosity = cfg["maskReferenceViscosity"]
+mask_params.poissonRatio = cfg["maskPoissonRatio"]
+mask_params.contactMode = 0 if cfg["maskContactMode"] == "kinematic" else 1
+mask_params.maxIterations = int(cfg["maskTractionIterations"])
+mask_params.tolerance = cfg["maskTractionTolerance"]
+mask_params.relaxation = cfg["maskTractionRelaxation"]
+mask_params.anchorBoundaryDirection = cfg["maskAnchorBoundaryDirection"]
+mask_params.anchorBoundarySide = cfg["maskAnchorBoundarySide"]
+mask_params.anchorBoundaryLayers = cfg["maskAnchorBoundaryLayers"]
+model.setMaskParameters(mask_params)
 
 model.saveSurfaceMesh(domain, f"{output_prefix}_step_000.vtp")
 

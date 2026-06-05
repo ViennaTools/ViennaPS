@@ -7,12 +7,12 @@
 #   Bird's-beak oxide grows laterally under the mask edges.
 #
 # Grid sizing guide:
-#   gridDelta=0.025 -> ~100k nodes (high-quality bird's beak)
+#   gridDelta=0.01 -> ~100k nodes (high-quality bird's beak)
 #   gridDelta=0.05  ->  ~25k nodes (default, good quality)
 #   gridDelta=0.1   ->   ~6k nodes (fast test)
 
 numThreads=16
-useGpu=gpu
+useGpu=cpu
 gpuPreconditioner=jacobi
 
 gridDelta=0.005
@@ -47,6 +47,21 @@ couplingTolerance=5e-2
 maskCouplingIterations=30
 maskCouplingTolerance=4e-2
 
+# Mask mechanics:
+#   maskContactMode=traction uses oxide stress and mask viscosity/thickness.
+#   maskContactMode=kinematic restores the legacy imposed-contact-velocity mode.
+#   maskTractionTolerance controls the inner relaxed mask solve residual.
+#   maskAnchorBoundarySide=-1 clamps the far-left mask edge; 0 disables it.
+maskContactMode=traction
+maskReferenceViscosity=5e11
+maskPoissonRatio=0.27
+maskTractionIterations=10000
+maskTractionTolerance=2e-4
+maskTractionRelaxation=0.9
+maskAnchorBoundaryDirection=0
+maskAnchorBoundarySide=-1
+maskAnchorBoundaryLayers=1
+
 # Log verbosity: error | warning | info (default) | timing | intermediate | debug
 # Set to "timing" to print per-phase wall-time breakdowns alongside normal output.
-logLevel=info
+logLevel=timing
