@@ -68,8 +68,9 @@ class IonImplantation : public ProcessModelBase<NumericType, D> {
       // Treat the cell set's cover material (air/vacuum region) as void so
       // the beam sweep skips it correctly regardless of ViennaPS material IDs.
       const int coverMat = cs->getCoverMaterial();
-      if (coverMat >= 0)
-        implant_.setVoidMaterial(coverMat);
+      if (coverMat >= 0) {
+        implant_.setVoidMaterials(std::vector<int>(1, coverMat));
+      }
       implant_.setCellSet(cs);
       implant_.apply();
       return true;
