@@ -59,8 +59,9 @@ cfg = {
     "maskPoissonRatio":       0.27,
     "maskContactMode":        "traction",
     "maskTractionIterations":  10000,
-    "maskTractionTolerance":   2.0e-4,
+    "maskTractionTolerance":   1.0e-5,
     "maskTractionRelaxation":  0.9,
+    "maskSmootherOmega":       1.0,   # SOR omega for multigrid V-cycle smoother
     "maskAnchorBoundaryDirection": 0,
     "maskAnchorBoundarySide": -1,
     "maskAnchorBoundaryLayers": 1,
@@ -196,6 +197,7 @@ mask_params.contactMode = 0 if cfg["maskContactMode"] == "kinematic" else 1
 mask_params.maxIterations = int(cfg["maskTractionIterations"])
 mask_params.tolerance = cfg["maskTractionTolerance"]
 mask_params.relaxation = cfg["maskTractionRelaxation"]
+mask_params.multigridSmootherOmega = cfg["maskSmootherOmega"]
 mask_params.anchorBoundaryDirection = cfg["maskAnchorBoundaryDirection"]
 mask_params.anchorBoundarySide = cfg["maskAnchorBoundarySide"]
 mask_params.anchorBoundaryLayers = cfg["maskAnchorBoundaryLayers"]

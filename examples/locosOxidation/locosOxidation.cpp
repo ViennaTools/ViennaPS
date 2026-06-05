@@ -107,8 +107,9 @@ struct Config {
   // Mask contact mode: "traction" (default) or "kinematic" (legacy).
   std::string maskContactMode = "traction";
   int maskTractionIterations = 10000;
-  NumericType maskTractionTolerance = 2e-4;
+  NumericType maskTractionTolerance = 1e-5;
   NumericType maskTractionRelaxation = 0.9;
+  NumericType maskSmootherOmega = 1.0;   // SOR omega for multigrid V-cycle smoother
   int maskAnchorBoundaryDirection = 0; // x direction in this 2D LOCOS setup
   int maskAnchorBoundarySide = -1;     // -1: far-left mask edge; 0 disables
   unsigned maskAnchorBoundaryLayers = 1;
@@ -169,6 +170,7 @@ Config parseConfig(const std::string &filename) {
     else if (key == "maskTractionIterations") cfg.maskTractionIterations = std::stoi(val);
     else if (key == "maskTractionTolerance") cfg.maskTractionTolerance = std::stod(val);
     else if (key == "maskTractionRelaxation") cfg.maskTractionRelaxation = std::stod(val);
+    else if (key == "maskSmootherOmega")      cfg.maskSmootherOmega      = std::stod(val);
     else if (key == "maskAnchorBoundaryDirection") cfg.maskAnchorBoundaryDirection = std::stoi(val);
     else if (key == "maskAnchorBoundarySide") cfg.maskAnchorBoundarySide = std::stoi(val);
     else if (key == "maskAnchorBoundaryLayers") cfg.maskAnchorBoundaryLayers = std::stoul(val);
@@ -283,6 +285,7 @@ int main() {
       static_cast<unsigned>(std::max(1, cfg.maskTractionIterations)));
   model->setMaskTractionTolerance(cfg.maskTractionTolerance);
   model->setMaskTractionRelaxation(cfg.maskTractionRelaxation);
+  model->setMaskSmootherOmega(cfg.maskSmootherOmega);
 
   {
     const auto meshWriteStart = Clock::now();

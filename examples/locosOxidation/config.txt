@@ -50,18 +50,22 @@ maskCouplingTolerance=4e-2
 # Mask mechanics:
 #   maskContactMode=traction uses oxide stress and mask viscosity/thickness.
 #   maskContactMode=kinematic restores the legacy imposed-contact-velocity mode.
-#   maskTractionTolerance controls the inner relaxed mask solve residual.
+#   maskTractionTolerance controls the inner multigrid-GMRES mask solve residual.
 #   maskAnchorBoundarySide=-1 clamps the far-left mask edge; 0 disables it.
 maskContactMode=traction
 maskReferenceViscosity=5e11
 maskPoissonRatio=0.27
 maskTractionIterations=10000
-maskTractionTolerance=2e-4
+maskTractionTolerance=1e-5
+# Outer Aitken damping for the mask/oxide coupling residual (0.01–1.0).
 maskTractionRelaxation=0.9
+# SOR omega for the multigrid V-cycle smoother (0.2–1.4).
+# 1.0 = Gauss-Seidel; independent of maskTractionRelaxation.
+maskSmootherOmega=1.0
 maskAnchorBoundaryDirection=0
 maskAnchorBoundarySide=-1
 maskAnchorBoundaryLayers=1
 
 # Log verbosity: error | warning | info (default) | timing | intermediate | debug
 # Set to "timing" to print per-phase wall-time breakdowns alongside normal output.
-logLevel=timing
+logLevel=info

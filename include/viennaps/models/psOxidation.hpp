@@ -280,6 +280,15 @@ public:
         std::clamp(relaxation, NumericType(0.01), NumericType(1));
   }
 
+  /// SOR omega for the multigrid V-cycle smoother used by the traction mask
+  /// solve (contactMode=1).  1.0 = Gauss-Seidel; values in (1, 1.4] add
+  /// over-relaxation.  Separate from the outer Aitken relaxation set by
+  /// setMaskTractionRelaxation().
+  void setMaskSmootherOmega(NumericType omega) {
+    maskParams_.multigridSmootherOmega =
+        std::clamp(omega, NumericType(0.2), NumericType(1.4));
+  }
+
   // Explicit Cartesian index bounds for the mask bending solve.
   // When not set, bounds are auto-computed from the mask level-set narrow band.
   void setMaskBendingBounds(const viennahrle::Index<D> &minIdx,
