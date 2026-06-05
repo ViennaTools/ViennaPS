@@ -103,6 +103,8 @@ struct Config {
   NumericType maskCouplingTolerance = 0.02;
   // "auto" (default, GPU when n>=threshold), "gpu" (always GPU), "cpu" (always CPU)
   std::string useGpu = "auto";
+  // "jacobi" matches the CPU diffusion preconditioner; "ilu0" is experimental.
+  std::string gpuPreconditioner = "jacobi";
   // "debug", "timing", "intermediate", "info" (default), "warning", "error"
   std::string logLevel = "info";
 };
@@ -151,6 +153,7 @@ Config parseConfig(const std::string &filename) {
     else if (key == "maskCouplingIterations") cfg.maskCouplingIterations = std::stoi(val);
     else if (key == "maskCouplingTolerance") cfg.maskCouplingTolerance = std::stod(val);
     else if (key == "useGpu")                cfg.useGpu = val;
+    else if (key == "gpuPreconditioner")     cfg.gpuPreconditioner = val;
     else if (key == "logLevel")              cfg.logLevel = val;
   }
   return cfg;
@@ -239,6 +242,10 @@ int main() {
   if      (cfg.useGpu == "gpu") model->setGpuMode(ps::GpuMode::Gpu);
   else if (cfg.useGpu == "cpu") model->setGpuMode(ps::GpuMode::Cpu);
   // else "auto": leave the default (GpuMode::Auto = GPU when n >= threshold)
+  if      (cfg.gpuPreconditioner == "ilu0")
+    model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
+  else
+    model->setGpuPreconditioner(ps::GpuPreconditioner::Jacobi);
 
   // LOCOS: mask material is already Si3N4 (default); just set parameters.
   model->setMaskParameters(
