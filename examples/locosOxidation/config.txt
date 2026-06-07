@@ -48,17 +48,30 @@ maskCouplingIterations=30
 maskCouplingTolerance=4e-2
 
 # Mask mechanics:
-#   maskContactMode=traction uses oxide stress and mask viscosity/thickness.
-#   maskContactMode=kinematic restores the legacy imposed-contact-velocity mode.
+#   maskContactMode=kinematic (0) mask velocity follows oxide velocity (legacy).
+#   maskContactMode=oneway    (1) multigrid-GMRES mask solve driven by oxide
+#                                 stress traction; oxide uses kinematic Dirichlet
+#                                 at mask faces. Stable; good for long sims.
+#   maskContactMode=traction  (2) as oneway, plus mask stress traction fed back
+#                                 to oxide as Neumann BC (full stress continuity).
+#                                 Most physical; can oscillate at large bending.
 #   maskTractionTolerance controls the inner multigrid-GMRES mask solve residual.
 #   maskAnchorBoundarySide=-1 clamps the far-left mask edge; 0 disables it.
 maskContactMode=traction
+# true enables unilateral contact/release; bonded=false is experimental.
+maskUnilateralContact=true
 maskReferenceViscosity=5e11
 maskPoissonRatio=0.27
 maskTractionIterations=10000
 maskTractionTolerance=1e-5
 # Outer Aitken damping for the mask/oxide coupling residual (0.01–1.0).
 maskTractionRelaxation=0.9
+# Relaxes unilateral contact load activation to prevent active-set flip-flop.
+# Only used when maskUnilateralContact=true.
+maskContactLoadRelaxation=0.25
+# Relative pressure floor for releasing relaxed contact faces.
+# Only used when maskUnilateralContact=true.
+maskContactReleaseFraction=5e-3
 # SOR omega for the multigrid V-cycle smoother (0.2–1.4).
 # 1.0 = Gauss-Seidel; independent of maskTractionRelaxation.
 maskSmootherOmega=1.0

@@ -280,6 +280,20 @@ public:
         std::clamp(relaxation, NumericType(0.01), NumericType(1));
   }
 
+  void setMaskContactLoadRelaxation(NumericType relaxation) {
+    maskParams_.contactLoadRelaxation =
+        std::clamp(relaxation, NumericType(0.02), NumericType(1));
+  }
+
+  void setMaskContactReleaseFraction(NumericType fraction) {
+    maskParams_.contactReleaseFraction =
+        std::clamp(fraction, NumericType(0), NumericType(0.25));
+  }
+
+  void setMaskUnilateralContact(bool enabled) {
+    maskParams_.unilateralContact = enabled;
+  }
+
   /// SOR omega for the multigrid V-cycle smoother used by the traction mask
   /// solve (contactMode=1).  1.0 = Gauss-Seidel; values in (1, 1.4] add
   /// over-relaxation.  Separate from the outer Aitken relaxation set by
@@ -641,10 +655,16 @@ private:
     NumericType time = 0.;
     unsigned substep = 0;
     NumericType nextStepEstimate = seedStep;
+    NumericType lastAcceptedDt = seedStep;
+    constexpr NumericType maxStepGrowth = NumericType(2);
     const NumericType timeEps = NumericType(1e-9) * time_;
     while (time_ - time > timeEps) {
+      const NumericType growthLimitedStep =
+          (substep == 0) ? nextStepEstimate
+                         : std::min(nextStepEstimate,
+                                    maxStepGrowth * lastAcceptedDt);
       NumericType requestedDt =
-          std::min({userStepCap, nextStepEstimate, time_ - time});
+          std::min({userStepCap, growthLimitedStep, time_ - time});
       if (requestedDt <= NumericType(0))
         break;
 
@@ -660,6 +680,7 @@ private:
       logCFLStep(modeLabel, ++substep, time, requestedDt, actualDt);
 
       time += actualDt;
+      lastAcceptedDt = actualDt;
       const NumericType maxV = locos->getLastMaxVelocity();
       nextStepEstimate = (maxV > NumericType(0))
                              ? std::min(userStepCap, cflStep(maxV))

@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cctype>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -106,9 +107,12 @@ struct Config {
   NumericType maskPoissonRatio = 0.27;
   // Mask contact mode: "traction" (default) or "kinematic" (legacy).
   std::string maskContactMode = "traction";
+  bool maskUnilateralContact = true;
   int maskTractionIterations = 10000;
   NumericType maskTractionTolerance = 1e-5;
   NumericType maskTractionRelaxation = 0.9;
+  NumericType maskContactLoadRelaxation = 0.25;
+  NumericType maskContactReleaseFraction = 5e-3;
   NumericType maskSmootherOmega = 1.0;   // SOR omega for multigrid V-cycle smoother
   int maskAnchorBoundaryDirection = 0; // x direction in this 2D LOCOS setup
   int maskAnchorBoundarySide = -1;     // -1: far-left mask edge; 0 disables
@@ -120,6 +124,12 @@ struct Config {
   // "debug", "timing", "intermediate", "info" (default), "warning", "error"
   std::string logLevel = "info";
 };
+
+bool parseBool(std::string value) {
+  std::transform(value.begin(), value.end(), value.begin(),
+                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  return value == "1" || value == "true" || value == "yes" || value == "on";
+}
 
 Config parseConfig(const std::string &filename) {
   Config cfg;
@@ -167,9 +177,12 @@ Config parseConfig(const std::string &filename) {
     else if (key == "maskReferenceViscosity") cfg.maskReferenceViscosity = std::stod(val);
     else if (key == "maskPoissonRatio") cfg.maskPoissonRatio = std::stod(val);
     else if (key == "maskContactMode") cfg.maskContactMode = val;
+    else if (key == "maskUnilateralContact") cfg.maskUnilateralContact = parseBool(val);
     else if (key == "maskTractionIterations") cfg.maskTractionIterations = std::stoi(val);
     else if (key == "maskTractionTolerance") cfg.maskTractionTolerance = std::stod(val);
     else if (key == "maskTractionRelaxation") cfg.maskTractionRelaxation = std::stod(val);
+    else if (key == "maskContactLoadRelaxation") cfg.maskContactLoadRelaxation = std::stod(val);
+    else if (key == "maskContactReleaseFraction") cfg.maskContactReleaseFraction = std::stod(val);
     else if (key == "maskSmootherOmega")      cfg.maskSmootherOmega      = std::stod(val);
     else if (key == "maskAnchorBoundaryDirection") cfg.maskAnchorBoundaryDirection = std::stoi(val);
     else if (key == "maskAnchorBoundarySide") cfg.maskAnchorBoundarySide = std::stoi(val);
@@ -276,7 +289,8 @@ int main() {
     maskParams.referenceViscosity = cfg.maskReferenceViscosity;
   maskParams.poissonRatio = cfg.maskPoissonRatio;
   maskParams.contactMode =
-      (cfg.maskContactMode == "kinematic") ? 0 : 1;
+      (cfg.maskContactMode == "kinematic") ? 0 :
+      (cfg.maskContactMode == "oneway")    ? 1 : 2;
   maskParams.anchorBoundaryDirection = cfg.maskAnchorBoundaryDirection;
   maskParams.anchorBoundarySide = cfg.maskAnchorBoundarySide;
   maskParams.anchorBoundaryLayers = cfg.maskAnchorBoundaryLayers;
@@ -285,6 +299,9 @@ int main() {
       static_cast<unsigned>(std::max(1, cfg.maskTractionIterations)));
   model->setMaskTractionTolerance(cfg.maskTractionTolerance);
   model->setMaskTractionRelaxation(cfg.maskTractionRelaxation);
+  model->setMaskContactLoadRelaxation(cfg.maskContactLoadRelaxation);
+  model->setMaskContactReleaseFraction(cfg.maskContactReleaseFraction);
+  model->setMaskUnilateralContact(cfg.maskUnilateralContact);
   model->setMaskSmootherOmega(cfg.maskSmootherOmega);
 
   {

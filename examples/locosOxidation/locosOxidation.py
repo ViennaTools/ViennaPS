@@ -193,7 +193,9 @@ model.setMaskCouplingTolerance(cfg["maskCouplingTolerance"])
 mask_params = viennals.OxidationPresets.siliconNitrideMask1000C()
 mask_params.referenceViscosity = cfg["maskReferenceViscosity"]
 mask_params.poissonRatio = cfg["maskPoissonRatio"]
-mask_params.contactMode = 0 if cfg["maskContactMode"] == "kinematic" else 1
+mask_params.contactMode = (0 if cfg["maskContactMode"] == "kinematic"
+                           else 1 if cfg["maskContactMode"] == "oneway"
+                           else 2)
 mask_params.maxIterations = int(cfg["maskTractionIterations"])
 mask_params.tolerance = cfg["maskTractionTolerance"]
 mask_params.relaxation = cfg["maskTractionRelaxation"]
