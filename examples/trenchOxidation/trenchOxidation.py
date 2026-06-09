@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 """
-Step Oxidation Example (ViennaPS)
-===================================
-Simulates thermal oxidation of a silicon step geometry using the
-Deal-Grove + Stokes-flow deformation model.
+Trench Structure Oxidation Example (ViennaPS)
+=============================================
+Simulates thermal oxidation of a rectangular Si trench etched into a flat
+Si substrate. Oxide grows on all exposed Si surfaces: trench sidewalls,
+trench floor, and the surrounding flat substrate.
+
+Geometry (2-D cross-section, extruded symmetrically in Z for 3-D):
+    · Flat Si substrate at y = 0
+    · Trench centered at x = 0: width trenchWidth, depth trenchDepth (into Si)
+
+Note: the deformation solver needs at least 2×gridDelta of initial oxide to
+converge on concave trench surfaces. The default oxideThickness in config.txt
+(0.1 µm at gridDelta=0.05) satisfies this requirement; if you change gridDelta
+keep oxideThickness ≥ 2×gridDelta.
 
 Usage:
-    python stepOxidation.py [config.txt]
+    python trenchOxidation.py [config.txt]
 
-If a config file is given its key=value pairs override the defaults below.
 All lengths are in micrometers, time in hours, pressure in atm.
-The timeStep setting is a maximum internal oxidation step; CFL-limited
-subcycling is automatic.
 
 Coordinate convention:
-    dim 0 = X  — lateral step direction (REFLECTIVE boundary)
+    dim 0 = X  — cross-section direction (REFLECTIVE boundary, trench at x=0)
     dim 1 = Y  — height / growth direction (INFINITE boundary)
 """
 
@@ -26,25 +33,24 @@ import viennaps as vps
 viennals.setDimension(2)
 vps.setDimension(2)
 
-# ── Default parameters (match stepOxidation/config.txt) ─────────────────────
+# ── Default parameters (match trenchOxidation/config.txt) ───────────────────
 cfg = {
-    "numThreads":      16,
-    "gridDelta":       0.05,
-    "xExtent":         4.0,
-    "yMin":           -2.0,
-    "yMax":            4.0,
-    "stepX":           0.0,
-    "leftSiTop":       0.0,
-    "rightSiTop":      1.0,
-    "oxideThickness":  0.0,
-    "oxidationTime":   0.05,
-    "timeStep":        0.01,
-    "temperature":  1000.0,
-    "pressure":        1.0,
-    "oxidant":       "wet",
-    "orientation":   "100",
-    "maxGridPoints": 5000000,
-    "outputPrefix":  "ps_step_oxidation",
+    "numThreads":    16,
+    "gridDelta":     0.05,
+    "xExtent":       0.6,
+    "yMin":         -1.5,
+    "yMax":          1.5,
+    "trenchWidth":   0.3,
+    "trenchDepth":   0.5,
+    "oxideThickness": 0.1,   # ≥ 2×gridDelta required for deformation solver
+    "oxidationTime": 0.2,
+    "timeStep":      0.025,
+    "temperature": 1000.0,
+    "pressure":      1.0,
+    "oxidant":     "wet",
+    "orientation": "100",
+    "outputPrefix": "ps_trench_oxidation",
+    "maxGridPoints": 0,  # 0 = unlimited; set >0 to cap the Cartesian solve grid
 }
 
 
@@ -87,7 +93,7 @@ def _parse_orientation(s: str):
     raise ValueError(f"Unknown orientation '{s}'. Use 100, 111, or poly.")
 
 
-# ── Config file ──────────────────────────────────────────────────────────────
+# ── Config file ───────────────────────────────────────────────────────────────
 config_file = sys.argv[1] if len(sys.argv) > 1 else "config.txt"
 _parse_config(config_file)
 
@@ -98,9 +104,8 @@ grid_delta      = cfg["gridDelta"]
 x_extent        = cfg["xExtent"]
 y_min           = cfg["yMin"]
 y_max           = cfg["yMax"]
-step_x          = cfg["stepX"]
-left_si_top     = cfg["leftSiTop"]
-right_si_top    = cfg["rightSiTop"]
+trench_width    = cfg["trenchWidth"]
+trench_depth    = cfg["trenchDepth"]
 oxide_thickness = cfg["oxideThickness"]
 oxidation_time  = cfg["oxidationTime"]
 time_step       = cfg["timeStep"]
@@ -108,38 +113,41 @@ temperature     = cfg["temperature"]
 pressure        = cfg["pressure"]
 oxidant         = _parse_oxidant(cfg["oxidant"])
 orientation     = _parse_orientation(cfg["orientation"])
-max_grid_points = cfg["maxGridPoints"]
 output_prefix   = cfg["outputPrefix"]
 
-# ── Domain bounds and boundary conditions ────────────────────────────────────
-BC = viennals.BoundaryConditionEnum
+# ── Domain bounds and boundary conditions ─────────────────────────────────────
+BC     = viennals.BoundaryConditionEnum
 bounds = [-x_extent, x_extent, y_min, y_max]
 bcs    = [BC.REFLECTIVE_BOUNDARY, BC.INFINITE_BOUNDARY]
 
-# ── Build Si step level set ──────────────────────────────────────────────────
-# Base: horizontal plane at y = left_si_top (everything below is solid Si).
+# ── Build Si trench level set ─────────────────────────────────────────────────
+# Base: flat substrate at y = 0 (solid below).
 si_ls = ls.Domain(bounds, bcs, grid_delta)
-ls.MakeGeometry(si_ls, ls.Plane([0.0, left_si_top], [0.0, 1.0])).apply()
+ls.MakeGeometry(si_ls, ls.Plane([0.0, 0.0], [0.0, 1.0])).apply()
 
-# Raised block at x > step_x, occupying y ∈ [left_si_top, right_si_top].
-right_block = ls.Domain(bounds, bcs, grid_delta)
-geom = ls.MakeGeometry(
-    right_block,
-    ls.Box([step_x, left_si_top], [x_extent, right_si_top]),
+# Trench void box: the cavity to subtract from the substrate.
+# Extends slightly above y=0 and below y=-trenchDepth for a clean boolean cut.
+void_box = ls.Domain(bounds, bcs, grid_delta)
+void_geom = ls.MakeGeometry(
+    void_box,
+    ls.Box(
+        [-trench_width / 2.0, -trench_depth - grid_delta],
+        [ trench_width / 2.0,  grid_delta],
+    ),
 )
-geom.setIgnoreBoundaryConditions([False, True])  # ignore INFINITE y boundary
-geom.apply()
+void_geom.setIgnoreBoundaryConditions([False, True])  # ignore INFINITE y
+void_geom.apply()
 ls.BooleanOperation(
-    si_ls, right_block, viennals.BooleanOperationEnum.UNION
+    si_ls, void_box, viennals.BooleanOperationEnum.RELATIVE_COMPLEMENT
 ).apply()
 
-# ── Assemble ViennaPS domain ─────────────────────────────────────────────────
+# ── Assemble ViennaPS domain ──────────────────────────────────────────────────
 domain = vps.Domain()
 domain.insertNextLevelSetAsMaterial(si_ls, vps.Material.Si, False)
 
-# The deformation solver needs the oxide to be at least gridDelta thick so
-# that Cartesian solve nodes exist between the two surfaces.  Clamp the seed
-# upward when the user specifies a sub-grid or zero initial oxide.
+# For the trench geometry the deformation solver needs at least 2×gridDelta of
+# oxide to converge on the concave walls. Use max(oxideThickness, gridDelta);
+# the config.txt default (0.1 µm at gridDelta=0.05) already satisfies this.
 seed_thickness = max(oxide_thickness, grid_delta)
 ambient_ls = ls.Domain(si_ls)
 ls.GeometricAdvect(ambient_ls, ls.SphereDistribution(seed_thickness)).apply()
@@ -153,10 +161,13 @@ model.setTimeStep(time_step)
 model.setOxidant(oxidant)
 model.setPressure(pressure)
 model.setOrientation(orientation)
-model.setMaxGridPoints(max_grid_points)
 model.setInitialOxideThickness(seed_thickness)
 
+if cfg["maxGridPoints"] > 0:
+    model.setMaxGridPoints(int(cfg["maxGridPoints"]))
+
 model.saveSurfaceMesh(domain, output_prefix + "_initial.vtp")
+model.saveVolumeMesh(domain, output_prefix + "_initial")
 
 vps.Process(domain, model, 0.0).apply()
 

@@ -1,0 +1,43 @@
+# Trench structure oxidation example configuration.
+# Lengths are in micrometers, time is in hours, pressure is in atm.
+#
+# Geometry: a rectangular trench centered at x=0 etched into a flat Si substrate.
+# Oxide grows on all exposed surfaces: trench sidewalls, trench floor,
+# and the surrounding flat substrate.
+#
+# dimensions: 2 (default) or 3. For 3D, zExtent (default: xExtent) sets
+# the half-depth of the domain; the trench is extruded symmetrically in Z
+# (slot geometry).
+#
+# Grid sizing guide:
+#   2D: gridDelta=0.025 gives ~24k points across the domain
+#   3D: gridDelta=0.05  ->  ~3M points (practical for 3D)
+#       gridDelta=0.1   -> ~384k points (fast 3D test)
+
+numThreads=16
+dimensions=2
+
+gridDelta=0.05
+xExtent=0.6
+yMin=-1.5
+yMax=1.5
+# zExtent=0.6  # 3D only; defaults to xExtent if omitted
+# maxGridPoints=10000000
+
+# Trench geometry (micrometers)
+trenchWidth=0.3
+trenchDepth=0.5
+
+# oxideThickness: initial oxide thickness (optional, default 0).
+# For the trench geometry the deformation solver needs at least 2×gridDelta
+# of initial oxide to converge; with gridDelta=0.05, set oxideThickness≥0.1.
+oxideThickness=0.1
+
+oxidationTime=0.2
+timeStep=0.025
+temperature=1000.
+pressure=1.
+oxidant=wet
+orientation=100
+
+outputPrefix=ps_trench_oxidation

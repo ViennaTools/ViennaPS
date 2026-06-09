@@ -55,15 +55,12 @@ ps::SiliconOrientation parseOrientation(const std::string &value) {
 }
 
 // ---------------------------------------------------------------------------
-// Geometry helpers (templated on D)
+// Geometry helpers
 //
 // Coordinate convention (both 2D and 3D):
-//   dim 0 = X  — lateral step direction (REFLECTIVE boundary)
+//   dim 0 = X  — cross-section direction (REFLECTIVE boundary, fin centered at x=0)
 //   dim 1 = Y  — height / growth direction (INFINITE boundary)
-//   dim 2 = Z  — depth / extrusion direction, 3D only (REFLECTIVE boundary)
-//
-// `timeStep` is a maximum internal oxidation step; the model automatically
-// subcycles below it when the CFL limit is smaller.
+//   dim 2 = Z  — fin extrusion direction, 3D only (REFLECTIVE boundary)
 // ---------------------------------------------------------------------------
 
 template <int D>
@@ -77,59 +74,45 @@ ps::SmartPointer<ls::Domain<NumericType, D>> makeBoxLevelSet(
       ls::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
   ls::MakeGeometry<NumericType, D> makeGeometry(
       levelSet, ls::Box<NumericType, D>::New(minCorner, maxCorner));
-  // Ignore the Y boundary (growth, INFINITE); respect lateral boundaries.
   std::array<bool, D> ignoreBoundary{};
-  ignoreBoundary[1] = true;
+  ignoreBoundary[1] = true; // Y is INFINITE; no transformation to apply
   makeGeometry.setIgnoreBoundaryConditions(ignoreBoundary);
   makeGeometry.apply();
   return levelSet;
 }
 
-// Builds the step geometry: a flat Si surface at y=leftTop for x<stepX,
-// stepping up/down to y=rightTop for x>stepX.
+// Builds a fin geometry: flat Si substrate at y=0 with a rectangular fin
+// ridge centered at x=0 extending from y=0 to y=finHeight, width finWidth.
 //
-// In 3D a second step wall is added at z=stepZ, forming a true 3D convex
-// corner: the raised platform occupies only the quadrant x>stepX AND z>stepZ.
-// The two step faces (the XY-plane wall and the ZY-plane wall) meet at the
-// corner edge running along Y at (stepX, y, stepZ).
+// In 3D the fin is extruded symmetrically along Z (uniform cross-section).
 template <int D>
-ps::SmartPointer<ls::Domain<NumericType, D>> makeStepLevelSet(
+ps::SmartPointer<ls::Domain<NumericType, D>> makeFinLevelSet(
     const double *bounds,
     typename ls::Domain<NumericType, D>::BoundaryType *boundaryCons,
-    NumericType gridDelta, NumericType xMax, NumericType leftTop,
-    NumericType rightTop, NumericType stepX, NumericType zExtent = 0,
-    NumericType stepZ = 0) {
-  auto step = ls::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
-
-  // Horizontal plane at y=leftTop — everything below is solid.
-  ls::VectorType<NumericType, D> planeOrigin{};
-  planeOrigin[1] = leftTop;
-  ls::VectorType<NumericType, D> planeNormal{};
-  planeNormal[1] = NumericType(1);
+    NumericType gridDelta, NumericType finWidth, NumericType finHeight,
+    NumericType zExtent) {
+  // Flat substrate: solid below y = 0.
+  auto siLS = ls::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
+  ls::VectorType<NumericType, D> origin{}, normal{};
+  normal[1] = NumericType(1);
   ls::MakeGeometry<NumericType, D>(
-      step, ls::Plane<NumericType, D>::New(planeOrigin, planeNormal))
+      siLS, ls::Plane<NumericType, D>::New(origin, normal))
       .apply();
 
-  // Corner block: raised platform from y=leftTop to y=rightTop.
-  // 2D: x in [stepX, xMax]
-  // 3D: x in [stepX, xMax] AND z in [stepZ, zExtent] — one quadrant only.
-  ls::VectorType<NumericType, D> rightMin{};
-  rightMin[0] = stepX;
-  rightMin[1] = leftTop;
-  ls::VectorType<NumericType, D> rightMax{};
-  rightMax[0] = xMax;
-  rightMax[1] = rightTop;
-  if constexpr (D == 3) {
-    rightMin[2] = stepZ;
-    rightMax[2] = zExtent;
-  }
-  auto rightBlock =
-      makeBoxLevelSet<D>(bounds, boundaryCons, gridDelta, rightMin, rightMax);
+  // Fin box: centered at x = 0, height finHeight.
+  // A tiny negative Y offset ensures the fin base fuses cleanly with the substrate.
+  ls::VectorType<NumericType, D> finMin{}, finMax{};
+  finMin[0] = -finWidth / NumericType(2);
+  finMin[1] = NumericType(-1e-6);
+  finMax[0] =  finWidth / NumericType(2);
+  finMax[1] =  finHeight;
+  if constexpr (D == 3) { finMin[2] = -zExtent; finMax[2] = zExtent; }
+  auto finBox = makeBoxLevelSet<D>(bounds, boundaryCons, gridDelta, finMin, finMax);
 
-  ls::BooleanOperation<NumericType, D>(step, rightBlock,
+  ls::BooleanOperation<NumericType, D>(siLS, finBox,
                                        ls::BooleanOperationEnum::UNION)
       .apply();
-  return step;
+  return siLS;
 }
 
 // ---------------------------------------------------------------------------
@@ -141,38 +124,31 @@ void run(const ps::util::Parameters &params) {
   omp_set_num_threads(params.get<int>("numThreads"));
   ps::Logger::setLogLevel(ps::LogLevel::ERROR);
 
-  const NumericType gridDelta      = params.get("gridDelta");
-  const NumericType xExtent        = params.get("xExtent");
-  const NumericType yMin           = params.get("yMin");
-  const NumericType yMax           = params.get("yMax");
-  const NumericType stepX          = params.get("stepX");
-  const NumericType leftSiTop      = params.get("leftSiTop");
-  const NumericType rightSiTop     = params.get("rightSiTop");
+  const NumericType gridDelta    = params.get("gridDelta");
+  const NumericType xExtent      = params.get("xExtent");
+  const NumericType yMin         = params.get("yMin");
+  const NumericType yMax         = params.get("yMax");
+  const NumericType finWidth     = params.get("finWidth");
+  const NumericType finHeight    = params.get("finHeight");
   const auto oxIt = params.m.find("oxideThickness");
   const NumericType oxideThickness =
       (oxIt != params.m.end()) ? params.get("oxideThickness") : NumericType(0);
-  const NumericType oxidationTime  = params.get("oxidationTime");
-  const NumericType timeStep       = params.get("timeStep");
-  const NumericType temperature    = params.get("temperature");
-  const NumericType pressure       = params.get("pressure");
+  const NumericType oxidationTime = params.get("oxidationTime");
+  const NumericType timeStep      = params.get("timeStep");
+  const NumericType temperature   = params.get("temperature");
+  const NumericType pressure      = params.get("pressure");
 
-  // For 3D: zExtent defaults to xExtent; stepZ defaults to stepX (symmetric corner).
+  // For 3D: zExtent defaults to xExtent (fin extrusion depth).
   const NumericType zExtent = [&]() -> NumericType {
     if constexpr (D != 3) return NumericType(0);
     const auto it = params.m.find("zExtent");
     return (it == params.m.end()) ? xExtent : params.get("zExtent");
   }();
-  const NumericType stepZ = [&]() -> NumericType {
-    if constexpr (D != 3) return NumericType(0);
-    const auto it = params.m.find("stepZ");
-    return (it == params.m.end()) ? stepX : params.get("stepZ");
-  }();
 
-  const auto oxidant     = parseOxidant(getString(params, "oxidant", "wet"));
-  const auto orientation = parseOrientation(getString(params, "orientation", "100"));
-  const auto outputPrefix = getString(params, "outputPrefix", "ps_step_oxidation");
+  const auto oxidant      = parseOxidant(getString(params, "oxidant", "wet"));
+  const auto orientation  = parseOrientation(getString(params, "orientation", "100"));
+  const auto outputPrefix = getString(params, "outputPrefix", "ps_fin_oxidation");
 
-  // Domain bounds: [X, Y] for 2D; [X, Y, Z] for 3D.
   double bounds[2 * D];
   bounds[0] = -xExtent; bounds[1] = xExtent;
   bounds[2] = yMin;     bounds[3] = yMax;
@@ -181,20 +157,16 @@ void run(const ps::util::Parameters &params) {
   typename ls::Domain<NumericType, D>::BoundaryType boundaryCons[D];
   boundaryCons[0] = ls::Domain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
   boundaryCons[1] = ls::Domain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
-  if constexpr (D == 3) {
+  if constexpr (D == 3)
     boundaryCons[2] = ls::Domain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
-  }
 
-  auto siInterface =
-      makeStepLevelSet<D>(bounds, boundaryCons, gridDelta, xExtent, leftSiTop,
-                          rightSiTop, stepX, zExtent, stepZ);
-
+  auto siInterface = makeFinLevelSet<D>(bounds, boundaryCons, gridDelta,
+                                        finWidth, finHeight, zExtent);
   auto domain = ps::Domain<NumericType, D>::New();
   domain->insertNextLevelSetAsMaterial(siInterface, ps::Material::Si);
 
-  // The deformation solver needs the oxide level set to be at least gridDelta
-  // thick so that Cartesian solve nodes exist between the two surfaces. Clamp
-  // the seed upward when the user specifies a sub-grid or zero initial oxide.
+  // Clamp the oxide seed to at least gridDelta so the Cartesian solve always
+  // has resolvable nodes between the Si and SiO2 level sets.
   const NumericType seedThickness = std::max(oxideThickness, gridDelta);
   {
     auto ambientInterface = ls::Domain<NumericType, D>::New(siInterface);
@@ -205,6 +177,7 @@ void run(const ps::util::Parameters &params) {
     domain->insertNextLevelSetAsMaterial(ambientInterface, ps::Material::SiO2,
                                          false);
   }
+
   auto model = ps::SmartPointer<ps::Oxidation<NumericType, D>>::New();
   model->setTemperature(temperature);
   model->setTime(oxidationTime);
@@ -214,12 +187,11 @@ void run(const ps::util::Parameters &params) {
   model->setOrientation(orientation);
   model->setInitialOxideThickness(seedThickness);
 
-  // maxGridPoints limits the Cartesian solve grid. Memory scales as N³ in 3D,
-  // so either set a higher value here or coarsen gridDelta for 3D runs.
   {
     const auto it = params.m.find("maxGridPoints");
     if (it != params.m.end())
-      model->setMaxGridPoints(static_cast<std::size_t>(std::stoull(it->second)));
+      model->setMaxGridPoints(
+          static_cast<std::size_t>(std::stoull(it->second)));
   }
 
   model->saveSurfaceMesh(domain, outputPrefix + "_stack_initial.vtp");
@@ -229,7 +201,6 @@ void run(const ps::util::Parameters &params) {
 
   model->saveSurfaceMesh(domain, outputPrefix + "_stack_after.vtp");
   model->saveVolumeMesh(domain, outputPrefix + "_stack_after");
-  
 
   std::cout << "Planar Deal-Grove estimate for " << oxidationTime
             << " hr oxidation at " << temperature << " C: "

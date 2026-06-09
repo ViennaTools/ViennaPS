@@ -1,0 +1,40 @@
+# Fin structure oxidation example configuration.
+# Lengths are in micrometers, time is in hours, pressure is in atm.
+#
+# Geometry: a rectangular Si fin centered at x=0 on a flat Si substrate.
+# The fin oxidizes on all exposed surfaces (top, sidewalls, and substrate).
+#
+# dimensions: 2 (default) or 3. For 3D, zExtent (default: xExtent) sets
+# the half-depth of the domain; the fin is extruded symmetrically in Z.
+#
+# Grid sizing guide:
+#   2D: gridDelta=0.025 gives ~24k points across the domain
+#   3D: gridDelta=0.05  ->  ~3M points (practical for 3D)
+#       gridDelta=0.1   -> ~384k points (fast 3D test)
+
+numThreads=16
+dimensions=2
+
+gridDelta=0.05
+xExtent=0.6
+yMin=-1.0
+yMax=2.0
+# zExtent=0.6  # 3D only; defaults to xExtent if omitted
+# maxGridPoints=10000000
+
+# Fin geometry (micrometers)
+finWidth=0.2
+finHeight=0.5
+
+# oxideThickness: optional initial oxide thickness. If omitted or 0, a seed
+# of gridDelta is created automatically so the solver has resolvable nodes.
+oxideThickness=0.0
+
+oxidationTime=0.2
+timeStep=0.025
+temperature=1000.
+pressure=1.
+oxidant=wet
+orientation=100
+
+outputPrefix=ps_fin_oxidation

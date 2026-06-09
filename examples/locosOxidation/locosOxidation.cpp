@@ -104,9 +104,10 @@ struct Config {
   int maskCouplingIterations = 8;
   NumericType maskCouplingTolerance = 0.02;
   NumericType maskReferenceViscosity = -1.; // Pa·hr; <0 uses preset
+  NumericType maskYoungModulus = -1.;       // Pa;    <0 uses preset (~270e9)
   NumericType maskPoissonRatio = 0.27;
-  // Mask contact mode: "traction" (default) or "kinematic" (legacy).
-  std::string maskContactMode = "traction";
+  // Mask contact mode: "kinematic"|"oneway"|"elastic"
+  std::string maskContactMode = "oneway";
   bool maskUnilateralContact = true;
   int maskTractionIterations = 10000;
   NumericType maskTractionTolerance = 1e-5;
@@ -129,6 +130,38 @@ bool parseBool(std::string value) {
   std::transform(value.begin(), value.end(), value.begin(),
                  [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   return value == "1" || value == "true" || value == "yes" || value == "on";
+}
+
+std::string normalizeConfigToken(std::string value) {
+  const auto comment = value.find('#');
+  if (comment != std::string::npos)
+    value.resize(comment);
+  const auto first = value.find_first_not_of(" \t\r\n");
+  if (first == std::string::npos)
+    return {};
+  const auto last = value.find_last_not_of(" \t\r\n");
+  value = value.substr(first, last - first + 1);
+  std::transform(value.begin(), value.end(), value.begin(),
+                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  return value;
+}
+
+int parseMaskContactMode(const std::string &value) {
+  const auto mode = normalizeConfigToken(value);
+  if (mode == "0" || mode == "kinematic")
+    return 0;
+  if (mode == "1" || mode == "2" || mode == "oneway" || mode == "one-way" ||
+      mode == "traction")
+    return 1;
+  if (mode == "3" || mode == "4" || mode == "elastic" || mode == "twoway" ||
+      mode == "two-way" || mode == "two_way" || mode == "feedback" ||
+      mode == "twoway-elastic" || mode == "two-way-elastic" ||
+      mode == "elastic-feedback")
+    return 2;
+
+  std::cerr << "Warning: unknown maskContactMode='" << value
+            << "', using oneway.\n";
+  return 1;
 }
 
 Config parseConfig(const std::string &filename) {
@@ -175,6 +208,7 @@ Config parseConfig(const std::string &filename) {
     else if (key == "maskCouplingIterations") cfg.maskCouplingIterations = std::stoi(val);
     else if (key == "maskCouplingTolerance") cfg.maskCouplingTolerance = std::stod(val);
     else if (key == "maskReferenceViscosity") cfg.maskReferenceViscosity = std::stod(val);
+    else if (key == "maskYoungModulus") cfg.maskYoungModulus = std::stod(val);
     else if (key == "maskPoissonRatio") cfg.maskPoissonRatio = std::stod(val);
     else if (key == "maskContactMode") cfg.maskContactMode = val;
     else if (key == "maskUnilateralContact") cfg.maskUnilateralContact = parseBool(val);
@@ -287,10 +321,10 @@ int main() {
       viennals::OxidationPresets<NumericType>::siliconNitrideMask1000C();
   if (cfg.maskReferenceViscosity > NumericType(0))
     maskParams.referenceViscosity = cfg.maskReferenceViscosity;
+  if (cfg.maskYoungModulus > NumericType(0))
+    maskParams.youngModulus = cfg.maskYoungModulus;
   maskParams.poissonRatio = cfg.maskPoissonRatio;
-  maskParams.contactMode =
-      (cfg.maskContactMode == "kinematic") ? 0 :
-      (cfg.maskContactMode == "oneway")    ? 1 : 2;
+  maskParams.contactMode = parseMaskContactMode(cfg.maskContactMode);
   maskParams.anchorBoundaryDirection = cfg.maskAnchorBoundaryDirection;
   maskParams.anchorBoundarySide = cfg.maskAnchorBoundarySide;
   maskParams.anchorBoundaryLayers = cfg.maskAnchorBoundaryLayers;

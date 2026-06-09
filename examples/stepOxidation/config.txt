@@ -14,8 +14,8 @@
 numThreads=16
 dimensions=2
 
-gridDelta=0.025
-xExtent=4.
+gridDelta=0.05
+xExtent=1.
 yMin=-2.
 yMax=4.
 # zExtent=4.  # 3D only; defaults to xExtent if omitted
@@ -26,7 +26,9 @@ stepX=0.
 #            # The raised platform occupies x>stepX AND z>stepZ (one quadrant).
 leftSiTop=0.
 rightSiTop=1.
-oxideThickness=0.05   # must be >= gridDelta; sub-grid seeds produce no oxide nodes
+# oxideThickness: optional. If omitted or 0, a seed of gridDelta thickness is
+# created automatically so the solver always has resolvable oxide nodes.
+oxideThickness=0.0
 
 oxidationTime=0.1
 # Maximum internal oxidation step. The model automatically subcycles below this
