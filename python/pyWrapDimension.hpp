@@ -116,6 +116,17 @@ inline void bindPsOxidationSharedTypes(py::module &module) {
       .value("Si111", SiliconOrientation::Si111)
       .value("PolySi", SiliconOrientation::PolySi)
       .finalize();
+
+  py::native_enum<GpuMode>(module, "GpuMode", "enum.IntEnum")
+      .value("Auto", GpuMode::Auto)
+      .value("Gpu",  GpuMode::Gpu)
+      .value("Cpu",  GpuMode::Cpu)
+      .finalize();
+
+  py::native_enum<GpuPreconditioner>(module, "GpuPreconditioner", "enum.IntEnum")
+      .value("Jacobi", GpuPreconditioner::Jacobi)
+      .value("ILU0",   GpuPreconditioner::ILU0)
+      .finalize();
 }
 
 // define trampoline classes for interface functions
