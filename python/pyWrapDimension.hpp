@@ -1163,12 +1163,21 @@ template <int D> void bindApi(py::module &module) {
       .def("setMechanicsIterations", &Oxidation<T, D>::setMechanicsIterations,
            py::arg("iterations"),
            "Maximum iterations for the viscous mechanics solve.")
+      .def("setMechanicsTolerance", &Oxidation<T, D>::setMechanicsTolerance,
+           py::arg("tolerance"),
+           "Convergence tolerance for the mechanics solve.")
       .def("setPressureIterations", &Oxidation<T, D>::setPressureIterations,
            py::arg("iterations"),
            "Maximum iterations for the pressure Poisson solve.")
+      .def("setPressureTolerance", &Oxidation<T, D>::setPressureTolerance,
+           py::arg("tolerance"),
+           "Convergence tolerance for the pressure solve.")
       .def("setStokesIterations", &Oxidation<T, D>::setStokesIterations,
            py::arg("iterations"),
            "Maximum iterations for the Stokes velocity solve.")
+      .def("setStokesTolerance", &Oxidation<T, D>::setStokesTolerance,
+           py::arg("tolerance"),
+           "Convergence tolerance for the Stokes solve.")
       .def(
           "setSolveBounds",
           [](Oxidation<T, D> &model,

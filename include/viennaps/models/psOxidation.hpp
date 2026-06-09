@@ -84,7 +84,7 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   NumericType diffusionActivationVolume_ = NumericType(0);
   std::size_t maxGridPoints_ = 5000000;
   unsigned couplingIterations_ = 8;
-  NumericType couplingTolerance_ = NumericType(1e-6);
+  NumericType couplingTolerance_ = NumericType(1e-4);
   bool useSolveBounds_ = false;
   viennahrle::Index<D> solveMinIndex_{};
   viennahrle::Index<D> solveMaxIndex_{};
@@ -105,7 +105,7 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   unsigned stokesIterations_ = 200;
   NumericType pressureTolerance_ = NumericType(1e-6);
   NumericType stokesTolerance_ = NumericType(1e-7);
-  NumericType mechanicsTolerance_ = NumericType(1e-7);
+  NumericType mechanicsTolerance_ = NumericType(1e-4);
   bool toleranceWarningEmitted_ = false;
 
   void validateTolerances() {
@@ -294,9 +294,9 @@ public:
     maskParams_.unilateralContact = enabled;
   }
 
-  /// SOR omega for the multigrid V-cycle smoother used by the traction mask
-  /// solve (contactMode=1).  1.0 = Gauss-Seidel; values in (1, 1.4] add
-  /// over-relaxation.  Separate from the outer Aitken relaxation set by
+  /// SOR omega for the multigrid V-cycle smoother used by the mask mechanics
+  /// solves (contactMode=1/2/3/4).  1.0 = Gauss-Seidel; values in (1, 1.4]
+  /// add over-relaxation.  Separate from the outer Aitken relaxation set by
   /// setMaskTractionRelaxation().
   void setMaskSmootherOmega(NumericType omega) {
     maskParams_.multigridSmootherOmega =
