@@ -115,20 +115,32 @@ ps::SmartPointer<ls::Domain<NumericType, D>> makeStepLevelSet(
   // 3D: x in [stepX, xMax] AND z in [stepZ, zExtent] — one quadrant only.
   ls::VectorType<NumericType, D> rightMin{};
   rightMin[0] = stepX;
-  rightMin[1] = leftTop;
   ls::VectorType<NumericType, D> rightMax{};
   rightMax[0] = xMax;
-  rightMax[1] = rightTop;
   if constexpr (D == 3) {
     rightMin[2] = stepZ;
     rightMax[2] = zExtent;
   }
-  auto rightBlock =
-      makeBoxLevelSet<D>(bounds, boundaryCons, gridDelta, rightMin, rightMax);
 
-  ls::BooleanOperation<NumericType, D>(step, rightBlock,
-                                       ls::BooleanOperationEnum::UNION)
-      .apply();
+  if (rightTop > leftTop) {
+    // Step up
+    rightMin[1] = leftTop - gridDelta;
+    rightMax[1] = rightTop;
+    auto rightBlock =
+        makeBoxLevelSet<D>(bounds, boundaryCons, gridDelta, rightMin, rightMax);
+    ls::BooleanOperation<NumericType, D>(step, rightBlock,
+                                         ls::BooleanOperationEnum::UNION)
+        .apply();
+  } else if (rightTop < leftTop) {
+    // Step down
+    rightMin[1] = rightTop;
+    rightMax[1] = leftTop + gridDelta;
+    auto rightBlock =
+        makeBoxLevelSet<D>(bounds, boundaryCons, gridDelta, rightMin, rightMax);
+    ls::BooleanOperation<NumericType, D>(step, rightBlock,
+                                         ls::BooleanOperationEnum::RELATIVE_COMPLEMENT)
+        .apply();
+  }
   return step;
 }
 

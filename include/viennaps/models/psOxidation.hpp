@@ -83,8 +83,8 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   NumericType reactionActivationVolume_ = NumericType(1.76e-35);
   NumericType diffusionActivationVolume_ = NumericType(0);
   std::size_t maxGridPoints_ = 5000000;
-  unsigned couplingIterations_ = 8;
-  NumericType couplingTolerance_ = NumericType(1e-4);
+  unsigned couplingIterations_ = 30;
+  NumericType couplingTolerance_ = NumericType(5e-2);
   bool useSolveBounds_ = false;
   viennahrle::Index<D> solveMinIndex_{};
   viennahrle::Index<D> solveMaxIndex_{};
@@ -102,10 +102,12 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   GpuPreconditioner gpuPreconditioner_ = GpuPreconditioner::Jacobi;
   unsigned mechanicsIterations_ = 200;
   unsigned pressureIterations_ = 500;
-  unsigned stokesIterations_ = 200;
-  NumericType pressureTolerance_ = NumericType(1e-6);
-  NumericType stokesTolerance_ = NumericType(1e-7);
-  NumericType mechanicsTolerance_ = NumericType(1e-4);
+  unsigned stokesIterations_ = 500;
+  NumericType pressureTolerance_ = NumericType(1e-3);
+  NumericType stokesTolerance_ = NumericType(1e-3);
+  NumericType mechanicsTolerance_ = NumericType(1e-2);
+  NumericType simpleVelocityRelaxation_ = NumericType(0.7);
+  NumericType simplePressureRelaxation_ = NumericType(0.5);
   bool toleranceWarningEmitted_ = false;
 
   void validateTolerances() {
@@ -345,6 +347,12 @@ public:
   void setPressureTolerance(NumericType tol) { pressureTolerance_ = tol; }
   void setStokesTolerance(NumericType tol) { stokesTolerance_ = tol; }
   void setMechanicsTolerance(NumericType tol) { mechanicsTolerance_ = tol; }
+  void setSimpleVelocityRelaxation(NumericType alpha) {
+    simpleVelocityRelaxation_ = std::min(NumericType(1), std::max(NumericType(0.01), alpha));
+  }
+  void setSimplePressureRelaxation(NumericType beta) {
+    simplePressureRelaxation_ = std::min(NumericType(1), std::max(NumericType(0.01), beta));
+  }
 
   void setStokesIterations(unsigned iterations) {
     stokesIterations_ = std::max(1u, iterations);
@@ -801,6 +809,8 @@ private:
     p.pressureTolerance = pressureTolerance_;
     p.stokesTolerance = stokesTolerance_;
     p.tolerance = NumericType(1e-7);
+    p.relaxation = simpleVelocityRelaxation_;
+    p.pressureRelaxation = simplePressureRelaxation_;
     p.maxGridPoints = maxGridPoints_;
     return p;
   }

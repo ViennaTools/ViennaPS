@@ -10,10 +10,10 @@ Geometry (2-D cross-section, extruded symmetrically in Z for 3-D):
     · Flat Si substrate at y = 0
     · Trench centered at x = 0: width trenchWidth, depth trenchDepth (into Si)
 
-Note: the deformation solver needs at least 2×gridDelta of initial oxide to
-converge on concave trench surfaces. The default oxideThickness in config.txt
-(0.1 µm at gridDelta=0.05) satisfies this requirement; if you change gridDelta
-keep oxideThickness ≥ 2×gridDelta.
+Oxide growth starts from a thin seed layer (oxideThickness, or gridDelta if
+zero). The deformation solver uses a Neumann pressure boundary at the Si/SiO2
+interface combined with SIMPLE pressure under-relaxation, so it converges
+stably from a 1×gridDelta seed on all geometries.
 
 Usage:
     python trenchOxidation.py [config.txt]
@@ -42,7 +42,7 @@ cfg = {
     "yMax":          1.5,
     "trenchWidth":   0.3,
     "trenchDepth":   0.5,
-    "oxideThickness": 0.1,   # ≥ 2×gridDelta required for deformation solver
+    "oxideThickness": 0.0,
     "oxidationTime": 0.2,
     "timeStep":      0.025,
     "temperature": 1000.0,
@@ -145,9 +145,6 @@ ls.BooleanOperation(
 domain = vps.Domain()
 domain.insertNextLevelSetAsMaterial(si_ls, vps.Material.Si, False)
 
-# For the trench geometry the deformation solver needs at least 2×gridDelta of
-# oxide to converge on the concave walls. Use max(oxideThickness, gridDelta);
-# the config.txt default (0.1 µm at gridDelta=0.05) already satisfies this.
 seed_thickness = max(oxide_thickness, grid_delta)
 ambient_ls = ls.Domain(si_ls)
 ls.GeometricAdvect(ambient_ls, ls.SphereDistribution(seed_thickness)).apply()

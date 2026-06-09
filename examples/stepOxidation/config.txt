@@ -14,7 +14,7 @@
 numThreads=16
 dimensions=2
 
-gridDelta=0.05
+gridDelta=0.005
 xExtent=1.
 yMin=-2.
 yMax=4.
@@ -22,10 +22,12 @@ yMax=4.
 # maxGridPoints=10000000  # raise if solver aborts with "exceeds maxGridPoints"
 
 stepX=0.
+# stepWidth=0.5
 # stepZ=0.  # 3D only: Z position of the second step wall (default: same as stepX).
 #            # The raised platform occupies x>stepX AND z>stepZ (one quadrant).
-leftSiTop=0.
-rightSiTop=1.
+# stepWidthZ=0.5  # 3D only: width of the raised platform in Z (default: stepWidth).
+leftSiTop=1.
+rightSiTop=0.
 # oxideThickness: optional. If omitted or 0, a seed of gridDelta thickness is
 # created automatically so the solver always has resolvable oxide nodes.
 oxideThickness=0.0

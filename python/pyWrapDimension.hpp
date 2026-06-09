@@ -1166,6 +1166,12 @@ template <int D> void bindApi(py::module &module) {
       .def("setMechanicsTolerance", &Oxidation<T, D>::setMechanicsTolerance,
            py::arg("tolerance"),
            "Convergence tolerance for the mechanics solve.")
+      .def("setSimpleVelocityRelaxation",
+           &Oxidation<T, D>::setSimpleVelocityRelaxation, py::arg("alpha"),
+           "SIMPLE velocity under-relaxation factor (0 < alpha <= 1).")
+      .def("setSimplePressureRelaxation",
+           &Oxidation<T, D>::setSimplePressureRelaxation, py::arg("beta"),
+           "SIMPLE pressure under-relaxation factor (0 < beta <= 1).")
       .def("setPressureIterations", &Oxidation<T, D>::setPressureIterations,
            py::arg("iterations"),
            "Maximum iterations for the pressure Poisson solve.")

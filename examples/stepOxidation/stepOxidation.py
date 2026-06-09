@@ -30,10 +30,11 @@ vps.setDimension(2)
 cfg = {
     "numThreads":      16,
     "gridDelta":       0.05,
-    "xExtent":         4.0,
+    "xExtent":         1.0,
     "yMin":           -2.0,
     "yMax":            4.0,
     "stepX":           0.0,
+#    "stepWidth":       2.0,
     "leftSiTop":       0.0,
     "rightSiTop":      1.0,
     "oxideThickness":  0.0,
@@ -99,6 +100,7 @@ x_extent        = cfg["xExtent"]
 y_min           = cfg["yMin"]
 y_max           = cfg["yMax"]
 step_x          = cfg["stepX"]
+#step_width      = cfg["stepWidth"]
 left_si_top     = cfg["leftSiTop"]
 right_si_top    = cfg["rightSiTop"]
 oxide_thickness = cfg["oxideThickness"]
@@ -117,21 +119,32 @@ bounds = [-x_extent, x_extent, y_min, y_max]
 bcs    = [BC.REFLECTIVE_BOUNDARY, BC.INFINITE_BOUNDARY]
 
 # ── Build Si step level set ──────────────────────────────────────────────────
-# Base: horizontal plane at y = left_si_top (everything below is solid Si).
-si_ls = ls.Domain(bounds, bcs, grid_delta)
-ls.MakeGeometry(si_ls, ls.Plane([0.0, left_si_top], [0.0, 1.0])).apply()
+lo_top = min(left_si_top, right_si_top)
+hi_top = max(left_si_top, right_si_top)
 
-# Raised block at x > step_x, occupying y ∈ [left_si_top, right_si_top].
-right_block = ls.Domain(bounds, bcs, grid_delta)
-geom = ls.MakeGeometry(
-    right_block,
-    ls.Box([step_x, left_si_top], [x_extent, right_si_top]),
-)
-geom.setIgnoreBoundaryConditions([False, True])  # ignore INFINITE y boundary
-geom.apply()
-ls.BooleanOperation(
-    si_ls, right_block, viennals.BooleanOperationEnum.UNION
-).apply()
+# Base: horizontal plane at y = lo_top (the lower surface).
+si_ls = ls.Domain(bounds, bcs, grid_delta)
+ls.MakeGeometry(si_ls, ls.Plane([0.0, lo_top], [0.0, 1.0])).apply()
+
+if abs(hi_top - lo_top) > 1e-10:
+    # Raised block: extend 3× beyond the domain boundary so the reflective BC
+    # sees solid Si interior rather than a box face at x=±x_extent.  This
+    # avoids a spurious vertical Si wall at the reflective boundary that would
+    # block oxide growth on the top surface near the edge.
+    large = 3.0 * x_extent
+    raised_block = ls.Domain(bounds, bcs, grid_delta)
+    if left_si_top > right_si_top:
+        # Raised platform is on the LEFT side
+        box = ls.Box([-large, lo_top], [step_x, hi_top])
+    else:
+        # Raised platform is on the RIGHT side
+        box = ls.Box([step_x, lo_top], [large, hi_top])
+    geom = ls.MakeGeometry(raised_block, box)
+    geom.setIgnoreBoundaryConditions([True, True])
+    geom.apply()
+    ls.BooleanOperation(
+        si_ls, raised_block, viennals.BooleanOperationEnum.UNION
+    ).apply()
 
 # ── Assemble ViennaPS domain ─────────────────────────────────────────────────
 domain = vps.Domain()

@@ -41,11 +41,11 @@ pressureTolerance=1e-3
 stokesIterations=500
 stokesTolerance=1e-3
 mechanicsIterations=300
-mechanicsTolerance=1e-2
-couplingIterations=30
-couplingTolerance=5e-2
+mechanicsTolerance=5e-3
+couplingIterations=100
+couplingTolerance=2e-2
 maskCouplingIterations=30
-maskCouplingTolerance=4e-2
+maskCouplingTolerance=1e-2
 
 # Mask mechanics:
 #   maskContactMode=kinematic (0) mask velocity follows oxide velocity (legacy).
@@ -55,8 +55,7 @@ maskCouplingTolerance=4e-2
 #   maskContactMode=elastic   (2) linear elastic multigrid-GMRES (E, nu); oxide
 #                                 contact prescribes displacement (v_oxide * dt);
 #                                 outer coupling loop feeds mask displacement back
-#                                 into oxide solve. Correct for Si3N4. Aliases:
-#                                 "twoway", "3", "4" and variants.
+#                                 into oxide solve. Correct for Si3N4.
 #                                 Uses maskYoungModulus (default 270e9 Pa).
 #   maskTractionTolerance controls the inner multigrid-GMRES mask solve residual.
 #   maskAnchorBoundarySide=-1 clamps the far-left mask edge; 0 disables it.

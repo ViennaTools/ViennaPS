@@ -17,7 +17,7 @@
 numThreads=16
 dimensions=2
 
-gridDelta=0.05
+gridDelta=0.005
 xExtent=0.6
 yMin=-1.5
 yMax=1.5
@@ -29,9 +29,8 @@ trenchWidth=0.3
 trenchDepth=0.5
 
 # oxideThickness: initial oxide thickness (optional, default 0).
-# For the trench geometry the deformation solver needs at least 2×gridDelta
-# of initial oxide to converge; with gridDelta=0.05, set oxideThickness≥0.1.
-oxideThickness=0.1
+# If omitted or 0, a seed of gridDelta is created automatically.
+oxideThickness=0.0
 
 oxidationTime=0.2
 timeStep=0.025
