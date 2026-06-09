@@ -20,25 +20,69 @@ a half-fin; the output meshes show the full symmetric structure. In 3D the fin
 is extruded uniformly along Z (uniform cross-section; no Z variation in geometry or
 oxidation rate).
 
-## Building
+## Setup (from scratch)
+
+Clone both libraries on their respective oxidation branches:
 
 ```bash
-# From the repository root
-cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON ...
+git clone -b oxidation https://github.com/ViennaTools/ViennaLS.git
+git clone -b oxide-growth https://github.com/ViennaTools/ViennaPS.git
+```
+
+Create a virtual environment and install the Python packages:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+
+pip install ./ViennaLS
+pip install ./ViennaPS
+```
+
+To enable the GPU-accelerated BiCGSTAB solver (requires CUDA):
+
+```bash
+pip install ./ViennaLS \
+  --config-settings cmake.args="-DVIENNALS_USE_GPU=ON"
+pip install ./ViennaPS
+```
+
+The `pip install` steps compile and install the C++ extension modules; a C++17
+compiler and CMake ≥ 3.20 are required. Build time is a few minutes per package.
+
+## Building (C++ executable)
+
+```bash
+# From the ViennaPS repository root
+cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON
+cmake --build build --target finOxidation
+```
+
+To enable the GPU-accelerated BiCGSTAB solver (requires CUDA), ViennaLS must be
+built with `VIENNALS_USE_GPU=ON` and its build tree made visible to ViennaPS:
+
+```bash
+# Build ViennaLS with GPU support
+cmake -B ViennaLS/build -S ViennaLS -DVIENNALS_USE_GPU=ON
+cmake --build ViennaLS/build
+
+# Build ViennaPS pointing at that ViennaLS build
+cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON \
+      -DViennaLS_DIR=ViennaLS/build
 cmake --build build --target finOxidation
 ```
 
 ## Running
 
 ```bash
-# Default config (reads config.txt in CWD)
-./finOxidation
+# C++ executable (from the build directory)
+./build/examples/finOxidation/finOxidation
 
 # Explicit config file
-./finOxidation my_config.txt
+./build/examples/finOxidation/finOxidation my_config.txt
 ```
 
-The Python version works identically:
+The Python version works identically (activate the venv first):
 
 ```bash
 python finOxidation.py            # reads config.txt
@@ -72,12 +116,15 @@ All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **
 
 ### Grid Sizing Guide
 
-| Scenario | `gridDelta` | Approx. node count |
-|---|---|---|
-| 2D fine | 0.01 µm | ~100k |
-| 2D fast | 0.025 µm | ~16k |
-| 3D practical | 0.05 µm | ~3M |
-| 3D fast test | 0.1 µm | ~400k |
+The diffusion solve scales as O((L/δ)^D): halving `gridDelta` increases solve
+time ~4× in 2D and ~8× in 3D.
+
+| Scenario | `gridDelta` |
+|---|---|
+| 2D quick test | 0.05 µm |
+| 2D production | 0.01 µm |
+| 3D quick test | 0.1 µm |
+| 3D production | 0.05 µm |
 
 ## Output Files
 

@@ -38,3 +38,9 @@ oxidant=wet
 orientation=100
 
 outputPrefix=ps_fin_oxidation
+
+# GPU solver backend (requires ViennaLS built with VIENNALS_USE_GPU=ON)
+# useGpu: auto (default) | gpu | cpu
+# gpuPreconditioner: jacobi (default) | ilu0
+# useGpu=auto
+# gpuPreconditioner=jacobi

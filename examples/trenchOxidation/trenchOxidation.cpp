@@ -2,10 +2,9 @@
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
 #include <psUtil.hpp>
+#include <geometries/psMakeTrench.hpp>
 
-#include <lsBooleanOperation.hpp>
 #include <lsGeometricAdvect.hpp>
-#include <lsMakeGeometry.hpp>
 
 #include <algorithm>
 #include <array>
@@ -55,69 +54,12 @@ ps::SiliconOrientation parseOrientation(const std::string &value) {
 }
 
 // ---------------------------------------------------------------------------
-// Geometry helpers
-//
-// Coordinate convention (both 2D and 3D):
-//   dim 0 = X  — cross-section direction (REFLECTIVE boundary, trench centered at x=0)
-//   dim 1 = Y  — height / growth direction (INFINITE boundary)
-//   dim 2 = Z  — trench extrusion direction, 3D only (REFLECTIVE boundary)
-// ---------------------------------------------------------------------------
-
-template <int D>
-ps::SmartPointer<ls::Domain<NumericType, D>> makeBoxLevelSet(
-    const double *bounds,
-    typename ls::Domain<NumericType, D>::BoundaryType *boundaryCons,
-    NumericType gridDelta,
-    const ls::VectorType<NumericType, D> &minCorner,
-    const ls::VectorType<NumericType, D> &maxCorner) {
-  auto levelSet =
-      ls::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
-  ls::MakeGeometry<NumericType, D> makeGeometry(
-      levelSet, ls::Box<NumericType, D>::New(minCorner, maxCorner));
-  std::array<bool, D> ignoreBoundary{};
-  ignoreBoundary[1] = true; // Y is INFINITE; no transformation to apply
-  makeGeometry.setIgnoreBoundaryConditions(ignoreBoundary);
-  makeGeometry.apply();
-  return levelSet;
-}
-
-// Builds a trench geometry: flat Si substrate at y=0 with a rectangular
-// trench centered at x=0, width trenchWidth, depth trenchDepth (into Si).
-//
-// In 3D the trench is extruded symmetrically along Z (slot geometry).
-template <int D>
-ps::SmartPointer<ls::Domain<NumericType, D>> makeTrenchLevelSet(
-    const double *bounds,
-    typename ls::Domain<NumericType, D>::BoundaryType *boundaryCons,
-    NumericType gridDelta, NumericType trenchWidth, NumericType trenchDepth,
-    NumericType zExtent) {
-  // Flat substrate: solid below y = 0.
-  auto siLS = ls::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
-  ls::VectorType<NumericType, D> origin{}, normal{};
-  normal[1] = NumericType(1);
-  ls::MakeGeometry<NumericType, D>(
-      siLS, ls::Plane<NumericType, D>::New(origin, normal))
-      .apply();
-
-  // Trench void box: the region to remove from the substrate.
-  // Extends slightly above y=0 and below y=-trenchDepth for a clean boolean cut.
-  ls::VectorType<NumericType, D> voidMin{}, voidMax{};
-  voidMin[0] = -trenchWidth / NumericType(2);
-  voidMin[1] = -trenchDepth - gridDelta;
-  voidMax[0] =  trenchWidth / NumericType(2);
-  voidMax[1] =  gridDelta;
-  if constexpr (D == 3) { voidMin[2] = -zExtent; voidMax[2] = zExtent; }
-  auto voidBox = makeBoxLevelSet<D>(bounds, boundaryCons, gridDelta, voidMin, voidMax);
-
-  // Subtract the trench void from the substrate.
-  ls::BooleanOperation<NumericType, D>(siLS, voidBox,
-                                       ls::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-      .apply();
-  return siLS;
-}
-
-// ---------------------------------------------------------------------------
 // Simulation driver
+//
+// Coordinate convention:
+//   2D: X = lateral (REFLECTIVE), Y = growth (INFINITE)
+//   3D: X = lateral (REFLECTIVE), Y = trench extrusion (REFLECTIVE), Z = growth (INFINITE)
+//       yMin/yMax refer to the growth axis (Z in 3D); zExtent is the Y extrusion range.
 // ---------------------------------------------------------------------------
 
 template <int D>
@@ -139,7 +81,6 @@ void run(const ps::util::Parameters &params) {
   const NumericType temperature   = params.get("temperature");
   const NumericType pressure      = params.get("pressure");
 
-  // For 3D: zExtent defaults to xExtent (trench extrusion depth).
   const NumericType zExtent = [&]() -> NumericType {
     if constexpr (D != 3) return NumericType(0);
     const auto it = params.m.find("zExtent");
@@ -150,27 +91,32 @@ void run(const ps::util::Parameters &params) {
   const auto orientation  = parseOrientation(getString(params, "orientation", "100"));
   const auto outputPrefix = getString(params, "outputPrefix", "ps_trench_oxidation");
 
+  using BoundaryType = typename ls::Domain<NumericType, D>::BoundaryType;
   double bounds[2 * D];
+  BoundaryType boundaryCons[D];
+
   bounds[0] = -xExtent; bounds[1] = xExtent;
-  bounds[2] = yMin;     bounds[3] = yMax;
-  if constexpr (D == 3) { bounds[4] = -zExtent; bounds[5] = zExtent; }
+  if constexpr (D == 2) {
+    bounds[2] = yMin; bounds[3] = yMax;
+    boundaryCons[0] = BoundaryType::REFLECTIVE_BOUNDARY;
+    boundaryCons[1] = BoundaryType::INFINITE_BOUNDARY;
+  } else {
+    // Y = trench extrusion (REFLECTIVE), Z = growth (INFINITE)
+    bounds[2] = -zExtent; bounds[3] = zExtent;
+    bounds[4] = yMin;     bounds[5] = yMax;
+    boundaryCons[0] = BoundaryType::REFLECTIVE_BOUNDARY;
+    boundaryCons[1] = BoundaryType::REFLECTIVE_BOUNDARY;
+    boundaryCons[2] = BoundaryType::INFINITE_BOUNDARY;
+  }
 
-  typename ls::Domain<NumericType, D>::BoundaryType boundaryCons[D];
-  boundaryCons[0] = ls::Domain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
-  boundaryCons[1] = ls::Domain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
-  if constexpr (D == 3)
-    boundaryCons[2] = ls::Domain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
-
-  auto siInterface = makeTrenchLevelSet<D>(bounds, boundaryCons, gridDelta,
-                                           trenchWidth, trenchDepth, zExtent);
-  auto domain = ps::Domain<NumericType, D>::New();
-  domain->insertNextLevelSetAsMaterial(siInterface, ps::Material::Si);
+  auto domain = ps::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
+  ps::MakeTrench<NumericType, D>(domain, trenchWidth, trenchDepth).apply();
 
   // Clamp the oxide seed to at least gridDelta so the Cartesian solve always
   // has resolvable nodes between the Si and SiO2 level sets.
   const NumericType seedThickness = std::max(oxideThickness, gridDelta);
   {
-    auto ambientInterface = ls::Domain<NumericType, D>::New(siInterface);
+    auto ambientInterface = ls::Domain<NumericType, D>::New(domain->getLevelSets().back());
     auto initialOxide =
         ps::SmartPointer<ls::SphereDistribution<viennahrle::CoordType, D>>::New(
             seedThickness);
@@ -187,6 +133,14 @@ void run(const ps::util::Parameters &params) {
   model->setPressure(pressure);
   model->setOrientation(orientation);
   model->setInitialOxideThickness(seedThickness);
+
+  {
+    const auto useGpu = lower(getString(params, "useGpu", "auto"));
+    if      (useGpu == "gpu") model->setGpuMode(ps::GpuMode::Gpu);
+    else if (useGpu == "cpu") model->setGpuMode(ps::GpuMode::Cpu);
+    const auto prec = lower(getString(params, "gpuPreconditioner", "jacobi"));
+    if (prec == "ilu0") model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
+  }
 
   {
     const auto it = params.m.find("maxGridPoints");

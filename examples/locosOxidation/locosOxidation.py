@@ -23,11 +23,9 @@ All lengths are in micrometers, time in hours, pressure in atm.
 
 import sys
 import os
-import viennals
-import viennals.d2 as ls
+import viennals as vls
 import viennaps as vps
 
-viennals.setDimension(2)
 vps.setDimension(2)
 
 # ── Default parameters (match locosOxidation/config.txt) ─────────────────────
@@ -123,7 +121,7 @@ def _parse_orientation(s: str):
 config_file = sys.argv[1] if len(sys.argv) > 1 else "config.txt"
 _parse_config(config_file)
 
-viennals.setNumThreads(cfg["numThreads"])
+vps.setNumThreads(cfg["numThreads"])
 vps.Logger.setLogLevel(vps.LogLevel.INFO)
 
 grid_delta          = cfg["gridDelta"]
@@ -146,34 +144,34 @@ output_prefix       = cfg["outputPrefix"]
 mask_contact_eps = 1.0e-6
 
 # ── Domain bounds and boundary conditions ────────────────────────────────────
-BC = viennals.BoundaryConditionEnum
+BC = vps.BoundaryType
 bounds = [-x_extent, x_extent, y_min, y_max]
 bcs    = [BC.REFLECTIVE_BOUNDARY, BC.INFINITE_BOUNDARY]
 
 # ── Build level sets ──────────────────────────────────────────────────────────
 
 # Si substrate: flat plane at y = 0.
-si_ls = ls.Domain(bounds, bcs, grid_delta)
-ls.MakeGeometry(si_ls, ls.Plane([0.0, 0.0], [0.0, 1.0])).apply()
+si_ls = vls.Domain(bounds, bcs, grid_delta)
+vls.MakeGeometry(si_ls, vls.Plane([0.0, 0.0], [0.0, 1.0])).apply()
 
 # Pad SiO2: geometrically advance Si surface by padOxideThickness.
-oxide_ls = ls.Domain(si_ls)
-ls.GeometricAdvect(
-    oxide_ls, ls.SphereDistribution(pad_oxide_thickness)
+oxide_ls = vls.Domain(si_ls)
+vls.GeometricAdvect(
+    oxide_ls, vls.SphereDistribution(pad_oxide_thickness)
 ).apply()
 
 # Si3N4 mask: rectangular box covering x ∈ [-xExtent, maskEdge],
 # y ∈ [pad_oxide_top - eps, pad_oxide_top + maskThickness].
 pad_oxide_top = pad_oxide_thickness
-mask_ls = ls.Domain(bounds, bcs, grid_delta)
-mask_geom = ls.MakeGeometry(
+mask_ls = vls.Domain(bounds, bcs, grid_delta)
+mask_geom = vls.MakeGeometry(
     mask_ls,
-    ls.Box(
+    vls.Box(
         [-x_extent, pad_oxide_top - mask_contact_eps],
         [mask_edge,  pad_oxide_top + mask_thickness],
     ),
 )
-mask_geom.setIgnoreBoundaryConditions([False, True])  # ignore INFINITE y boundary
+mask_geom.setIgnoreBoundaryConditions([False, True, False])  # ignore INFINITE y boundary
 mask_geom.apply()
 
 # ── Assemble ViennaPS domain ──────────────────────────────────────────────────
@@ -201,7 +199,7 @@ model.setCouplingIterations(cfg["couplingIterations"])
 model.setCouplingTolerance(cfg["couplingTolerance"])
 model.setMaskCouplingIterations(cfg["maskCouplingIterations"])
 model.setMaskCouplingTolerance(cfg["maskCouplingTolerance"])
-mask_params = viennals.OxidationPresets.siliconNitrideMask1000C()
+mask_params = vls.OxidationPresets.siliconNitrideMask1000C()
 mask_params.referenceViscosity = cfg["maskReferenceViscosity"]
 mask_params.poissonRatio = cfg["maskPoissonRatio"]
 mask_params.youngModulus = cfg["maskYoungModulus"]

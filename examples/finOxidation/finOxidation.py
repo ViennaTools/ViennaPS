@@ -14,18 +14,11 @@ Usage:
     python finOxidation.py [config.txt]
 
 All lengths are in micrometers, time in hours, pressure in atm.
-
-Coordinate convention:
-    dim 0 = X  — cross-section direction (REFLECTIVE boundary, fin at x=0)
-    dim 1 = Y  — height / growth direction (INFINITE boundary)
 """
 
 import sys
-import viennals
-import viennals.d2 as ls
 import viennaps as vps
 
-viennals.setDimension(2)
 vps.setDimension(2)
 
 # ── Default parameters (match finOxidation/config.txt) ──────────────────────
@@ -33,8 +26,6 @@ cfg = {
     "numThreads":    16,
     "gridDelta":     0.05,
     "xExtent":       0.6,
-    "yMin":         -1.0,
-    "yMax":          2.0,
     "finWidth":      0.2,
     "finHeight":     0.5,
     "oxideThickness": 0.0,
@@ -42,10 +33,12 @@ cfg = {
     "timeStep":      0.025,
     "temperature": 1000.0,
     "pressure":      1.0,
-    "oxidant":     "wet",
-    "orientation": "100",
-    "outputPrefix": "ps_fin_oxidation",
-    "maxGridPoints": 0,  # 0 = unlimited; set >0 to cap the Cartesian solve grid
+    "oxidant":            "wet",
+    "orientation":        "100",
+    "outputPrefix":       "ps_fin_oxidation",
+    "maxGridPoints":      0,   # 0 = unlimited; set >0 to cap the Cartesian solve grid
+    "useGpu":             "auto",   # auto | gpu | cpu
+    "gpuPreconditioner":  "jacobi", # jacobi | ilu0
 }
 
 
@@ -92,13 +85,11 @@ def _parse_orientation(s: str):
 config_file = sys.argv[1] if len(sys.argv) > 1 else "config.txt"
 _parse_config(config_file)
 
-viennals.setNumThreads(cfg["numThreads"])
+vps.setNumThreads(cfg["numThreads"])
 vps.Logger.setLogLevel(vps.LogLevel.ERROR)
 
 grid_delta      = cfg["gridDelta"]
 x_extent        = cfg["xExtent"]
-y_min           = cfg["yMin"]
-y_max           = cfg["yMax"]
 fin_width       = cfg["finWidth"]
 fin_height      = cfg["finHeight"]
 oxide_thickness = cfg["oxideThickness"]
@@ -110,36 +101,21 @@ oxidant         = _parse_oxidant(cfg["oxidant"])
 orientation     = _parse_orientation(cfg["orientation"])
 output_prefix   = cfg["outputPrefix"]
 
-# ── Domain bounds and boundary conditions ─────────────────────────────────────
-BC     = viennals.BoundaryConditionEnum
-bounds = [-x_extent, x_extent, y_min, y_max]
-bcs    = [BC.REFLECTIVE_BOUNDARY, BC.INFINITE_BOUNDARY]
-
-# ── Build Si fin level set ────────────────────────────────────────────────────
-# Base: flat substrate at y = 0 (solid below).
-si_ls = ls.Domain(bounds, bcs, grid_delta)
-ls.MakeGeometry(si_ls, ls.Plane([0.0, 0.0], [0.0, 1.0])).apply()
-
-# Fin box: centered at x = 0, from y ≈ 0 to y = finHeight.
-# A tiny negative Y offset fuses the fin base seamlessly into the substrate.
-fin_box = ls.Domain(bounds, bcs, grid_delta)
-fin_geom = ls.MakeGeometry(
-    fin_box,
-    ls.Box([-fin_width / 2.0, -1e-6], [fin_width / 2.0, fin_height]),
-)
-fin_geom.setIgnoreBoundaryConditions([False, True])  # ignore INFINITE y
-fin_geom.apply()
-ls.BooleanOperation(si_ls, fin_box, viennals.BooleanOperationEnum.UNION).apply()
-
-# ── Assemble ViennaPS domain ──────────────────────────────────────────────────
+# ── Build Si fin geometry ─────────────────────────────────────────────────────
+# MakeFin's second constructor sets up the domain (REFLECTIVE X, INFINITE Y)
+# and creates the fin: flat substrate at y=0 with a rectangular fin of
+# width finWidth and height finHeight centered at x=0.
 domain = vps.Domain()
-domain.insertNextLevelSetAsMaterial(si_ls, vps.Material.Si, False)
+vps.MakeFin(domain, gridDelta=grid_delta, xExtent=2.0 * x_extent, yExtent=0.0,
+            finWidth=fin_width, finHeight=fin_height).apply()
 
-# The deformation solver needs at least gridDelta of oxide between the two
-# interfaces so that Cartesian solve nodes exist. Clamp the seed upward.
+# ── Oxide seed ────────────────────────────────────────────────────────────────
+# Clamp to at least gridDelta so the Cartesian solve has resolvable nodes.
+import viennals as vls
+
 seed_thickness = max(oxide_thickness, grid_delta)
-ambient_ls = ls.Domain(si_ls)
-ls.GeometricAdvect(ambient_ls, ls.SphereDistribution(seed_thickness)).apply()
+ambient_ls = vls.Domain(domain.getLevelSets()[-1])
+vls.GeometricAdvect(ambient_ls, vls.SphereDistribution(seed_thickness)).apply()
 domain.insertNextLevelSetAsMaterial(ambient_ls, vps.Material.SiO2, False)
 
 # ── Oxidation model ───────────────────────────────────────────────────────────
@@ -151,6 +127,14 @@ model.setOxidant(oxidant)
 model.setPressure(pressure)
 model.setOrientation(orientation)
 model.setInitialOxideThickness(seed_thickness)
+
+use_gpu = cfg["useGpu"].lower()
+if use_gpu == "gpu":
+    model.setGpuMode(vps.GpuMode.Gpu)
+elif use_gpu == "cpu":
+    model.setGpuMode(vps.GpuMode.Cpu)
+if cfg["gpuPreconditioner"].lower() == "ilu0":
+    model.setGpuPreconditioner(vps.GpuPreconditioner.ILU0)
 
 if cfg["maxGridPoints"] > 0:
     model.setMaxGridPoints(int(cfg["maxGridPoints"]))

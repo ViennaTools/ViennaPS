@@ -2,10 +2,9 @@
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
 #include <psUtil.hpp>
+#include <geometries/psMakeFin.hpp>
 
-#include <lsBooleanOperation.hpp>
 #include <lsGeometricAdvect.hpp>
-#include <lsMakeGeometry.hpp>
 
 #include <algorithm>
 #include <array>
@@ -55,97 +54,19 @@ ps::SiliconOrientation parseOrientation(const std::string &value) {
 }
 
 // ---------------------------------------------------------------------------
-// Geometry helpers (templated on D)
-//
-// Coordinate convention (both 2D and 3D):
-//   dim 0 = X  — lateral step direction (REFLECTIVE boundary)
-//   dim 1 = Y  — height / growth direction (INFINITE boundary)
-//   dim 2 = Z  — depth / extrusion direction, 3D only (REFLECTIVE boundary)
-//
-// `timeStep` is a maximum internal oxidation step; the model automatically
-// subcycles below it when the CFL limit is smaller.
-// ---------------------------------------------------------------------------
-
-template <int D>
-ps::SmartPointer<ls::Domain<NumericType, D>> makeBoxLevelSet(
-    const double *bounds,
-    typename ls::Domain<NumericType, D>::BoundaryType *boundaryCons,
-    NumericType gridDelta,
-    const ls::VectorType<NumericType, D> &minCorner,
-    const ls::VectorType<NumericType, D> &maxCorner) {
-  auto levelSet =
-      ls::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
-  ls::MakeGeometry<NumericType, D> makeGeometry(
-      levelSet, ls::Box<NumericType, D>::New(minCorner, maxCorner));
-  // Ignore the Y boundary (growth, INFINITE); respect lateral boundaries.
-  std::array<bool, D> ignoreBoundary{};
-  ignoreBoundary[1] = true;
-  makeGeometry.setIgnoreBoundaryConditions(ignoreBoundary);
-  makeGeometry.apply();
-  return levelSet;
-}
-
-// Builds the step geometry: a flat Si surface at y=leftTop for x<stepX,
-// stepping up/down to y=rightTop for x>stepX.
-//
-// In 3D a second step wall is added at z=stepZ, forming a true 3D convex
-// corner: the raised platform occupies only the quadrant x>stepX AND z>stepZ.
-// The two step faces (the XY-plane wall and the ZY-plane wall) meet at the
-// corner edge running along Y at (stepX, y, stepZ).
-template <int D>
-ps::SmartPointer<ls::Domain<NumericType, D>> makeStepLevelSet(
-    const double *bounds,
-    typename ls::Domain<NumericType, D>::BoundaryType *boundaryCons,
-    NumericType gridDelta, NumericType xMax, NumericType leftTop,
-    NumericType rightTop, NumericType stepX, NumericType zExtent = 0,
-    NumericType stepZ = 0) {
-  auto step = ls::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
-
-  // Horizontal plane at y=leftTop — everything below is solid.
-  ls::VectorType<NumericType, D> planeOrigin{};
-  planeOrigin[1] = leftTop;
-  ls::VectorType<NumericType, D> planeNormal{};
-  planeNormal[1] = NumericType(1);
-  ls::MakeGeometry<NumericType, D>(
-      step, ls::Plane<NumericType, D>::New(planeOrigin, planeNormal))
-      .apply();
-
-  // Corner block: raised platform from y=leftTop to y=rightTop.
-  // 2D: x in [stepX, xMax]
-  // 3D: x in [stepX, xMax] AND z in [stepZ, zExtent] — one quadrant only.
-  ls::VectorType<NumericType, D> rightMin{};
-  rightMin[0] = stepX;
-  ls::VectorType<NumericType, D> rightMax{};
-  rightMax[0] = xMax;
-  if constexpr (D == 3) {
-    rightMin[2] = stepZ;
-    rightMax[2] = zExtent;
-  }
-
-  if (rightTop > leftTop) {
-    // Step up
-    rightMin[1] = leftTop - gridDelta;
-    rightMax[1] = rightTop;
-    auto rightBlock =
-        makeBoxLevelSet<D>(bounds, boundaryCons, gridDelta, rightMin, rightMax);
-    ls::BooleanOperation<NumericType, D>(step, rightBlock,
-                                         ls::BooleanOperationEnum::UNION)
-        .apply();
-  } else if (rightTop < leftTop) {
-    // Step down
-    rightMin[1] = rightTop;
-    rightMax[1] = leftTop + gridDelta;
-    auto rightBlock =
-        makeBoxLevelSet<D>(bounds, boundaryCons, gridDelta, rightMin, rightMax);
-    ls::BooleanOperation<NumericType, D>(step, rightBlock,
-                                         ls::BooleanOperationEnum::RELATIVE_COMPLEMENT)
-        .apply();
-  }
-  return step;
-}
-
-// ---------------------------------------------------------------------------
 // Simulation driver
+//
+// Geometry: a rectangular Si fin (half-fin) centred at the reflective boundary
+// x = 0, with the step wall at x = finWidth / 2.  In the visible simulation
+// domain [0, xExtent] the raised platform occupies [0, finWidth/2] and the
+// flat substrate occupies [finWidth/2, xExtent].  The reflective boundary
+// mirrors the fin symmetrically; oxide grows on the top, both sides of the
+// fin wall, and the surrounding substrate.
+//
+// Coordinate convention:
+//   2D: X = lateral (REFLECTIVE at x=0), Y = growth (INFINITE)
+//   3D: X = lateral (REFLECTIVE at x=0), Y = step extrusion (REFLECTIVE),
+//       Z = growth (INFINITE)
 // ---------------------------------------------------------------------------
 
 template <int D>
@@ -155,11 +76,19 @@ void run(const ps::util::Parameters &params) {
 
   const NumericType gridDelta      = params.get("gridDelta");
   const NumericType xExtent        = params.get("xExtent");
-  const NumericType yMin           = params.get("yMin");
-  const NumericType yMax           = params.get("yMax");
-  const NumericType stepX          = params.get("stepX");
-  const NumericType leftSiTop      = params.get("leftSiTop");
-  const NumericType rightSiTop     = params.get("rightSiTop");
+  const NumericType finWidth       = params.get("finWidth");
+  const NumericType finHeight      = params.get("finHeight");
+  // yMin/yMax set the growth-direction bounds for the HRLE domain.  With an
+  // INFINITE boundary the level set extends correctly regardless, so these are
+  // only needed when the surface might reach the boundary during simulation.
+  const NumericType yMin = [&]() {
+    const auto it = params.m.find("yMin");
+    return (it != params.m.end()) ? params.get("yMin") : NumericType(-2.0);
+  }();
+  const NumericType yMax = [&]() {
+    const auto it = params.m.find("yMax");
+    return (it != params.m.end()) ? params.get("yMax") : NumericType(finHeight + NumericType(2.0));
+  }();
   const auto oxIt = params.m.find("oxideThickness");
   const NumericType oxideThickness =
       (oxIt != params.m.end()) ? params.get("oxideThickness") : NumericType(0);
@@ -168,48 +97,49 @@ void run(const ps::util::Parameters &params) {
   const NumericType temperature    = params.get("temperature");
   const NumericType pressure       = params.get("pressure");
 
-  // For 3D: zExtent defaults to xExtent; stepZ defaults to stepX (symmetric corner).
   const NumericType zExtent = [&]() -> NumericType {
     if constexpr (D != 3) return NumericType(0);
     const auto it = params.m.find("zExtent");
     return (it == params.m.end()) ? xExtent : params.get("zExtent");
-  }();
-  const NumericType stepZ = [&]() -> NumericType {
-    if constexpr (D != 3) return NumericType(0);
-    const auto it = params.m.find("stepZ");
-    return (it == params.m.end()) ? stepX : params.get("stepZ");
   }();
 
   const auto oxidant     = parseOxidant(getString(params, "oxidant", "wet"));
   const auto orientation = parseOrientation(getString(params, "orientation", "100"));
   const auto outputPrefix = getString(params, "outputPrefix", "ps_step_oxidation");
 
-  // Domain bounds: [X, Y] for 2D; [X, Y, Z] for 3D.
+  using BoundaryType = typename ls::Domain<NumericType, D>::BoundaryType;
   double bounds[2 * D];
-  bounds[0] = -xExtent; bounds[1] = xExtent;
-  bounds[2] = yMin;     bounds[3] = yMax;
-  if constexpr (D == 3) { bounds[4] = -zExtent; bounds[5] = zExtent; }
+  BoundaryType boundaryCons[D];
 
-  typename ls::Domain<NumericType, D>::BoundaryType boundaryCons[D];
-  boundaryCons[0] = ls::Domain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
-  boundaryCons[1] = ls::Domain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
-  if constexpr (D == 3) {
-    boundaryCons[2] = ls::Domain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+  bounds[0] = -xExtent; bounds[1] = xExtent;
+  if constexpr (D == 2) {
+    bounds[2] = yMin; bounds[3] = yMax;
+    boundaryCons[0] = BoundaryType::REFLECTIVE_BOUNDARY;
+    boundaryCons[1] = BoundaryType::INFINITE_BOUNDARY;
+  } else {
+    // Y = step extrusion (REFLECTIVE), Z = growth (INFINITE)
+    bounds[2] = -zExtent; bounds[3] = zExtent;
+    bounds[4] = yMin;     bounds[5] = yMax;
+    boundaryCons[0] = BoundaryType::REFLECTIVE_BOUNDARY;
+    boundaryCons[1] = BoundaryType::REFLECTIVE_BOUNDARY;
+    boundaryCons[2] = BoundaryType::INFINITE_BOUNDARY;
   }
 
-  auto siInterface =
-      makeStepLevelSet<D>(bounds, boundaryCons, gridDelta, xExtent, leftSiTop,
-                          rightSiTop, stepX, zExtent, stepZ);
+  // MakeFin with halfFin=true calls halveXAxis() on the setup, clipping the
+  // domain to [0, xExtent].  The fin (raised platform) occupies x in
+  // [0, finWidth/2] and the step wall sits at x = finWidth/2.
+  auto domain = ps::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
+  ps::MakeFin<NumericType, D>(domain, finWidth, finHeight,
+                               /*taperAngle=*/NumericType(0),
+                               /*maskHeight=*/NumericType(0),
+                               /*maskTaperAngle=*/NumericType(0),
+                               /*halfFin=*/true).apply();
 
-  auto domain = ps::Domain<NumericType, D>::New();
-  domain->insertNextLevelSetAsMaterial(siInterface, ps::Material::Si);
-
-  // The deformation solver needs the oxide level set to be at least gridDelta
-  // thick so that Cartesian solve nodes exist between the two surfaces. Clamp
-  // the seed upward when the user specifies a sub-grid or zero initial oxide.
+  // The deformation solver needs the oxide to be at least gridDelta thick so
+  // that Cartesian solve nodes exist between the two surfaces.
   const NumericType seedThickness = std::max(oxideThickness, gridDelta);
   {
-    auto ambientInterface = ls::Domain<NumericType, D>::New(siInterface);
+    auto ambientInterface = ls::Domain<NumericType, D>::New(domain->getLevelSets().back());
     auto initialOxide =
         ps::SmartPointer<ls::SphereDistribution<viennahrle::CoordType, D>>::New(
             seedThickness);
@@ -217,6 +147,7 @@ void run(const ps::util::Parameters &params) {
     domain->insertNextLevelSetAsMaterial(ambientInterface, ps::Material::SiO2,
                                          false);
   }
+
   auto model = ps::SmartPointer<ps::Oxidation<NumericType, D>>::New();
   model->setTemperature(temperature);
   model->setTime(oxidationTime);
@@ -226,8 +157,14 @@ void run(const ps::util::Parameters &params) {
   model->setOrientation(orientation);
   model->setInitialOxideThickness(seedThickness);
 
-  // maxGridPoints limits the Cartesian solve grid. Memory scales as N³ in 3D,
-  // so either set a higher value here or coarsen gridDelta for 3D runs.
+  {
+    const auto useGpu = lower(getString(params, "useGpu", "auto"));
+    if      (useGpu == "gpu") model->setGpuMode(ps::GpuMode::Gpu);
+    else if (useGpu == "cpu") model->setGpuMode(ps::GpuMode::Cpu);
+    const auto prec = lower(getString(params, "gpuPreconditioner", "jacobi"));
+    if (prec == "ilu0") model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
+  }
+
   {
     const auto it = params.m.find("maxGridPoints");
     if (it != params.m.end())
@@ -241,7 +178,6 @@ void run(const ps::util::Parameters &params) {
 
   model->saveSurfaceMesh(domain, outputPrefix + "_stack_after.vtp");
   model->saveVolumeMesh(domain, outputPrefix + "_stack_after");
-  
 
   std::cout << "Planar Deal-Grove estimate for " << oxidationTime
             << " hr oxidation at " << temperature << " C: "

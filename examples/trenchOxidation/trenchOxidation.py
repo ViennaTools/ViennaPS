@@ -10,27 +10,15 @@ Geometry (2-D cross-section, extruded symmetrically in Z for 3-D):
     · Flat Si substrate at y = 0
     · Trench centered at x = 0: width trenchWidth, depth trenchDepth (into Si)
 
-Oxide growth starts from a thin seed layer (oxideThickness, or gridDelta if
-zero). The deformation solver uses a Neumann pressure boundary at the Si/SiO2
-interface combined with SIMPLE pressure under-relaxation, so it converges
-stably from a 1×gridDelta seed on all geometries.
-
 Usage:
     python trenchOxidation.py [config.txt]
 
 All lengths are in micrometers, time in hours, pressure in atm.
-
-Coordinate convention:
-    dim 0 = X  — cross-section direction (REFLECTIVE boundary, trench at x=0)
-    dim 1 = Y  — height / growth direction (INFINITE boundary)
 """
 
 import sys
-import viennals
-import viennals.d2 as ls
 import viennaps as vps
 
-viennals.setDimension(2)
 vps.setDimension(2)
 
 # ── Default parameters (match trenchOxidation/config.txt) ───────────────────
@@ -38,8 +26,6 @@ cfg = {
     "numThreads":    16,
     "gridDelta":     0.05,
     "xExtent":       0.6,
-    "yMin":         -1.5,
-    "yMax":          1.5,
     "trenchWidth":   0.3,
     "trenchDepth":   0.5,
     "oxideThickness": 0.0,
@@ -47,10 +33,12 @@ cfg = {
     "timeStep":      0.025,
     "temperature": 1000.0,
     "pressure":      1.0,
-    "oxidant":     "wet",
-    "orientation": "100",
-    "outputPrefix": "ps_trench_oxidation",
-    "maxGridPoints": 0,  # 0 = unlimited; set >0 to cap the Cartesian solve grid
+    "oxidant":            "wet",
+    "orientation":        "100",
+    "outputPrefix":       "ps_trench_oxidation",
+    "maxGridPoints":      0,   # 0 = unlimited; set >0 to cap the Cartesian solve grid
+    "useGpu":             "auto",   # auto | gpu | cpu
+    "gpuPreconditioner":  "jacobi", # jacobi | ilu0
 }
 
 
@@ -97,13 +85,11 @@ def _parse_orientation(s: str):
 config_file = sys.argv[1] if len(sys.argv) > 1 else "config.txt"
 _parse_config(config_file)
 
-viennals.setNumThreads(cfg["numThreads"])
+vps.setNumThreads(cfg["numThreads"])
 vps.Logger.setLogLevel(vps.LogLevel.ERROR)
 
 grid_delta      = cfg["gridDelta"]
 x_extent        = cfg["xExtent"]
-y_min           = cfg["yMin"]
-y_max           = cfg["yMax"]
 trench_width    = cfg["trenchWidth"]
 trench_depth    = cfg["trenchDepth"]
 oxide_thickness = cfg["oxideThickness"]
@@ -115,39 +101,20 @@ oxidant         = _parse_oxidant(cfg["oxidant"])
 orientation     = _parse_orientation(cfg["orientation"])
 output_prefix   = cfg["outputPrefix"]
 
-# ── Domain bounds and boundary conditions ─────────────────────────────────────
-BC     = viennals.BoundaryConditionEnum
-bounds = [-x_extent, x_extent, y_min, y_max]
-bcs    = [BC.REFLECTIVE_BOUNDARY, BC.INFINITE_BOUNDARY]
-
-# ── Build Si trench level set ─────────────────────────────────────────────────
-# Base: flat substrate at y = 0 (solid below).
-si_ls = ls.Domain(bounds, bcs, grid_delta)
-ls.MakeGeometry(si_ls, ls.Plane([0.0, 0.0], [0.0, 1.0])).apply()
-
-# Trench void box: the cavity to subtract from the substrate.
-# Extends slightly above y=0 and below y=-trenchDepth for a clean boolean cut.
-void_box = ls.Domain(bounds, bcs, grid_delta)
-void_geom = ls.MakeGeometry(
-    void_box,
-    ls.Box(
-        [-trench_width / 2.0, -trench_depth - grid_delta],
-        [ trench_width / 2.0,  grid_delta],
-    ),
-)
-void_geom.setIgnoreBoundaryConditions([False, True])  # ignore INFINITE y
-void_geom.apply()
-ls.BooleanOperation(
-    si_ls, void_box, viennals.BooleanOperationEnum.RELATIVE_COMPLEMENT
-).apply()
-
-# ── Assemble ViennaPS domain ──────────────────────────────────────────────────
+# ── Build Si trench geometry ──────────────────────────────────────────────────
+# MakeTrench's second constructor sets up the domain (REFLECTIVE X, INFINITE Y)
+# and creates the trench: flat substrate at y=0 with a rectangular slot of
+# width trenchWidth and depth trenchDepth centered at x=0.
 domain = vps.Domain()
-domain.insertNextLevelSetAsMaterial(si_ls, vps.Material.Si, False)
+vps.MakeTrench(domain, gridDelta=grid_delta, xExtent=2.0 * x_extent, yExtent=0.0,
+               trenchWidth=trench_width, trenchDepth=trench_depth).apply()
+
+# ── Oxide seed ────────────────────────────────────────────────────────────────
+import viennals as vls
 
 seed_thickness = max(oxide_thickness, grid_delta)
-ambient_ls = ls.Domain(si_ls)
-ls.GeometricAdvect(ambient_ls, ls.SphereDistribution(seed_thickness)).apply()
+ambient_ls = vls.Domain(domain.getLevelSets()[-1])
+vls.GeometricAdvect(ambient_ls, vls.SphereDistribution(seed_thickness)).apply()
 domain.insertNextLevelSetAsMaterial(ambient_ls, vps.Material.SiO2, False)
 
 # ── Oxidation model ───────────────────────────────────────────────────────────
@@ -159,6 +126,14 @@ model.setOxidant(oxidant)
 model.setPressure(pressure)
 model.setOrientation(orientation)
 model.setInitialOxideThickness(seed_thickness)
+
+use_gpu = cfg["useGpu"].lower()
+if use_gpu == "gpu":
+    model.setGpuMode(vps.GpuMode.Gpu)
+elif use_gpu == "cpu":
+    model.setGpuMode(vps.GpuMode.Cpu)
+if cfg["gpuPreconditioner"].lower() == "ilu0":
+    model.setGpuPreconditioner(vps.GpuPreconditioner.ILU0)
 
 if cfg["maxGridPoints"] > 0:
     model.setMaxGridPoints(int(cfg["maxGridPoints"]))

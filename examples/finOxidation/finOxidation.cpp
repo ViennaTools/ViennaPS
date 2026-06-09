@@ -2,10 +2,9 @@
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
 #include <psUtil.hpp>
+#include <geometries/psMakeFin.hpp>
 
-#include <lsBooleanOperation.hpp>
 #include <lsGeometricAdvect.hpp>
-#include <lsMakeGeometry.hpp>
 
 #include <algorithm>
 #include <array>
@@ -55,68 +54,12 @@ ps::SiliconOrientation parseOrientation(const std::string &value) {
 }
 
 // ---------------------------------------------------------------------------
-// Geometry helpers
-//
-// Coordinate convention (both 2D and 3D):
-//   dim 0 = X  — cross-section direction (REFLECTIVE boundary, fin centered at x=0)
-//   dim 1 = Y  — height / growth direction (INFINITE boundary)
-//   dim 2 = Z  — fin extrusion direction, 3D only (REFLECTIVE boundary)
-// ---------------------------------------------------------------------------
-
-template <int D>
-ps::SmartPointer<ls::Domain<NumericType, D>> makeBoxLevelSet(
-    const double *bounds,
-    typename ls::Domain<NumericType, D>::BoundaryType *boundaryCons,
-    NumericType gridDelta,
-    const ls::VectorType<NumericType, D> &minCorner,
-    const ls::VectorType<NumericType, D> &maxCorner) {
-  auto levelSet =
-      ls::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
-  ls::MakeGeometry<NumericType, D> makeGeometry(
-      levelSet, ls::Box<NumericType, D>::New(minCorner, maxCorner));
-  std::array<bool, D> ignoreBoundary{};
-  ignoreBoundary[1] = true; // Y is INFINITE; no transformation to apply
-  makeGeometry.setIgnoreBoundaryConditions(ignoreBoundary);
-  makeGeometry.apply();
-  return levelSet;
-}
-
-// Builds a fin geometry: flat Si substrate at y=0 with a rectangular fin
-// ridge centered at x=0 extending from y=0 to y=finHeight, width finWidth.
-//
-// In 3D the fin is extruded symmetrically along Z (uniform cross-section).
-template <int D>
-ps::SmartPointer<ls::Domain<NumericType, D>> makeFinLevelSet(
-    const double *bounds,
-    typename ls::Domain<NumericType, D>::BoundaryType *boundaryCons,
-    NumericType gridDelta, NumericType finWidth, NumericType finHeight,
-    NumericType zExtent) {
-  // Flat substrate: solid below y = 0.
-  auto siLS = ls::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
-  ls::VectorType<NumericType, D> origin{}, normal{};
-  normal[1] = NumericType(1);
-  ls::MakeGeometry<NumericType, D>(
-      siLS, ls::Plane<NumericType, D>::New(origin, normal))
-      .apply();
-
-  // Fin box: centered at x = 0, height finHeight.
-  // A tiny negative Y offset ensures the fin base fuses cleanly with the substrate.
-  ls::VectorType<NumericType, D> finMin{}, finMax{};
-  finMin[0] = -finWidth / NumericType(2);
-  finMin[1] = NumericType(-1e-6);
-  finMax[0] =  finWidth / NumericType(2);
-  finMax[1] =  finHeight;
-  if constexpr (D == 3) { finMin[2] = -zExtent; finMax[2] = zExtent; }
-  auto finBox = makeBoxLevelSet<D>(bounds, boundaryCons, gridDelta, finMin, finMax);
-
-  ls::BooleanOperation<NumericType, D>(siLS, finBox,
-                                       ls::BooleanOperationEnum::UNION)
-      .apply();
-  return siLS;
-}
-
-// ---------------------------------------------------------------------------
 // Simulation driver
+//
+// Coordinate convention:
+//   2D: X = lateral (REFLECTIVE), Y = growth (INFINITE)
+//   3D: X = lateral (REFLECTIVE), Y = fin extrusion (REFLECTIVE), Z = growth (INFINITE)
+//       yMin/yMax refer to the growth axis (Z in 3D); zExtent is the Y extrusion range.
 // ---------------------------------------------------------------------------
 
 template <int D>
@@ -138,7 +81,6 @@ void run(const ps::util::Parameters &params) {
   const NumericType temperature   = params.get("temperature");
   const NumericType pressure      = params.get("pressure");
 
-  // For 3D: zExtent defaults to xExtent (fin extrusion depth).
   const NumericType zExtent = [&]() -> NumericType {
     if constexpr (D != 3) return NumericType(0);
     const auto it = params.m.find("zExtent");
@@ -149,27 +91,32 @@ void run(const ps::util::Parameters &params) {
   const auto orientation  = parseOrientation(getString(params, "orientation", "100"));
   const auto outputPrefix = getString(params, "outputPrefix", "ps_fin_oxidation");
 
+  using BoundaryType = typename ls::Domain<NumericType, D>::BoundaryType;
   double bounds[2 * D];
+  BoundaryType boundaryCons[D];
+
   bounds[0] = -xExtent; bounds[1] = xExtent;
-  bounds[2] = yMin;     bounds[3] = yMax;
-  if constexpr (D == 3) { bounds[4] = -zExtent; bounds[5] = zExtent; }
+  if constexpr (D == 2) {
+    bounds[2] = yMin; bounds[3] = yMax;
+    boundaryCons[0] = BoundaryType::REFLECTIVE_BOUNDARY;
+    boundaryCons[1] = BoundaryType::INFINITE_BOUNDARY;
+  } else {
+    // Y = fin extrusion (REFLECTIVE), Z = growth (INFINITE)
+    bounds[2] = -zExtent; bounds[3] = zExtent;
+    bounds[4] = yMin;     bounds[5] = yMax;
+    boundaryCons[0] = BoundaryType::REFLECTIVE_BOUNDARY;
+    boundaryCons[1] = BoundaryType::REFLECTIVE_BOUNDARY;
+    boundaryCons[2] = BoundaryType::INFINITE_BOUNDARY;
+  }
 
-  typename ls::Domain<NumericType, D>::BoundaryType boundaryCons[D];
-  boundaryCons[0] = ls::Domain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
-  boundaryCons[1] = ls::Domain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
-  if constexpr (D == 3)
-    boundaryCons[2] = ls::Domain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
-
-  auto siInterface = makeFinLevelSet<D>(bounds, boundaryCons, gridDelta,
-                                        finWidth, finHeight, zExtent);
-  auto domain = ps::Domain<NumericType, D>::New();
-  domain->insertNextLevelSetAsMaterial(siInterface, ps::Material::Si);
+  auto domain = ps::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
+  ps::MakeFin<NumericType, D>(domain, finWidth, finHeight).apply();
 
   // Clamp the oxide seed to at least gridDelta so the Cartesian solve always
   // has resolvable nodes between the Si and SiO2 level sets.
   const NumericType seedThickness = std::max(oxideThickness, gridDelta);
   {
-    auto ambientInterface = ls::Domain<NumericType, D>::New(siInterface);
+    auto ambientInterface = ls::Domain<NumericType, D>::New(domain->getLevelSets().back());
     auto initialOxide =
         ps::SmartPointer<ls::SphereDistribution<viennahrle::CoordType, D>>::New(
             seedThickness);
@@ -186,6 +133,16 @@ void run(const ps::util::Parameters &params) {
   model->setPressure(pressure);
   model->setOrientation(orientation);
   model->setInitialOxideThickness(seedThickness);
+
+  {
+    const auto useGpu = lower(getString(params, "useGpu", "auto"));
+    if      (useGpu == "gpu") model->setGpuMode(ps::GpuMode::Gpu);
+    else if (useGpu == "cpu") model->setGpuMode(ps::GpuMode::Cpu);
+    // "auto" = default: GPU when node count >= threshold
+    const auto prec = lower(getString(params, "gpuPreconditioner", "jacobi"));
+    if (prec == "ilu0") model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
+    // else Jacobi is the default
+  }
 
   {
     const auto it = params.m.find("maxGridPoints");
