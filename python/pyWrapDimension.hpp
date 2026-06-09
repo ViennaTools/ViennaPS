@@ -112,6 +112,7 @@ inline void bindPsOxidationSharedTypes(py::module &module) {
   py::native_enum<SiliconOrientation>(module, "SiliconOrientation",
                                       "enum.IntEnum")
       .value("Si100", SiliconOrientation::Si100)
+      .value("Si110", SiliconOrientation::Si110)
       .value("Si111", SiliconOrientation::Si111)
       .value("PolySi", SiliconOrientation::PolySi)
       .finalize();
@@ -1229,6 +1230,32 @@ template <int D> void bindApi(py::module &module) {
            &Oxidation<T, D>::setMaskCouplingIterations, py::arg("iterations"))
       .def("setMaskCouplingTolerance",
            &Oxidation<T, D>::setMaskCouplingTolerance, py::arg("tolerance"))
+      .def("setMaskTractionIterations",
+           &Oxidation<T, D>::setMaskTractionIterations, py::arg("iterations"),
+           "Maximum iterations for the inner mask traction solve.")
+      .def("setMaskTractionTolerance",
+           &Oxidation<T, D>::setMaskTractionTolerance, py::arg("tolerance"),
+           "Convergence tolerance for the inner mask traction solve.")
+      .def("setMaskTractionRelaxation",
+           &Oxidation<T, D>::setMaskTractionRelaxation, py::arg("relaxation"),
+           "Outer Aitken relaxation factor for the mask/oxide coupling (0.01–1).")
+      .def("setMaskContactLoadRelaxation",
+           &Oxidation<T, D>::setMaskContactLoadRelaxation, py::arg("relaxation"),
+           "Under-relaxation for the unilateral contact active-set load (0.02–1).")
+      .def("setMaskContactReleaseFraction",
+           &Oxidation<T, D>::setMaskContactReleaseFraction, py::arg("fraction"),
+           "Relative traction floor for releasing a relaxed contact face (0–0.25).")
+      .def("setMaskUnilateralContact",
+           &Oxidation<T, D>::setMaskUnilateralContact, py::arg("enabled"),
+           "Enable unilateral (compression-only) contact at the mask/oxide interface.")
+      .def("setMaskSmootherOmega",
+           &Oxidation<T, D>::setMaskSmootherOmega, py::arg("omega"),
+           "SOR omega for the mask multigrid smoother (0.2–1.4; 1.0 = Gauss-Seidel).")
+      .def("setGpuMode", &Oxidation<T, D>::setGpuMode, py::arg("mode"),
+           "BiCGSTAB solver back-end: GpuMode.Auto, GpuMode.Gpu, or GpuMode.Cpu.")
+      .def("setGpuPreconditioner", &Oxidation<T, D>::setGpuPreconditioner,
+           py::arg("preconditioner"),
+           "GPU BiCGSTAB preconditioner (GpuPreconditioner.Jacobi matches CPU).")
       .def("estimatePlanarOxideThickness",
            &Oxidation<T, D>::estimatePlanarOxideThickness,
            py::arg("initialOxideThickness") = T(0),

@@ -9,7 +9,7 @@ import viennals._core
 import viennals.d3
 import viennaps._core
 from . import gpu
-__all__: list[str] = ['AdvectionCallback', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'CustomSphereDistribution', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
+__all__: list[str] = ['AdvectionCallback', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'CustomSphereDistribution', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'Oxidation', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
 class AdvectionCallback:
     domain: Domain
     def __init__(self) -> None:
@@ -716,6 +716,97 @@ class MultiParticleProcess(ProcessModel):
         ...
     def setRateFunction(self, arg0: collections.abc.Callable[[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], viennaps._core.Material], float]) -> None:
         ...
+class Oxidation(ProcessModelBase):
+    def __init__(self) -> None:
+        ...
+    def setTemperature(self, temperatureC: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Oxidation temperature in °C (800–1200 °C)."""
+    def setTime(self, timeHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Total oxidation time in hours."""
+    def setOxidant(self, oxidant: viennaps._core.OxidantType) -> None:
+        """Oxidant species: OxidantType.Dry (O₂) or OxidantType.Wet (H₂O)."""
+    def setPressure(self, pressureAtm: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Ambient pressure in atm (scales B and B/A linearly)."""
+    def setOrientation(self, orientation: viennaps._core.SiliconOrientation) -> None:
+        """Crystal orientation: SiliconOrientation.Si100, Si110, Si111, or PolySi."""
+    def setTimeStep(self, dtHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Maximum internal step duration in hours (0 = CFL-only)."""
+    def setCFLFactor(self, factor: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Courant number for CFL-limited internal stepping (default 0.499)."""
+    def setInitialOxideThickness(self, thicknessUm: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Native-oxide seed thickness in µm when no SiO2 layer exists."""
+    def setTransferCoefficient(self, coefficient: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Gas-transfer coefficient in µm/hr."""
+    def setReactionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Stress-coupling activation volume for interface reaction rate (m³)."""
+    def setDiffusionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Stress-coupling activation volume for oxide diffusivity (m³)."""
+    def setMaxGridPoints(self, maxGridPoints: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """Maximum Cartesian grid points for the diffusion/mechanics solve."""
+    def setCouplingIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def setCouplingTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setMechanicsIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """Maximum iterations for the viscous mechanics solve."""
+    def setMechanicsTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Convergence tolerance for the mechanics solve."""
+    def setSimpleVelocityRelaxation(self, alpha: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """SIMPLE velocity under-relaxation factor (0 < alpha <= 1)."""
+    def setSimplePressureRelaxation(self, beta: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """SIMPLE pressure under-relaxation factor (0 < beta <= 1)."""
+    def setPressureIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """Maximum iterations for the pressure Poisson solve."""
+    def setPressureTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Convergence tolerance for the pressure solve."""
+    def setStokesIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """Maximum iterations for the Stokes velocity solve."""
+    def setStokesTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Convergence tolerance for the Stokes solve."""
+    def setSolveBounds(self, minIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"], maxIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"]) -> None:
+        """Cartesian index bounds for the diffusion/deformation solve."""
+    def clearSolveBounds(self) -> None:
+        ...
+    def setMaskBendingBounds(self, minIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"], maxIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"]) -> None:
+        """Cartesian index bounds for the mask bending solve."""
+    def clearMaskBendingBounds(self) -> None:
+        ...
+    def setSiliconMaterial(self, mat: viennaps._core.Material) -> None:
+        """Override which material is treated as silicon."""
+    def setOxideMaterial(self, mat: viennaps._core.Material) -> None:
+        """Override which material is treated as oxide."""
+    def setMaskMaterial(self, mat: viennaps._core.Material) -> None:
+        """Material treated as the oxidation mask (activates LOCOS physics)."""
+    def setMaskParameters(self, params: viennals.d3.OxidationMaskParameters) -> None:
+        """Viscous-elasticity parameters for the mask layer."""
+    def setMaskCouplingIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def setMaskCouplingTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setMaskTractionIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """Maximum iterations for the inner mask traction solve."""
+    def setMaskTractionTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Convergence tolerance for the inner mask traction solve."""
+    def setMaskTractionRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Outer Aitken relaxation factor for the mask/oxide coupling (0.01–1)."""
+    def setMaskContactLoadRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Under-relaxation for the unilateral contact active-set load (0.02–1)."""
+    def setMaskContactReleaseFraction(self, fraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Relative traction floor for releasing a relaxed contact face (0–0.25)."""
+    def setMaskUnilateralContact(self, enabled: bool) -> None:
+        """Enable unilateral (compression-only) contact at the mask/oxide interface."""
+    def setMaskSmootherOmega(self, omega: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """SOR omega for the mask multigrid smoother (0.2–1.4; 1.0 = Gauss-Seidel)."""
+    def setGpuMode(self, mode: viennaps._core.GpuMode) -> None:
+        """BiCGSTAB solver back-end: GpuMode.Auto, GpuMode.Gpu, or GpuMode.Cpu."""
+    def setGpuPreconditioner(self, preconditioner: viennaps._core.GpuPreconditioner) -> None:
+        """GPU BiCGSTAB preconditioner (GpuPreconditioner.Jacobi matches CPU)."""
+    def estimatePlanarOxideThickness(self, initialOxideThickness: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> float:
+        """Deal-Grove planar oxide thickness estimate in µm."""
+    def saveSurfaceMesh(self, domain: Domain, fileName: str) -> None:
+        """Extracts and saves a mathematically wrapped surface mesh."""
+    def saveVolumeMesh(self, domain: Domain, baseName: str) -> None:
+        """Extracts and saves a mathematically wrapped volume mesh."""
 class OxideRegrowth(ProcessModel):
     def __init__(self, nitrideEtchRate: typing.SupportsFloat | typing.SupportsIndex, oxideEtchRate: typing.SupportsFloat | typing.SupportsIndex, redepositionRate: typing.SupportsFloat | typing.SupportsIndex, redepositionThreshold: typing.SupportsFloat | typing.SupportsIndex, redepositionTimeInt: typing.SupportsFloat | typing.SupportsIndex, diffusionCoefficient: typing.SupportsFloat | typing.SupportsIndex, sinkStrength: typing.SupportsFloat | typing.SupportsIndex, scallopVelocity: typing.SupportsFloat | typing.SupportsIndex, centerVelocity: typing.SupportsFloat | typing.SupportsIndex, topHeight: typing.SupportsFloat | typing.SupportsIndex, centerWidth: typing.SupportsFloat | typing.SupportsIndex, stabilityFactor: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...

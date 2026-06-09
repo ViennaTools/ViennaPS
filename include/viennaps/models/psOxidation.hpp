@@ -839,11 +839,20 @@ private:
         }
       }
     }
-    if (found)
+    if (found) {
       for (int d = 0; d < D; ++d) {
-        lo[d] -= padding;
-        hi[d] += padding;
+        if (lo[d] < std::numeric_limits<viennahrle::IndexType>::min() + padding) {
+          lo[d] = std::numeric_limits<viennahrle::IndexType>::min();
+        } else {
+          lo[d] -= padding;
+        }
+        if (hi[d] > std::numeric_limits<viennahrle::IndexType>::max() - padding) {
+          hi[d] = std::numeric_limits<viennahrle::IndexType>::max();
+        } else {
+          hi[d] += padding;
+        }
       }
+    }
     return {lo, hi};
   }
 
