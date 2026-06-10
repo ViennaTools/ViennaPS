@@ -33,7 +33,6 @@ trenchDepth=0.5
 oxideThickness=0.0
 
 oxidationTime=0.2
-timeStep=0.025
 temperature=1000.
 pressure=1.
 oxidant=wet

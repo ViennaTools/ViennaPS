@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <chrono>
 #include <iostream>
 #include <omp.h>
 #include <stdexcept>
@@ -93,7 +94,6 @@ void run(const ps::util::Parameters &params) {
   const NumericType oxideThickness =
       (oxIt != params.m.end()) ? params.get("oxideThickness") : NumericType(0);
   const NumericType oxidationTime  = params.get("oxidationTime");
-  const NumericType timeStep       = params.get("timeStep");
   const NumericType temperature    = params.get("temperature");
   const NumericType pressure       = params.get("pressure");
 
@@ -151,7 +151,6 @@ void run(const ps::util::Parameters &params) {
   auto model = ps::SmartPointer<ps::Oxidation<NumericType, D>>::New();
   model->setTemperature(temperature);
   model->setTime(oxidationTime);
-  model->setTimeStep(timeStep);
   model->setOxidant(oxidant);
   model->setPressure(pressure);
   model->setOrientation(orientation);
@@ -174,11 +173,15 @@ void run(const ps::util::Parameters &params) {
   model->saveSurfaceMesh(domain, outputPrefix + "_stack_initial.vtp");
   model->saveVolumeMesh(domain, outputPrefix + "_stack_initial");
 
+  const auto t0 = std::chrono::steady_clock::now();
   ps::Process<NumericType, D>(domain, model, NumericType(0)).apply();
+  const double elapsedSim =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
 
   model->saveSurfaceMesh(domain, outputPrefix + "_stack_after.vtp");
   model->saveVolumeMesh(domain, outputPrefix + "_stack_after");
 
+  std::cout << "Simulation time: " << elapsedSim << " s\n";
   std::cout << "Planar Deal-Grove estimate for " << oxidationTime
             << " hr oxidation at " << temperature << " C: "
             << model->estimatePlanarOxideThickness(seedThickness)

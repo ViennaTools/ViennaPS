@@ -32,9 +32,6 @@ finHeight=1.0      # height of the raised platform above the substrate
 oxideThickness=0.0
 
 oxidationTime=0.1
-# Maximum internal oxidation step. The model automatically subcycles below this
-# value when the CFL limit is smaller.
-timeStep=0.01
 temperature=1000.
 pressure=1.
 oxidant=wet

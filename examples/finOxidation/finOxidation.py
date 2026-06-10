@@ -17,12 +17,12 @@ All lengths are in micrometers, time in hours, pressure in atm.
 """
 
 import sys
+import time
 import viennaps as vps
-
-vps.setDimension(2)
 
 # ── Default parameters (match finOxidation/config.txt) ──────────────────────
 cfg = {
+    "dimensions":    2,
     "numThreads":    16,
     "gridDelta":     0.05,
     "xExtent":       0.6,
@@ -30,12 +30,12 @@ cfg = {
     "finHeight":     0.5,
     "oxideThickness": 0.0,
     "oxidationTime": 0.2,
-    "timeStep":      0.025,
     "temperature": 1000.0,
     "pressure":      1.0,
     "oxidant":            "wet",
     "orientation":        "100",
     "outputPrefix":       "ps_fin_oxidation",
+    "zExtent":       0.0,   # 3D only: half-depth in Z; defaults to xExtent if 0
     "maxGridPoints":      0,   # 0 = unlimited; set >0 to cap the Cartesian solve grid
     "useGpu":             "auto",   # auto | gpu | cpu
     "gpuPreconditioner":  "jacobi", # jacobi | ilu0
@@ -85,16 +85,17 @@ def _parse_orientation(s: str):
 config_file = sys.argv[1] if len(sys.argv) > 1 else "config.txt"
 _parse_config(config_file)
 
+vps.setDimension(cfg["dimensions"])
 vps.setNumThreads(cfg["numThreads"])
-vps.Logger.setLogLevel(vps.LogLevel.ERROR)
+vps.Logger.setLogLevel(vps.LogLevel.INFO)
 
 grid_delta      = cfg["gridDelta"]
 x_extent        = cfg["xExtent"]
+z_extent        = cfg["zExtent"] if cfg["zExtent"] > 0.0 else cfg["xExtent"]
 fin_width       = cfg["finWidth"]
 fin_height      = cfg["finHeight"]
 oxide_thickness = cfg["oxideThickness"]
 oxidation_time  = cfg["oxidationTime"]
-time_step       = cfg["timeStep"]
 temperature     = cfg["temperature"]
 pressure        = cfg["pressure"]
 oxidant         = _parse_oxidant(cfg["oxidant"])
@@ -106,7 +107,8 @@ output_prefix   = cfg["outputPrefix"]
 # and creates the fin: flat substrate at y=0 with a rectangular fin of
 # width finWidth and height finHeight centered at x=0.
 domain = vps.Domain()
-vps.MakeFin(domain, gridDelta=grid_delta, xExtent=2.0 * x_extent, yExtent=0.0,
+y_extent = 2.0 * z_extent if cfg["dimensions"] == 3 else 0.0
+vps.MakeFin(domain, gridDelta=grid_delta, xExtent=2.0 * x_extent, yExtent=y_extent,
             finWidth=fin_width, finHeight=fin_height).apply()
 
 # ── Oxide seed ────────────────────────────────────────────────────────────────
@@ -122,7 +124,6 @@ domain.insertNextLevelSetAsMaterial(ambient_ls, vps.Material.SiO2, False)
 model = vps.Oxidation()
 model.setTemperature(temperature)
 model.setTime(oxidation_time)
-model.setTimeStep(time_step)
 model.setOxidant(oxidant)
 model.setPressure(pressure)
 model.setOrientation(orientation)
@@ -142,11 +143,14 @@ if cfg["maxGridPoints"] > 0:
 model.saveSurfaceMesh(domain, output_prefix + "_initial.vtp")
 model.saveVolumeMesh(domain, output_prefix + "_initial")
 
+t0 = time.perf_counter()
 vps.Process(domain, model, 0.0).apply()
+elapsed_sim = time.perf_counter() - t0
 
 model.saveSurfaceMesh(domain, output_prefix + "_after.vtp")
 model.saveVolumeMesh(domain, output_prefix + "_after")
 
+print(f"Simulation time: {elapsed_sim:.2f} s")
 print(
     f"Planar Deal-Grove estimate for {oxidation_time} hr at {temperature} °C: "
     f"{model.estimatePlanarOxideThickness(seed_thickness):.4f} µm oxide."

@@ -13,13 +13,13 @@
 #       gridDelta=0.1   -> ~384k points (fast 3D test)
 
 numThreads=16
-dimensions=2
+dimensions=3
 
 gridDelta=0.01
 xExtent=0.6
 yMin=-1.0
 yMax=2.0
-# zExtent=0.6  # 3D only; defaults to xExtent if omitted
+zExtent=0.1  # 3D only; defaults to xExtent if omitted
 # maxGridPoints=10000000
 
 # Fin geometry (micrometers)
@@ -31,7 +31,6 @@ finHeight=0.5
 oxideThickness=0.0
 
 oxidationTime=0.2
-timeStep=0.025
 temperature=1000.
 pressure=1.
 oxidant=wet

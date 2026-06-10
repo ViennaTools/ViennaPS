@@ -20,20 +20,20 @@ All lengths are in micrometers, time in hours, pressure in atm.
 """
 
 import sys
+import time
 import viennaps as vps
-
-vps.setDimension(2)
 
 # ── Default parameters (match stepOxidation/config.txt) ─────────────────────
 cfg = {
+    "dimensions":      2,
     "numThreads":      16,
     "gridDelta":       0.05,
     "xExtent":         1.0,
+    "zExtent":         0.0,   # 3D only: half-depth in Z; defaults to xExtent if 0
     "finWidth":        0.5,   # fin wall at x = finWidth/2 = 0.25 µm
     "finHeight":       1.0,   # step height above the substrate
     "oxideThickness":  0.0,
     "oxidationTime":   0.05,
-    "timeStep":        0.01,
     "temperature":  1000.0,
     "pressure":        1.0,
     "oxidant":       "wet",
@@ -88,16 +88,17 @@ def _parse_orientation(s: str):
 config_file = sys.argv[1] if len(sys.argv) > 1 else "config.txt"
 _parse_config(config_file)
 
+vps.setDimension(cfg["dimensions"])
 vps.setNumThreads(cfg["numThreads"])
 vps.Logger.setLogLevel(vps.LogLevel.ERROR)
 
 grid_delta      = cfg["gridDelta"]
 x_extent        = cfg["xExtent"]
+z_extent        = cfg["zExtent"] if cfg["zExtent"] > 0.0 else cfg["xExtent"]
 fin_width       = cfg["finWidth"]
 fin_height      = cfg["finHeight"]
 oxide_thickness = cfg["oxideThickness"]
 oxidation_time  = cfg["oxidationTime"]
-time_step       = cfg["timeStep"]
 temperature     = cfg["temperature"]
 pressure        = cfg["pressure"]
 oxidant         = _parse_oxidant(cfg["oxidant"])
@@ -110,7 +111,8 @@ output_prefix   = cfg["outputPrefix"]
 # MakeFin with halfFin=True calls halveXAxis(), clipping the domain to
 # [0, xExtent].  The fin occupies x in [0, finWidth/2]; the step wall is
 # at x = finWidth/2.
-domain = vps.Domain(vps.DomainSetup(grid_delta, 2.0 * x_extent, 0.0,
+y_extent = 2.0 * z_extent if cfg["dimensions"] == 3 else 0.0
+domain = vps.Domain(vps.DomainSetup(grid_delta, 2.0 * x_extent, y_extent,
                                      vps.BoundaryType.REFLECTIVE_BOUNDARY))
 vps.MakeFin(domain, fin_width, fin_height, 0.0, 0, 0, True).apply()
 
@@ -126,7 +128,6 @@ domain.insertNextLevelSetAsMaterial(ambient_ls, vps.Material.SiO2, False)
 model = vps.Oxidation()
 model.setTemperature(temperature)
 model.setTime(oxidation_time)
-model.setTimeStep(time_step)
 model.setOxidant(oxidant)
 model.setPressure(pressure)
 model.setOrientation(orientation)
@@ -143,11 +144,14 @@ if cfg["gpuPreconditioner"].lower() == "ilu0":
 
 model.saveSurfaceMesh(domain, output_prefix + "_initial.vtp")
 
+t0 = time.perf_counter()
 vps.Process(domain, model, 0.0).apply()
+elapsed_sim = time.perf_counter() - t0
 
 model.saveSurfaceMesh(domain, output_prefix + "_after.vtp")
 model.saveVolumeMesh(domain, output_prefix + "_after")
 
+print(f"Simulation time: {elapsed_sim:.2f} s")
 print(
     f"Planar Deal-Grove estimate for {oxidation_time} hr at {temperature} °C: "
     f"{model.estimatePlanarOxideThickness(seed_thickness):.4f} µm oxide."
