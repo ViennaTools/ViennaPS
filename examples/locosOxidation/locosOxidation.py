@@ -22,7 +22,6 @@ All lengths are in micrometers, time in hours, pressure in atm.
 """
 
 import sys
-import os
 import viennals as vls
 import viennaps as vps
 
@@ -142,49 +141,36 @@ orientation         = _parse_orientation(cfg["orientation"])
 max_grid_points     = cfg["maxGridPoints"]
 output_prefix       = cfg["outputPrefix"]
 
-# Tiny offset so Cartesian stencils unambiguously see the mask/oxide interface.
-mask_contact_eps = 1.0e-6
+# ── Build geometry ────────────────────────────────────────────────────────────
 
-# ── Domain bounds and boundary conditions ────────────────────────────────────
+# Asymmetric y-bounds: yMin below Si surface, yMax above anticipated oxide height.
 BC = vps.BoundaryType
 bounds = [-x_extent, x_extent, y_min, y_max]
 bcs    = [BC.REFLECTIVE_BOUNDARY, BC.INFINITE_BOUNDARY]
 
-# ── Build level sets ──────────────────────────────────────────────────────────
+domain = vps.Domain(bounds, bcs, grid_delta)
 
-# Si substrate: flat plane at y = 0.
-si_ls = vls.Domain(bounds, bcs, grid_delta)
-vls.MakeGeometry(si_ls, vls.Plane([0.0, 0.0], [0.0, 1.0])).apply()
+# Si substrate flat at y = 0, then pad SiO2 at y = padOxideThickness.
+vps.MakePlane(domain, 0., vps.Material.Si).apply()
+vps.MakePlane(domain, pad_oxide_thickness, vps.Material.SiO2, True).apply()
 
-# Pad SiO2: geometrically advance Si surface by padOxideThickness.
-oxide_ls = vls.Domain(si_ls)
-vls.GeometricAdvect(
-    oxide_ls, vls.SphereDistribution(pad_oxide_thickness)
-).apply()
-
-# Si3N4 mask: rectangular box covering x ∈ [-xExtent, maskEdge],
-# y ∈ [pad_oxide_top - eps, pad_oxide_top + maskThickness].
-pad_oxide_top = pad_oxide_thickness
-mask_ls = vls.Domain(bounds, bcs, grid_delta)
-mask_geom = vls.MakeGeometry(
-    mask_ls,
-    vls.Box(
-        [-x_extent, pad_oxide_top - mask_contact_eps],
-        [mask_edge,  pad_oxide_top + mask_thickness],
-    ),
-)
-mask_geom.setIgnoreBoundaryConditions([False, True, False])  # ignore INFINITE y boundary
-mask_geom.apply()
-
-# ── Assemble ViennaPS domain ──────────────────────────────────────────────────
-domain = vps.Domain()
-domain.insertNextLevelSetAsMaterial(si_ls,    vps.Material.Si,    False)
-domain.insertNextLevelSetAsMaterial(oxide_ls, vps.Material.SiO2,  False)
-
-# Only add mask if thickness is positive. Setting maskThickness <= 0 disables
-# LOCOS physics and uses standard oxidation instead.
+# Si3N4 mask: box covering x ∈ [−xExtent, maskEdge], sitting on the pad oxide.
+# No built-in ViennaPS helper for a half-mask, so construct it directly.
+# The tiny contact epsilon places the mask bottom numerically inside the oxide
+# so Cartesian stencils unambiguously see the mask/oxide boundary.
 if mask_thickness > 0.0:
-    domain.insertNextLevelSetAsMaterial(mask_ls,  vps.Material.Si3N4, False)
+    mask_contact_eps = 1.0e-6
+    mask_ls = vls.Domain(bounds, bcs, grid_delta)
+    mask_geom = vls.MakeGeometry(
+        mask_ls,
+        vls.Box(
+            [-x_extent, pad_oxide_thickness - mask_contact_eps],
+            [mask_edge,  pad_oxide_thickness + mask_thickness],
+        ),
+    )
+    mask_geom.setIgnoreBoundaryConditions([False, True, False])
+    mask_geom.apply()
+    domain.insertNextLevelSetAsMaterial(mask_ls, vps.Material.Si3N4, False)
 
 # ── Oxidation model ───────────────────────────────────────────────────────────
 model = vps.Oxidation()

@@ -30,11 +30,9 @@
 #include <sstream>
 #include <string>
 
-#include <lsBooleanOperation.hpp>
-#include <lsDomain.hpp>
-#include <lsGeometricAdvect.hpp>
 #include <lsMakeGeometry.hpp>
 
+#include <geometries/psMakePlane.hpp>
 #include <models/psOxidation.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
@@ -45,34 +43,7 @@ namespace ps = viennaps;
 using NumericType = double;
 constexpr int D = 2;
 
-// ── Geometry helpers ─────────────────────────────────────────────────────────
-
-using LevelSet = ls::SmartPointer<ls::Domain<NumericType, D>>;
-using BoundaryType = ls::Domain<NumericType, D>::BoundaryType;
-
-LevelSet makePlane(const double *bounds, BoundaryType *bc,
-                   NumericType gridDelta, NumericType y) {
-  auto ls = ls::Domain<NumericType, D>::New(bounds, bc, gridDelta);
-  const ls::VectorType<NumericType, D> origin{0., y};
-  const ls::VectorType<NumericType, D> normal{0., 1.};
-  ls::MakeGeometry<NumericType, D>(ls,
-                                   ls::Plane<NumericType, D>::New(origin, normal))
-      .apply();
-  return ls;
-}
-
-LevelSet makeMask(const double *bounds, BoundaryType *bc, NumericType gridDelta,
-                  NumericType xMin, NumericType xMax, NumericType yMin,
-                  NumericType yMax) {
-  auto mask = ls::Domain<NumericType, D>::New(bounds, bc, gridDelta);
-  const ls::VectorType<NumericType, D> minCorner{xMin, yMin};
-  const ls::VectorType<NumericType, D> maxCorner{xMax, yMax};
-  ls::MakeGeometry<NumericType, D> geom(
-      mask, ls::Box<NumericType, D>::New(minCorner, maxCorner));
-  geom.setIgnoreBoundaryConditions(std::array<bool, D>{false, true});
-  geom.apply();
-  return mask;
-}
+using BoundaryType = ps::BoundaryType;
 
 // ── Config parser ────────────────────────────────────────────────────────────
 
@@ -96,7 +67,7 @@ struct Config {
   int mechanicsIterations = 2;
   NumericType mechanicsTolerance = 1e-7;
   int pressureIterations = 500;
-  NumericType pressureTolerance = 1e-3;  // 1e-8 is unachievable with Jacobi; 1e-3 works with ILU(0)
+  NumericType pressureTolerance = 1e-3;
   int stokesIterations = 100;
   NumericType stokesTolerance = 1e-3;
   int couplingIterations = 8;
@@ -114,15 +85,12 @@ struct Config {
   NumericType maskTractionRelaxation = 0.9;
   NumericType maskContactLoadRelaxation = 0.25;
   NumericType maskContactReleaseFraction = 5e-3;
-  NumericType maskSmootherOmega = 1.0;   // SOR omega for multigrid V-cycle smoother
-  int maskAnchorBoundaryDirection = 0; // x direction in this 2D LOCOS setup
-  int maskAnchorBoundarySide = -1;     // -1: far-left mask edge; 0 disables
+  NumericType maskSmootherOmega = 1.0;
+  int maskAnchorBoundaryDirection = 0;
+  int maskAnchorBoundarySide = -1;
   unsigned maskAnchorBoundaryLayers = 1;
-  // "auto" (default, GPU when n>=threshold), "gpu" (always GPU), "cpu" (always CPU)
   std::string useGpu = "auto";
-  // "jacobi" matches the CPU diffusion preconditioner; "ilu0" is experimental.
   std::string gpuPreconditioner = "jacobi";
-  // "debug", "timing", "intermediate", "info" (default), "warning", "error"
   std::string logLevel = "info";
 };
 
@@ -236,7 +204,6 @@ int main() {
   std::chrono::duration<double> meshWriteTime{0.};
   const auto cfg = parseConfig("config.txt");
 
-  // Apply log level from config (controls verbosity including timing output).
   {
     const auto &lv = cfg.logLevel;
     if      (lv == "debug")        ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
@@ -249,39 +216,37 @@ int main() {
   }
   omp_set_num_threads(cfg.numThreads);
 
-  const NumericType maskContactEpsilon = 1.e-6; // µm: mask bottom offset from oxide top
+  // ── Geometry ──────────────────────────────────────────────────────────────
 
+  // Asymmetric y-bounds: yMin below Si surface (for the substrate), yMax above
+  // anticipated oxide height.  MakePlane reuses this setup for all layers.
   double bounds[2 * D] = {-cfg.xExtent, cfg.xExtent, cfg.yMin, cfg.yMax};
   BoundaryType bc[D] = {BoundaryType::REFLECTIVE_BOUNDARY,
                         BoundaryType::INFINITE_BOUNDARY};
 
-  // Si substrate at y = 0.
-  auto siLS = makePlane(bounds, bc, cfg.gridDelta, 0.);
+  auto domain = ps::Domain<NumericType, D>::New(bounds, bc, cfg.gridDelta);
 
-  // Pad oxide: geometrically advance Si surface by padOxideThickness.
-  auto oxLS = ls::Domain<NumericType, D>::New(siLS);
-  auto sphere =
-      ls::SmartPointer<ls::SphereDistribution<viennahrle::CoordType, D>>::New(
-          cfg.padOxideThickness);
-  ls::GeometricAdvect<NumericType, D>(oxLS, sphere).apply();
+  // Si substrate flat at y = 0.
+  ps::MakePlane<NumericType, D>(domain, 0., ps::Material::Si).apply();
 
-  // SiN mask: box occupying x < maskEdge, sitting flat on the pad oxide.
-  // The tiny contact epsilon places the mask bottom numerically below the oxide
-  // top so Cartesian stencils unambiguously hit the mask boundary.
-  auto maskLS =
-      makeMask(bounds, bc, cfg.gridDelta, -cfg.xExtent, cfg.maskEdge,
-               cfg.padOxideThickness - maskContactEpsilon,
-               cfg.padOxideThickness + cfg.maskThickness);
+  // Pad SiO2: flat plane at y = padOxideThickness grown on the Si surface.
+  ps::MakePlane<NumericType, D>(domain, cfg.padOxideThickness,
+                                ps::Material::SiO2, /*addToExisting=*/true).apply();
 
-  // ── ViennaPS domain ───────────────────────────────────────────────────────
-
-  auto domain = ps::Domain<NumericType, D>::New();
-  domain->insertNextLevelSetAsMaterial(siLS, ps::Material::Si, false);
-  domain->insertNextLevelSetAsMaterial(oxLS, ps::Material::SiO2, false);
-
-  // Only add mask if thickness is positive. Setting maskThickness <= 0 disables
-  // LOCOS physics and uses standard oxidation instead.
+  // Si3N4 mask: box covering x ∈ [−xExtent, maskEdge], sitting on the pad
+  // oxide.  The tiny contact epsilon ensures the mask bottom is numerically
+  // inside the oxide so Cartesian stencils unambiguously hit the boundary.
   if (cfg.maskThickness > NumericType(0)) {
+    constexpr NumericType contactEps = 1e-6; // µm
+    auto maskLS = ls::Domain<NumericType, D>::New(bounds, bc, cfg.gridDelta);
+    const ls::VectorType<NumericType, D> minCorner{-cfg.xExtent,
+        cfg.padOxideThickness - contactEps};
+    const ls::VectorType<NumericType, D> maxCorner{cfg.maskEdge,
+        cfg.padOxideThickness + cfg.maskThickness};
+    ls::MakeGeometry<NumericType, D> geom(
+        maskLS, ls::Box<NumericType, D>::New(minCorner, maxCorner));
+    geom.setIgnoreBoundaryConditions(std::array<bool, D>{false, true});
+    geom.apply();
     domain->insertNextLevelSetAsMaterial(maskLS, ps::Material::Si3N4, false);
   }
 
@@ -310,13 +275,11 @@ int main() {
 
   if      (cfg.useGpu == "gpu") model->setGpuMode(ps::GpuMode::Gpu);
   else if (cfg.useGpu == "cpu") model->setGpuMode(ps::GpuMode::Cpu);
-  // else "auto": leave the default (GpuMode::Auto = GPU when n >= threshold)
-  if      (cfg.gpuPreconditioner == "ilu0")
+  if (cfg.gpuPreconditioner == "ilu0")
     model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
   else
     model->setGpuPreconditioner(ps::GpuPreconditioner::Jacobi);
 
-  // LOCOS: mask material is already Si3N4 (default); just set parameters.
   auto maskParams =
       viennals::OxidationPresets<NumericType>::siliconNitrideMask1000C();
   if (cfg.maskReferenceViscosity > NumericType(0))
@@ -351,6 +314,8 @@ int main() {
             << " hr oxidation at " << cfg.temperature
             << " C: " << est << " um total oxide thickness.\n";
 
+  // ── Time-stepping loop ────────────────────────────────────────────────────
+
   NumericType elapsed = 0.;
   unsigned step = 0;
   const NumericType timeEps = 1e-9 * cfg.oxidationTime;
@@ -370,7 +335,7 @@ int main() {
 
     std::ostringstream filename;
     filename << cfg.outputPrefix << "_stack_step_" << std::setw(3)
-             << std::setfill('0') << step;// << ".vtp";
+             << std::setfill('0') << step;
     {
       const auto meshWriteStart = Clock::now();
       model->saveSurfaceMesh(domain, filename.str() + ".vtp");
