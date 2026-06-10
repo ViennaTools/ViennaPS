@@ -22,33 +22,32 @@ oxidation rate).
 
 ## Setup (from scratch)
 
-Clone both libraries on their respective oxidation branches:
+Clone both libraries on their respective branches and run the install script from
+inside the ViennaPS directory. The script creates a virtual environment, installs
+ViennaLS, and installs ViennaPS. GPU support (requires CUDA 12+) is **enabled by
+default**; pass `--no-gpu` to disable it.
+
+**Option A — local clones of both libraries:**
 
 ```bash
-git clone -b oxidation https://github.com/ViennaTools/ViennaLS.git
+git clone -b oxidation  https://github.com/ViennaTools/ViennaLS.git
 git clone -b oxide-growth https://github.com/ViennaTools/ViennaPS.git
-```
-
-Create a virtual environment and install the Python packages:
-
-```bash
-python -m venv .venv
+cd ViennaPS
+python3 python/scripts/install_ViennaPS.py --viennals-dir=../ViennaLS
 source .venv/bin/activate
-
-pip install ./ViennaLS
-pip install ./ViennaPS
 ```
 
-To enable the GPU-accelerated BiCGSTAB solver (requires CUDA):
+**Option B — only clone ViennaPS; let the script pull ViennaLS automatically:**
 
 ```bash
-pip install ./ViennaLS \
-  --config-settings cmake.args="-DVIENNALS_USE_GPU=ON"
-pip install ./ViennaPS
+git clone -b oxide-growth https://github.com/ViennaTools/ViennaPS.git
+cd ViennaPS
+python3 python/scripts/install_ViennaPS.py --viennals-branch=oxidation
+source .venv/bin/activate
 ```
 
-The `pip install` steps compile and install the C++ extension modules; a C++17
-compiler and CMake ≥ 3.20 are required. Build time is a few minutes per package.
+The install step compiles and installs the C++ extension modules; a C++17 compiler
+and CMake ≥ 3.20 are required. Build time is a few minutes per package.
 
 ## Building (C++ executable)
 
