@@ -70,6 +70,8 @@ cfg = {
     "maskAnchorBoundaryDirection": 0,
     "maskAnchorBoundarySide":   -1,
     "maskAnchorBoundaryLayers":  1,
+    "useGpu":            "auto",   # auto | gpu | cpu
+    "gpuPreconditioner": "jacobi", # jacobi | ilu0
 }
 
 
@@ -224,6 +226,14 @@ model.setMaskParameters(mask_params)
 model.setMechanicsTolerance(cfg["mechanicsTolerance"])
 model.setPressureTolerance(cfg["pressureTolerance"])
 model.setStokesTolerance(cfg["stokesTolerance"])
+
+use_gpu = cfg["useGpu"].lower()
+if use_gpu == "gpu":
+    model.setGpuMode(vps.GpuMode.Gpu)
+elif use_gpu == "cpu":
+    model.setGpuMode(vps.GpuMode.Cpu)
+if cfg["gpuPreconditioner"].lower() == "ilu0":
+    model.setGpuPreconditioner(vps.GpuPreconditioner.ILU0)
 
 model.saveSurfaceMesh(domain, f"{output_prefix}_step_000.vtp")
 
