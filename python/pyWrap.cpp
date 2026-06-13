@@ -19,7 +19,29 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.def("gpuAvailable", &gpuAvailable,
              "Check if ViennaPS was compiled with GPU support.");
 
-  bindPsOxidationSharedTypes(module);
+  py::native_enum<OxidantType>(module, "OxidantType", "enum.IntEnum")
+      .value("Dry", OxidantType::Dry)
+      .value("Wet", OxidantType::Wet)
+      .finalize();
+
+  py::native_enum<SiliconOrientation>(module, "SiliconOrientation",
+                                      "enum.IntEnum")
+      .value("Si100", SiliconOrientation::Si100)
+      .value("Si110", SiliconOrientation::Si110)
+      .value("Si111", SiliconOrientation::Si111)
+      .value("PolySi", SiliconOrientation::PolySi)
+      .finalize();
+
+  py::native_enum<GpuMode>(module, "GpuMode", "enum.IntEnum")
+      .value("Gpu", GpuMode::Gpu)
+      .value("Cpu", GpuMode::Cpu)
+      .finalize();
+
+  py::native_enum<GpuPreconditioner>(module, "GpuPreconditioner",
+                                     "enum.IntEnum")
+      .value("Jacobi", GpuPreconditioner::Jacobi)
+      .value("ILU0", GpuPreconditioner::ILU0)
+      .finalize();
 
   // Logger
   py::class_<Logger, SmartPointer<Logger>>(module, "Logger", py::module_local())

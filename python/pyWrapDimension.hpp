@@ -104,32 +104,6 @@ PYBIND11_DECLARE_HOLDER_TYPE(Types, SmartPointer<Types>)
 // constructors with custom enum need lambda to work: seems to be an issue
 // with implicit move constructor
 
-inline void bindPsOxidationSharedTypes(py::module &module) {
-  py::native_enum<OxidantType>(module, "OxidantType", "enum.IntEnum")
-      .value("Dry", OxidantType::Dry)
-      .value("Wet", OxidantType::Wet)
-      .finalize();
-
-  py::native_enum<SiliconOrientation>(module, "SiliconOrientation",
-                                      "enum.IntEnum")
-      .value("Si100", SiliconOrientation::Si100)
-      .value("Si110", SiliconOrientation::Si110)
-      .value("Si111", SiliconOrientation::Si111)
-      .value("PolySi", SiliconOrientation::PolySi)
-      .finalize();
-
-  py::native_enum<GpuMode>(module, "GpuMode", "enum.IntEnum")
-      .value("Gpu", GpuMode::Gpu)
-      .value("Cpu", GpuMode::Cpu)
-      .finalize();
-
-  py::native_enum<GpuPreconditioner>(module, "GpuPreconditioner",
-                                     "enum.IntEnum")
-      .value("Jacobi", GpuPreconditioner::Jacobi)
-      .value("ILU0", GpuPreconditioner::ILU0)
-      .finalize();
-}
-
 // define trampoline classes for interface functions
 // ALSO NEED TO ADD TRAMPOLINE CLASSES FOR CLASSES
 // WHICH HOLD REFERENCES TO INTERFACE(ABSTRACT) CLASSES
