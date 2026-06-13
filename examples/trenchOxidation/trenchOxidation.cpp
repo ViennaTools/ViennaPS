@@ -135,7 +135,7 @@ void run(const ps::util::Parameters &params) {
   model->setInitialOxideThickness(seedThickness);
 
   {
-    const auto useGpu = lower(getString(params, "useGpu", "auto"));
+    const auto useGpu = lower(getString(params, "useGpu", "cpu"));
     if      (useGpu == "gpu") model->setGpuMode(ps::GpuMode::Gpu);
     else if (useGpu == "cpu") model->setGpuMode(ps::GpuMode::Cpu);
     const auto prec = lower(getString(params, "gpuPreconditioner", "jacobi"));

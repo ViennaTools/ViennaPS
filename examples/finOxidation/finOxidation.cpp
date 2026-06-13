@@ -135,11 +135,9 @@ void run(const ps::util::Parameters &params) {
   model->setInitialOxideThickness(seedThickness);
 
   {
-    const auto useGpu = lower(getString(params, "useGpu", "auto"));
-    if      (useGpu == "gpu")        model->setGpuMode(ps::GpuMode::Gpu);
-    // else if (useGpu == "gpu_simple") model->setGpuMode(ps::GpuMode::GpuSimple);
-    else if (useGpu == "cpu")        model->setGpuMode(ps::GpuMode::Cpu);
-    // "auto" = default: GPU when node count >= threshold
+    const auto useGpu = lower(getString(params, "useGpu", "cpu"));
+    if      (useGpu == "gpu") model->setGpuMode(ps::GpuMode::Gpu);
+    else if (useGpu == "cpu") model->setGpuMode(ps::GpuMode::Cpu);
     const auto prec = lower(getString(params, "gpuPreconditioner", "jacobi"));
     if (prec == "ilu0") model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
     // else Jacobi is the default

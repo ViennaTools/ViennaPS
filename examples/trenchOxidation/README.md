@@ -110,6 +110,8 @@ All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **
 | `oxidant` | `wet` | `wet` (H₂O) or `dry` (O₂) |
 | `orientation` | `100` | Crystal orientation: `100`, `110`, `111`, or `poly` |
 | `maxGridPoints` | *(5M)* | Optional cap on Cartesian solve grid nodes |
+| `useGpu` | `cpu` | BiCGSTAB back-end: `cpu` or `gpu` (GPU requires `VIENNALS_USE_GPU=ON`) |
+| `gpuPreconditioner` | `jacobi` | GPU preconditioner: `jacobi` or `ilu0` |
 | `outputPrefix` | `ps_trench_oxidation` | Prefix for all output file names |
 
 ### Grid Sizing Guide
@@ -166,8 +168,61 @@ Open `.vtp` files in ParaView to visualize the surface geometry and per-point fi
   xExtent = zExtent = 0.6 µm and trenchDepth = 0.5 µm gives ~400k nodes, which
   completes in a few minutes on a modern workstation.
 
-## Physics Notes
+## Solver
+
+Each time step solves two coupled PDEs on a Cartesian grid extracted from the oxide
+level-set narrow band:
+
+**1 — Oxidant diffusion** (Deal-Grove model)
+
+```
+∇·(D_eff(p) ∇C) = 0   inside oxide
+```
+
+with Robin BCs: transfer coefficient at the gas/oxide surface, reaction rate
+`k_eff(p) · C / N` at the Si/SiO2 interface. Both `D_eff` and `k_eff` are reduced
+by local compressive pressure through an Arrhenius activation-volume coupling. In the
+trench geometry this effect is most pronounced at the floor and sidewall junctions,
+where the oxide is mechanically confined. Solved with BiCGSTAB (Jacobi preconditioned).
+
+**2 — Oxide mechanics** (viscous Stokes flow with Maxwell viscoelasticity)
+
+```
+−∇p + η ∇²u = 0       (momentum)
+∇·u = ṡ               (modified continuity; source ṡ at Si/SiO2 interface)
+```
+
+Volume expansion β = 2.27 at the Si surface drives oxide toward the trench interior.
+Viscoelastic deviatoric stress is tracked via Maxwell relaxation
+(τ_relaxation = η/G). The SIMPLE algorithm (pressure-velocity coupling) solves this
+unconditionally-stably in up to 200 outer iterations. High compressive pressures in
+the trench corners are visible in the `OxPressure` output field.
+
+**Coupling loop**
+
+Pressure from the deformation solve feeds back into the diffusion solve via D_eff and
+k_eff; oxidant concentration sets the volume source for Stokes flow. An Aitken Δ²
+outer loop converges the coupling in ~3–5 iterations per time step.
+
+**Orientation correction**
+
+The linear Deal-Grove rate constant is multiplied per-face by a crystal-normal
+correction. For Si(100) wafers the trench sidewalls are (110)-like and oxidize
+~1.45× faster than the (100) floor.
+
+**Time stepping**
+
+CFL-limited explicit stepping: each accepted step satisfies
+`v_max · Δt / gridDelta < 0.499`. The step grows up to 2× per accepted step and
+halves on convergence failure (up to 16 retries).
+
+**GPU acceleration**
+
+If ViennaLS is built with `VIENNALS_USE_GPU=ON`, setting `useGpu=gpu` offloads the
+inner BiCGSTAB linear solves (diffusion, Stokes, pressure, harmonic extension) to
+CUDA via a custom GPU BiCGSTAB implementation. The SIMPLE iteration control, stress
+assembly, and RHS construction always run on the CPU. `gpuPreconditioner=ilu0` uses
+cuSPARSE ILU(0) instead of Jacobi for better convergence on ill-conditioned systems.
 
 See [`docs/OxidationSolver.md`](../../ViennaLS/docs/OxidationSolver.md) in the
-ViennaLS repository for the full description of the diffusion PDE, Stokes deformation
-solver, pressure–concentration coupling, and CFL-limited time stepping.
+ViennaLS repository for the full mathematical and implementation details.

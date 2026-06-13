@@ -89,7 +89,7 @@ struct Config {
   int maskAnchorBoundaryDirection = 0;
   int maskAnchorBoundarySide = -1;
   unsigned maskAnchorBoundaryLayers = 1;
-  std::string useGpu = "auto";
+  std::string useGpu = "cpu";
   std::string gpuPreconditioner = "jacobi";
   std::string logLevel = "info";
 };

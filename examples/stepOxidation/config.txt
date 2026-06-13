@@ -40,7 +40,7 @@ orientation=100
 outputPrefix=ps_step_oxidation
 
 # GPU solver backend (requires ViennaLS built with VIENNALS_USE_GPU=ON)
-# useGpu: auto (default) | gpu | cpu
+# useGpu: cpu (default) | gpu
 # gpuPreconditioner: jacobi (default) | ilu0
-# useGpu=auto
+# useGpu=cpu
 # gpuPreconditioner=jacobi
