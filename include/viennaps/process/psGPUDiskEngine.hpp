@@ -2,7 +2,7 @@
 
 #ifdef VIENNACORE_COMPILE_GPU
 
-#include "../psDomain.hpp"
+#include "psDesorptionSource.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
 
@@ -83,8 +83,7 @@ public:
     auto &diskMesh = context.diskMesh;
     assert(diskMesh != nullptr);
 
-    auto const &points = diskMesh->getNodes();
-    auto const &normals = *diskMesh->getCellData().getVectorData("Normals");
+    const auto &[points, normals, materialIds] = context.getDiskMeshData();
 
     // TODO: make this conversion to float prettier
     auto convertToFloat = [](const std::vector<Vec3D<NumericType>> &input) {
@@ -121,12 +120,11 @@ public:
       diskMeshRay.radius =
           static_cast<float>(context.rayTracingParams.diskRadius);
     }
+    diskRadius_ = diskMeshRay.radius;
 
     rayTracer_.setGeometry(diskMeshRay);
 
     if (model_->useMaterialIds()) {
-      auto const &materialIds =
-          *diskMesh->getCellData().getScalarData("MaterialIds");
       rayTracer_.setMaterialIds(materialIds);
     }
     assert(context.diskMesh->nodes.size() > 0);
@@ -135,9 +133,9 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateFluxes(
-      ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+  ProcessResult
+  calculateSourceFluxes(ProcessContext<NumericType, D> &context,
+                        SmartPointer<PointData<NumericType>> &fluxes) override {
 
     this->timer_.start();
 
@@ -164,8 +162,9 @@ public:
     // run the ray tracer
     rayTracer_.apply();
     rayTracer_.normalizeResults();
-    downloadResultsToPointData(*fluxes,
-                               context.rayTracingParams.smoothingNeighbors);
+    auto fluxResults = rayTracer_.getResults();
+    copyResultsToPointData(*fluxes, context.rayTracingParams.smoothingNeighbors,
+                           fluxResults);
     ++this->fluxCalculationsCount_;
 
     // output
@@ -175,8 +174,9 @@ public:
         downloadCoverages(d_coverages, context.diskMesh->getCellData(),
                           coverages, context.diskMesh->getNodes().size());
       }
-      downloadResultsToPointData(context.diskMesh->getCellData(),
-                                 context.rayTracingParams.smoothingNeighbors);
+      copyResultsToPointData(context.diskMesh->getCellData(),
+                             context.rayTracingParams.smoothingNeighbors,
+                             fluxResults);
       viennals::VTKWriter<NumericType>(
           context.diskMesh,
           context.intermediateOutputPath + context.getProcessName() + "_flux_" +
@@ -190,12 +190,55 @@ public:
     return ProcessResult::SUCCESS;
   }
 
+  ProcessResult calculateSurfaceFluxes(
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<PointData<NumericType>> &fluxes) override {
+
+    this->timer_.start();
+
+    const auto &[nodes, normals, materialIds] = context.getDiskMeshData();
+    const auto desorptionWeights = model_->getSurfaceModel()
+                                       ->getDesorptionWeights(materialIds)
+                                       .value_or(std::vector<NumericType>{});
+
+    if (desorptionWeights.size() != nodes.size()) {
+      VIENNACORE_LOG_WARNING(
+          "Desorption weights size does not match number of mesh nodes. "
+          "Skipping surface flux calculation.");
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    auto sourceData = makeDiskDesorptionSourceData<float, NumericType, D>(
+        nodes, normals, desorptionWeights, context.domain->getGridDelta(),
+        static_cast<NumericType>(diskRadius_), true);
+    if (!sourceData.hasSource) {
+      // No active desorption sources, skip ray tracing
+      VIENNACORE_LOG_DEBUG(
+          "No active desorption sources found. Skipping ray tracing.");
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    rayTracer_.setSurfaceSource(sourceData.positions, sourceData.normals,
+                                sourceData.weights, sourceData.sourceArea,
+                                sourceData.sourceOffset);
+    rayTracer_.apply();
+    rayTracer_.normalizeResults();
+    auto desorptionResults = rayTracer_.getResults();
+
+    copyResultsToPointData(*fluxes, context.rayTracingParams.smoothingNeighbors,
+                           desorptionResults);
+
+    rayTracer_.clearSurfaceSource();
+    this->timer_.finish();
+
+    return ProcessResult::SUCCESS;
+  }
+
 private:
-  static void
-  downloadCoverages(CudaBuffer &d_coverages,
-                    viennals::PointData<NumericType> &elementData,
-                    SmartPointer<viennals::PointData<NumericType>> &coverages,
-                    unsigned int numElements) {
+  static void downloadCoverages(CudaBuffer &d_coverages,
+                                PointData<NumericType> &elementData,
+                                SmartPointer<PointData<NumericType>> &coverages,
+                                unsigned int numElements) {
 
     auto numCov = coverages->getScalarDataSize();
     auto *temp = new float[numElements * numCov];
@@ -214,8 +257,9 @@ private:
     delete[] temp;
   }
 
-  void downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
-                                  int smoothingNeighbors) {
+  void copyResultsToPointData(
+      PointData<NumericType> &pointData, int smoothingNeighbors,
+      std::vector<std::vector<viennaray::gpu::ResultType>> results) {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();
     assert(numRates > 0);
@@ -224,7 +268,10 @@ private:
     int offset = 0;
     for (int pIdx = 0; pIdx < particles.size(); pIdx++) {
       for (int dIdx = 0; dIdx < particles[pIdx].dataLabels.size(); dIdx++) {
-        auto diskFlux = rayTracer_.getFlux(pIdx, dIdx, smoothingNeighbors);
+        auto diskFlux = results[offset + dIdx];
+        if (smoothingNeighbors > 0) {
+          rayTracer_.smoothFlux(diskFlux, smoothingNeighbors);
+        }
         auto name = particles[pIdx].dataLabels[dIdx];
 
         std::vector<NumericType> diskFluxCasted(diskFlux.begin(),
@@ -241,6 +288,7 @@ private:
   SmartPointer<gpu::ProcessModelGPU<NumericType, D>> model_;
 
   bool rayTracerInitialized_ = false;
+  float diskRadius_ = 0.f;
 };
 
 } // namespace viennaps

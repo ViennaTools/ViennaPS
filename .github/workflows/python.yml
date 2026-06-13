@@ -96,11 +96,22 @@ jobs:
             --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows"
           .\venv\Scripts\python -c "import viennaps; print(viennaps.__doc__)"
 
-      - name: 🐍 Build and check Python Module (Other)
-        if: ${{ matrix.os != 'windows-latest' }}
+      - name: 🐍 Build and check Python Module (Linux)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           python -m venv venv
-          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install .
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . 
+          ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
+
+      - name: 🐍 Build and check Python Module (macOS)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          python -m venv venv
+          ./venv/bin/python -m pip install --upgrade pip
+          git clone --depth 1 --branch v5.7.3 https://github.com/ViennaTools/ViennaLS.git ViennaLS
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install ./ViennaLS
+          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . --no-deps
+          SITE_PACKAGES=$(./venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["platlib"])')
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 📦 Upload Artifact
@@ -144,19 +155,19 @@ jobs:
       - name: 🛠️ Use VTK-Python Libs
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON","-Wno-dev"/g' pyproject.toml
           type pyproject.toml
 
       - name: 🛠️ Use VTK-Python Libs
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          sed -i .bak 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
+          sed -i .bak 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON","-Wno-dev"/g' pyproject.toml
           cat pyproject.toml
 
       - name: 🛠️ Use VTK-Python Libs
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON", "-DVIENNAPS_USE_GPU=ON", "-DVIENNACORE_LINK_CUDA_DRIVER=OFF"/g' pyproject.toml
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON","-Wno-dev","-DVIENNAPS_USE_GPU=ON","-DVIENNACORE_LINK_CUDA_DRIVER=OFF"/g' pyproject.toml
           cat pyproject.toml
 
       - name: 🏗️ Build Wheels (Linux)

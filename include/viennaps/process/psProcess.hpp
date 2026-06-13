@@ -83,6 +83,10 @@ public:
     context_.atomicLayerParams = p;
   }
 
+  void setParameters(const SurfaceDiffusionParameters &p) {
+    context_.surfaceDiffusionParams = p;
+  }
+
   void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }
 
   void setIntermediateOutputPath(const std::string &path) {
@@ -104,11 +108,6 @@ public:
     VIENNACORE_LOG_DEBUG("Using strategy: " + std::string(strategy->name()));
 
     if (strategy->requiresFluxEngine()) {
-      if (fluxEngineType_ == FluxEngineType::AUTO) {
-        fluxEngineType_ = FluxEngineType::CPU_DISK;
-        VIENNACORE_LOG_DEBUG("Auto-selected flux engine type: " +
-                             util::toString(fluxEngineType_));
-      }
       VIENNACORE_LOG_DEBUG("Setting up " + util::toString(fluxEngineType_) +
                            " flux engine for strategy.");
       strategy->setFluxEngine(createFluxEngine());
@@ -136,13 +135,17 @@ public:
       return nullptr;
     }
 
-    if (fluxEngineType_ == FluxEngineType::AUTO)
-      fluxEngineType_ = FluxEngineType::CPU_DISK;
     auto strategy = std::make_unique<FluxProcessStrategy<NumericType, D>>(
         createFluxEngine());
     strategy->calculateFlux(context_);
 
     return context_.diskMesh;
+  }
+
+  // Returns the per-triangle flux mesh from the last calculateFlux() call.
+  // Only populated when using a triangle flux engine; null otherwise.
+  SmartPointer<viennals::Mesh<float>> getTriangleMesh() const {
+    return context_.triangleMesh;
   }
 
 private:
@@ -294,17 +297,18 @@ public:
     context_.updateFlags();
     context_.printFlags();
 
-    // Resolve AUTO only when GPU is available — CPU fallback is deferred to
-    // apply() so that callback-only and geometric models never touch the flux
-    // engine path at all.
-    // hasGPUModel() is checked FIRST to short-circuit before gpuAvailable(),
-    // which has the expensive (and potentially crashing) side effect of trying
-    // to initialise an OptiX device context.
-    if (fluxEngineType_ == FluxEngineType::AUTO &&
-        context_.model->hasGPUModel() && gpuAvailable()) {
-      fluxEngineType_ = context_.flags.domainHasPeriodicBoundaries
-                            ? FluxEngineType::GPU_DISK
-                            : FluxEngineType::GPU_TRIANGLE;
+    // Auto-select engine type
+    if (fluxEngineType_ == FluxEngineType::AUTO) {
+      if (gpuAvailable() && context_.model->hasGPUModel()) {
+        // Prefer disks if boundary is periodic in any direction
+        if (context_.flags.domainHasPeriodicBoundaries) {
+          fluxEngineType_ = FluxEngineType::GPU_DISK;
+        } else {
+          fluxEngineType_ = FluxEngineType::GPU_TRIANGLE;
+        }
+      } else {
+        fluxEngineType_ = FluxEngineType::CPU_DISK;
+      }
       VIENNACORE_LOG_DEBUG("Auto-selected flux engine type: " +
                            util::toString(fluxEngineType_));
     }

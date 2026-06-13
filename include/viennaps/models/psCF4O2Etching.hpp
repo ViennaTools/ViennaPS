@@ -27,7 +27,7 @@ public:
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
-      coverages = viennals::PointData<NumericType>::New();
+      coverages = PointData<NumericType>::New();
     } else {
       coverages->clear();
     }
@@ -40,7 +40,7 @@ public:
   void initializeSurfaceData(unsigned numGeometryPoints) override {
     if (Logger::hasIntermediate()) {
       if (surfaceData == nullptr) {
-        surfaceData = viennals::PointData<NumericType>::New();
+        surfaceData = PointData<NumericType>::New();
       } else {
         surfaceData->clear();
       }
@@ -53,7 +53,7 @@ public:
   }
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+  calculateVelocities(SmartPointer<PointData<NumericType>> rates,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
     updateCoverages(rates, materialIds);
@@ -146,7 +146,7 @@ public:
     return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
-  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
+  void updateCoverages(SmartPointer<PointData<NumericType>> rates,
                        const std::vector<NumericType> &materialIds) override {
     // update coverages based on fluxes
     const auto numPoints = rates->getScalarData(0)->size();
@@ -234,8 +234,8 @@ public:
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
+                        PointData<NumericType> &localData,
+                        const PointData<NumericType> *globalData,
                         RNG &) override {
     // collect data for this hit
     const double cosTheta = -DotProduct(rayDir, geomNormal);
@@ -274,23 +274,23 @@ public:
     assert(Y_C >= 0. && "Invalid yield");
 
     // sputtering yield Y_sp ionSputterFlux
-    localData.getVectorData(0)[primID] += Y_sp * rayWeight;
+    localData.addToScalarData(0, primID, Y_sp * rayWeight);
 
     // ion enhanced etching yield Y_Si ionEnhancedFlux
-    localData.getVectorData(1)[primID] += Y_Si * rayWeight;
+    localData.addToScalarData(1, primID, Y_Si * rayWeight);
 
     // ion enhanced O sputtering yield Y_O ionEnhancedOxidationFlux
-    localData.getVectorData(2)[primID] += Y_O * rayWeight;
+    localData.addToScalarData(2, primID, Y_O * rayWeight);
 
     // ion enhanced C sputtering yield Y_C ionEnhancedPassivationFlux
-    localData.getVectorData(3)[primID] += Y_C * rayWeight;
+    localData.addToScalarData(3, primID, Y_C * rayWeight);
   }
 
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &Rng) override {
     auto cosTheta = -DotProduct(rayDir, geomNormal);
 
@@ -358,18 +358,17 @@ public:
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
-                        const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
+                        const int materialId, PointData<NumericType> &localData,
+                        const PointData<NumericType> *globalData,
                         RNG &) override {
     NumericType S_eff = 1.;
     if (params.fluxIncludeSticking) {
       // F surface coverage
-      const auto &phi_F = globalData->getVectorData(0)[primID];
+      const auto &phi_F = globalData->getScalarData(0)->at(primID);
       // O surface coverage
-      const auto &phi_O = globalData->getVectorData(1)[primID];
+      const auto &phi_O = globalData->getScalarData(1)->at(primID);
       // F surface coverage on oxidized SiGe
-      const auto &phi_C = globalData->getVectorData(2)[primID];
+      const auto &phi_C = globalData->getScalarData(2)->at(primID);
       NumericType gamma_F =
           params.gamma_F.get(Material::fromLegacyId(materialId));
       NumericType gamma_FO =
@@ -378,21 +377,21 @@ public:
           gamma_F * std::max(1. - phi_F - phi_O - phi_C, 0.) + gamma_FO * phi_O;
     }
 
-    localData.getVectorData(0)[primID] += rayWeight * S_eff;
+    localData.addToScalarData(0, primID, rayWeight * S_eff);
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &rngState) override {
 
     // F surface coverage
-    const auto &phi_F = globalData->getVectorData(0)[primID];
+    const auto &phi_F = globalData->getScalarData(0)->at(primID);
     // O surface coverage
-    const auto &phi_O = globalData->getVectorData(1)[primID];
+    const auto &phi_O = globalData->getScalarData(1)->at(primID);
     // F surface coverage on oxidized SiGe
-    const auto &phi_C = globalData->getVectorData(2)[primID];
+    const auto &phi_C = globalData->getScalarData(2)->at(primID);
     // Obtain the sticking probability
     NumericType gamma_F =
         params.gamma_F.get(Material::fromLegacyId(materialId));
@@ -422,15 +421,14 @@ public:
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
-                        const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
+                        const int materialId, PointData<NumericType> &localData,
+                        const PointData<NumericType> *globalData,
                         RNG &) override {
     NumericType S_eff = 1.;
     if (params.fluxIncludeSticking) {
-      const auto &phi_F = globalData->getVectorData(0)[primID];
-      const auto &phi_O = globalData->getVectorData(1)[primID];
-      const auto &phi_C = globalData->getVectorData(2)[primID];
+      const auto &phi_F = globalData->getScalarData(0)->at(primID);
+      const auto &phi_O = globalData->getScalarData(1)->at(primID);
+      const auto &phi_C = globalData->getScalarData(2)->at(primID);
       NumericType gamma_O =
           params.gamma_O.get(Material::fromLegacyId(materialId));
       NumericType gamma_OC =
@@ -439,18 +437,18 @@ public:
           gamma_O * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_OC * phi_C;
     }
 
-    localData.getVectorData(0)[primID] += rayWeight * S_eff;
+    localData.addToScalarData(0, primID, rayWeight * S_eff);
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &rngState) override {
 
-    const auto &phi_F = globalData->getVectorData(0)[primID];
-    const auto &phi_O = globalData->getVectorData(1)[primID];
-    const auto &phi_C = globalData->getVectorData(2)[primID];
+    const auto &phi_F = globalData->getScalarData(0)->at(primID);
+    const auto &phi_O = globalData->getScalarData(1)->at(primID);
+    const auto &phi_C = globalData->getScalarData(2)->at(primID);
     NumericType gamma_O =
         params.gamma_O.get(Material::fromLegacyId(materialId));
     NumericType gamma_OC =
@@ -479,15 +477,14 @@ public:
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
-                        const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
+                        const int materialId, PointData<NumericType> &localData,
+                        const PointData<NumericType> *globalData,
                         RNG &) override {
     NumericType S_eff = 1.;
     if (params.fluxIncludeSticking) {
-      const auto &phi_F = globalData->getVectorData(0)[primID];
-      const auto &phi_O = globalData->getVectorData(1)[primID];
-      const auto &phi_C = globalData->getVectorData(2)[primID];
+      const auto &phi_F = globalData->getScalarData(0)->at(primID);
+      const auto &phi_O = globalData->getScalarData(1)->at(primID);
+      const auto &phi_C = globalData->getScalarData(2)->at(primID);
       NumericType gamma_C =
           params.gamma_C.get(Material::fromLegacyId(materialId));
       NumericType gamma_CO =
@@ -496,18 +493,18 @@ public:
           gamma_C * std::max(1. - phi_O - phi_F - phi_C, 0.) + gamma_CO * phi_O;
     }
 
-    localData.getVectorData(0)[primID] += rayWeight * S_eff;
+    localData.addToScalarData(0, primID, rayWeight * S_eff);
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &rngState) override {
 
-    const auto &phi_F = globalData->getVectorData(0)[primID];
-    const auto &phi_O = globalData->getVectorData(1)[primID];
-    const auto &phi_C = globalData->getVectorData(2)[primID];
+    const auto phi_F = globalData->getScalarData(0)->at(primID);
+    const auto phi_O = globalData->getScalarData(1)->at(primID);
+    const auto phi_C = globalData->getScalarData(2)->at(primID);
     NumericType gamma_C =
         params.gamma_C.get(Material::fromLegacyId(materialId));
     NumericType gamma_CO =

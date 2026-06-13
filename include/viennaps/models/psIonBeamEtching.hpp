@@ -30,7 +30,7 @@ public:
   IBESurfaceModel(const IBEParameters<NumericType> &params) : params_(params) {}
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+  calculateVelocities(SmartPointer<PointData<NumericType>> rates,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
 
@@ -97,9 +97,8 @@ public:
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
-                        RNG &) override {
+                        PointData<NumericType> &localData,
+                        const PointData<NumericType> *, RNG &) override {
     auto cosTheta = util::saturate(-DotProduct(rayDir, geomNormal));
     NumericType yield;
     if (params_.cos4Yield.isDefined) {
@@ -113,20 +112,22 @@ public:
       yield = params_.yieldFunction(std::acos(cosTheta));
     }
 
-    localData.getVectorData(0)[primID] +=
+    localData.addToScalarData(
+        0, primID,
         rayWeight *
-        std::max(std::sqrt(energy_) - sqrtThresholdEnergy_, NumericType(0)) *
-        yield;
+            std::max(std::sqrt(energy_) - sqrtThresholdEnergy_,
+                     NumericType(0)) *
+            yield);
 
     if (params_.redepositionRate > 0. && redepositionWeight_ > 0.)
-      localData.getVectorData(1)[primID] += redepositionWeight_;
+      localData.addToScalarData(1, primID, redepositionWeight_);
   }
 
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &rngState) override {
 
     const NumericType cosTheta = getCosTheta(rayDir, geomNormal);
@@ -248,7 +249,7 @@ private:
   NumericType energy_;
   NumericType redepositionWeight_;
 
-  const IBEParameters<NumericType> &params_;
+  const IBEParameters<NumericType> params_;
   const NumericType inflectAngle_; // in rad
   const NumericType minAngle_;     // in rad
   const NumericType A_;

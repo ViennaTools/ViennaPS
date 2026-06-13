@@ -99,7 +99,7 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   viennahrle::Index<D> maskBendingMaxIndex_{};
   unsigned maskCouplingIterations_ = 8;
   NumericType maskCouplingTolerance_ = NumericType(2e-2);
-  GpuMode gpuMode_ = GpuMode::Auto;
+  GpuMode gpuMode_ = GpuMode::Cpu;
   GpuPreconditioner gpuPreconditioner_ = GpuPreconditioner::Jacobi;
   unsigned mechanicsIterations_ = 200;
   unsigned pressureIterations_ = 500;
@@ -332,9 +332,8 @@ public:
   }
 
   /// Select the BiCGSTAB solver back-end.
-  ///   GpuMode::Auto — CPU below threshold, GPU above threshold (default)
+  ///   GpuMode::Cpu  — always CPU (default)
   ///   GpuMode::Gpu  — always GPU (throws if unavailable or unsuccessful)
-  ///   GpuMode::Cpu  — always CPU
   void setGpuMode(GpuMode mode) { gpuMode_ = mode; }
   /// Select the GPU BiCGSTAB preconditioner. Jacobi matches the CPU solver.
   void setGpuPreconditioner(GpuPreconditioner preconditioner) {
