@@ -15,9 +15,9 @@
 //
 // Prerequisites: the domain must have a cell set initialised before apply().
 
-#include "psImplantProfile.hpp"
 #include "../process/psAdvectionCallback.hpp"
 #include "../process/psProcessModel.hpp"
+#include "psImplantProfile.hpp"
 
 #include <csImplant.hpp>
 
@@ -60,9 +60,9 @@ class IonImplantation : public ProcessModelBase<NumericType, D> {
       if (useEmbeddedBoundaries_ && !cs->embeddedBoundariesEnabled()) {
         cs->enableEmbeddedBoundaries(true);
         const auto &matMap = this->domain->getMaterialMap();
-        cs->fromLevelSets(
-            this->domain->getLevelSets(),
-            matMap ? matMap->getMaterialMap() : nullptr, cs->getDepth());
+        cs->fromLevelSets(this->domain->getLevelSets(),
+                          matMap ? matMap->getMaterialMap() : nullptr,
+                          cs->getDepth());
         cs->buildNeighborhood();
       }
       // Treat the cell set's cover material (air/vacuum region) as void so
@@ -96,8 +96,8 @@ public:
   }
 
   // Dopant concentration profile (required)
-  void setImplantModel(
-      SmartPointer<ImplantProfileModel<NumericType, D>> model) {
+  void
+  setImplantModel(SmartPointer<ImplantProfileModel<NumericType, D>> model) {
     callback_->implant().setImplantModel(model);
   }
 

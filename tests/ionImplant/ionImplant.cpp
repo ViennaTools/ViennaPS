@@ -1,8 +1,8 @@
 #include <models/psIonImplantation.hpp>
 
 #include <geometries/psMakePlane.hpp>
-#include <psDomain.hpp>
 #include <process/psProcess.hpp>
+#include <psDomain.hpp>
 
 #include <vcTestAsserts.hpp>
 
@@ -41,21 +41,20 @@ void testDoseDeposition() {
   auto cs = domain->getCellSet();
   VC_TEST_ASSERT(cs != nullptr);
 
-
   // Pearson IV profile for boron in Si at ~20 keV (moments in nm)
   ps::PearsonIVParameters<T> params;
-  params.mu    = 60.;   // projected range
+  params.mu = 60.; // projected range
   params.sigma = 20.;
   params.gamma = 0.5;
-  params.beta  = 4.0;
+  params.beta = 4.0;
 
   auto profile = ps::SmartPointer<ps::ImplantPearsonIV<T, D>>::New(
       params, /*lateralMu=*/0., /*lateralSigma=*/25.);
 
   auto model = ps::SmartPointer<ps::IonImplantation<T, D>>::New();
   model->setImplantModel(profile);
-  model->setDose(1e14);                                          // ions/cm²
-  model->setLengthUnit(1e-7);                                   // nm → cm
+  model->setDose(1e14);       // ions/cm²
+  model->setLengthUnit(1e-7); // nm → cm
   model->setDoseControl(ps::ImplantDoseControl::WaferDose);
   model->setOutputConcentrationInCm3(true);
 
@@ -85,11 +84,14 @@ void testTiltShift() {
   auto domainTilted = makeSubstrate();
 
   ps::PearsonIVParameters<T> params;
-  params.mu = 60.; params.sigma = 18.; params.gamma = 0.3; params.beta = 3.8;
+  params.mu = 60.;
+  params.sigma = 18.;
+  params.gamma = 0.3;
+  params.beta = 3.8;
 
   auto makeModel = [&](T tilt) {
-    auto profile = ps::SmartPointer<ps::ImplantPearsonIV<T, D>>::New(
-        params, 0., 20.);
+    auto profile =
+        ps::SmartPointer<ps::ImplantPearsonIV<T, D>>::New(params, 0., 20.);
     auto m = ps::SmartPointer<ps::IonImplantation<T, D>>::New();
     m->setImplantModel(profile);
     m->setDose(1e13);
@@ -99,11 +101,11 @@ void testTiltShift() {
     return m;
   };
 
-  ps::Process<T, D>(domainNormal, makeModel(0.),  0.).apply();
+  ps::Process<T, D>(domainNormal, makeModel(0.), 0.).apply();
   ps::Process<T, D>(domainTilted, makeModel(30.), 0.).apply();
 
   auto sumConc = [](const ps::SmartPointer<ps::Domain<T, D>> &dom) {
-    auto cs   = dom->getCellSet();
+    auto cs = dom->getCellSet();
     auto conc = cs->getScalarData("concentration");
     return std::accumulate(conc->begin(), conc->end(), T(0.));
   };
@@ -121,8 +123,12 @@ void testMaskBlocking() {
   auto domain = makeSubstrate();
 
   ps::PearsonIVParameters<T> params;
-  params.mu = 60.; params.sigma = 20.; params.gamma = 0.5; params.beta = 4.0;
-  auto profile = ps::SmartPointer<ps::ImplantPearsonIV<T, D>>::New(params, 0., 25.);
+  params.mu = 60.;
+  params.sigma = 20.;
+  params.gamma = 0.5;
+  params.beta = 4.0;
+  auto profile =
+      ps::SmartPointer<ps::ImplantPearsonIV<T, D>>::New(params, 0., 25.);
 
   auto model = ps::SmartPointer<ps::IonImplantation<T, D>>::New();
   model->setImplantModel(profile);
@@ -147,10 +153,12 @@ void testDamageField() {
   auto domain = makeSubstrate();
 
   ps::PearsonIVParameters<T> dopantParams;
-  dopantParams.mu = 60.; dopantParams.sigma = 20.;
-  dopantParams.gamma = 0.5; dopantParams.beta = 4.0;
-  auto profile = ps::SmartPointer<ps::ImplantPearsonIV<T, D>>::New(
-      dopantParams, 0., 25.);
+  dopantParams.mu = 60.;
+  dopantParams.sigma = 20.;
+  dopantParams.gamma = 0.5;
+  dopantParams.beta = 4.0;
+  auto profile =
+      ps::SmartPointer<ps::ImplantPearsonIV<T, D>>::New(dopantParams, 0., 25.);
 
   auto damage = ps::SmartPointer<ps::ImplantDamageHobler<T, D>>::New(
       /*rp=*/60., /*sigma=*/20., /*lambda=*/0., /*defectsPerIon=*/300.,
@@ -165,18 +173,18 @@ void testDamageField() {
 
   ps::Process<T, D>(domain, model, 0.).apply();
 
-  auto cs      = domain->getCellSet();
-  auto conc    = cs->getScalarData("concentration");
-  auto dmg     = cs->getScalarData("Damage");
+  auto cs = domain->getCellSet();
+  auto conc = cs->getScalarData("concentration");
+  auto dmg = cs->getScalarData("Damage");
 
   VC_TEST_ASSERT(conc != nullptr);
-  VC_TEST_ASSERT(dmg  != nullptr);
+  VC_TEST_ASSERT(dmg != nullptr);
 
   T totalConc = std::accumulate(conc->begin(), conc->end(), T(0.));
-  T totalDmg  = std::accumulate(dmg->begin(),  dmg->end(),  T(0.));
+  T totalDmg = std::accumulate(dmg->begin(), dmg->end(), T(0.));
 
   VC_TEST_ASSERT(totalConc > 0.);
-  VC_TEST_ASSERT(totalDmg  > 0.);
+  VC_TEST_ASSERT(totalDmg > 0.);
 }
 
 // --- Test 5: embedded-boundary cell set produces a non-zero dose -----------
@@ -199,7 +207,10 @@ void testEmbeddedBoundaryDepthCorrection() {
   domainEmb->getCellSet()->buildNeighborhood();
 
   ps::PearsonIVParameters<T> params;
-  params.mu = 60.; params.sigma = 20.; params.gamma = 0.5; params.beta = 4.0;
+  params.mu = 60.;
+  params.sigma = 20.;
+  params.gamma = 0.5;
+  params.beta = 4.0;
 
   auto makeModel = [&]() {
     auto profile = ps::SmartPointer<ps::ImplantPearsonIV<T, D>>::New(
@@ -214,21 +225,22 @@ void testEmbeddedBoundaryDepthCorrection() {
   };
 
   ps::Process<T, D>(domainFlat, makeModel(), 0.).apply();
-  ps::Process<T, D>(domainEmb,  makeModel(), 0.).apply();
+  ps::Process<T, D>(domainEmb, makeModel(), 0.).apply();
 
   auto sumConc = [](const ps::SmartPointer<ps::Domain<T, D>> &dom) {
     auto conc = dom->getCellSet()->getScalarData("concentration");
     VC_TEST_ASSERT(conc != nullptr);
     T total = 0.;
-    for (const auto &v : *conc) total += v;
+    for (const auto &v : *conc)
+      total += v;
     return total;
   };
 
   const T totalFlat = sumConc(domainFlat);
-  const T totalEmb  = sumConc(domainEmb);
+  const T totalEmb = sumConc(domainEmb);
 
   VC_TEST_ASSERT(totalFlat > 0.);
-  VC_TEST_ASSERT(totalEmb  > 0.);
+  VC_TEST_ASSERT(totalEmb > 0.);
   // Both flat and embedded-boundary domains must agree within 10 %
   VC_TEST_ASSERT_ISCLOSE(totalFlat, totalEmb, 0.1 * totalFlat);
 

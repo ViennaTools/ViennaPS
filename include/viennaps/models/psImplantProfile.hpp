@@ -28,18 +28,21 @@
 namespace viennaps {
 
 // Abstract base: a normalized depth/lateral profile integrating to 1.
-// getProfile(depth, offset) == getDepthProfile(depth) * getLateralProfile(offset, depth)
+// getProfile(depth, offset) == getDepthProfile(depth) *
+// getLateralProfile(offset, depth)
 template <typename NumericType, int D>
 using ImplantProfileModel = ImplantModel<NumericType, D>;
 
 // Pearson IV moment parameters { mu, sigma, gamma, beta }
 template <typename NumericType>
-using PearsonIVParameters = viennaps::constants::PearsonIVParameters<NumericType>;
+using PearsonIVParameters =
+    viennaps::constants::PearsonIVParameters<NumericType>;
 
 // Lateral straggle model selector and its parameter bundle
 using LateralStraggleModel = viennaps::LateralStraggleModel;
 template <typename NumericType>
-using LateralStraggleParameters = viennaps::LateralStraggleParameters<NumericType>;
+using LateralStraggleParameters =
+    viennaps::LateralStraggleParameters<NumericType>;
 
 // Single Pearson IV dopant depth profile + Gaussian lateral profile
 template <typename NumericType, int D>
@@ -47,7 +50,8 @@ using ImplantPearsonIV = viennaps::ImplantPearsonIV<NumericType, D>;
 
 // Pearson IV + exponential channeling tail
 template <typename NumericType, int D>
-using ImplantPearsonIVChanneling = viennaps::ImplantPearsonIVChanneling<NumericType, D>;
+using ImplantPearsonIVChanneling =
+    viennaps::ImplantPearsonIVChanneling<NumericType, D>;
 
 // Weighted sum of two Pearson IV components (amorphous head + channeling tail)
 template <typename NumericType, int D>

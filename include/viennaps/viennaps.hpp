@@ -21,6 +21,9 @@
 
 #include <process/psProcess.hpp>
 
+#include <models/psAnneal.hpp>
+#include <models/psAnnealParams.hpp>
+#include <models/psAnnealSetup.hpp>
 #include <models/psCF4O2Etching.hpp>
 #include <models/psCSVFileProcess.hpp>
 #include <models/psDirectionalProcess.hpp>
@@ -28,16 +31,13 @@
 #include <models/psFluorocarbonEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psHBrO2Etching.hpp>
+#include <models/psImplantParams.hpp>
+#include <models/psImplantProfile.hpp>
+#include <models/psImplantSetup.hpp>
 #include <models/psIonBeamEtching.hpp>
 #include <models/psIonImplantation.hpp>
 #include <models/psIsotropicProcess.hpp>
-#include <models/psAnneal.hpp>
-#include <models/psImplantProfile.hpp>
 #include <models/psModelDbLookup.hpp>
-#include <models/psAnnealParams.hpp>
-#include <models/psAnnealSetup.hpp>
-#include <models/psImplantParams.hpp>
-#include <models/psImplantSetup.hpp>
 #include <models/psMultiParticleProcess.hpp>
 #include <models/psOxidation.hpp>
 #include <models/psOxideRegrowth.hpp>

@@ -36,7 +36,8 @@ NumericType PearsonIV(NumericType x,
   const NumericType polynomial = b_0 + b_1 * x + b_2 * x * x;
 
   if (discriminant <= NumericType(0)) {
-    // Pearson Type I/II: real roots give bounded support — use atanh in log-space
+    // Pearson Type I/II: real roots give bounded support — use atanh in
+    // log-space
     const NumericType sqrtNegDisc = std::sqrt(-discriminant);
     if (sqrtNegDisc <= NumericType(1e-30))
       return NumericType(0);

@@ -31,8 +31,7 @@ void testDealGroveEstimateWet1000C() {
   const T B = 386. * std::exp(-0.78 / (kB * temperature));
   const T BoA = 9.70e7 * std::exp(-2.05 / (kB * temperature));
   const T A = B / BoA;
-  const T expected =
-      (std::sqrt(A * A + 4. * B * 0.1) - A) / 2.;
+  const T expected = (std::sqrt(A * A + 4. * B * 0.1) - A) / 2.;
 
   VC_TEST_ASSERT_ISCLOSE(thickness, expected, 1.e-12)
   VC_TEST_ASSERT(thickness > 0.)
@@ -78,8 +77,10 @@ void testLocosOxidationPreservesLayers() {
 
   // Si substrate (plane at y = 0).
   auto siLS = ls::Domain<T, D>::New(bounds, bc, gridDelta);
-  ls::MakeGeometry<T, D>(siLS, ls::Plane<T, D>::New(
-      ls::VectorType<T, D>{0., 0.}, ls::VectorType<T, D>{0., 1.})).apply();
+  ls::MakeGeometry<T, D>(siLS,
+                         ls::Plane<T, D>::New(ls::VectorType<T, D>{0., 0.},
+                                              ls::VectorType<T, D>{0., 1.}))
+      .apply();
 
   // Pad oxide (geometrically expanded from Si surface).
   auto oxLS = ls::Domain<T, D>::New(siLS);
@@ -91,8 +92,9 @@ void testLocosOxidationPreservesLayers() {
   // Si3N4 mask covering x < 0, sitting on top of pad oxide.
   auto maskLS = ls::Domain<T, D>::New(bounds, bc, gridDelta);
   ls::MakeGeometry<T, D> maskGeom(
-      maskLS, ls::Box<T, D>::New(ls::VectorType<T, D>{-xExtent, padOxide - 1e-6},
-                                 ls::VectorType<T, D>{0., padOxide + maskThick}));
+      maskLS,
+      ls::Box<T, D>::New(ls::VectorType<T, D>{-xExtent, padOxide - 1e-6},
+                         ls::VectorType<T, D>{0., padOxide + maskThick}));
   maskGeom.setIgnoreBoundaryConditions(std::array<bool, D>{false, true});
   maskGeom.apply();
 
@@ -134,9 +136,9 @@ void testDealGroveEstimateDryHighT() {
 
   const T kB = 8.617333e-5;
   const T T_K = 1273.15;
-  const T B   = 772.   * std::exp(-1.23 / (kB * T_K));
+  const T B = 772. * std::exp(-1.23 / (kB * T_K));
   const T BoA = 3.71e6 * std::exp(-2.00 / (kB * T_K));
-  const T A   = B / BoA;
+  const T A = B / BoA;
   const T expected = (std::sqrt(A * A + 4. * B * 0.5) - A) / 2.;
 
   VC_TEST_ASSERT_ISCLOSE(thickness, expected, 1.e-12)
@@ -155,9 +157,9 @@ void testDealGroveEstimateDryLowT() {
 
   const T kB = 8.617333e-5;
   const T T_K = 1173.15;
-  const T B   = 772.   * std::exp(-1.23 / (kB * T_K));
+  const T B = 772. * std::exp(-1.23 / (kB * T_K));
   const T BoA = 3.46e7 * std::exp(-2.30 / (kB * T_K));
-  const T A   = B / BoA;
+  const T A = B / BoA;
   const T expected = (std::sqrt(A * A + 4. * B * 0.5) - A) / 2.;
 
   VC_TEST_ASSERT_ISCLOSE(thickness, expected, 1.e-12)

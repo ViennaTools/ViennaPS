@@ -76,8 +76,8 @@ inline void applyAnnealParams(Anneal<NumericType, D> &anneal,
                                        p.solidSolubilityEa_eV);
   }
   if (p.enableTedFromScoreDFactor)
-    anneal.setTEDFromDamageFactor(
-        p.scoreDFactor, p.tedCoefficientScale, p.tedNormalization);
+    anneal.setTEDFromDamageFactor(p.scoreDFactor, p.tedCoefficientScale,
+                                  p.tedNormalization);
   else if (p.tedCoefficient > NumericType(0))
     anneal.setDefectEnhancedDiffusion(p.tedCoefficient, p.tedNormalization);
   if (p.enableDefectClustering) {

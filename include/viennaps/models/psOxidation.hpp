@@ -26,17 +26,17 @@
 #include <lsBooleanOperation.hpp>
 #include <lsGeometricAdvect.hpp>
 #include <lsOxidation.hpp>
-#include <lsToMesh.hpp>
-#include <lsVTKWriter.hpp>
 #include <lsOxidationDeformation.hpp>
 #include <lsOxidationDiffusion.hpp>
 #include <lsOxidationPresets.hpp>
+#include <lsToMesh.hpp>
+#include <lsVTKWriter.hpp>
 
 #include <hrleSparseIterator.hpp>
 
+#include "../materials/psMaterial.hpp"
 #include "../process/psAdvectionCallback.hpp"
 #include "../process/psProcessModel.hpp"
-#include "../materials/psMaterial.hpp"
 
 #include <algorithm>
 #include <array>
@@ -64,8 +64,8 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   // Units are chosen to match ViennaLS oxidation examples (µm and hours).
   // <100> dry/wet B/A values are <111> values divided by 1.68.
   struct DealGroveRow {
-    NumericType B0, EB;       // B  = B0  * exp(-EB  / kT)
-    NumericType BoA0, EBoA;   // B/A = BoA0 * exp(-EBoA / kT)
+    NumericType B0, EB;     // B  = B0  * exp(-EB  / kT)
+    NumericType BoA0, EBoA; // B/A = BoA0 * exp(-EBoA / kT)
   };
 
   static constexpr NumericType kB_ = NumericType(8.617333e-5); // eV/K
@@ -76,7 +76,8 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   OxidantType oxidant_ = OxidantType::Dry;
   NumericType pressure_ = 1.;
   SiliconOrientation orientation_ = SiliconOrientation::Si100;
-  NumericType timeStep_ = 0.;   // 0 = no user cap; internal steps remain CFL-limited
+  NumericType timeStep_ =
+      0.; // 0 = no user cap; internal steps remain CFL-limited
   NumericType cflFactor_ = NumericType(0.499);
   NumericType initialOxideThickness_ = NumericType(0.002); // µm (2 nm)
   NumericType transferCoefficient_ = NumericType(100);
@@ -124,25 +125,27 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
         std::max(pressureTolerance_, stokesTolerance_);
     if (mechanicsTolerance_ < NumericType(5) * solverFloor)
       Logger::getInstance()
-          .addWarning("Oxidation: mechanicsTolerance (" +
-                      std::to_string(mechanicsTolerance_) +
-                      ") is less than 5× max(pressureTolerance, stokesTolerance) ("
-                      + std::to_string(solverFloor) +
-                      "). The mechanics coupling residual cannot go below the "
-                      "solver noise floor — solveMechanics will stall without "
-                      "converging. Set mechanicsTolerance >= " +
-                      std::to_string(NumericType(5) * solverFloor) + ".")
+          .addWarning(
+              "Oxidation: mechanicsTolerance (" +
+              std::to_string(mechanicsTolerance_) +
+              ") is less than 5× max(pressureTolerance, stokesTolerance) (" +
+              std::to_string(solverFloor) +
+              "). The mechanics coupling residual cannot go below the "
+              "solver noise floor — solveMechanics will stall without "
+              "converging. Set mechanicsTolerance >= " +
+              std::to_string(NumericType(5) * solverFloor) + ".")
           .print();
 
     if (couplingTolerance_ < mechanicsTolerance_)
       Logger::getInstance()
-          .addWarning("Oxidation: couplingTolerance (" +
-                      std::to_string(couplingTolerance_) +
-                      ") is tighter than mechanicsTolerance (" +
-                      std::to_string(mechanicsTolerance_) +
-                      "). The diffusion–deformation coupling cannot converge "
-                      "more precisely than the mechanics solve — couplingTolerance "
-                      "will never be reached.")
+          .addWarning(
+              "Oxidation: couplingTolerance (" +
+              std::to_string(couplingTolerance_) +
+              ") is tighter than mechanicsTolerance (" +
+              std::to_string(mechanicsTolerance_) +
+              "). The diffusion–deformation coupling cannot converge "
+              "more precisely than the mechanics solve — couplingTolerance "
+              "will never be reached.")
           .print();
   }
 
@@ -150,6 +153,7 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   // Nested classes in C++ have full access to enclosing-class private members.
   class OxidationCallback : public AdvectionCallback<NumericType, D> {
     Oxidation *owner_;
+
   public:
     explicit OxidationCallback(Oxidation *o) : owner_(o) {}
     bool applyPreAdvect(NumericType processTime) override {
@@ -262,7 +266,8 @@ public:
   void setMaskMaterial(Material mat) { maskMaterial_ = mat; }
 
   // Viscous-elasticity parameters for the mask layer (default: SiN at 1000 °C).
-  void setMaskParameters(viennals::OxidationMaskParameters<NumericType> params) {
+  void
+  setMaskParameters(viennals::OxidationMaskParameters<NumericType> params) {
     maskParams_ = std::move(params);
   }
 
@@ -308,7 +313,7 @@ public:
   // Explicit Cartesian index bounds for the mask bending solve.
   // When not set, bounds are auto-computed from the mask level-set narrow band.
   void setMaskBendingBounds(const viennahrle::Index<D> &minIdx,
-                             const viennahrle::Index<D> &maxIdx) {
+                            const viennahrle::Index<D> &maxIdx) {
     maskBendingMinIndex_ = minIdx;
     maskBendingMaxIndex_ = maxIdx;
     useMaskBendingBounds_ = true;
@@ -348,10 +353,12 @@ public:
   void setStokesTolerance(NumericType tol) { stokesTolerance_ = tol; }
   void setMechanicsTolerance(NumericType tol) { mechanicsTolerance_ = tol; }
   void setSimpleVelocityRelaxation(NumericType alpha) {
-    simpleVelocityRelaxation_ = std::min(NumericType(1), std::max(NumericType(0.01), alpha));
+    simpleVelocityRelaxation_ =
+        std::min(NumericType(1), std::max(NumericType(0.01), alpha));
   }
   void setSimplePressureRelaxation(NumericType beta) {
-    simplePressureRelaxation_ = std::min(NumericType(1), std::max(NumericType(0.01), beta));
+    simplePressureRelaxation_ =
+        std::min(NumericType(1), std::max(NumericType(0.01), beta));
   }
 
   void setStokesIterations(unsigned iterations) {
@@ -382,9 +389,8 @@ public:
     int siIdx = -1, sio2Idx = -1, maskIdx = -1;
     for (int i = static_cast<int>(levelSets.size()) - 1; i >= 0; --i) {
       const auto mat = matMap->getMaterialAtIdx(i);
-      if (siIdx < 0 &&
-          (mat == siliconMaterial_ || mat == Material::BulkSi ||
-           mat == Material::PolySi || mat == Material::aSi))
+      if (siIdx < 0 && (mat == siliconMaterial_ || mat == Material::BulkSi ||
+                        mat == Material::PolySi || mat == Material::aSi))
         siIdx = i;
       if (sio2Idx < 0 && mat == oxideMaterial_)
         sio2Idx = i;
@@ -394,7 +400,8 @@ public:
 
     if (siIdx < 0 || sio2Idx < 0) {
       Logger::getInstance()
-          .addWarning("Oxidation: missing Silicon or Oxide layer for surface mesh extraction.")
+          .addWarning("Oxidation: missing Silicon or Oxide layer for surface "
+                      "mesh extraction.")
           .print();
       return;
     }
@@ -406,17 +413,23 @@ public:
     if (maskIdx >= 0) {
       auto mskSurf = ls::Domain<NumericType, D>::New(levelSets[maskIdx]);
       ls::BooleanOperation<NumericType, D>(oxSurf, mskSurf,
-                                           ls::BooleanOperationEnum::UNION).apply();
+                                           ls::BooleanOperationEnum::UNION)
+          .apply();
       auto surfDomain = SmartPointer<Domain<NumericType, D>>::New();
-      surfDomain->insertNextLevelSetAsMaterial(siCopy, matMap->getMaterialAtIdx(siIdx), false);
-      surfDomain->insertNextLevelSetAsMaterial(oxSurf, matMap->getMaterialAtIdx(sio2Idx), false);
-      surfDomain->insertNextLevelSetAsMaterial(mskSurf, matMap->getMaterialAtIdx(maskIdx), false);
+      surfDomain->insertNextLevelSetAsMaterial(
+          siCopy, matMap->getMaterialAtIdx(siIdx), false);
+      surfDomain->insertNextLevelSetAsMaterial(
+          oxSurf, matMap->getMaterialAtIdx(sio2Idx), false);
+      surfDomain->insertNextLevelSetAsMaterial(
+          mskSurf, matMap->getMaterialAtIdx(maskIdx), false);
       surfDomain->saveSurfaceMesh(fileName);
     } else {
       // Standard geometry (no mask)
       auto surfDomain = SmartPointer<Domain<NumericType, D>>::New();
-      surfDomain->insertNextLevelSetAsMaterial(siCopy, matMap->getMaterialAtIdx(siIdx), false);
-      surfDomain->insertNextLevelSetAsMaterial(oxSurf, matMap->getMaterialAtIdx(sio2Idx), false);
+      surfDomain->insertNextLevelSetAsMaterial(
+          siCopy, matMap->getMaterialAtIdx(siIdx), false);
+      surfDomain->insertNextLevelSetAsMaterial(
+          oxSurf, matMap->getMaterialAtIdx(sio2Idx), false);
       surfDomain->saveSurfaceMesh(fileName);
     }
   }
@@ -439,9 +452,8 @@ public:
     int siIdx = -1, sio2Idx = -1, maskIdx = -1;
     for (int i = static_cast<int>(levelSets.size()) - 1; i >= 0; --i) {
       const auto mat = matMap->getMaterialAtIdx(i);
-      if (siIdx < 0 &&
-          (mat == siliconMaterial_ || mat == Material::BulkSi ||
-           mat == Material::PolySi || mat == Material::aSi))
+      if (siIdx < 0 && (mat == siliconMaterial_ || mat == Material::BulkSi ||
+                        mat == Material::PolySi || mat == Material::aSi))
         siIdx = i;
       if (sio2Idx < 0 && mat == oxideMaterial_)
         sio2Idx = i;
@@ -451,7 +463,8 @@ public:
 
     if (siIdx < 0 || sio2Idx < 0) {
       Logger::getInstance()
-          .addWarning("Oxidation: missing Silicon or Oxide layer for volume mesh extraction.")
+          .addWarning("Oxidation: missing Silicon or Oxide layer for volume "
+                      "mesh extraction.")
           .print();
       return;
     }
@@ -462,21 +475,29 @@ public:
     if (maskIdx >= 0) {
       auto mskCopy = ls::Domain<NumericType, D>::New(levelSets[maskIdx]);
       ls::BooleanOperation<NumericType, D>(oxCopy, siCopy,
-                                           ls::BooleanOperationEnum::UNION).apply();
+                                           ls::BooleanOperationEnum::UNION)
+          .apply();
       ls::BooleanOperation<NumericType, D>(mskCopy, oxCopy,
-                                           ls::BooleanOperationEnum::UNION).apply();
+                                           ls::BooleanOperationEnum::UNION)
+          .apply();
 
       auto volDomain = SmartPointer<Domain<NumericType, D>>::New();
-      volDomain->insertNextLevelSetAsMaterial(siCopy, matMap->getMaterialAtIdx(siIdx), false);
-      volDomain->insertNextLevelSetAsMaterial(oxCopy, matMap->getMaterialAtIdx(sio2Idx), false);
-      volDomain->insertNextLevelSetAsMaterial(mskCopy, matMap->getMaterialAtIdx(maskIdx), false);
+      volDomain->insertNextLevelSetAsMaterial(
+          siCopy, matMap->getMaterialAtIdx(siIdx), false);
+      volDomain->insertNextLevelSetAsMaterial(
+          oxCopy, matMap->getMaterialAtIdx(sio2Idx), false);
+      volDomain->insertNextLevelSetAsMaterial(
+          mskCopy, matMap->getMaterialAtIdx(maskIdx), false);
       volDomain->saveVolumeMesh(baseName);
     } else {
       ls::BooleanOperation<NumericType, D>(oxCopy, siCopy,
-                                           ls::BooleanOperationEnum::UNION).apply();
+                                           ls::BooleanOperationEnum::UNION)
+          .apply();
       auto volDomain = SmartPointer<Domain<NumericType, D>>::New();
-      volDomain->insertNextLevelSetAsMaterial(siCopy, matMap->getMaterialAtIdx(siIdx), false);
-      volDomain->insertNextLevelSetAsMaterial(oxCopy, matMap->getMaterialAtIdx(sio2Idx), false);
+      volDomain->insertNextLevelSetAsMaterial(
+          siCopy, matMap->getMaterialAtIdx(siIdx), false);
+      volDomain->insertNextLevelSetAsMaterial(
+          oxCopy, matMap->getMaterialAtIdx(sio2Idx), false);
       volDomain->saveVolumeMesh(baseName);
     }
 
@@ -490,16 +511,16 @@ public:
         oxLS->getPointData().getVectorDataSize() > 0) {
       auto oxFieldMesh = ls::SmartPointer<ls::Mesh<NumericType>>::New();
       ls::ToMesh<NumericType, D>(oxLS, oxFieldMesh).apply();
-      ls::VTKWriter<NumericType>(oxFieldMesh,
-                                 baseName + "_oxide_fields.vtp").apply();
+      ls::VTKWriter<NumericType>(oxFieldMesh, baseName + "_oxide_fields.vtp")
+          .apply();
     }
     if (maskIdx >= 0) {
       const auto &maskLS = levelSets[maskIdx];
       if (maskLS->getPointData().getVectorDataSize() > 0) {
         auto maskFieldMesh = ls::SmartPointer<ls::Mesh<NumericType>>::New();
         ls::ToMesh<NumericType, D>(maskLS, maskFieldMesh).apply();
-        ls::VTKWriter<NumericType>(maskFieldMesh,
-                                   baseName + "_mask_fields.vtp").apply();
+        ls::VTKWriter<NumericType>(maskFieldMesh, baseName + "_mask_fields.vtp")
+            .apply();
       }
     }
   }
@@ -525,9 +546,8 @@ private:
     int siIdx = -1, sio2Idx = -1, maskIdx = -1;
     for (int i = static_cast<int>(levelSets.size()) - 1; i >= 0; --i) {
       const auto mat = matMap->getMaterialAtIdx(i);
-      if (siIdx < 0 &&
-          (mat == siliconMaterial_ || mat == Material::BulkSi ||
-           mat == Material::PolySi || mat == Material::aSi))
+      if (siIdx < 0 && (mat == siliconMaterial_ || mat == Material::BulkSi ||
+                        mat == Material::PolySi || mat == Material::aSi))
         siIdx = i;
       if (sio2Idx < 0 && mat == oxideMaterial_)
         sio2Idx = i;
@@ -544,8 +564,7 @@ private:
 
     if (temperature_ < NumericType(700) || temperature_ > NumericType(1200))
       Logger::getInstance()
-          .addWarning("Oxidation: temperature " +
-                      std::to_string(temperature_) +
+          .addWarning("Oxidation: temperature " + std::to_string(temperature_) +
                       " °C is outside the calibrated Deal-Grove range "
                       "[700, 1200] °C — rate constants may be inaccurate.")
           .print();
@@ -567,9 +586,9 @@ private:
                      std::to_string(initialOxideThickness_) +
                      " µm native oxide.")
             .print();
-        auto sphere = SmartPointer<
-            ls::SphereDistribution<viennahrle::CoordType, D>>::New(
-            initialOxideThickness_);
+        auto sphere =
+            SmartPointer<ls::SphereDistribution<viennahrle::CoordType, D>>::New(
+                initialOxideThickness_);
         ls::GeometricAdvect<NumericType, D>(ambientInterface, sphere).apply();
       } else {
         Logger::getInstance()
@@ -581,8 +600,7 @@ private:
                                           false);
     }
 
-    const NumericType gridDelta =
-        reactionInterface->getGrid().getGridDelta();
+    const NumericType gridDelta = reactionInterface->getGrid().getGridDelta();
 
     auto cflStep = [&](NumericType maxVel) -> NumericType {
       if (maxVel <= NumericType(0))
@@ -616,21 +634,35 @@ private:
       const std::string oxStr = (oxidant_ == OxidantType::Wet) ? "wet" : "dry";
       const NumericType initDt = std::min(userStepCap, seedStep);
       Logger::getInstance()
-          .addInfo("Oxidation: starting " + mode + " simulation"
-                   ", T=" + std::to_string(temperature_) + " °C"
-                   ", " + oxStr + " oxidation"
-                   ", B=" + std::to_string(rates.B) + " µm²/hr"
-                   ", B/A=" + std::to_string(rates.BoA) + " µm/hr"
-                   ", Δx=" + std::to_string(gridDelta) + " µm"
-                   ", total=" + std::to_string(time_) + " hr"
-                   ", initial_dt≤" + std::to_string(initDt) + " hr")
+          .addInfo("Oxidation: starting " + mode +
+                   " simulation"
+                   ", T=" +
+                   std::to_string(temperature_) +
+                   " °C"
+                   ", " +
+                   oxStr +
+                   " oxidation"
+                   ", B=" +
+                   std::to_string(rates.B) +
+                   " µm²/hr"
+                   ", B/A=" +
+                   std::to_string(rates.BoA) +
+                   " µm/hr"
+                   ", Δx=" +
+                   std::to_string(gridDelta) +
+                   " µm"
+                   ", total=" +
+                   std::to_string(time_) +
+                   " hr"
+                   ", initial_dt≤" +
+                   std::to_string(initDt) + " hr")
           .print();
     }
 
     const std::string modeLabel = (maskIdx >= 0) ? "LOCOS" : "Oxidation";
 
-    auto locos = ls::Oxidation<NumericType, D>::New(
-        reactionInterface, ambientInterface);
+    auto locos =
+        ls::Oxidation<NumericType, D>::New(reactionInterface, ambientInterface);
     locos->setGpuMode(gpuMode_);
     locos->setGpuPreconditioner(gpuPreconditioner_);
     locos->setOxidationParameters(oxParams);
@@ -642,7 +674,8 @@ private:
       auto maskLS = levelSets[maskIdx];
       locos->setMaskInterface(maskLS);
       // Sync simulation temperature so OxidationMaskBending's Arrhenius
-      // viscosity scaling uses the correct temperature, not the preset's default.
+      // viscosity scaling uses the correct temperature, not the preset's
+      // default.
       auto activeMaskParams = maskParams_;
       activeMaskParams.temperature = temperature_ + NumericType(273.15);
       locos->setMaskParameters(activeMaskParams);
@@ -668,9 +701,9 @@ private:
     const NumericType timeEps = NumericType(1e-9) * time_;
     while (time_ - time > timeEps) {
       const NumericType growthLimitedStep =
-          (substep == 0) ? nextStepEstimate
-                         : std::min(nextStepEstimate,
-                                    maxStepGrowth * lastAcceptedDt);
+          (substep == 0)
+              ? nextStepEstimate
+              : std::min(nextStepEstimate, maxStepGrowth * lastAcceptedDt);
       NumericType requestedDt =
           std::min({userStepCap, growthLimitedStep, time_ - time});
       if (requestedDt <= NumericType(0))
@@ -713,10 +746,8 @@ private:
 
     std::string message = label + " CFL substep " + std::to_string(substep) +
                           ": t=" + std::to_string(elapsed) +
-                          " hr, requested_dt=" +
-                          std::to_string(requestedDt) +
-                          " hr, actual_dt=" + std::to_string(actualDt) +
-                          " hr";
+                          " hr, requested_dt=" + std::to_string(requestedDt) +
+                          " hr, actual_dt=" + std::to_string(actualDt) + " hr";
     if (maxVelocity >= NumericType(0))
       message += ", max_velocity=" + std::to_string(maxVelocity) + " um/hr";
     if (actualDt < requestedDt * (NumericType(1) - NumericType(1e-8)))
@@ -748,12 +779,13 @@ private:
     p.transferCoefficient = transferCoefficient_;
     p.equilibriumConcentration = NumericType(1);
     p.oxidantMoleculeDensity = NumericType(1);
-    p.expansionCoefficient = NumericType(2.27);  // V_SiO2 / V_Si
-    p.velocitySign = NumericType(-1);             // reaction interface moves inward
+    p.expansionCoefficient = NumericType(2.27); // V_SiO2 / V_Si
+    p.velocitySign = NumericType(-1); // reaction interface moves inward
     p.temperature = T_K;
     p.reactionActivationVolume = reactionActivationVolume_;
     p.diffusionActivationVolume = diffusionActivationVolume_;
-    // Continuous crystal-axis correction applied per-face by OxidationDiffusion:
+    // Continuous crystal-axis correction applied per-face by
+    // OxidationDiffusion:
     //   k(n) = k_base × [1 + (ratio − 1) × (1 − (n · axis)²)]
     // k_base is the B/A for the chosen bulk orientation; ratio is the B/A of
     // faces perpendicular to the wafer normal divided by k_base. crystalAxis
@@ -761,21 +793,21 @@ private:
     // Ratios derived from the (100):(110):(111) = 1 : 1.45 : 1.68 ladder.
     p.crystalAxis = {NumericType(0), NumericType(1), NumericType(0)};
     switch (orientation_) {
-      case SiliconOrientation::Si100:
-        // Perpendicular faces are (110)-like: 1.45× faster than (100).
-        p.reactionRateRatio111 = NumericType(1.45);
-        break;
-      case SiliconOrientation::Si110:
-        // Perpendicular faces are (100)-like: 1/1.45 ≈ 0.690× of (110).
-        p.reactionRateRatio111 = NumericType(1) / NumericType(1.45);
-        break;
-      case SiliconOrientation::Si111:
-        // Perpendicular faces are (100)-like: 1/1.68 ≈ 0.595× of (111).
-        p.reactionRateRatio111 = NumericType(1) / NumericType(1.68);
-        break;
-      default: // PolySi — isotropic
-        p.reactionRateRatio111 = NumericType(1);
-        break;
+    case SiliconOrientation::Si100:
+      // Perpendicular faces are (110)-like: 1.45× faster than (100).
+      p.reactionRateRatio111 = NumericType(1.45);
+      break;
+    case SiliconOrientation::Si110:
+      // Perpendicular faces are (100)-like: 1/1.45 ≈ 0.690× of (110).
+      p.reactionRateRatio111 = NumericType(1) / NumericType(1.45);
+      break;
+    case SiliconOrientation::Si111:
+      // Perpendicular faces are (100)-like: 1/1.68 ≈ 0.595× of (111).
+      p.reactionRateRatio111 = NumericType(1) / NumericType(1.68);
+      break;
+    default: // PolySi — isotropic
+      p.reactionRateRatio111 = NumericType(1);
+      break;
     }
     p.maxGridPoints = maxGridPoints_;
     p.maxIterations = 10000;
@@ -784,14 +816,15 @@ private:
   }
 
   // Oxide mechanics: viscosity follows Arrhenius (Irene, J. Electrochem. Soc.
-  // 125, 1708 (1978)); bulk and shear moduli treated as temperature-independent.
+  // 125, 1708 (1978)); bulk and shear moduli treated as
+  // temperature-independent.
   viennals::OxidationDeformationParameters<NumericType>
   computeDefParams(NumericType dt) const {
     const NumericType T_K = temperature_ + NumericType(273.15);
     // η(T) = η_ref × exp(Ea/kB × (1/T − 1/T_ref))
     // η_ref = 1×10¹⁰ Pa·hr at T_ref = 1000 °C, Ea = 1.5 eV (Irene 1978)
-    static constexpr NumericType etaRef  = NumericType(1e10);
-    static constexpr NumericType etaEa   = NumericType(1.5);     // eV
+    static constexpr NumericType etaRef = NumericType(1e10);
+    static constexpr NumericType etaEa = NumericType(1.5);       // eV
     static constexpr NumericType etaTref = NumericType(1273.15); // K
     const NumericType viscosity =
         etaRef * std::exp(etaEa / kB_ *
@@ -799,8 +832,8 @@ private:
 
     viennals::OxidationDeformationParameters<NumericType> p;
     p.viscosity = viscosity;
-    p.bulkModulus = NumericType(7.5e8);     // Pa
-    p.shearModulus = NumericType(3e10);     // Pa
+    p.bulkModulus = NumericType(7.5e8); // Pa
+    p.shearModulus = NumericType(3e10); // Pa
     p.stressTimeStep = dt;
     p.mechanicsIterations = mechanicsIterations_;
     p.mechanicsTolerance = mechanicsTolerance_;
@@ -819,8 +852,8 @@ private:
   // level-set narrow band, padded by `padding` cells.  Same pattern as
   // OxidationSolverBase::definedPointBounds().
   static std::pair<viennahrle::Index<D>, viennahrle::Index<D>>
-  computeLevelSetBounds(
-      SmartPointer<viennals::Domain<NumericType, D>> ls, int padding) {
+  computeLevelSetBounds(SmartPointer<viennals::Domain<NumericType, D>> ls,
+                        int padding) {
     using DomType = typename viennals::Domain<NumericType, D>::DomainType;
     viennahrle::Index<D> lo{}, hi{};
     bool found = false;
@@ -841,12 +874,14 @@ private:
     }
     if (found) {
       for (int d = 0; d < D; ++d) {
-        if (lo[d] < std::numeric_limits<viennahrle::IndexType>::min() + padding) {
+        if (lo[d] <
+            std::numeric_limits<viennahrle::IndexType>::min() + padding) {
           lo[d] = std::numeric_limits<viennahrle::IndexType>::min();
         } else {
           lo[d] -= padding;
         }
-        if (hi[d] > std::numeric_limits<viennahrle::IndexType>::max() - padding) {
+        if (hi[d] >
+            std::numeric_limits<viennahrle::IndexType>::max() - padding) {
           hi[d] = std::numeric_limits<viennahrle::IndexType>::max();
         } else {
           hi[d] += padding;
@@ -888,33 +923,33 @@ private:
       if (temperature_ < NumericType(950)) {
         // Low-T regime (<950 °C): higher activation energy 2.30 eV.
         if (orientation_ == SiliconOrientation::Si111)
-          return {NumericType(772), NumericType(1.23),
-                  NumericType(5.82e7), NumericType(2.30)};
+          return {NumericType(772), NumericType(1.23), NumericType(5.82e7),
+                  NumericType(2.30)};
         if (orientation_ == SiliconOrientation::Si110)
-          return {NumericType(772), NumericType(1.23),
-                  NumericType(5.02e7), NumericType(2.30)}; // 3.46e7 × 1.45
-        return   {NumericType(772), NumericType(1.23),
-                  NumericType(3.46e7), NumericType(2.30)}; // Si100 / PolySi
+          return {NumericType(772), NumericType(1.23), NumericType(5.02e7),
+                  NumericType(2.30)}; // 3.46e7 × 1.45
+        return {NumericType(772), NumericType(1.23), NumericType(3.46e7),
+                NumericType(2.30)}; // Si100 / PolySi
       }
       // High-T regime (≥950 °C): standard activation energy 2.00 eV.
       if (orientation_ == SiliconOrientation::Si111)
-        return {NumericType(772), NumericType(1.23),
-                NumericType(6.23e6), NumericType(2.00)};
+        return {NumericType(772), NumericType(1.23), NumericType(6.23e6),
+                NumericType(2.00)};
       if (orientation_ == SiliconOrientation::Si110)
-        return {NumericType(772), NumericType(1.23),
-                NumericType(5.38e6), NumericType(2.00)}; // 3.71e6 × 1.45
-      return   {NumericType(772), NumericType(1.23),
-                NumericType(3.71e6), NumericType(2.00)}; // Si100 / PolySi
+        return {NumericType(772), NumericType(1.23), NumericType(5.38e6),
+                NumericType(2.00)}; // 3.71e6 × 1.45
+      return {NumericType(772), NumericType(1.23), NumericType(3.71e6),
+              NumericType(2.00)}; // Si100 / PolySi
     }
     // Wet: single-regime for all orientations.
     if (orientation_ == SiliconOrientation::Si111)
-      return {NumericType(386), NumericType(0.78),
-              NumericType(1.63e8), NumericType(2.05)};
+      return {NumericType(386), NumericType(0.78), NumericType(1.63e8),
+              NumericType(2.05)};
     if (orientation_ == SiliconOrientation::Si110)
-      return {NumericType(386), NumericType(0.78),
-              NumericType(1.41e8), NumericType(2.05)}; // 9.70e7 × 1.45
-    return   {NumericType(386), NumericType(0.78),
-              NumericType(9.70e7), NumericType(2.05)}; // Si100 / PolySi
+      return {NumericType(386), NumericType(0.78), NumericType(1.41e8),
+              NumericType(2.05)}; // 9.70e7 × 1.45
+    return {NumericType(386), NumericType(0.78), NumericType(9.70e7),
+            NumericType(2.05)}; // Si100 / PolySi
   }
 };
 

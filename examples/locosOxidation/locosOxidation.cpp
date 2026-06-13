@@ -20,8 +20,8 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -95,8 +95,9 @@ struct Config {
 };
 
 bool parseBool(std::string value) {
-  std::transform(value.begin(), value.end(), value.begin(),
-                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  std::transform(
+      value.begin(), value.end(), value.begin(),
+      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   return value == "1" || value == "true" || value == "yes" || value == "on";
 }
 
@@ -109,8 +110,9 @@ std::string normalizeConfigToken(std::string value) {
     return {};
   const auto last = value.find_last_not_of(" \t\r\n");
   value = value.substr(first, last - first + 1);
-  std::transform(value.begin(), value.end(), value.begin(),
-                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  std::transform(
+      value.begin(), value.end(), value.begin(),
+      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   return value;
 }
 
@@ -149,49 +151,92 @@ Config parseConfig(const std::string &filename) {
       continue;
     const auto key = line.substr(0, eq);
     const auto val = line.substr(eq + 1);
-    if (key == "numThreads")        cfg.numThreads = std::stoi(val);
-    else if (key == "gridDelta")    cfg.gridDelta = std::stod(val);
-    else if (key == "xExtent")      cfg.xExtent = std::stod(val);
-    else if (key == "yMin")         cfg.yMin = std::stod(val);
-    else if (key == "yMax")         cfg.yMax = std::stod(val);
-    else if (key == "padOxideThickness") cfg.padOxideThickness = std::stod(val);
-    else if (key == "maskThickness")cfg.maskThickness = std::stod(val);
-    else if (key == "maskEdge")     cfg.maskEdge = std::stod(val);
-    else if (key == "oxidationTime")cfg.oxidationTime = std::stod(val);
-    else if (key == "timeStep")     cfg.timeStep = std::stod(val);
-    else if (key == "temperature")  cfg.temperature = std::stod(val);
-    else if (key == "pressure")     cfg.pressure = std::stod(val);
-    else if (key == "oxidant")      cfg.oxidant = val;
-    else if (key == "orientation")  cfg.orientation = val;
-    else if (key == "maxGridPoints")cfg.maxGridPoints = std::stoull(val);
-    else if (key == "outputPrefix") cfg.outputPrefix = val;
-    else if (key == "mechanicsIterations")  cfg.mechanicsIterations  = std::stoi(val);
-    else if (key == "mechanicsTolerance")   cfg.mechanicsTolerance   = std::stod(val);
-    else if (key == "pressureIterations")   cfg.pressureIterations   = std::stoi(val);
-    else if (key == "pressureTolerance")    cfg.pressureTolerance    = std::stod(val);
-    else if (key == "stokesIterations") cfg.stokesIterations = std::stoi(val);
-    else if (key == "stokesTolerance")  cfg.stokesTolerance  = std::stod(val);
-    else if (key == "couplingIterations") cfg.couplingIterations = std::stoi(val);
-    else if (key == "couplingTolerance") cfg.couplingTolerance = std::stod(val);
-    else if (key == "maskCouplingIterations") cfg.maskCouplingIterations = std::stoi(val);
-    else if (key == "maskCouplingTolerance") cfg.maskCouplingTolerance = std::stod(val);
-    else if (key == "maskReferenceViscosity") cfg.maskReferenceViscosity = std::stod(val);
-    else if (key == "maskYoungModulus") cfg.maskYoungModulus = std::stod(val);
-    else if (key == "maskPoissonRatio") cfg.maskPoissonRatio = std::stod(val);
-    else if (key == "maskContactMode") cfg.maskContactMode = val;
-    else if (key == "maskUnilateralContact") cfg.maskUnilateralContact = parseBool(val);
-    else if (key == "maskTractionIterations") cfg.maskTractionIterations = std::stoi(val);
-    else if (key == "maskTractionTolerance") cfg.maskTractionTolerance = std::stod(val);
-    else if (key == "maskTractionRelaxation") cfg.maskTractionRelaxation = std::stod(val);
-    else if (key == "maskContactLoadRelaxation") cfg.maskContactLoadRelaxation = std::stod(val);
-    else if (key == "maskContactReleaseFraction") cfg.maskContactReleaseFraction = std::stod(val);
-    else if (key == "maskSmootherOmega")      cfg.maskSmootherOmega      = std::stod(val);
-    else if (key == "maskAnchorBoundaryDirection") cfg.maskAnchorBoundaryDirection = std::stoi(val);
-    else if (key == "maskAnchorBoundarySide") cfg.maskAnchorBoundarySide = std::stoi(val);
-    else if (key == "maskAnchorBoundaryLayers") cfg.maskAnchorBoundaryLayers = std::stoul(val);
-    else if (key == "useGpu")                cfg.useGpu = val;
-    else if (key == "gpuPreconditioner")     cfg.gpuPreconditioner = val;
-    else if (key == "logLevel")              cfg.logLevel = val;
+    if (key == "numThreads")
+      cfg.numThreads = std::stoi(val);
+    else if (key == "gridDelta")
+      cfg.gridDelta = std::stod(val);
+    else if (key == "xExtent")
+      cfg.xExtent = std::stod(val);
+    else if (key == "yMin")
+      cfg.yMin = std::stod(val);
+    else if (key == "yMax")
+      cfg.yMax = std::stod(val);
+    else if (key == "padOxideThickness")
+      cfg.padOxideThickness = std::stod(val);
+    else if (key == "maskThickness")
+      cfg.maskThickness = std::stod(val);
+    else if (key == "maskEdge")
+      cfg.maskEdge = std::stod(val);
+    else if (key == "oxidationTime")
+      cfg.oxidationTime = std::stod(val);
+    else if (key == "timeStep")
+      cfg.timeStep = std::stod(val);
+    else if (key == "temperature")
+      cfg.temperature = std::stod(val);
+    else if (key == "pressure")
+      cfg.pressure = std::stod(val);
+    else if (key == "oxidant")
+      cfg.oxidant = val;
+    else if (key == "orientation")
+      cfg.orientation = val;
+    else if (key == "maxGridPoints")
+      cfg.maxGridPoints = std::stoull(val);
+    else if (key == "outputPrefix")
+      cfg.outputPrefix = val;
+    else if (key == "mechanicsIterations")
+      cfg.mechanicsIterations = std::stoi(val);
+    else if (key == "mechanicsTolerance")
+      cfg.mechanicsTolerance = std::stod(val);
+    else if (key == "pressureIterations")
+      cfg.pressureIterations = std::stoi(val);
+    else if (key == "pressureTolerance")
+      cfg.pressureTolerance = std::stod(val);
+    else if (key == "stokesIterations")
+      cfg.stokesIterations = std::stoi(val);
+    else if (key == "stokesTolerance")
+      cfg.stokesTolerance = std::stod(val);
+    else if (key == "couplingIterations")
+      cfg.couplingIterations = std::stoi(val);
+    else if (key == "couplingTolerance")
+      cfg.couplingTolerance = std::stod(val);
+    else if (key == "maskCouplingIterations")
+      cfg.maskCouplingIterations = std::stoi(val);
+    else if (key == "maskCouplingTolerance")
+      cfg.maskCouplingTolerance = std::stod(val);
+    else if (key == "maskReferenceViscosity")
+      cfg.maskReferenceViscosity = std::stod(val);
+    else if (key == "maskYoungModulus")
+      cfg.maskYoungModulus = std::stod(val);
+    else if (key == "maskPoissonRatio")
+      cfg.maskPoissonRatio = std::stod(val);
+    else if (key == "maskContactMode")
+      cfg.maskContactMode = val;
+    else if (key == "maskUnilateralContact")
+      cfg.maskUnilateralContact = parseBool(val);
+    else if (key == "maskTractionIterations")
+      cfg.maskTractionIterations = std::stoi(val);
+    else if (key == "maskTractionTolerance")
+      cfg.maskTractionTolerance = std::stod(val);
+    else if (key == "maskTractionRelaxation")
+      cfg.maskTractionRelaxation = std::stod(val);
+    else if (key == "maskContactLoadRelaxation")
+      cfg.maskContactLoadRelaxation = std::stod(val);
+    else if (key == "maskContactReleaseFraction")
+      cfg.maskContactReleaseFraction = std::stod(val);
+    else if (key == "maskSmootherOmega")
+      cfg.maskSmootherOmega = std::stod(val);
+    else if (key == "maskAnchorBoundaryDirection")
+      cfg.maskAnchorBoundaryDirection = std::stoi(val);
+    else if (key == "maskAnchorBoundarySide")
+      cfg.maskAnchorBoundarySide = std::stoi(val);
+    else if (key == "maskAnchorBoundaryLayers")
+      cfg.maskAnchorBoundaryLayers = std::stoul(val);
+    else if (key == "useGpu")
+      cfg.useGpu = val;
+    else if (key == "gpuPreconditioner")
+      cfg.gpuPreconditioner = val;
+    else if (key == "logLevel")
+      cfg.logLevel = val;
   }
   return cfg;
 }
@@ -206,13 +251,20 @@ int main() {
 
   {
     const auto &lv = cfg.logLevel;
-    if      (lv == "debug")        ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
-    else if (lv == "timing")       ps::Logger::setLogLevel(ps::LogLevel::TIMING);
-    else if (lv == "intermediate") ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
-    else if (lv == "info")         ps::Logger::setLogLevel(ps::LogLevel::INFO);
-    else if (lv == "warning")      ps::Logger::setLogLevel(ps::LogLevel::WARNING);
-    else if (lv == "error")        ps::Logger::setLogLevel(ps::LogLevel::ERROR);
-    else                           ps::Logger::setLogLevel(ps::LogLevel::INFO);
+    if (lv == "debug")
+      ps::Logger::setLogLevel(ps::LogLevel::DEBUG);
+    else if (lv == "timing")
+      ps::Logger::setLogLevel(ps::LogLevel::TIMING);
+    else if (lv == "intermediate")
+      ps::Logger::setLogLevel(ps::LogLevel::INTERMEDIATE);
+    else if (lv == "info")
+      ps::Logger::setLogLevel(ps::LogLevel::INFO);
+    else if (lv == "warning")
+      ps::Logger::setLogLevel(ps::LogLevel::WARNING);
+    else if (lv == "error")
+      ps::Logger::setLogLevel(ps::LogLevel::ERROR);
+    else
+      ps::Logger::setLogLevel(ps::LogLevel::INFO);
   }
   omp_set_num_threads(cfg.numThreads);
 
@@ -231,7 +283,8 @@ int main() {
 
   // Pad SiO2: flat plane at y = padOxideThickness grown on the Si surface.
   ps::MakePlane<NumericType, D>(domain, cfg.padOxideThickness,
-                                ps::Material::SiO2, /*addToExisting=*/true).apply();
+                                ps::Material::SiO2, /*addToExisting=*/true)
+      .apply();
 
   // Si3N4 mask: box covering x ∈ [−xExtent, maskEdge], sitting on the pad
   // oxide.  The tiny contact epsilon ensures the mask bottom is numerically
@@ -239,10 +292,10 @@ int main() {
   if (cfg.maskThickness > NumericType(0)) {
     constexpr NumericType contactEps = 1e-6; // µm
     auto maskLS = ls::Domain<NumericType, D>::New(bounds, bc, cfg.gridDelta);
-    const ls::VectorType<NumericType, D> minCorner{-cfg.xExtent,
-        cfg.padOxideThickness - contactEps};
-    const ls::VectorType<NumericType, D> maxCorner{cfg.maskEdge,
-        cfg.padOxideThickness + cfg.maskThickness};
+    const ls::VectorType<NumericType, D> minCorner{
+        -cfg.xExtent, cfg.padOxideThickness - contactEps};
+    const ls::VectorType<NumericType, D> maxCorner{
+        cfg.maskEdge, cfg.padOxideThickness + cfg.maskThickness};
     ls::MakeGeometry<NumericType, D> geom(
         maskLS, ls::Box<NumericType, D>::New(minCorner, maxCorner));
     geom.setIgnoreBoundaryConditions(std::array<bool, D>{false, true});
@@ -258,8 +311,9 @@ int main() {
                                          : ps::OxidantType::Dry);
   model->setPressure(cfg.pressure);
   model->setOrientation(cfg.orientation == "111" ? ps::SiliconOrientation::Si111
-                      : cfg.orientation == "110" ? ps::SiliconOrientation::Si110
-                                                 : ps::SiliconOrientation::Si100);
+                        : cfg.orientation == "110"
+                            ? ps::SiliconOrientation::Si110
+                            : ps::SiliconOrientation::Si100);
   model->setTimeStep(cfg.timeStep);
   model->setMaxGridPoints(cfg.maxGridPoints);
   model->setMechanicsIterations(cfg.mechanicsIterations);
@@ -273,8 +327,10 @@ int main() {
   model->setMaskCouplingIterations(cfg.maskCouplingIterations);
   model->setMaskCouplingTolerance(cfg.maskCouplingTolerance);
 
-  if      (cfg.useGpu == "gpu")        model->setGpuMode(ps::GpuMode::Gpu);
-  else if (cfg.useGpu == "cpu")        model->setGpuMode(ps::GpuMode::Cpu);
+  if (cfg.useGpu == "gpu")
+    model->setGpuMode(ps::GpuMode::Gpu);
+  else if (cfg.useGpu == "cpu")
+    model->setGpuMode(ps::GpuMode::Cpu);
   if (cfg.gpuPreconditioner == "ilu0")
     model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
   else
@@ -311,8 +367,8 @@ int main() {
   const NumericType est =
       model->estimatePlanarOxideThickness(cfg.padOxideThickness);
   std::cout << "Planar Deal-Grove estimate for " << cfg.oxidationTime
-            << " hr oxidation at " << cfg.temperature
-            << " C: " << est << " um total oxide thickness.\n";
+            << " hr oxidation at " << cfg.temperature << " C: " << est
+            << " um total oxide thickness.\n";
 
   // ── Time-stepping loop ────────────────────────────────────────────────────
 
@@ -353,17 +409,16 @@ int main() {
     meshWriteTime += Clock::now() - meshWriteStart;
   }
 
-  std::cout << "Wrote " << cfg.outputPrefix << "_stack_initial.vtp, "
-            << step << " time-step files, "
-            << cfg.outputPrefix << "_stack_after.vtp, and "
-            << cfg.outputPrefix << "_stack_after_volume.vtu\n";
+  std::cout << "Wrote " << cfg.outputPrefix << "_stack_initial.vtp, " << step
+            << " time-step files, " << cfg.outputPrefix
+            << "_stack_after.vtp, and " << cfg.outputPrefix
+            << "_stack_after_volume.vtu\n";
 
   const auto wallEnd = Clock::now();
   const std::chrono::duration<double> wallTime =
       (wallEnd - wallStart) - meshWriteTime;
-  std::cout << "Total LOCOS wall time excluding mesh writes: "
-            << std::fixed << std::setprecision(3)
-            << wallTime.count() << " s\n";
+  std::cout << "Total LOCOS wall time excluding mesh writes: " << std::fixed
+            << std::setprecision(3) << wallTime.count() << " s\n";
 
   return 0;
 }
