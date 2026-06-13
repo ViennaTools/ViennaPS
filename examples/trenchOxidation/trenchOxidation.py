@@ -74,11 +74,13 @@ def _parse_orientation(s: str):
     s = s.lower()
     if s in ("100", "<100>", "si100"):
         return vps.SiliconOrientation.Si100
+    if s in ("110", "<110>", "si110"):
+        return vps.SiliconOrientation.Si110
     if s in ("111", "<111>", "si111"):
         return vps.SiliconOrientation.Si111
     if s in ("poly", "polysi"):
         return vps.SiliconOrientation.PolySi
-    raise ValueError(f"Unknown orientation '{s}'. Use 100, 111, or poly.")
+    raise ValueError(f"Unknown orientation '{s}'. Use 100, 110, 111, or poly.")
 
 
 # ── Config file ───────────────────────────────────────────────────────────────

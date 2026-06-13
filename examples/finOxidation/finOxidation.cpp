@@ -47,11 +47,12 @@ ps::OxidantType parseOxidant(const std::string &value) {
 ps::SiliconOrientation parseOrientation(const std::string &value) {
   const auto n = lower(value);
   if (n == "100" || n == "<100>" || n == "si100") return ps::SiliconOrientation::Si100;
+  if (n == "110" || n == "<110>" || n == "si110") return ps::SiliconOrientation::Si110;
   if (n == "111" || n == "<111>" || n == "si111") return ps::SiliconOrientation::Si111;
   if (n == "poly" || n == "polysi" || n == "poly-silicon")
     return ps::SiliconOrientation::PolySi;
   throw std::invalid_argument("Unknown orientation '" + value +
-                              "'. Use 100, 111, or poly.");
+                              "'. Use 100, 110, 111, or poly.");
 }
 
 // ---------------------------------------------------------------------------
@@ -135,8 +136,9 @@ void run(const ps::util::Parameters &params) {
 
   {
     const auto useGpu = lower(getString(params, "useGpu", "auto"));
-    if      (useGpu == "gpu") model->setGpuMode(ps::GpuMode::Gpu);
-    else if (useGpu == "cpu") model->setGpuMode(ps::GpuMode::Cpu);
+    if      (useGpu == "gpu")        model->setGpuMode(ps::GpuMode::Gpu);
+    // else if (useGpu == "gpu_simple") model->setGpuMode(ps::GpuMode::GpuSimple);
+    else if (useGpu == "cpu")        model->setGpuMode(ps::GpuMode::Cpu);
     // "auto" = default: GPU when node count >= threshold
     const auto prec = lower(getString(params, "gpuPreconditioner", "jacobi"));
     if (prec == "ilu0") model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
@@ -187,6 +189,13 @@ int main(int argc, char **argv) {
       std::cout << "Usage: " << argv[0] << " <config file>" << std::endl;
       return 1;
     }
+  }
+  // Command-line key=value pairs (argv[2]...) override config file values.
+  for (int i = 2; i < argc; ++i) {
+    const std::string arg(argv[i]);
+    const auto eq = arg.find('=');
+    if (eq != std::string::npos)
+      params.m[arg.substr(0, eq)] = arg.substr(eq + 1);
   }
 
   const int dimensions = std::stoi(getString(params, "dimensions", "2"));

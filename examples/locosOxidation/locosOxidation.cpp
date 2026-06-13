@@ -257,9 +257,9 @@ int main() {
   model->setOxidant(cfg.oxidant == "wet" ? ps::OxidantType::Wet
                                          : ps::OxidantType::Dry);
   model->setPressure(cfg.pressure);
-  model->setOrientation(cfg.orientation == "111"
-                            ? ps::SiliconOrientation::Si111
-                            : ps::SiliconOrientation::Si100);
+  model->setOrientation(cfg.orientation == "111" ? ps::SiliconOrientation::Si111
+                      : cfg.orientation == "110" ? ps::SiliconOrientation::Si110
+                                                 : ps::SiliconOrientation::Si100);
   model->setTimeStep(cfg.timeStep);
   model->setMaxGridPoints(cfg.maxGridPoints);
   model->setMechanicsIterations(cfg.mechanicsIterations);
@@ -273,8 +273,8 @@ int main() {
   model->setMaskCouplingIterations(cfg.maskCouplingIterations);
   model->setMaskCouplingTolerance(cfg.maskCouplingTolerance);
 
-  if      (cfg.useGpu == "gpu") model->setGpuMode(ps::GpuMode::Gpu);
-  else if (cfg.useGpu == "cpu") model->setGpuMode(ps::GpuMode::Cpu);
+  if      (cfg.useGpu == "gpu")        model->setGpuMode(ps::GpuMode::Gpu);
+  else if (cfg.useGpu == "cpu")        model->setGpuMode(ps::GpuMode::Cpu);
   if (cfg.gpuPreconditioner == "ilu0")
     model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
   else

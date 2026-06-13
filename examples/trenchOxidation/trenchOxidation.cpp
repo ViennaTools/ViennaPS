@@ -47,11 +47,12 @@ ps::OxidantType parseOxidant(const std::string &value) {
 ps::SiliconOrientation parseOrientation(const std::string &value) {
   const auto n = lower(value);
   if (n == "100" || n == "<100>" || n == "si100") return ps::SiliconOrientation::Si100;
+  if (n == "110" || n == "<110>" || n == "si110") return ps::SiliconOrientation::Si110;
   if (n == "111" || n == "<111>" || n == "si111") return ps::SiliconOrientation::Si111;
   if (n == "poly" || n == "polysi" || n == "poly-silicon")
     return ps::SiliconOrientation::PolySi;
   throw std::invalid_argument("Unknown orientation '" + value +
-                              "'. Use 100, 111, or poly.");
+                              "'. Use 100, 110, 111, or poly.");
 }
 
 // ---------------------------------------------------------------------------

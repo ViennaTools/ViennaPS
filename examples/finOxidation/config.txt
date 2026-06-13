@@ -19,7 +19,7 @@ gridDelta=0.01
 xExtent=0.6
 yMin=-1.0
 yMax=2.0
-zExtent=0.1  # 3D only; defaults to xExtent if omitted
+zExtent=0.03  # 3D only; defaults to xExtent if omitted
 # maxGridPoints=10000000
 
 # Fin geometry (micrometers)
@@ -41,5 +41,5 @@ outputPrefix=ps_fin_oxidation
 # GPU solver backend (requires ViennaLS built with VIENNALS_USE_GPU=ON)
 # useGpu: auto (default) | gpu | cpu
 # gpuPreconditioner: jacobi (default) | ilu0
-# useGpu=auto
+useGpu=cpu
 # gpuPreconditioner=jacobi
