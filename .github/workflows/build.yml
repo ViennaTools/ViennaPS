@@ -35,7 +35,7 @@ jobs:
     container: ${{ matrix.container }}
 
     env:
-      VCPKG_COMMIT: c3867e714dd3a51c272826eea77267876517ed99
+      VCPKG_COMMIT: 72d876b20f06129a1b1e0db80c7075fe3e419d7c
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
 
     name: "🧪 Test on ${{ matrix.os }} (⚙️: ${{ matrix.config }}, 💿: ${{ matrix.container || matrix.os }})"

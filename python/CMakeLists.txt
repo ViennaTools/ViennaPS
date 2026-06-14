@@ -81,7 +81,9 @@ if(VIENNALS_VTK_RENDERING)
     NAME VTK
     GIT_TAG v9.3.1
     VERSION 9.0.0
-    GIT_REPOSITORY "https://gitlab.kitware.com/vtk/vtk")
+    GIT_REPOSITORY "https://gitlab.kitware.com/vtk/vtk"
+    PATCH_COMMAND ${CMAKE_COMMAND} -P
+                  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/vtk-stdext-patch.cmake")
 
   # These modules need to be initialized for VTK rendering to work properly
   vtk_module_autoinit(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME} MODULES ${VTK_LIBRARIES})

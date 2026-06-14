@@ -32,7 +32,7 @@ jobs:
     container: ${{ matrix.container }}
 
     env:
-      VCPKG_COMMIT: c3867e714dd3a51c272826eea77267876517ed99
+      VCPKG_COMMIT: 72d876b20f06129a1b1e0db80c7075fe3e419d7c
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
 
     name: "🐍 Test Bindings on ${{ matrix.os }}"
@@ -140,6 +140,10 @@ jobs:
 
     name: "🐍 Package Bindings on ${{ matrix.os }}"
 
+    env:
+      VCPKG_COMMIT: 72d876b20f06129a1b1e0db80c7075fe3e419d7c
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v6
@@ -152,10 +156,40 @@ jobs:
       - name: 🛞 CIBuildWheel
         run: pip install cibuildwheel==3.4.0 --break-system-packages
 
-      - name: 🛠️ Use VTK-Python Libs
+      - name: 🖥️ Setup vcpkg (Windows)
+        shell: pwsh
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON","-Wno-dev"/g' pyproject.toml
+          Remove-Item Env:VCPKG_ROOT -ErrorAction SilentlyContinue
+
+          git clone https://github.com/microsoft/vcpkg.git
+          git -C vcpkg checkout $env:VCPKG_COMMIT
+          & .\vcpkg\bootstrap-vcpkg.bat
+
+          "VCPKG_ROOT=$($env:GITHUB_WORKSPACE)\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          New-Item -ItemType Directory -Force -Path "${{ env.VCPKG_DEFAULT_BINARY_CACHE }}"
+
+      - name: 🦥 Cache vcpkg binary (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-${{ matrix.os }}-Release-${{ env.VCPKG_COMMIT }}
+
+      - name: 🛠️ Build Dependencies (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          ./vcpkg/vcpkg install --triplet x64-windows
+
+      - name: 🛠️ Use VTK-Python Libs
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          $toolchain = "${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake".Replace('\', '/')
+          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_IS_CI=ON","-Wno-dev"/g' pyproject.toml
+          "CIBW_CONFIG_SETTINGS=cmake.define.CMAKE_TOOLCHAIN_FILE=$toolchain cmake.define.VCPKG_TARGET_TRIPLET=x64-windows" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           type pyproject.toml
 
       - name: 🛠️ Use VTK-Python Libs
