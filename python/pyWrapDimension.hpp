@@ -545,6 +545,9 @@ template <int D> void bindApi(py::module &module) {
       .def("setMaterialMap", &Domain<T, D>::setMaterialMap)
       .def("getMaterialMap", &Domain<T, D>::getMaterialMap)
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
+           py::arg("position"), py::arg("coverMaterial"),
+           py::arg("isAboveSurface") = false,
+           py::arg("withEmbeddedBoundaries") = false,
            "Generate the cell set.")
       .def("getLevelSets", &Domain<T, D>::getLevelSets)
       .def("getMaterialsInDomain", &Domain<T, D>::getMaterialsInDomain,

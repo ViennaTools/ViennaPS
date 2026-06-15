@@ -402,7 +402,7 @@ class Domain:
         """
         Enable adding meta data from processes to domain.
         """
-    def generateCellSet(self: viennaps.d2.Domain, arg0: typing.SupportsFloat, arg1: viennaps._core.Material, arg2: bool) -> None:
+    def generateCellSet(self: viennaps.d2.Domain, position: typing.SupportsFloat, coverMaterial: viennaps._core.Material, isAboveSurface: bool = False, withEmbeddedBoundaries: bool = False) -> None:
         """
         Generate the cell set.
         """
