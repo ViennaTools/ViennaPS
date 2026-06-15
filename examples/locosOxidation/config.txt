@@ -12,7 +12,7 @@
 #   gridDelta=0.1   ->   ~6k nodes (fast test)
 
 numThreads=16
-useGpu=cpu
+useGpu=gpu
 # gpuPreconditioner=jacobi
 
 gridDelta=0.005

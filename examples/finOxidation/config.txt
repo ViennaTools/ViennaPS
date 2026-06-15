@@ -41,5 +41,5 @@ outputPrefix=ps_fin_oxidation
 # GPU solver backend (requires ViennaLS built with VIENNALS_USE_GPU=ON)
 # useGpu: cpu (default) | gpu
 # gpuPreconditioner: jacobi (default) | ilu0
-useGpu=cpu
+useGpu=gpu
 # gpuPreconditioner=jacobi

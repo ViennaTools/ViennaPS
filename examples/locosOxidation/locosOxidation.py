@@ -222,6 +222,7 @@ if cfg["gpuPreconditioner"].lower() == "ilu0":
     model.setGpuPreconditioner(vps.GpuPreconditioner.ILU0)
 
 model.saveSurfaceMesh(domain, f"{output_prefix}_step_000.vtp")
+model.saveVolumeMesh(domain, f"{output_prefix}_step_000.vtp")
 
 est = model.estimatePlanarOxideThickness(pad_oxide_thickness)
 print(
@@ -248,6 +249,7 @@ while oxidation_time - elapsed > time_eps:
 
     fname = f"{output_prefix}_step_{step:03d}.vtp"
     model.saveSurfaceMesh(domain, fname)
+    model.saveVolumeMesh(domain, fname)
     print(f"Wrote {fname} at t = {elapsed:.4f} hr.")
 
 # ── Final output ───────────────────────────────────────────────────────────────
