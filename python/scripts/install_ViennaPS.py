@@ -278,6 +278,28 @@ def install_viennals(
         print("Proceeding with the currently installed ViennaLS.")
 
 
+def install_viennacs(pip_path: Path, viennacs_dir: Path | None, verbose: bool):
+    """Install a local ViennaCS checkout into the venv, if one was provided."""
+    if viennacs_dir is None:
+        return
+
+    env = os.environ.copy()
+
+    # On Linux, set CC and CXX environment variables
+    if IS_LINUX and REQUIRED_GCC is not None:
+        env["CC"] = f"gcc-{REQUIRED_GCC}"
+        env["CXX"] = f"g++-{REQUIRED_GCC}"
+
+    print(f"Installing ViennaCS from local directory: {viennacs_dir}")
+    if not (viennacs_dir.exists() and (viennacs_dir / "CMakeLists.txt").exists()):
+        sys.exit(f"ViennaCS directory not valid: {viennacs_dir}")
+
+    cmd = [str(pip_path), "install", ".", "--force-reinstall", "--no-deps"]
+    if verbose:
+        cmd.append("-v")
+    run(cmd, cwd=viennacs_dir, env=env)
+
+
 def get_viennaps_dir(viennaps_dir_arg: str | None) -> Path:
     cwd = Path.cwd()
     if viennaps_dir_arg:
@@ -308,6 +330,7 @@ def install_viennaps(
     pip_path: Path,
     viennaps_dir: Path,
     viennals_dir: Path | None,
+    viennacs_dir: Path | None,
     debug_build: bool,
     gpu_build: bool,
     verbose: bool,
@@ -337,6 +360,9 @@ def install_viennaps(
 
     if viennals_dir:
         cmake_args.append(f'-DCPM_ViennaLS_SOURCE="{str(viennals_dir)}"')
+
+    if viennacs_dir:
+        cmake_args.append(f'-DVIENNAPS_VIENNACS_SOURCE="{str(viennacs_dir)}"')
 
     if sanitize:
         cmake_args.append(
@@ -381,6 +407,15 @@ def main():
         help="ViennaLS version tag to use if cloning.",
     )
     parser.add_argument(
+        "--viennacs-dir",
+        default=None,
+        help=(
+            "Path to a local ViennaCS checkout (optional). The checkout is "
+            "installed into the venv and passed to ViennaPS via "
+            "VIENNAPS_VIENNACS_SOURCE."
+        ),
+    )
+    parser.add_argument(
         "--viennaps-dir",
         default=None,
         help="Path to ViennaPS directory (defaults to current dir if it's ViennaPS).",
@@ -407,7 +442,7 @@ def main():
     )
     args = parser.parse_args()
 
-    if not args.skip_toolchain_check or not args.no_gpu:
+    if not args.skip_toolchain_check and not args.no_gpu:
         print("Checking toolchain...")
         ensure_cuda()
         ensure_compilers()
@@ -423,12 +458,19 @@ def main():
     )
     install_viennals(venv_pip, viennals_dir, args.viennals_version, args.verbose)
 
+    # ViennaCS
+    viennacs_dir = (
+        Path(args.viennacs_dir).expanduser().resolve() if args.viennacs_dir else None
+    )
+    install_viennacs(venv_pip, viennacs_dir, args.verbose)
+
     # ViennaPS
     viennaps_dir = get_viennaps_dir(args.viennaps_dir)
     install_viennaps(
         venv_pip,
         viennaps_dir,
         viennals_dir,
+        viennacs_dir,
         args.debug_build,
         not args.no_gpu,
         args.verbose,

@@ -326,6 +326,32 @@ public:
   void clearSourceField() {
     callback_->anneal().clearSourceField();
   }
+
+  // ── Zero-time activation ─────────────────────────────────────────────────
+
+  // Apply only the solid-activation model without running the diffusion
+  // solver: computes
+  //   C_active = C_SS(T) · C_total / (C_SS(T) + C_total)
+  // and writes the result to the active-concentration field.
+  //
+  // Call this immediately after implantation (before the full Process run)
+  // to initialise the active-concentration field for SheetResistance or
+  // NetDoping without any dopant redistribution.
+  //
+  // Prerequisites: enableSolidActivation(true) and
+  //   setSolidSolubilityArrhenius(C0, Ea) must be configured.
+  void applyActivation(SmartPointer<Domain<NumericType, D>> domain) {
+    auto &cs = domain->getCellSet();
+    if (!cs) {
+      Logger::getInstance()
+          .addWarning("Anneal::applyActivation: domain has no cell set — "
+                      "call domain->generateCellSet() first.")
+          .print();
+      return;
+    }
+    callback_->anneal().setCellSet(cs);
+    callback_->anneal().applyActivation();
+  }
 };
 
 } // namespace viennaps

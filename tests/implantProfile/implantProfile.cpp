@@ -111,10 +111,32 @@ void testImplantMaterialName() {
   VC_TEST_ASSERT(ps::implantMaterialName(viennaps::Material::custom(42)) == "unknown");
 }
 
+void testTableBackedModels() {
+#ifdef VIENNAPS_MODELDB_DIR
+  const std::string root = VIENNAPS_MODELDB_DIR;
+  const std::string implantTable =
+      root + "/implant/phosphorus_in_silicon_crystalline.csv";
+  const std::string damageTable =
+      root + "/damage/phosphorus_damage_in_silicon.csv";
+
+  ps::ImplantTableModel<T, D> implant(implantTable, "phosphorus", "silicon",
+                                      "crystalline", 15., 0., 0., 1e13,
+                                      0., 0.);
+  ps::DamageTableModel<T, D> damage(damageTable, "phosphorus", "silicon",
+                                    15., 0., 0., 1e13, 0.);
+
+  VC_TEST_ASSERT(implant.getMaxDepth() > 0.);
+  VC_TEST_ASSERT(implant.getDepthProfile(15.) >= 0.);
+  VC_TEST_ASSERT(damage.getMaxDepth() > 0.);
+  VC_TEST_ASSERT(damage.getDepthProfile(15.) >= 0.);
+#endif
+}
+
 int main() {
   testPearsonIVProfile();
   testDualPearsonIVProfile();
   testChannelingTail();
   testHoblerDamageProfile();
   testImplantMaterialName();
+  testTableBackedModels();
 }

@@ -1,6 +1,7 @@
 #include <models/psIonImplantation.hpp>
 
 #include <geometries/psMakePlane.hpp>
+#include <lsMakeGeometry.hpp>
 #include <psDomain.hpp>
 #include <process/psProcess.hpp>
 
@@ -30,6 +31,43 @@ ps::SmartPointer<ps::Domain<T, D>> makeSubstrate(T gridDelta = 2.0) {
   // isAboveSurface=true places the depth plane last in the level-set order so
   // that Si cells are assigned their own material ID (not the cover material).
   domain->generateCellSet(/*position=*/300., ps::Material::Air,
+                          /*isAboveSurface=*/true);
+  domain->getCellSet()->buildNeighborhood();
+  return domain;
+}
+
+ps::SmartPointer<ps::Domain<T, D>> makeScreenedSubstrate(T gridDelta = 2.0) {
+  const T xExtent = 100.;
+  const T substrateDepth = 200.;
+  const T oxideThickness = 8.;
+  const T topSpace = 30.;
+  T bounds[2 * D] = {-0.5 * xExtent, 0.5 * xExtent, -substrateDepth,
+                     topSpace + oxideThickness};
+  ps::BoundaryType bc[D] = {ps::BoundaryType::REFLECTIVE_BOUNDARY,
+                            ps::BoundaryType::INFINITE_BOUNDARY};
+
+  auto domain = ps::Domain<T, D>::New(bounds, bc, gridDelta);
+  auto makels = [&]() {
+    return ps::SmartPointer<viennals::Domain<T, D>>::New(bounds, bc, gridDelta);
+  };
+
+  auto addPlane = [&](T y, ps::Material material) {
+    auto ls = makels();
+    T origin[D] = {};
+    T normal[D] = {};
+    origin[D - 1] = y;
+    normal[D - 1] = 1.;
+    viennals::MakeGeometry<T, D>(
+        ls, viennals::SmartPointer<viennals::Plane<T, D>>::New(origin, normal))
+        .apply();
+    domain->insertNextLevelSetAsMaterial(ls, material);
+  };
+
+  addPlane(-substrateDepth, ps::Material::Si);
+  addPlane(0., ps::Material::Si);
+  addPlane(oxideThickness, ps::Material::SiO2);
+
+  domain->generateCellSet(topSpace, ps::Material::Air,
                           /*isAboveSurface=*/true);
   domain->getCellSet()->buildNeighborhood();
   return domain;
@@ -237,10 +275,112 @@ void testEmbeddedBoundaryDepthCorrection() {
     VC_TEST_ASSERT(v >= 0.);
 }
 
+void testScreenPassThroughAndBeamHits() {
+  auto domain = makeScreenedSubstrate();
+
+  ps::PearsonIVParameters<T> params;
+  params.mu = 40.; params.sigma = 12.; params.gamma = 0.5; params.beta = 4.0;
+  auto profile = ps::SmartPointer<ps::ImplantPearsonIV<T, D>>::New(
+      params, 0., 20.);
+
+  auto model = ps::SmartPointer<ps::IonImplantation<T, D>>::New();
+  model->setImplantModel(profile);
+  model->setDose(1e14);
+  model->setLengthUnit(1e-7);
+  model->setDoseControl(ps::ImplantDoseControl::WaferDose);
+  model->setScreenMaterials({ps::Material::SiO2});
+  model->setConcentrationLabel("P_total");
+  model->setBeamHitsLabel("P_beam_hits");
+  model->enableBeamHits(true);
+
+  ps::Process<T, D>(domain, model, 0.).apply();
+
+  auto cs = domain->getCellSet();
+  auto conc = cs->getScalarData("P_total");
+  auto hits = cs->getScalarData("P_beam_hits");
+  VC_TEST_ASSERT(conc != nullptr);
+  VC_TEST_ASSERT(hits != nullptr);
+
+  const T totalConc = std::accumulate(conc->begin(), conc->end(), T(0.));
+  const T totalHits = std::accumulate(hits->begin(), hits->end(), T(0.));
+  VC_TEST_ASSERT(totalConc > 0.);
+  VC_TEST_ASSERT(totalHits > 0.);
+}
+
+void testScreenAsMaskBlocksBeam() {
+  auto domain = makeScreenedSubstrate();
+
+  ps::PearsonIVParameters<T> params;
+  params.mu = 40.; params.sigma = 12.; params.gamma = 0.5; params.beta = 4.0;
+  auto profile = ps::SmartPointer<ps::ImplantPearsonIV<T, D>>::New(
+      params, 0., 20.);
+
+  auto model = ps::SmartPointer<ps::IonImplantation<T, D>>::New();
+  model->setImplantModel(profile);
+  model->setDose(1e14);
+  model->setLengthUnit(1e-7);
+  model->setDoseControl(ps::ImplantDoseControl::WaferDose);
+  model->setMaskMaterials({ps::Material::SiO2});
+  model->setConcentrationLabel("P_total");
+
+  ps::Process<T, D>(domain, model, 0.).apply();
+
+  auto conc = domain->getCellSet()->getScalarData("P_total");
+  VC_TEST_ASSERT(conc != nullptr);
+  const T totalConc = std::accumulate(conc->begin(), conc->end(), T(0.));
+  VC_TEST_ASSERT_ISCLOSE(totalConc, 0., 1e-30);
+}
+
+void testLastDamageResetAndAccumulation() {
+  auto domain = makeSubstrate();
+
+  ps::PearsonIVParameters<T> dopantParams;
+  dopantParams.mu = 60.; dopantParams.sigma = 20.;
+  dopantParams.gamma = 0.5; dopantParams.beta = 4.0;
+  auto profile = ps::SmartPointer<ps::ImplantPearsonIV<T, D>>::New(
+      dopantParams, 0., 25.);
+
+  auto damage = ps::SmartPointer<ps::ImplantDamageHobler<T, D>>::New(
+      60., 20., 0., 300., 20.);
+
+  auto model = ps::SmartPointer<ps::IonImplantation<T, D>>::New();
+  model->setImplantModel(profile);
+  model->setDamageModel(damage);
+  model->setDose(1e14);
+  model->setLengthUnit(1e-7);
+  model->setDoseControl(ps::ImplantDoseControl::WaferDose);
+  model->setDamageFactor(2.);
+
+  ps::Process<T, D>(domain, model, 0.).apply();
+  auto cs = domain->getCellSet();
+  auto dmg = cs->getScalarData("Damage");
+  auto last = cs->getScalarData("Damage_Last");
+  VC_TEST_ASSERT(dmg != nullptr);
+  VC_TEST_ASSERT(last != nullptr);
+  const T firstDamage = std::accumulate(dmg->begin(), dmg->end(), T(0.));
+  const T firstLast = std::accumulate(last->begin(), last->end(), T(0.));
+  VC_TEST_ASSERT(firstDamage > 0.);
+  VC_TEST_ASSERT(firstLast > 0.);
+  VC_TEST_ASSERT_ISCLOSE(firstDamage, T(2) * firstLast, T(1e-6));
+
+  ps::Process<T, D>(domain, model, 0.).apply();
+  dmg = cs->getScalarData("Damage");
+  last = cs->getScalarData("Damage_Last");
+  VC_TEST_ASSERT(dmg != nullptr);
+  VC_TEST_ASSERT(last != nullptr);
+  const T secondDamage = std::accumulate(dmg->begin(), dmg->end(), T(0.));
+  const T secondLast = std::accumulate(last->begin(), last->end(), T(0.));
+  VC_TEST_ASSERT_ISCLOSE(secondLast, firstLast, T(1e-6));
+  VC_TEST_ASSERT(secondDamage > firstDamage);
+}
+
 int main() {
   testDoseDeposition();
   testTiltShift();
   testMaskBlocking();
   testDamageField();
   testEmbeddedBoundaryDepthCorrection();
+  testScreenPassThroughAndBeamHits();
+  testScreenAsMaskBlocksBeam();
+  testLastDamageResetAndAccumulation();
 }

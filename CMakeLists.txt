@@ -143,8 +143,8 @@ if(VIENNAPS_VIENNACS_SOURCE)
 else()
   CPMAddPackage(
     NAME ViennaCS
-    VERSION 2.0.1
     GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
+    GIT_TAG implant
     EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 endif()
 
