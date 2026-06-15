@@ -29,39 +29,40 @@ vps.setDimension(2)
 
 # ── Default parameters (match locosOxidation/config.txt) ─────────────────────
 cfg = {
-    "numThreads":          16,
-    "gridDelta":           0.05,
-    "xExtent":             4.0,
+    "numThreads":          4,
+    "gridDelta":           0.05,   # coarse default; config.txt uses 0.005 (GPU)
+    "xExtent":             1.0,
     "yMin":               -1.0,
     "yMax":                2.0,
-    "padOxideThickness":   0.05,
-    "maskThickness":       0.3,
+    "padOxideThickness":   0.03,
+    "maskThickness":       0.05,
     "maskEdge":            0.0,
-    "oxidationTime":       1.0,
-    "timeStep":            0.1,
+    "oxidationTime":       0.1,
+    "timeStep":            0.01,
     "temperature":      1000.0,
     "pressure":            1.0,
     "oxidant":           "wet",
     "orientation":       "100",
     "maxGridPoints":          5000000,
     "outputPrefix":           "ps_locos",
-    "mechanicsIterations":    200,
-    "mechanicsTolerance":     1e-4,
+    # SIMPLE mechanics solver parameters (must be generous for convergence)
+    "mechanicsIterations":    300,
+    "mechanicsTolerance":     5e-3,
     "pressureIterations":     500,
-    "pressureTolerance":      1e-6,
-    "stokesIterations":       200,
-    "stokesTolerance":        1e-7,
-    "couplingIterations":     8,
-    "couplingTolerance":      1e-4,
-    "maskCouplingIterations": 8,
-    "maskCouplingTolerance":  0.02,
+    "pressureTolerance":      1e-3,
+    "stokesIterations":       500,
+    "stokesTolerance":        1e-3,
+    "couplingIterations":     100,
+    "couplingTolerance":      2e-2,
+    "maskCouplingIterations": 30,
+    "maskCouplingTolerance":  1e-2,
     "maskReferenceViscosity": 5.0e11,
     "maskPoissonRatio":       0.27,
-    "maskContactMode":           "oneway",
+    "maskContactMode":           "twoway",
     "maskYoungModulus":          270e9,
-    "maskUnilateralContact":     False,
-    "maskContactLoadRelaxation": 1.0,
-    "maskContactReleaseFraction": 1e-2,
+    "maskUnilateralContact":     True,
+    "maskContactLoadRelaxation": 0.25,
+    "maskContactReleaseFraction": 5e-3,
     "maskTractionIterations":    10000,
     "maskTractionTolerance":     1.0e-5,
     "maskTractionRelaxation":    0.9,
@@ -69,7 +70,7 @@ cfg = {
     "maskAnchorBoundaryDirection": 0,
     "maskAnchorBoundarySide":   -1,
     "maskAnchorBoundaryLayers":  1,
-    "useGpu":            "auto",   # auto | gpu | cpu
+    "useGpu":            "cpu",    # cpu | gpu
     "gpuPreconditioner": "jacobi", # jacobi | ilu0
 }
 
@@ -222,7 +223,7 @@ if cfg["gpuPreconditioner"].lower() == "ilu0":
     model.setGpuPreconditioner(vps.GpuPreconditioner.ILU0)
 
 model.saveSurfaceMesh(domain, f"{output_prefix}_step_000.vtp")
-model.saveVolumeMesh(domain, f"{output_prefix}_step_000.vtp")
+model.saveVolumeMesh(domain, f"{output_prefix}_step_000")
 
 est = model.estimatePlanarOxideThickness(pad_oxide_thickness)
 print(
@@ -247,8 +248,8 @@ while oxidation_time - elapsed > time_eps:
     elapsed += dt
     step    += 1
 
-    fname = f"{output_prefix}_step_{step:03d}.vtp"
-    model.saveSurfaceMesh(domain, fname)
+    fname = f"{output_prefix}_step_{step:03d}"
+    model.saveSurfaceMesh(domain, fname + ".vtp")
     model.saveVolumeMesh(domain, fname)
     print(f"Wrote {fname} at t = {elapsed:.4f} hr.")
 

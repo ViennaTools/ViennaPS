@@ -2,12 +2,15 @@
 
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
-      "ViennaPS is a topography simulation library for microelectronic "
-      "fabrication processes. It models the evolution of 2D and 3D surfaces "
-      "during etching, deposition, and related steps, combining advanced "
-      "level-set methods for surface evolution with Monte Carlo ray tracing "
-      "for flux calculation. This allows accurate, feature-scale simulation of "
-      "complex fabrication geometries.";
+      "ViennaPS is a header-only C++ library for process and topography "
+      "simulation in microelectronic fabrication. It models the evolution of "
+      "2D and 3D surfaces during etching, deposition, oxidation, and related "
+      "steps, combining advanced level-set methods for surface evolution with "
+      "Monte Carlo ray tracing for flux calculation and physics-based solvers "
+      "for coupled processes. The oxidation model simulates LOCOS and trench "
+      "oxidation through a fully coupled diffusion-viscous flow solver with "
+      "nitride mask deformation, capturing bird's beak formation and "
+      "stress-driven oxide redistribution.";
 
   // set version string of python module
   module.attr("__version__") = versionString();

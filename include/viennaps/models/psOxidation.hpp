@@ -829,10 +829,15 @@ private:
         etaRef * std::exp(etaEa / kB_ *
                           (NumericType(1) / T_K - NumericType(1) / etaTref));
 
+    // Pull temperature-independent elastic constants from the canonical preset
+    // so there is a single source of truth for the SiO2 moduli.
+    static const auto basePreset =
+        viennals::OxidationPresets<NumericType>::oxideMechanics1000C(
+            NumericType(1));
     viennals::OxidationDeformationParameters<NumericType> p;
-    p.viscosity = viscosity;
-    p.bulkModulus = NumericType(7.5e8); // Pa
-    p.shearModulus = NumericType(3e10); // Pa
+    p.viscosity    = viscosity;
+    p.bulkModulus  = basePreset.bulkModulus;
+    p.shearModulus = basePreset.shearModulus;
     p.stressTimeStep = dt;
     p.mechanicsIterations = mechanicsIterations_;
     p.mechanicsTolerance = mechanicsTolerance_;
