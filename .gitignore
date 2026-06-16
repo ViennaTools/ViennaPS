@@ -25,3 +25,4 @@ output/
 *.optixir
 .cache/
 modeldb/
+_viennals/
