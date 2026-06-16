@@ -108,7 +108,7 @@ jobs:
         run: |
           python -m venv venv
           ./venv/bin/python -m pip install --upgrade pip
-          git clone --depth 1 --branch v5.7.3 https://github.com/ViennaTools/ViennaLS.git ViennaLS
+          git clone --depth 1 --branch v5.8.0 https://github.com/ViennaTools/ViennaLS.git ViennaLS
           CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install ./ViennaLS
           CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . --no-deps
           SITE_PACKAGES=$(./venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["platlib"])')

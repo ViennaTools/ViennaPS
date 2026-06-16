@@ -1,27 +1,27 @@
 #pragma once
 
-// psOxidation — ViennaPS process model for thermal silicon oxidation.
-//
-// Wraps the ViennaLS coupled diffusion+deformation oxidation engine as a
-// psProcess model, exposing process-level inputs (temperature, time, oxidant
-// type, pressure, crystal orientation) instead of raw OxidationParameters.
-//
-// Rate constants follow the Deal-Grove model (Deal & Grove, J. Appl. Phys.
-// 36, 3770 (1965)). The built-in Arrhenius table is the common 1 atm
-// low-doping silicon table used in process texts and calculators: dry/wet
-// B and B/A for <100>/<111>, with B/A(111)/B/A(100) = 1.68.
-//
-// Usage:
-//   auto model = SmartPointer<Oxidation<T, D>>::New();
-//   model->setTemperature(1000.);               // °C
-//   model->setTime(0.5);                         // hours
-//   model->setOxidant(OxidantType::Wet);
-//   model->setOrientation(SiliconOrientation::Si100);
-//   psProcess<T, D>(domain, model, 0.).apply();  // duration=0: one-shot
-//
-// The domain must contain a level set mapped to Material::Si (or BulkSi).
-// If no SiO2 level set is present, a thin native-oxide layer is created
-// automatically and appended to the top of the level-set stack.
+/// psOxidation — ViennaPS process model for thermal silicon oxidation.
+///
+/// Wraps the ViennaLS coupled diffusion+deformation oxidation engine as a
+/// psProcess model, exposing process-level inputs (temperature, time, oxidant
+/// type, pressure, crystal orientation) instead of raw OxidationParameters.
+///
+/// Rate constants follow the Deal-Grove model (Deal & Grove, J. Appl. Phys.
+/// 36, 3770 (1965)). The built-in Arrhenius table is the common 1 atm
+/// low-doping silicon table used in process texts and calculators: dry/wet
+/// B and B/A for <100>/<111>, with B/A(111)/B/A(100) = 1.68.
+///
+/// Usage:
+///   auto model = SmartPointer<Oxidation<T, D>>::New();
+///   model->setTemperature(1000.);               // °C
+///   model->setTime(0.5);                         // hours
+///   model->setOxidant(OxidantType::Wet);
+///   model->setOrientation(SiliconOrientation::Si100);
+///   psProcess<T, D>(domain, model, 0.).apply();  // duration=0: one-shot
+///
+/// The domain must contain a level set mapped to Material::Si (or BulkSi).
+/// If no SiO2 level set is present, a thin native-oxide layer is created
+/// automatically and appended to the top of the level-set stack.
 
 #include <lsBooleanOperation.hpp>
 #include <lsGeometricAdvect.hpp>
@@ -92,8 +92,8 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   Material siliconMaterial_ = Material::Si;
   Material oxideMaterial_ = Material::SiO2;
   Material maskMaterial_ = Material::Si3N4;
-  viennals::OxidationMaskParameters<NumericType> maskParams_ =
-      viennals::OxidationPresets<NumericType>::siliconNitrideMask1000C();
+  viennals::OxidationMaskParameters maskParams_ =
+      viennals::OxidationPresets::siliconNitrideMask1000C();
   bool useMaskBendingBounds_ = false;
   viennahrle::Index<D> maskBendingMinIndex_{};
   viennahrle::Index<D> maskBendingMaxIndex_{};
@@ -267,8 +267,8 @@ public:
 
   // Viscous-elasticity parameters for the mask layer (default: SiN at 1000 °C).
   void
-  setMaskParameters(viennals::OxidationMaskParameters<NumericType> params) {
-    maskParams_ = std::move(params);
+  setMaskParameters(viennals::OxidationMaskParameters params) {
+    maskParams_ = params;
   }
 
   // Inner traction-mask solve controls.  These update the stored mask
@@ -624,7 +624,7 @@ private:
         timeStep_ > NumericType(0) ? timeStep_
                                    : std::numeric_limits<NumericType>::max();
 
-    ls::OxidationCouplingParameters<NumericType> coupling;
+    ls::OxidationCouplingParameters coupling;
     coupling.maxIterations = couplingIterations_;
     coupling.tolerance = couplingTolerance_;
 
@@ -768,18 +768,18 @@ private:
 
   // Map process conditions → OxidationParameters.
   // With C* = N = 1 (normalised): B = 2D, so diffusionCoefficient = B/2.
-  viennals::OxidationParameters<NumericType> computeOxParams() const {
+  viennals::OxidationParameters computeOxParams() const {
     const NumericType T_K = temperature_ + NumericType(273.15);
     const auto rates = computeDealGroveRates();
 
-    viennals::OxidationParameters<NumericType> p;
-    p.diffusionCoefficient = rates.B / NumericType(2); // B = 2D
+    viennals::OxidationParameters p;
+    p.diffusionCoefficient = rates.B / 2.; // B = 2D
     p.reactionRate = rates.BoA;
     p.transferCoefficient = transferCoefficient_;
-    p.equilibriumConcentration = NumericType(1);
-    p.oxidantMoleculeDensity = NumericType(1);
-    p.expansionCoefficient = NumericType(2.27); // V_SiO2 / V_Si
-    p.velocitySign = NumericType(-1); // reaction interface moves inward
+    p.equilibriumConcentration = 1.;
+    p.oxidantMoleculeDensity = 1.;
+    p.expansionCoefficient = 2.27; // V_SiO2 / V_Si
+    p.velocitySign = -1.; // reaction interface moves inward
     p.temperature = T_K;
     p.reactionActivationVolume = reactionActivationVolume_;
     p.diffusionActivationVolume = diffusionActivationVolume_;
@@ -790,34 +790,34 @@ private:
     // faces perpendicular to the wafer normal divided by k_base. crystalAxis
     // points along the wafer normal (y = surface-normal convention in 2D).
     // Ratios derived from the (100):(110):(111) = 1 : 1.45 : 1.68 ladder.
-    p.crystalAxis = {NumericType(0), NumericType(1), NumericType(0)};
+    p.crystalAxis = {0., 1., 0.};
     switch (orientation_) {
     case SiliconOrientation::Si100:
       // Perpendicular faces are (110)-like: 1.45× faster than (100).
-      p.reactionRateRatio111 = NumericType(1.45);
+      p.reactionRateRatio111 = 1.45;
       break;
     case SiliconOrientation::Si110:
       // Perpendicular faces are (100)-like: 1/1.45 ≈ 0.690× of (110).
-      p.reactionRateRatio111 = NumericType(1) / NumericType(1.45);
+      p.reactionRateRatio111 = 1. / 1.45;
       break;
     case SiliconOrientation::Si111:
       // Perpendicular faces are (100)-like: 1/1.68 ≈ 0.595× of (111).
-      p.reactionRateRatio111 = NumericType(1) / NumericType(1.68);
+      p.reactionRateRatio111 = 1. / 1.68;
       break;
     default: // PolySi — isotropic
-      p.reactionRateRatio111 = NumericType(1);
+      p.reactionRateRatio111 = 1.;
       break;
     }
     p.maxGridPoints = maxGridPoints_;
     p.maxIterations = 10000;
-    p.tolerance = NumericType(1e-7);
+    p.tolerance = 1e-7;
     return p;
   }
 
   // Oxide mechanics: viscosity follows Arrhenius (Irene, J. Electrochem. Soc.
   // 125, 1708 (1978)); bulk and shear moduli treated as
   // temperature-independent.
-  viennals::OxidationDeformationParameters<NumericType>
+  viennals::OxidationDeformationParameters
   computeDefParams(NumericType dt) const {
     const NumericType T_K = temperature_ + NumericType(273.15);
     // η(T) = η_ref × exp(Ea/kB × (1/T − 1/T_ref))
@@ -832,9 +832,8 @@ private:
     // Pull temperature-independent elastic constants from the canonical preset
     // so there is a single source of truth for the SiO2 moduli.
     static const auto basePreset =
-        viennals::OxidationPresets<NumericType>::oxideMechanics1000C(
-            NumericType(1));
-    viennals::OxidationDeformationParameters<NumericType> p;
+        viennals::OxidationPresets::oxideMechanics1000C(1.0);
+    viennals::OxidationDeformationParameters p;
     p.viscosity    = viscosity;
     p.bulkModulus  = basePreset.bulkModulus;
     p.shearModulus = basePreset.shearModulus;
@@ -845,7 +844,7 @@ private:
     p.stokesIterations = stokesIterations_;
     p.pressureTolerance = pressureTolerance_;
     p.stokesTolerance = stokesTolerance_;
-    p.tolerance = NumericType(1e-7);
+    p.tolerance = 1e-7;
     p.relaxation = simpleVelocityRelaxation_;
     p.pressureRelaxation = simplePressureRelaxation_;
     p.maxGridPoints = maxGridPoints_;
