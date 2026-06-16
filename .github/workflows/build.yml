@@ -49,6 +49,32 @@ jobs:
         with:
           os: ${{ matrix.os }}
 
+      - name: 🔗 Prepare ViennaLS source
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          VIENNALS_TAG=$(awk '/NAME ViennaLS/{f=1} f && /GIT_TAG/{print $2; exit}' CMakeLists.txt)
+          if ! git ls-remote --tags --exit-code https://github.com/ViennaTools/ViennaLS.git "$VIENNALS_TAG" > /dev/null 2>&1; then
+            echo "[CI] Tag $VIENNALS_TAG not found; cloning master as fallback"
+            rm -rf _viennals
+            git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
+            echo "CPM_ViennaLS_SOURCE=$(pwd)/_viennals" >> "$GITHUB_ENV"
+          fi
+
+      - name: 🔗 Prepare ViennaLS source (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          $content = Get-Content CMakeLists.txt -Raw
+          $viennalsTag = [regex]::Match($content, 'NAME\s+ViennaLS.*?GIT_TAG\s+(\S+)', [System.Text.RegularExpressions.RegexOptions]::Singleline).Groups[1].Value
+          git ls-remote --tags --exit-code https://github.com/ViennaTools/ViennaLS.git $viennalsTag | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "[CI] Tag $viennalsTag not found; cloning master as fallback"
+            Remove-Item -Recurse -Force _viennals -ErrorAction SilentlyContinue
+            git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+            "CPM_ViennaLS_SOURCE=$((Get-Location).Path)/_viennals" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+
       - name: 🖥️ Setup vcpkg (Windows)
         shell: pwsh
         if: ${{ matrix.os == 'windows-latest' }}
@@ -82,14 +108,17 @@ jobs:
 
       - name: 🏗️ Compile (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
         run: |
-          cmake -DVIENNAPS_BUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows -B build
+          $cpmArgs = @()
+          if ($env:CPM_ViennaLS_SOURCE) { $cpmArgs += "-DCPM_ViennaLS_SOURCE=$env:CPM_ViennaLS_SOURCE" }
+          cmake -DVIENNAPS_BUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows @cpmArgs -B build
           cmake --build build --config ${{ matrix.config }}
 
       - name: 🏗️ Compile (other)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          cmake -DVIENNAPS_BUILD_TESTS=ON -DVIENNAPS_ENABLE_SANITIZER=ON -B build
+          cmake -DVIENNAPS_BUILD_TESTS=ON -DVIENNAPS_ENABLE_SANITIZER=ON ${CPM_ViennaLS_SOURCE:+-DCPM_ViennaLS_SOURCE="$CPM_ViennaLS_SOURCE"} -B build
           cmake --build build --config ${{ matrix.config }}
 
       - name: 🧪 Test

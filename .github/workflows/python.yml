@@ -16,6 +16,9 @@ on:
         type: boolean
         description: Publish on PyPi
 
+env:
+  VCPKG_COMMIT: 72d876b20f06129a1b1e0db80c7075fe3e419d7c
+
 jobs:
   test-bindings:
     strategy:
@@ -32,7 +35,6 @@ jobs:
     container: ${{ matrix.container }}
 
     env:
-      VCPKG_COMMIT: 72d876b20f06129a1b1e0db80c7075fe3e419d7c
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
 
     name: "🐍 Test Bindings on ${{ matrix.os }}"
@@ -89,9 +91,22 @@ jobs:
         run: |
           python -m venv venv
           $toolchain = "${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake".Replace('\', '/')
+          $viennalsVer = python -c "import re; print(re.search(r'ViennaLS>=([0-9.]+)', open('pyproject.toml').read()).group(1))"
 
           .\venv\Scripts\python -m pip install --upgrade pip
-          .\venv\Scripts\python -m pip install . `
+          $cmakeExtra = "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF"
+          .\venv\Scripts\python -m pip install "ViennaLS>=$viennalsVer"
+          if ($LASTEXITCODE -ne 0) {
+            git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+            $env:CMAKE_ARGS = $cmakeExtra
+            .\venv\Scripts\python -m pip install ./_viennals `
+              --config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE="$toolchain" `
+              --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows"
+            $cmakeExtra = "$cmakeExtra -DCPM_ViennaLS_SOURCE=$((Get-Location).Path)/_viennals"
+          }
+          $env:CMAKE_ARGS = $cmakeExtra
+          .\venv\Scripts\python -m pip install . --no-deps `
             --config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE="$toolchain" `
             --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows"
           .\venv\Scripts\python -c "import viennaps; print(viennaps.__doc__)"
@@ -100,7 +115,15 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           python -m venv venv
-          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . 
+          VIENNALS_VER=$(python3 -c "import re; print(re.search(r'ViennaLS>=([0-9.]+)', open('pyproject.toml').read()).group(1))")
+          CMAKE_EXTRA="-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF"
+          if ! ./venv/bin/pip install "ViennaLS>=${VIENNALS_VER}"; then
+            rm -rf _viennals
+            git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
+            CMAKE_ARGS="${CMAKE_EXTRA}" ./venv/bin/pip install ./_viennals
+            CMAKE_EXTRA="${CMAKE_EXTRA} -DCPM_ViennaLS_SOURCE=$(pwd)/_viennals"
+          fi
+          CMAKE_ARGS="${CMAKE_EXTRA}" ./venv/bin/pip install . --no-deps
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 🐍 Build and check Python Module (macOS)
@@ -108,13 +131,19 @@ jobs:
         run: |
           python -m venv venv
           ./venv/bin/python -m pip install --upgrade pip
-          git clone --depth 1 --branch v5.8.0 https://github.com/ViennaTools/ViennaLS.git ViennaLS
-          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install ./ViennaLS
+          VIENNALS_VER=$(python3 -c "import re; print(re.search(r'ViennaLS>=([0-9.]+)', open('pyproject.toml').read()).group(1))")
+          CMAKE_EXTRA="-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF"
+          if ! ./venv/bin/pip install "ViennaLS>=${VIENNALS_VER}"; then
+            rm -rf _viennals
+            git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
+            CMAKE_ARGS="${CMAKE_EXTRA}" ./venv/bin/pip install ./_viennals
+            CMAKE_EXTRA="${CMAKE_EXTRA} -DCPM_ViennaLS_SOURCE=$(pwd)/_viennals"
+          fi
           CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install . --no-deps
-          SITE_PACKAGES=$(./venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["platlib"])')
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 📦 Upload Artifact
+        if: ${{ !env.ACT }}
         uses: actions/upload-artifact@v7
         with:
           name: Pre-Built (${{ matrix.os }})
@@ -122,6 +151,7 @@ jobs:
 
   package:
     if: ${{ github.event_name == 'release' || github.event.inputs.publish == 'true' || github.event_name == 'workflow_dispatch' }}
+    needs: [test-bindings]
     strategy:
       fail-fast: false
 
@@ -141,7 +171,6 @@ jobs:
     name: "🐍 Package Bindings on ${{ matrix.os }}"
 
     env:
-      VCPKG_COMMIT: 72d876b20f06129a1b1e0db80c7075fe3e419d7c
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
 
     steps:
@@ -183,7 +212,7 @@ jobs:
         run: |
           ./vcpkg/vcpkg install --triplet x64-windows
 
-      - name: 🛠️ Use VTK-Python Libs
+      - name: 🛠️ Configure build (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         shell: pwsh
         run: |
@@ -192,13 +221,13 @@ jobs:
           "CIBW_CONFIG_SETTINGS=cmake.define.CMAKE_TOOLCHAIN_FILE=$toolchain cmake.define.VCPKG_TARGET_TRIPLET=x64-windows" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           type pyproject.toml
 
-      - name: 🛠️ Use VTK-Python Libs
+      - name: 🛠️ Configure build (macOS)
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           sed -i .bak 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON","-Wno-dev"/g' pyproject.toml
           cat pyproject.toml
 
-      - name: 🛠️ Use VTK-Python Libs
+      - name: 🛠️ Configure build (Linux)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON","-Wno-dev","-DVIENNAPS_USE_GPU=ON","-DVIENNACORE_LINK_CUDA_DRIVER=OFF"/g' pyproject.toml

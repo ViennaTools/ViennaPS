@@ -16,6 +16,7 @@ runs:
       run: git config --system core.longpaths true
 
     - name: 🖥️ Enable MSVC Dev Console
+      if: ${{ inputs.os == 'windows-latest' }}
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: 📋 Install OpenMP
