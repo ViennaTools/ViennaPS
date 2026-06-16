@@ -266,8 +266,7 @@ public:
   void setMaskMaterial(Material mat) { maskMaterial_ = mat; }
 
   // Viscous-elasticity parameters for the mask layer (default: SiN at 1000 °C).
-  void
-  setMaskParameters(viennals::OxidationMaskParameters params) {
+  void setMaskParameters(viennals::OxidationMaskParameters params) {
     maskParams_ = params;
   }
 
@@ -779,7 +778,7 @@ private:
     p.equilibriumConcentration = 1.;
     p.oxidantMoleculeDensity = 1.;
     p.expansionCoefficient = 2.27; // V_SiO2 / V_Si
-    p.velocitySign = -1.; // reaction interface moves inward
+    p.velocitySign = -1.;          // reaction interface moves inward
     p.temperature = T_K;
     p.reactionActivationVolume = reactionActivationVolume_;
     p.diffusionActivationVolume = diffusionActivationVolume_;
@@ -834,8 +833,8 @@ private:
     static const auto basePreset =
         viennals::OxidationPresets::oxideMechanics1000C(1.0);
     viennals::OxidationDeformationParameters p;
-    p.viscosity    = viscosity;
-    p.bulkModulus  = basePreset.bulkModulus;
+    p.viscosity = viscosity;
+    p.bulkModulus = basePreset.bulkModulus;
     p.shearModulus = basePreset.shearModulus;
     p.stressTimeStep = dt;
     p.mechanicsIterations = mechanicsIterations_;

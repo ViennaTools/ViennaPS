@@ -336,8 +336,7 @@ int main() {
   else
     model->setGpuPreconditioner(ps::GpuPreconditioner::Jacobi);
 
-  auto maskParams =
-      viennals::OxidationPresets::siliconNitrideMask1000C();
+  auto maskParams = viennals::OxidationPresets::siliconNitrideMask1000C();
   if (cfg.maskReferenceViscosity > NumericType(0))
     maskParams.referenceViscosity = cfg.maskReferenceViscosity;
   if (cfg.maskYoungModulus > NumericType(0))
