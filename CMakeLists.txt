@@ -74,8 +74,44 @@ if(VIENNAPS_BUILD_PYTHON)
   endif()
 endif()
 
+if(VIENNAPS_STATIC_BUILD)
+  message(STATUS "[ViennaPS] Enabling precompiled headers for static build")
+  set(VIENNAPS_PRECOMPILE_HEADERS ON)
+  set(BUILD_SHARED_LIBS OFF)
+endif()
+
 if(MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp:llvm /bigobj")
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.30)
+    set(OpenMP_RUNTIME_MSVC
+        "llvm"
+        CACHE STRING "MSVC OpenMP runtime selected for FindOpenMP" FORCE)
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp:llvm")
+  endif()
+
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/bigobj>")
+endif()
+
+# Reduce wheel size when packaging Python wheels.
+# These flags are set before dependencies are added, so bundled dependencies use them too.
+if(MSVC AND VIENNAPS_PACKAGE_PYTHON)
+  string(APPEND CMAKE_C_FLAGS_RELEASE " /O2 /Gy /Gw")
+  string(APPEND CMAKE_CXX_FLAGS_RELEASE " /O2 /Gy /Gw")
+  string(APPEND CMAKE_MODULE_LINKER_FLAGS_RELEASE " /OPT:REF /OPT:ICF")
+  string(APPEND CMAKE_SHARED_LINKER_FLAGS_RELEASE " /OPT:REF /OPT:ICF")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS_RELEASE " /OPT:REF /OPT:ICF")
+endif()
+
+if((CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang") AND VIENNAPS_PACKAGE_PYTHON)
+  string(APPEND CMAKE_C_FLAGS_RELEASE " -O3 -DNDEBUG -ffunction-sections -fdata-sections")
+  string(APPEND CMAKE_CXX_FLAGS_RELEASE " -O3 -DNDEBUG -ffunction-sections -fdata-sections")
+  if(APPLE)
+    string(APPEND CMAKE_MODULE_LINKER_FLAGS_RELEASE " -Wl,-dead_strip")
+    string(APPEND CMAKE_SHARED_LINKER_FLAGS_RELEASE " -Wl,-dead_strip")
+  else()
+    string(APPEND CMAKE_MODULE_LINKER_FLAGS_RELEASE " -Wl,--gc-sections")
+    string(APPEND CMAKE_SHARED_LINKER_FLAGS_RELEASE " -Wl,--gc-sections")
+  endif()
 endif()
 
 # --------------------------------------------------------------------------------------------------------
@@ -108,18 +144,20 @@ target_include_directories(
 # Setup Dependencies
 # --------------------------------------------------------------------------------------------------------
 include("cmake/cpm.cmake")
+include("cmake/vtk.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
   VERSION 2.2.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
-  OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
+  OPTIONS "VIENNACORE_FORMAT_EXCLUDE build/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMAddPackage(
   NAME PackageProject
   VERSION 1.13.0
-  GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
+  GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake"
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMAddPackage(
   NAME ViennaRay
@@ -128,6 +166,8 @@ CPMAddPackage(
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
+
+viennaps_prepare_vtk()
 
 CPMAddPackage(
   NAME ViennaLS

@@ -10,6 +10,13 @@ runs:
   using: "composite"
 
   steps:
+    - name: Remove unused Homebrew taps
+      shell: bash
+      if: ${{ startsWith(inputs.os, 'macos-') }}
+      run: |
+        brew uninstall --formula azure/bicep/bicep || true
+        brew untap aws/tap azure/bicep || true
+
     - name: 🩹 Enable Long Paths
       shell: bash
       if: ${{ inputs.os == 'windows-latest' }}
@@ -17,11 +24,11 @@ runs:
 
     - name: 🖥️ Enable MSVC Dev Console
       if: ${{ inputs.os == 'windows-latest' }}
-      uses: ilammy/msvc-dev-cmd@v1
+      uses: TheMrMilchmann/setup-msvc-dev@v4
 
     - name: 📋 Install OpenMP
       shell: bash
-      if: ${{ inputs.os == 'macos-latest' }}
+      if: ${{ startsWith(inputs.os, 'macos-') }}
       run: |
         brew install libomp
         echo "OpenMP_ROOT=$(brew --prefix)/opt/libomp" >> $GITHUB_ENV
@@ -37,7 +44,7 @@ runs:
         echo "CMAKE_GIT_COMMAND=$(which git)" >> "$GITHUB_ENV"
 
     - name: Install Git LFS and configure (macOS)
-      if: ${{ inputs.os == 'macos-latest' }}
+      if: ${{ startsWith(inputs.os, 'macos-') }}
       shell: bash
       run: |
         brew install git-lfs || true
@@ -48,7 +55,6 @@ runs:
 
     - name: 💻 Setup Deployment Target
       shell: bash
-      if: ${{ inputs.os == 'macos-latest' }}
+      if: ${{ startsWith(inputs.os, 'macos-') }}
       run: |
         echo "MACOSX_DEPLOYMENT_TARGET=15.0" >> $GITHUB_ENV
-
