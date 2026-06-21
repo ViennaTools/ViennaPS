@@ -262,7 +262,8 @@ if(WIN32)
     foreach(_VIENNAPS_TBB_TARGET TBB::tbb TBB::tbbmalloc tbb)
       if(TARGET ${_VIENNAPS_TBB_TARGET})
         install(PROGRAMS $<TARGET_FILE:${_VIENNAPS_TBB_TARGET}>
-                DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs)
+                DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs
+                OPTIONAL)
       endif()
     endforeach()
   endif()
