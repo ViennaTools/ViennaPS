@@ -148,8 +148,6 @@ jobs:
           path: venv
 
   package:
-    if: ${{ github.event_name == 'release' || github.event.inputs.publish == 'true' || github.event_name == 'workflow_dispatch' }}
-    needs: [test-bindings]
     strategy:
       fail-fast: false
 
