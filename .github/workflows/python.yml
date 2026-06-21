@@ -172,6 +172,7 @@ jobs:
     name: "🐍 Package Bindings on ${{ matrix.os }}"
 
     env:
+      VCPKG_COMMIT: 72d876b20f06129a1b1e0db80c7075fe3e419d7c
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
 
     steps:
@@ -186,32 +187,30 @@ jobs:
       - name: 🛞 CIBuildWheel
         run: pip install cibuildwheel==3.4.0 --break-system-packages
 
-      - name: 🖥️ Setup vcpkg (Windows)
-        shell: pwsh
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: |
-          Remove-Item Env:VCPKG_ROOT -ErrorAction SilentlyContinue
-
-          git clone https://github.com/microsoft/vcpkg.git
-          git -C vcpkg checkout $env:VCPKG_COMMIT
-          & .\vcpkg\bootstrap-vcpkg.bat
-
-          "VCPKG_ROOT=$($env:GITHUB_WORKSPACE)\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
-          New-Item -ItemType Directory -Force -Path "${{ env.VCPKG_DEFAULT_BINARY_CACHE }}"
-
-      - name: 🦥 Cache vcpkg binary (Windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        uses: actions/cache@v5
-        with:
-          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-          key: vcpkg-${{ matrix.os }}-Release-${{ env.VCPKG_COMMIT }}
-
-      - name: 🛠️ Build Dependencies (Windows)
+      - name: Inspect OpenMP runtime (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         shell: pwsh
         run: |
-          ./vcpkg/vcpkg install --triplet x64-windows
+          $roots = @(
+            $env:llvmX64,
+            $env:VCToolsRedistDir,
+            $env:VCINSTALLDIR,
+            $env:VCToolsInstallDir,
+            'C:\Program Files\LLVM\bin',
+            'C:\Program Files (x86)\LLVM\bin'
+          ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
+
+          $matches = @()
+          foreach ($root in $roots) {
+            Write-Host "Searching $root"
+            $matches += Get-ChildItem -Path $root -Filter libomp140.x86_64.dll -Recurse -ErrorAction SilentlyContinue
+          }
+
+          if ($matches.Count -eq 0) {
+            Write-Warning "libomp140.x86_64.dll was not found in the Visual Studio or LLVM runtime locations."
+          } else {
+            $matches | Select-Object -ExpandProperty FullName
+          }
 
       - name: 🏗️ Build Wheels (Linux)
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -229,31 +228,15 @@ jobs:
             cmake.define.VIENNAPS_IS_CI=ON
             cmake.define.VIENNAPS_USE_GPU=ON
             cmake.define.VIENNACORE_LINK_CUDA_DRIVER=OFF
+            cmake.define.VIENNAPS_VTK_RENDERING=ON
             cmake.define.USE_IPO=OFF
 
-      - name: 🏗️ Build Wheels (Windows)
-        if: ${{ matrix.os == 'windows-latest' }}
+      - name: 🏗️ Build Wheels (Other)
+        if: ${{ matrix.os != 'ubuntu-latest' }}
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_SKIP: ${{ matrix.skip }}
           CIBW_ARCHS_WINDOWS: auto64
-          CIBW_TEST_COMMAND: >-
-            python -c "import viennaps;
-            print(viennaps.__file__);
-            print(viennaps.d2);
-            print(viennaps.d3)"
-          CIBW_CONFIG_SETTINGS: >-
-            cmake.define.CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
-            cmake.define.VCPKG_TARGET_TRIPLET=x64-windows
-            cmake.define.VCPKG_MANIFEST_INSTALL=OFF
-            cmake.define.VIENNAPS_PACKAGE_PYTHON=ON
-            cmake.define.VIENNAPS_IS_CI=ON
-
-      - name: 🏗️ Build Wheels (macOS)
-        if: ${{ startsWith(matrix.os, 'macos-') }}
-        run: python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_SKIP: ${{ matrix.skip }}
           CIBW_ARCHS_MACOS: ${{ matrix.archs }}
           CIBW_TEST_COMMAND: >-
             python -c "import viennaps;
@@ -263,6 +246,7 @@ jobs:
           CIBW_CONFIG_SETTINGS: >-
             cmake.define.VIENNAPS_PACKAGE_PYTHON=ON
             cmake.define.VIENNAPS_IS_CI=ON
+            cmake.define.VIENNAPS_VTK_RENDERING=ON
 
       - name: 🔎 Inspect wheel contents
         shell: bash
