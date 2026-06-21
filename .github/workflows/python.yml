@@ -272,11 +272,10 @@ jobs:
                   names = [entry.filename for entry in entries]
                   if "win_amd64" in wheel:
                       libs = [name for name in names if name.startswith("viennaps.libs/")]
-                      openmp = [
-                          name
-                          for name in libs
-                          if name.lower() == "viennaps.libs/libomp140.x86_64.dll"
-                      ]
+                      libs_lower = [n.lower() for n in libs]
+                      openmp = [n for n in libs_lower if "libomp140" in n]
+                      embree = [n for n in libs_lower if "embree" in n]
+                      tbb = [n for n in libs_lower if "tbb" in n]
                       core = next(
                           name
                           for name in names
@@ -292,6 +291,10 @@ jobs:
                           missing.append(f"{wheel}: missing viennaps.libs/")
                       if not openmp:
                           missing.append(f"{wheel}: missing viennaps.libs/libomp140.x86_64.dll")
+                      if not embree:
+                          missing.append(f"{wheel}: missing viennaps.libs/embree*.dll")
+                      if not tbb:
+                          missing.append(f"{wheel}: missing viennaps.libs/tbb*.dll")
                       if b"omp_set_nested" in core_bytes:
                           missing.append(f"{wheel}: _core.pyd still references deprecated omp_set_nested")
 

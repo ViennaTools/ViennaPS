@@ -63,7 +63,8 @@ if(APPLE AND VIENNAPS_PACKAGE_PYTHON)
   # Do not install viennaps.libs manually on macOS. These build-tree rpaths only
   # let delocate resolve VTK/Embree/TBB @rpath dependencies during wheel repair;
   # delocate then vendors the dylibs into viennaps/.dylibs and strips them.
-  foreach(DEPENDENCY_TARGET VTK::CommonCore embree tbb)
+  # TBB may be "tbb" (system FindTBB) or "TBB::tbb" (oneTBB built from source).
+  foreach(DEPENDENCY_TARGET VTK::CommonCore embree tbb TBB::tbb)
     if(TARGET ${DEPENDENCY_TARGET})
       set_property(
         TARGET ${VIENNAPS_PYTHON_MODULE_NAME}
@@ -254,8 +255,21 @@ if(VIENNAPS_PACKAGE_PYTHON OR MSVC)
 endif()
 
 if(WIN32)
+  # Embree is statically linked into _core.pyd, but it loads TBB at runtime via
+  # LoadLibrary() — not a PE import — so RUNTIME_DEPENDENCY_SET won't detect it.
+  # Bundle TBB DLLs explicitly, the same way libomp140 is handled above.
+  if(VIENNAPS_PACKAGE_PYTHON)
+    foreach(_VIENNAPS_TBB_TARGET TBB::tbb TBB::tbbmalloc tbb)
+      if(TARGET ${_VIENNAPS_TBB_TARGET})
+        install(PROGRAMS $<TARGET_FILE:${_VIENNAPS_TBB_TARGET}>
+                DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs)
+      endif()
+    endforeach()
+  endif()
+
   set(VIENNAPS_RUNTIME_DEPENDENCY_DIRS)
-  foreach(DEPENDENCY_TARGET VTK::CommonCore embree tbb)
+  # TBB may be exposed as bare "tbb" (system FindTBB) or "TBB::tbb" (oneTBB built from source).
+  foreach(DEPENDENCY_TARGET VTK::CommonCore embree tbb TBB::tbb)
     if(TARGET ${DEPENDENCY_TARGET})
       list(APPEND VIENNAPS_RUNTIME_DEPENDENCY_DIRS "$<TARGET_FILE_DIR:${DEPENDENCY_TARGET}>")
     endif()
@@ -281,8 +295,13 @@ if(WIN32)
     "[/\\\\]vcruntime[0-9]+.*\\.dll$"
     "[/\\\\]msvcp[0-9]+.*\\.dll$")
 else()
+  # Only install shared libraries (.so/.so.*). Static archives (.a) are
+  # already linked into _core.so and must not be distributed in the wheel.
   install(
     DIRECTORY ${VIENNAPS_LIB_FOLDER}
     DESTINATION .
-    OPTIONAL)
+    OPTIONAL
+    FILES_MATCHING
+    PATTERN "*.so"
+    PATTERN "*.so.*")
 endif()
