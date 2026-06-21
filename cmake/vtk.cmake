@@ -168,7 +168,7 @@ function(viennaps_prepare_vtk)
         OFF
         CACHE BOOL "" FORCE)
 
-    if(NOT VIENNAPS_PACKAGE_PYTHON OR MSVC)
+    if(NOT VIENNAPS_BUILD_PYTHON OR MSVC)
       find_package(VTK 9.0.0 QUIET)
     endif()
 

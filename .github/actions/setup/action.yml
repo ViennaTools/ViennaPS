@@ -25,6 +25,8 @@ runs:
     - name: 🖥️ Enable MSVC Dev Console
       if: ${{ inputs.os == 'windows-latest' }}
       uses: TheMrMilchmann/setup-msvc-dev@v4
+      with:
+        arch: x64
 
     - name: 📋 Install OpenMP
       shell: bash
