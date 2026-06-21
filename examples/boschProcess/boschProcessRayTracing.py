@@ -59,7 +59,7 @@ materialStickingEtch = {
     ps.Material.Mask: params["stickingEtchMask"],
     ps.Material.Polymer: params["stickingEtchPoly"],
 }
-etchModel.addNeutralParticle(materialStickingEtch, defaultStickingProbability=1.0)
+etchModel.addNeutralParticle(materialStickingEtch)
 etchModel.addIonParticle(params["ionSourceExponent"])
 
 # Conversion factors

@@ -267,6 +267,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // MaterialValueMap
   py::class_<MaterialValueMap<T>>(module, "MaterialValueMap")
       .def(py::init<>())
+      .def(py::init([](py::dict d) {
+             MaterialValueMap<T> m;
+             for (auto item : d)
+               m.set(item.first.cast<Material>(), item.second.cast<T>());
+             return m;
+           }),
+           py::arg("d"))
       .def("set", &MaterialValueMap<T>::set, py::arg("material"),
            py::arg("value"))
       .def("get",
@@ -276,6 +283,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getDefault", &MaterialValueMap<T>::getDefault)
       .def("setDefault", &MaterialValueMap<T>::setDefault, py::arg("value"))
       .def("clearAll", &MaterialValueMap<T>::clearAll);
+  py::implicitly_convertible<py::dict, MaterialValueMap<T>>();
 
   // ProcessParams
   py::class_<ProcessParams<T>, SmartPointer<ProcessParams<T>>>(module,
