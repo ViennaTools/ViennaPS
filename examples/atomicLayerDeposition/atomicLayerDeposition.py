@@ -54,16 +54,16 @@ print("Mean free path: ", gasMFP, " um")
 
 gpc = params["totalCycles"] / params["numCycles"] * params["growthPerCycle"]
 
-params = ps.SingleParticleALDParams()
-params.stickingProbability = params["stickingProbability"]
-params.gasMeanFreePath = gasMFP
-params.growthPerCycle = gpc
-params.evaporationFlux = params["evFlux"]
-params.incomingFlux = params["inFlux"]
-params.s0 = params["s0"]
-params.coverageDiffusionCoefficient = params["coverageDiffusionCoefficient"]
+aldParams = ps.SingleParticleALDParams()
+aldParams.stickingProbability = params["stickingProbability"]
+aldParams.gasMeanFreePath = gasMFP
+aldParams.growthPerCycle = gpc
+aldParams.evaporationFlux = params["evFlux"]
+aldParams.incomingFlux = params["inFlux"]
+aldParams.s0 = params["s0"]
+aldParams.coverageDiffusionCoefficient = params["coverageDiffusionCoefficient"]
 
-model = ps.SingleParticleALD(params)
+model = ps.SingleParticleALD(aldParams)
 
 alpParams = ps.AtomicLayerProcessParameters()
 alpParams.pulseTime = params["pulseTime"]
