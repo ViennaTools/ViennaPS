@@ -261,20 +261,22 @@ if(WIN32)
   if(VIENNAPS_PACKAGE_PYTHON)
     foreach(_VIENNAPS_TBB_TARGET TBB::tbb TBB::tbbmalloc tbb)
       if(TARGET ${_VIENNAPS_TBB_TARGET})
-        install(PROGRAMS $<TARGET_FILE:${_VIENNAPS_TBB_TARGET}>
-                DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs
-                OPTIONAL)
+        install(
+          PROGRAMS $<TARGET_FILE:${_VIENNAPS_TBB_TARGET}>
+          DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs
+          OPTIONAL)
       endif()
     endforeach()
 
     foreach(_VIENNAPS_EMBREE_TARGET embree embree4)
       if(TARGET ${_VIENNAPS_EMBREE_TARGET})
         get_target_property(_VIENNAPS_EMBREE_TYPE ${_VIENNAPS_EMBREE_TARGET} TYPE)
-        if(NOT _VIENNAPS_EMBREE_TYPE STREQUAL "STATIC_LIBRARY"
-           AND NOT _VIENNAPS_EMBREE_TYPE STREQUAL "INTERFACE_LIBRARY")
-          install(PROGRAMS $<TARGET_FILE:${_VIENNAPS_EMBREE_TARGET}>
-                  DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs
-                  OPTIONAL)
+        if(NOT _VIENNAPS_EMBREE_TYPE STREQUAL "STATIC_LIBRARY" AND NOT _VIENNAPS_EMBREE_TYPE 
+                                                                   STREQUAL "INTERFACE_LIBRARY")
+          install(
+            PROGRAMS $<TARGET_FILE:${_VIENNAPS_EMBREE_TARGET}>
+            DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs
+            OPTIONAL)
         endif()
       endif()
     endforeach()
@@ -314,8 +316,7 @@ else()
   install(
     DIRECTORY ${VIENNAPS_LIB_FOLDER}
     DESTINATION .
-    OPTIONAL
-    FILES_MATCHING
+    OPTIONAL FILES_MATCHING
     PATTERN "*.so"
     PATTERN "*.so.*")
 endif()
