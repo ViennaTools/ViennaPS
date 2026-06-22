@@ -218,6 +218,13 @@ jobs:
         env:
           CIBW_SKIP: ${{ matrix.skip }}
           CIBW_MANYLINUX_X86_64_IMAGE: ghcr.io/viennatools/vienna-builder:cuda-python
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >-
+            auditwheel repair
+            --exclude libcuda.so.1
+            --exclude libcudart.so.12
+            --exclude libcusparse.so.12
+            --exclude libnvJitLink.so.12
+            -w {dest_dir} {wheel}
           CIBW_TEST_COMMAND: >-
             python -c "import viennaps;
             print(viennaps.__file__);
@@ -239,8 +246,8 @@ jobs:
           CIBW_ARCHS_WINDOWS: auto64
           CIBW_ARCHS_MACOS: ${{ matrix.archs }}
           CIBW_BEFORE_TEST: >-
-            python -m pip install "ViennaLS>=5.8.0" ||
-            python -m pip install "git+https://github.com/ViennaTools/ViennaLS.git@v5.8.0#egg=ViennaLS"
+            python -m pip install "ViennaLS>=5.8.1" ||
+            python -m pip install "git+https://github.com/ViennaTools/ViennaLS.git@v5.8.1#egg=ViennaLS"
           CIBW_TEST_COMMAND: >-
             python -c "import viennaps;
             print(viennaps.__file__);

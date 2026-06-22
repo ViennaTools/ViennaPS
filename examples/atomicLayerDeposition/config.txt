@@ -29,6 +29,7 @@ inFlux = 2e6 # 1e19
 stickingProbability = 5e-5
 evFlux = 2.5 # 1e19
 s0 = 3.36
+coverageDiffusionCoefficient = 0
 
 # Simulation
 numRaysPerPoint = 1000
