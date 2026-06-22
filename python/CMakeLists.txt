@@ -255,9 +255,9 @@ if(VIENNAPS_PACKAGE_PYTHON OR MSVC)
 endif()
 
 if(WIN32)
-  # Embree is statically linked into _core.pyd, but it loads TBB at runtime via
-  # LoadLibrary() — not a PE import — so RUNTIME_DEPENDENCY_SET won't detect it.
-  # Bundle TBB DLLs explicitly, the same way libomp140 is handled above.
+  # Embree and TBB are not reliably detected by RUNTIME_DEPENDENCY_SET on Windows
+  # (TBB is loaded by embree via LoadLibrary, embree4.dll is not found by the scanner).
+  # Bundle both explicitly, the same way libomp140 is handled above.
   if(VIENNAPS_PACKAGE_PYTHON)
     foreach(_VIENNAPS_TBB_TARGET TBB::tbb TBB::tbbmalloc tbb)
       if(TARGET ${_VIENNAPS_TBB_TARGET})
@@ -266,6 +266,19 @@ if(WIN32)
                 OPTIONAL)
       endif()
     endforeach()
+
+    foreach(_VIENNAPS_EMBREE_TARGET embree embree4)
+      if(TARGET ${_VIENNAPS_EMBREE_TARGET})
+        get_target_property(_VIENNAPS_EMBREE_TYPE ${_VIENNAPS_EMBREE_TARGET} TYPE)
+        if(NOT _VIENNAPS_EMBREE_TYPE STREQUAL "STATIC_LIBRARY"
+           AND NOT _VIENNAPS_EMBREE_TYPE STREQUAL "INTERFACE_LIBRARY")
+          install(PROGRAMS $<TARGET_FILE:${_VIENNAPS_EMBREE_TARGET}>
+                  DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs
+                  OPTIONAL)
+        endif()
+      endif()
+    endforeach()
+
   endif()
 
   set(VIENNAPS_RUNTIME_DEPENDENCY_DIRS)
