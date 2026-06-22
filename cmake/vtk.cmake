@@ -168,14 +168,13 @@ function(viennaps_prepare_vtk)
         OFF
         CACHE BOOL "" FORCE)
 
-    if(NOT VIENNAPS_BUILD_PYTHON
-       OR MSVC
-       OR APPLE)
+    if(NOT VIENNAPS_PACKAGE_PYTHON)
       find_package(VTK 9.0.0 QUIET)
     endif()
 
     if(VTK_FOUND)
       message(STATUS "[ViennaPS] Using system VTK ${VTK_VERSION}")
+      set(VTK_FOUND TRUE PARENT_SCOPE)
     else()
       message(STATUS "[ViennaPS] Using bundled VTK v9.3.1")
 
