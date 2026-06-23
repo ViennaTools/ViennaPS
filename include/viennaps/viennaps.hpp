@@ -32,6 +32,7 @@
 #include <models/psIsotropicProcess.hpp>
 #include <models/psMultiParticleProcess.hpp>
 #include <models/psNeutralTransport.hpp>
+#include <models/psOxidation.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6C4F8Etching.hpp>
 #include <models/psSF6O2Etching.hpp>

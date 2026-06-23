@@ -14,9 +14,9 @@
 
 </div>
 
-ViennaPS is a header-only C++ library for topography simulation in microelectronic fabrication processes. It models the evolution of 2D and 3D surfaces during etching, deposition, and related steps, combining advanced level-set methods for surface evolution with Monte Carlo ray tracing for flux calculation. This allows accurate, feature-scale simulation of complex fabrication geometries.
+ViennaPS is a header-only C++ library for process and topography simulation in microelectronic fabrication. It models the evolution of 2D and 3D surfaces during etching, deposition, oxidation, and related steps, combining advanced level-set methods for surface evolution with Monte Carlo ray tracing for flux calculation and physics-based solvers for coupled processes. The oxidation model simulates LOCOS and trench oxidation through a fully coupled diffusion–viscous flow solver with nitride mask deformation, capturing bird's beak formation and stress-driven oxide redistribution.
 
-ViennaPS supports both physical process models and fast emulation approaches, enabling flexible and efficient development of semiconductor processes. It can be easily integrated into existing C++ projects and also provides Python bindings for use in Python-based workflows. The library is actively developed and continuously improved to address the needs of process and topography simulation in microelectronics.
+ViennaPS supports both physics-based process models and fast emulation approaches, enabling flexible and efficient development of semiconductor processes. It can be easily integrated into existing C++ projects and also provides Python bindings for use in Python-based workflows. The library is actively developed and continuously improved to address the needs of process and topography simulation in microelectronics.
 
 ## Quick Start  
 
@@ -130,7 +130,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@4.5.0")
+  CPMAddPackage("gh:viennatools/viennaps@4.6.0")
   ```
 
 * With a local installation
@@ -157,7 +157,7 @@ If ViennaPS was built with shared libraries and you use ViennaPS in your project
 
 ## GPU Acceleration
 
-As of version 3.4.0, ViennaPS supports GPU acceleration for the ray tracing part of the library. This feature is still experimental. Details on how to enable GPU functionality can be found in the [documentation](https://viennatools.github.io/ViennaPS/inst/gpu.html).
+ViennaPS supports GPU acceleration for the ray tracing part of the library (since v3.4.0) and for the diffusion solver in the physics-based oxidation model. Both GPU features are still experimental. Details on how to enable GPU functionality can be found in the [documentation](https://viennatools.github.io/ViennaPS/inst/gpu.html).
 
 ## Basic Examples
 
@@ -248,6 +248,22 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/GDSR
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/masks.png" width=1200 style="background-color:white;">
+</div>
+
+### Fin Oxidation
+
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/finOxidation) simulates thermal oxidation of a silicon fin structure. Oxide grows simultaneously on the fin top, both sidewalls, and the surrounding substrate. The image shows the initial bare Si fin on the left and the oxidized structure on the right (together with the pressure field) after thermal oxidation, with the grown SiO<sub>2</sub> shell visible around the fin. Anisotropic oxidation rates produce a non-uniform oxide shell: the (110)-oriented sidewalls oxidize about 1.45x faster than the (100) top surface. The fin corners progressively round as the oxide thickens.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/oxide-growth/assets/fin_oxidation.png" width=700 style="background-color:white;">
+</div>
+
+### LOCOS Oxidation
+
+This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/locosOxidation) simulates Local Oxidation of Silicon (LOCOS), the classical process for field-oxide isolation in CMOS technology. A silicon nitride (Si<sub>3</sub>N<sub>4</sub>) pad mask blocks oxidation on the protected side; the open window oxidizes freely. At the mask edge, lateral diffusion of oxidant beneath the nitride produces the characteristic **bird's beak**: a wedge-shaped oxide intrusion that tapers from the full field-oxide thickness to nothing under the mask center. The model fully couples a Deal-Grove diffusion solve, a viscous Stokes deformation solver, and a nitride mask bending solver, all iterated to self-consistency at each time step. The image shows the  Si<sub>3</sub>N<sub>4</sub>/SiO<sub>2</sub> material stack on the left half and the corresponding compressive stress in the nitride mask and pressure field in the oxide on the right half, after thermal oxidation.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/oxide-growth/assets/locos.png" width=700 style="background-color:white;">
 </div>
 
 

@@ -2,12 +2,15 @@
 
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
-      "ViennaPS is a topography simulation library for microelectronic "
-      "fabrication processes. It models the evolution of 2D and 3D surfaces "
-      "during etching, deposition, and related steps, combining advanced "
-      "level-set methods for surface evolution with Monte Carlo ray tracing "
-      "for flux calculation. This allows accurate, feature-scale simulation of "
-      "complex fabrication geometries.";
+      "ViennaPS is a header-only C++ library for process and topography "
+      "simulation in microelectronic fabrication. It models the evolution of "
+      "2D and 3D surfaces during etching, deposition, oxidation, and related "
+      "steps, combining advanced level-set methods for surface evolution with "
+      "Monte Carlo ray tracing for flux calculation and physics-based solvers "
+      "for coupled processes. The oxidation model simulates LOCOS and trench "
+      "oxidation through a fully coupled diffusion-viscous flow solver with "
+      "nitride mask deformation, capturing bird's beak formation and "
+      "stress-driven oxide redistribution.";
 
   // set version string of python module
   module.attr("__version__") = versionString();
@@ -18,6 +21,30 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   module.def("gpuAvailable", &gpuAvailable,
              "Check if ViennaPS was compiled with GPU support.");
+
+  py::native_enum<OxidantType>(module, "OxidantType", "enum.IntEnum")
+      .value("Dry", OxidantType::Dry)
+      .value("Wet", OxidantType::Wet)
+      .finalize();
+
+  py::native_enum<SiliconOrientation>(module, "SiliconOrientation",
+                                      "enum.IntEnum")
+      .value("Si100", SiliconOrientation::Si100)
+      .value("Si110", SiliconOrientation::Si110)
+      .value("Si111", SiliconOrientation::Si111)
+      .value("PolySi", SiliconOrientation::PolySi)
+      .finalize();
+
+  py::native_enum<GpuMode>(module, "GpuMode", "enum.IntEnum")
+      .value("Gpu", GpuMode::Gpu)
+      .value("Cpu", GpuMode::Cpu)
+      .finalize();
+
+  py::native_enum<GpuPreconditioner>(module, "GpuPreconditioner",
+                                     "enum.IntEnum")
+      .value("Jacobi", GpuPreconditioner::Jacobi)
+      .value("ILU0", GpuPreconditioner::ILU0)
+      .finalize();
 
   // Logger
   py::class_<Logger, SmartPointer<Logger>>(module, "Logger", py::module_local())
@@ -240,6 +267,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // MaterialValueMap
   py::class_<MaterialValueMap<T>>(module, "MaterialValueMap")
       .def(py::init<>())
+      .def(py::init([](py::dict d) {
+             MaterialValueMap<T> m;
+             for (auto item : d)
+               m.set(item.first.cast<Material>(), item.second.cast<T>());
+             return m;
+           }),
+           py::arg("d"))
       .def("set", &MaterialValueMap<T>::set, py::arg("material"),
            py::arg("value"))
       .def("get",
@@ -249,6 +283,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getDefault", &MaterialValueMap<T>::getDefault)
       .def("setDefault", &MaterialValueMap<T>::setDefault, py::arg("value"))
       .def("clearAll", &MaterialValueMap<T>::clearAll);
+  py::implicitly_convertible<py::dict, MaterialValueMap<T>>();
 
   // ProcessParams
   py::class_<ProcessParams<T>, SmartPointer<ProcessParams<T>>>(module,

@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 
 REQUIRED_NVCC_MAJOR = 12
-DEFAULT_VIENNALS_VERSION = "5.7.0"
+DEFAULT_VIENNALS_VERSION = "5.8.2"
 
 # Detect OS
 IS_WINDOWS = sys.platform == "win32" or os.name == "nt"
@@ -226,7 +226,11 @@ def pip_show_version(pip_path: Path, pkg: str):
 
 
 def install_viennals(
-    pip_path: Path, viennals_dir: Path | None, required_version: str, verbose: bool
+    pip_path: Path,
+    viennals_dir: Path | None,
+    required_version: str,
+    verbose: bool,
+    gpu_build: bool = False,
 ):
     env = os.environ.copy()
 
@@ -234,6 +238,9 @@ def install_viennals(
     if IS_LINUX and REQUIRED_GCC is not None:
         env["CC"] = f"gcc-{REQUIRED_GCC}"
         env["CXX"] = f"g++-{REQUIRED_GCC}"
+
+    if gpu_build:
+        env["CMAKE_ARGS"] = "-DVIENNALS_USE_GPU=ON"
 
     if viennals_dir is not None:
         print(f"Installing ViennaLS from local directory: {viennals_dir}")
@@ -336,7 +343,7 @@ def install_viennaps(
         cmake_args.append("-DVIENNAPS_USE_GPU=OFF")
 
     if viennals_dir:
-        cmake_args.append(f'-DCPM_ViennaLS_SOURCE="{str(viennals_dir)}"')
+        cmake_args.append(f"-DCPM_ViennaLS_SOURCE={str(viennals_dir)}")
 
     if sanitize:
         cmake_args.append(
@@ -370,15 +377,21 @@ def main():
         default=os.environ.get("VIRTUAL_ENV", ".venv"),
         help="Path to the virtual environment directory.",
     )
-    parser.add_argument(
+    viennals_source = parser.add_mutually_exclusive_group()
+    viennals_source.add_argument(
         "--viennals-dir",
         default=None,
-        help="Path to a local ViennaLS checkout (optional).",
+        help="Path to a local ViennaLS checkout.",
+    )
+    viennals_source.add_argument(
+        "--viennals-branch",
+        default=None,
+        help="ViennaLS branch to clone from GitHub (e.g. 'oxidation').",
     )
     parser.add_argument(
         "--viennals-version",
         default=DEFAULT_VIENNALS_VERSION,
-        help="ViennaLS version tag to use if cloning.",
+        help="ViennaLS version tag to use if neither --viennals-dir nor --viennals-branch is given.",
     )
     parser.add_argument(
         "--viennaps-dir",
@@ -421,19 +434,41 @@ def main():
     viennals_dir = (
         Path(args.viennals_dir).expanduser().resolve() if args.viennals_dir else None
     )
-    install_viennals(venv_pip, viennals_dir, args.viennals_version, args.verbose)
 
-    # ViennaPS
-    viennaps_dir = get_viennaps_dir(args.viennaps_dir)
-    install_viennaps(
-        venv_pip,
-        viennaps_dir,
-        viennals_dir,
-        args.debug_build,
-        not args.no_gpu,
-        args.verbose,
-        args.sanitize,
-    )
+    with tempfile.TemporaryDirectory(prefix="ViennaLS_branch_") as tmp:
+        if args.viennals_branch:
+            which_or_fail("git")
+            tmp_path = Path(tmp)
+            print(f"Cloning ViennaLS branch '{args.viennals_branch}'...")
+            env = os.environ.copy()
+            if IS_LINUX and REQUIRED_GCC is not None:
+                env["CC"] = f"gcc-{REQUIRED_GCC}"
+                env["CXX"] = f"g++-{REQUIRED_GCC}"
+            run(
+                [
+                    "git", "clone",
+                    "--branch", args.viennals_branch,
+                    "--depth", "1",
+                    "https://github.com/ViennaTools/ViennaLS.git",
+                    str(tmp_path),
+                ],
+                env=env,
+            )
+            viennals_dir = tmp_path
+
+        install_viennals(venv_pip, viennals_dir, args.viennals_version, args.verbose, not args.no_gpu)
+
+        # ViennaPS
+        viennaps_dir = get_viennaps_dir(args.viennaps_dir)
+        install_viennaps(
+            venv_pip,
+            viennaps_dir,
+            viennals_dir,
+            args.debug_build,
+            not args.no_gpu,
+            args.verbose,
+            args.sanitize,
+        )
 
     # Final info
     bindir = "Scripts" if os.name == "nt" else "bin"

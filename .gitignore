@@ -1,5 +1,5 @@
-build/
-build-cpu/
+build*/
+bin/
 cmake-build*
 .vscode
 .vs
@@ -24,3 +24,5 @@ output/
 *.ptx
 *.optixir
 .cache/
+modeldb/
+_viennals/

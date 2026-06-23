@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 4.5.0)
+  VERSION 4.6.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Include guards
@@ -68,14 +68,46 @@ endif()
 
 if(VIENNAPS_BUILD_PYTHON)
   set(CMAKE_PLATFORM_NO_VERSIONED_SONAME ON)
+endif()
 
-  if(APPLE)
-    set(VIENNAPS_VTK_RENDERING OFF)
-  endif()
+if(VIENNAPS_STATIC_BUILD)
+  message(STATUS "[ViennaPS] Enabling precompiled headers for static build")
+  set(VIENNAPS_PRECOMPILE_HEADERS ON)
+  set(BUILD_SHARED_LIBS OFF)
 endif()
 
 if(MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp:llvm /bigobj")
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.30)
+    set(OpenMP_RUNTIME_MSVC
+        "llvm"
+        CACHE STRING "MSVC OpenMP runtime selected for FindOpenMP" FORCE)
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp:llvm")
+  endif()
+
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/bigobj>")
+endif()
+
+# Reduce wheel size when packaging Python wheels.
+# These flags are set before dependencies are added, so bundled dependencies use them too.
+if(MSVC AND VIENNAPS_PACKAGE_PYTHON)
+  string(APPEND CMAKE_C_FLAGS_RELEASE " /O2 /Gy /Gw")
+  string(APPEND CMAKE_CXX_FLAGS_RELEASE " /O2 /Gy /Gw")
+  string(APPEND CMAKE_MODULE_LINKER_FLAGS_RELEASE " /OPT:REF /OPT:ICF")
+  string(APPEND CMAKE_SHARED_LINKER_FLAGS_RELEASE " /OPT:REF /OPT:ICF")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS_RELEASE " /OPT:REF /OPT:ICF")
+endif()
+
+if((CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang") AND VIENNAPS_PACKAGE_PYTHON)
+  string(APPEND CMAKE_C_FLAGS_RELEASE " -O3 -DNDEBUG -ffunction-sections -fdata-sections")
+  string(APPEND CMAKE_CXX_FLAGS_RELEASE " -O3 -DNDEBUG -ffunction-sections -fdata-sections")
+  if(APPLE)
+    string(APPEND CMAKE_MODULE_LINKER_FLAGS_RELEASE " -Wl,-dead_strip")
+    string(APPEND CMAKE_SHARED_LINKER_FLAGS_RELEASE " -Wl,-dead_strip")
+  else()
+    string(APPEND CMAKE_MODULE_LINKER_FLAGS_RELEASE " -Wl,--gc-sections")
+    string(APPEND CMAKE_SHARED_LINKER_FLAGS_RELEASE " -Wl,--gc-sections")
+  endif()
 endif()
 
 # --------------------------------------------------------------------------------------------------------
@@ -108,18 +140,20 @@ target_include_directories(
 # Setup Dependencies
 # --------------------------------------------------------------------------------------------------------
 include("cmake/cpm.cmake")
+include("cmake/vtk.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
   VERSION 2.2.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
-  OPTIONS "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
+  OPTIONS "VIENNACORE_FORMAT_EXCLUDE build/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
 
 CPMAddPackage(
   NAME PackageProject
   VERSION 1.13.0
-  GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake")
+  GIT_REPOSITORY "https://github.com/TheLartians/PackageProject.cmake"
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 CPMAddPackage(
   NAME ViennaRay
@@ -129,13 +163,84 @@ CPMAddPackage(
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
 
+viennaps_prepare_vtk()
+
+set(_VIENNAPS_HAD_CMAKE_SKIP_INSTALL_RULES FALSE)
+if(DEFINED CMAKE_SKIP_INSTALL_RULES)
+  set(_VIENNAPS_HAD_CMAKE_SKIP_INSTALL_RULES TRUE)
+  set(_VIENNAPS_PREVIOUS_CMAKE_SKIP_INSTALL_RULES "${CMAKE_SKIP_INSTALL_RULES}")
+endif()
+
+if(VIENNAPS_BUILD_PYTHON)
+  set(CMAKE_SKIP_INSTALL_RULES TRUE)
+endif()
+
+# VTK 9.0.1's FindOpenSlide module is not idempotent: a second VTK package load
+# tries to recreate OpenSlide::OpenSlide. Prefer this tiny config package while
+# configuring ViennaLS so repeated OpenSlide discovery reuses the existing target.
+set(_VIENNAPS_HAD_CMAKE_FIND_PACKAGE_PREFER_CONFIG FALSE)
+if(DEFINED CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+  set(_VIENNAPS_HAD_CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
+  set(_VIENNAPS_PREVIOUS_CMAKE_FIND_PACKAGE_PREFER_CONFIG "${CMAKE_FIND_PACKAGE_PREFER_CONFIG}")
+endif()
+
+set(_VIENNAPS_HAD_OPENSLIDE_DIR FALSE)
+if(DEFINED OpenSlide_DIR)
+  set(_VIENNAPS_HAD_OPENSLIDE_DIR TRUE)
+  set(_VIENNAPS_PREVIOUS_OPENSLIDE_DIR "${OpenSlide_DIR}")
+endif()
+
+if(TARGET OpenSlide::OpenSlide)
+  set(_VIENNAPS_OPENSLIDE_CONFIG_GUARD_DIR "${PROJECT_BINARY_DIR}/cmake/openslide-config-guard")
+  file(MAKE_DIRECTORY "${_VIENNAPS_OPENSLIDE_CONFIG_GUARD_DIR}")
+  file(
+    WRITE "${_VIENNAPS_OPENSLIDE_CONFIG_GUARD_DIR}/OpenSlideConfig.cmake"
+    "if(TARGET OpenSlide::OpenSlide)\n  set(OpenSlide_FOUND TRUE)\n  return()\nendif()\nset(OpenSlide_FOUND FALSE)\n"
+  )
+  set(OpenSlide_DIR "${_VIENNAPS_OPENSLIDE_CONFIG_GUARD_DIR}")
+  set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
+endif()
+
+# VTK was bundled via CPM add_subdirectory (Linux Python path): VTK::CommonCore exists
+# but VTK_FOUND is unset. Suppress find_package(VTK) inside ViennaLS so it falls to
+# its CPM path, CPM sees VTK already downloaded (VTK_ADDED=FALSE), skips add_subdirectory,
+# and the existing targets are reused — no system-VTK conflict.
+if(TARGET VTK::CommonCore AND NOT VTK_FOUND)
+  set(CMAKE_DISABLE_FIND_PACKAGE_VTK TRUE)
+endif()
+
 CPMAddPackage(
   NAME ViennaLS
-  VERSION 5.7.3
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
+  GIT_TAG v5.8.2
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}"
-          "VIENNALS_VTK_RENDERING ${VIENNAPS_VTK_RENDERING}")
+          "VIENNALS_VTK_RENDERING ${VIENNAPS_VTK_RENDERING}" "VIENNALS_USE_GPU ${VIENNAPS_USE_GPU}")
+
+unset(CMAKE_DISABLE_FIND_PACKAGE_VTK)
+if(_VIENNAPS_HAD_CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+  set(CMAKE_FIND_PACKAGE_PREFER_CONFIG "${_VIENNAPS_PREVIOUS_CMAKE_FIND_PACKAGE_PREFER_CONFIG}")
+else()
+  unset(CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+endif()
+if(_VIENNAPS_HAD_OPENSLIDE_DIR)
+  set(OpenSlide_DIR "${_VIENNAPS_PREVIOUS_OPENSLIDE_DIR}")
+else()
+  unset(OpenSlide_DIR)
+endif()
+unset(_VIENNAPS_HAD_CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+unset(_VIENNAPS_PREVIOUS_CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+unset(_VIENNAPS_HAD_OPENSLIDE_DIR)
+unset(_VIENNAPS_PREVIOUS_OPENSLIDE_DIR)
+unset(_VIENNAPS_OPENSLIDE_CONFIG_GUARD_DIR)
+
+if(_VIENNAPS_HAD_CMAKE_SKIP_INSTALL_RULES)
+  set(CMAKE_SKIP_INSTALL_RULES "${_VIENNAPS_PREVIOUS_CMAKE_SKIP_INSTALL_RULES}")
+else()
+  unset(CMAKE_SKIP_INSTALL_RULES)
+endif()
+unset(_VIENNAPS_HAD_CMAKE_SKIP_INSTALL_RULES)
+unset(_VIENNAPS_PREVIOUS_CMAKE_SKIP_INSTALL_RULES)
 
 CPMAddPackage(
   NAME ViennaCS
