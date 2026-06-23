@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 4.5.0)
+  VERSION 4.6.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Include guards
@@ -186,7 +186,7 @@ endif()
 CPMAddPackage(
   NAME ViennaLS
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-  GIT_TAG v5.8.1
+  GIT_TAG v5.8.2
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}"
           "VIENNALS_VTK_RENDERING ${VIENNAPS_VTK_RENDERING}" "VIENNALS_USE_GPU ${VIENNAPS_USE_GPU}")

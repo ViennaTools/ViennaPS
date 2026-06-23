@@ -163,7 +163,7 @@ jobs:
             archs: x86_64
             skip: "cp38-* cp39-* cp310-*"
 
-          - os: macos-latest
+          - os: macos-15
             archs: arm64
             skip: "cp38-* cp39-* cp310-*"
 
@@ -246,8 +246,8 @@ jobs:
           CIBW_ARCHS_WINDOWS: auto64
           CIBW_ARCHS_MACOS: ${{ matrix.archs }}
           CIBW_BEFORE_TEST: >-
-            python -m pip install "ViennaLS>=5.8.1" ||
-            python -m pip install "git+https://github.com/ViennaTools/ViennaLS.git@v5.8.1#egg=ViennaLS"
+            python -m pip install "ViennaLS>=5.8.2" ||
+            python -m pip install "git+https://github.com/ViennaTools/ViennaLS.git@v5.8.2#egg=ViennaLS"
           CIBW_TEST_COMMAND: >-
             python -c "import viennaps;
             print(viennaps.__file__);
