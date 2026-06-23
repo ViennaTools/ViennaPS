@@ -175,6 +175,32 @@ if(VIENNAPS_BUILD_PYTHON)
   set(CMAKE_SKIP_INSTALL_RULES TRUE)
 endif()
 
+# VTK 9.0.1's FindOpenSlide module is not idempotent: a second VTK package load
+# tries to recreate OpenSlide::OpenSlide. Prefer this tiny config package while
+# configuring ViennaLS so repeated OpenSlide discovery reuses the existing target.
+set(_VIENNAPS_HAD_CMAKE_FIND_PACKAGE_PREFER_CONFIG FALSE)
+if(DEFINED CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+  set(_VIENNAPS_HAD_CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
+  set(_VIENNAPS_PREVIOUS_CMAKE_FIND_PACKAGE_PREFER_CONFIG "${CMAKE_FIND_PACKAGE_PREFER_CONFIG}")
+endif()
+
+set(_VIENNAPS_HAD_OPENSLIDE_DIR FALSE)
+if(DEFINED OpenSlide_DIR)
+  set(_VIENNAPS_HAD_OPENSLIDE_DIR TRUE)
+  set(_VIENNAPS_PREVIOUS_OPENSLIDE_DIR "${OpenSlide_DIR}")
+endif()
+
+if(TARGET OpenSlide::OpenSlide)
+  set(_VIENNAPS_OPENSLIDE_CONFIG_GUARD_DIR "${PROJECT_BINARY_DIR}/cmake/openslide-config-guard")
+  file(MAKE_DIRECTORY "${_VIENNAPS_OPENSLIDE_CONFIG_GUARD_DIR}")
+  file(
+    WRITE "${_VIENNAPS_OPENSLIDE_CONFIG_GUARD_DIR}/OpenSlideConfig.cmake"
+    "if(TARGET OpenSlide::OpenSlide)\n  set(OpenSlide_FOUND TRUE)\n  return()\nendif()\nset(OpenSlide_FOUND FALSE)\n"
+  )
+  set(OpenSlide_DIR "${_VIENNAPS_OPENSLIDE_CONFIG_GUARD_DIR}")
+  set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
+endif()
+
 # VTK was bundled via CPM add_subdirectory (Linux Python path): VTK::CommonCore exists
 # but VTK_FOUND is unset. Suppress find_package(VTK) inside ViennaLS so it falls to
 # its CPM path, CPM sees VTK already downloaded (VTK_ADDED=FALSE), skips add_subdirectory,
@@ -192,6 +218,21 @@ CPMAddPackage(
           "VIENNALS_VTK_RENDERING ${VIENNAPS_VTK_RENDERING}" "VIENNALS_USE_GPU ${VIENNAPS_USE_GPU}")
 
 unset(CMAKE_DISABLE_FIND_PACKAGE_VTK)
+if(_VIENNAPS_HAD_CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+  set(CMAKE_FIND_PACKAGE_PREFER_CONFIG "${_VIENNAPS_PREVIOUS_CMAKE_FIND_PACKAGE_PREFER_CONFIG}")
+else()
+  unset(CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+endif()
+if(_VIENNAPS_HAD_OPENSLIDE_DIR)
+  set(OpenSlide_DIR "${_VIENNAPS_PREVIOUS_OPENSLIDE_DIR}")
+else()
+  unset(OpenSlide_DIR)
+endif()
+unset(_VIENNAPS_HAD_CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+unset(_VIENNAPS_PREVIOUS_CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+unset(_VIENNAPS_HAD_OPENSLIDE_DIR)
+unset(_VIENNAPS_PREVIOUS_OPENSLIDE_DIR)
+unset(_VIENNAPS_OPENSLIDE_CONFIG_GUARD_DIR)
 
 if(_VIENNAPS_HAD_CMAKE_SKIP_INSTALL_RULES)
   set(CMAKE_SKIP_INSTALL_RULES "${_VIENNAPS_PREVIOUS_CMAKE_SKIP_INSTALL_RULES}")
