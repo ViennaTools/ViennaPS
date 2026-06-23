@@ -174,7 +174,9 @@ function(viennaps_prepare_vtk)
 
     if(VTK_FOUND)
       message(STATUS "[ViennaPS] Using system VTK ${VTK_VERSION}")
-      set(VTK_FOUND TRUE PARENT_SCOPE)
+      set(VTK_FOUND
+          TRUE
+          PARENT_SCOPE)
     else()
       message(STATUS "[ViennaPS] Using bundled VTK v9.3.1")
 
