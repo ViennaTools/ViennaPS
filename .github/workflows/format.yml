@@ -25,24 +25,12 @@ jobs:
       - name: 🔗 Prepare ViennaLS source
         run: |
           VIENNALS_TAG=$(awk '/NAME ViennaLS/{f=1} f && /GIT_TAG/{print $2; exit}' CMakeLists.txt)
-          # REMOVE BEFORE RELEASE: allow temporary ViennaLS commit pins while testing unreleased fixes.
-          if echo "$VIENNALS_TAG" | grep -Eq '^[0-9a-f]{40}$'; then
-            echo "[CI] Using temporary ViennaLS commit pin $VIENNALS_TAG"
-          elif ! git ls-remote --tags --exit-code https://github.com/ViennaTools/ViennaLS.git "$VIENNALS_TAG" > /dev/null 2>&1; then
+          if ! git ls-remote --tags --exit-code https://github.com/ViennaTools/ViennaLS.git "$VIENNALS_TAG" > /dev/null 2>&1; then
             echo "[CI] Tag $VIENNALS_TAG not found; cloning master as fallback"
             rm -rf _viennals
             git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
             echo "CPM_ViennaLS_SOURCE=$(pwd)/_viennals" >> "$GITHUB_ENV"
           fi
-          # ------------------
-          # ADD BEFORE RELEASE:
-          # if ! git ls-remote --tags --exit-code https://github.com/ViennaTools/ViennaLS.git "$VIENNALS_TAG" > /dev/null 2>&1; then
-          #   echo "[CI] Tag $VIENNALS_TAG not found; cloning master as fallback"
-          #   rm -rf _viennals
-          #   git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
-          #   echo "CPM_ViennaLS_SOURCE=$(pwd)/_viennals" >> "$GITHUB_ENV"
-          # fi
-          # ------------------
 
       - name: 📋 Install additional dependencies
         if: ${{ github.event.inputs.debug == 'true' }}

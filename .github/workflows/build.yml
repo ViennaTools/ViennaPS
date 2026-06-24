@@ -53,24 +53,12 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           VIENNALS_TAG=$(awk '/NAME ViennaLS/{f=1} f && /GIT_TAG/{print $2; exit}' CMakeLists.txt)
-          # REMOVE BEFORE RELEASE: allow temporary ViennaLS commit pins while testing unreleased fixes.
-          if echo "$VIENNALS_TAG" | grep -Eq '^[0-9a-f]{40}$'; then
-            echo "[CI] Using temporary ViennaLS commit pin $VIENNALS_TAG"
-          elif ! git ls-remote --tags --exit-code https://github.com/ViennaTools/ViennaLS.git "$VIENNALS_TAG" > /dev/null 2>&1; then
+          if ! git ls-remote --tags --exit-code https://github.com/ViennaTools/ViennaLS.git "$VIENNALS_TAG" > /dev/null 2>&1; then
             echo "[CI] Tag $VIENNALS_TAG not found; cloning master as fallback"
             rm -rf _viennals
             git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
             echo "CPM_ViennaLS_SOURCE=$(pwd)/_viennals" >> "$GITHUB_ENV"
           fi
-          # ------------------
-          # ADD BEFORE RELEASE
-          # if ! git ls-remote --tags --exit-code https://github.com/ViennaTools/ViennaLS.git "$VIENNALS_TAG" > /dev/null 2>&1; then
-          #   echo "[CI] Tag $VIENNALS_TAG not found; cloning master as fallback"
-          #   rm -rf _viennals
-          #   git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
-          #   echo "CPM_ViennaLS_SOURCE=$(pwd)/_viennals" >> "$GITHUB_ENV"
-          # fi
-          # ------------------
 
       - name: 🔗 Prepare ViennaLS source (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
@@ -78,30 +66,14 @@ jobs:
         run: |
           $content = Get-Content CMakeLists.txt -Raw
           $viennalsTag = [regex]::Match($content, 'NAME\s+ViennaLS.*?GIT_TAG\s+(\S+)', [System.Text.RegularExpressions.RegexOptions]::Singleline).Groups[1].Value
-          # REMOVE BEFORE RELEASE: allow temporary ViennaLS commit pins while testing unreleased fixes.
-          if ($viennalsTag -match '^[0-9a-f]{40}$') {
-            Write-Host "[CI] Using temporary ViennaLS commit pin $viennalsTag"
-          } else {
-            git ls-remote --tags --exit-code https://github.com/ViennaTools/ViennaLS.git $viennalsTag | Out-Null
-          }
-          if ($viennalsTag -notmatch '^[0-9a-f]{40}$' -and $LASTEXITCODE -ne 0) {
+          git ls-remote --tags --exit-code https://github.com/ViennaTools/ViennaLS.git $viennalsTag | Out-Null
+          if ($LASTEXITCODE -ne 0) {
             Write-Host "[CI] Tag $viennalsTag not found; cloning master as fallback"
             Remove-Item -Recurse -Force _viennals -ErrorAction SilentlyContinue
             git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
             if ($LASTEXITCODE -ne 0) { exit 1 }
             "CPM_ViennaLS_SOURCE=$((Get-Location).Path)/_viennals" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           }
-          # ------------------
-          # ADD BEFORE RELEASE
-          # git ls-remote --tags --exit-code https://github.com/ViennaTools/ViennaLS.git $viennalsTag | Out-Null
-          # if ($LASTEXITCODE -ne 0) {
-          #   Write-Host "[CI] Tag $viennalsTag not found; cloning master as fallback"
-          #   Remove-Item -Recurse -Force _viennals -ErrorAction SilentlyContinue
-          #   git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
-          #   if ($LASTEXITCODE -ne 0) { exit 1 }
-          #   "CPM_ViennaLS_SOURCE=$((Get-Location).Path)/_viennals" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          # }
-          # ------------------
       - name: 🖥️ Setup vcpkg (Windows)
         shell: pwsh
         if: ${{ matrix.os == 'windows-latest' }}

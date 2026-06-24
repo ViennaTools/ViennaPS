@@ -10,6 +10,7 @@
 #include "psCallbackOnlyStrategy.hpp"
 #include "psFluxProcessStrategy.hpp"
 #include "psGeometricProcessStrategy.hpp"
+#include "psOxidationStrategy.hpp"
 
 // Flux engines
 #include "psCPUDiskEngine.hpp"
@@ -154,6 +155,8 @@ private:
     // Add strategies in priority order
     strategies_.push_back(
         std::make_unique<GeometricProcessStrategy<NumericType, D>>());
+    strategies_.push_back(
+        std::make_unique<OxidationStrategy<NumericType, D>>());
     strategies_.push_back(
         std::make_unique<CallbackOnlyStrategy<NumericType, D>>());
     strategies_.push_back(

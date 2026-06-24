@@ -17,7 +17,7 @@
 ///   model->setTime(0.5);                         // hours
 ///   model->setOxidant(OxidantType::Wet);
 ///   model->setOrientation(SiliconOrientation::Si100);
-///   psProcess<T, D>(domain, model, 0.).apply();  // duration=0: one-shot
+///   psProcess<T, D>(domain, model).apply();
 ///
 /// The domain must contain a level set mapped to Material::Si (or BulkSi).
 /// If no SiO2 level set is present, a thin native-oxide layer is created
@@ -35,7 +35,6 @@
 #include <hrleSparseIterator.hpp>
 
 #include "../materials/psMaterial.hpp"
-#include "../process/psAdvectionCallback.hpp"
 #include "../process/psProcessModel.hpp"
 
 #include <algorithm>
@@ -149,22 +148,13 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
           .print();
   }
 
-  // Thin wrapper: forwards applyPreAdvect to Oxidation::doApplyPreAdvect.
-  // Nested classes in C++ have full access to enclosing-class private members.
-  class OxidationCallback : public AdvectionCallback<NumericType, D> {
-    Oxidation *owner_;
-
-  public:
-    explicit OxidationCallback(Oxidation *o) : owner_(o) {}
-    bool applyPreAdvect(NumericType processTime) override {
-      return owner_->doApplyPreAdvect(processTime, this->domain);
-    }
-  };
-
 public:
-  Oxidation() {
-    this->setProcessName("Oxidation");
-    this->setAdvectionCallback(SmartPointer<OxidationCallback>::New(this));
+  Oxidation() { this->setProcessName("Oxidation"); }
+
+  bool managesOwnPhysics() const override { return true; }
+
+  void applyModel(SmartPointer<Domain<NumericType, D>> domain) override {
+    run(domain);
   }
 
   // Temperature in °C (valid range: 800–1200 °C)
@@ -347,9 +337,18 @@ public:
     pressureIterations_ = std::max(1u, iterations);
   }
 
-  void setPressureTolerance(NumericType tol) { pressureTolerance_ = tol; }
-  void setStokesTolerance(NumericType tol) { stokesTolerance_ = tol; }
-  void setMechanicsTolerance(NumericType tol) { mechanicsTolerance_ = tol; }
+  void setPressureTolerance(NumericType tol) {
+    pressureTolerance_ = tol;
+    toleranceWarningEmitted_ = false;
+  }
+  void setStokesTolerance(NumericType tol) {
+    stokesTolerance_ = tol;
+    toleranceWarningEmitted_ = false;
+  }
+  void setMechanicsTolerance(NumericType tol) {
+    mechanicsTolerance_ = tol;
+    toleranceWarningEmitted_ = false;
+  }
   void setSimpleVelocityRelaxation(NumericType alpha) {
     simpleVelocityRelaxation_ =
         std::min(NumericType(1), std::max(NumericType(0.01), alpha));
@@ -383,20 +382,10 @@ public:
       return;
     }
 
-    // Find Si, SiO2, and optional mask level-set indices.
-    int siIdx = -1, sio2Idx = -1, maskIdx = -1;
-    for (int i = static_cast<int>(levelSets.size()) - 1; i >= 0; --i) {
-      const auto mat = matMap->getMaterialAtIdx(i);
-      if (siIdx < 0 && (mat == siliconMaterial_ || mat == Material::BulkSi ||
-                        mat == Material::PolySi || mat == Material::aSi))
-        siIdx = i;
-      if (sio2Idx < 0 && mat == oxideMaterial_)
-        sio2Idx = i;
-      if (maskIdx < 0 && mat == maskMaterial_)
-        maskIdx = i;
-    }
+    const auto idx = findMaterialIndices(*domain);
+    const int siIdx = idx.si, sio2Idx = idx.sio2, maskIdx = idx.mask;
 
-    if (siIdx < 0 || sio2Idx < 0) {
+    if (!idx.valid()) {
       Logger::getInstance()
           .addWarning("Oxidation: missing Silicon or Oxide layer for surface "
                       "mesh extraction.")
@@ -447,19 +436,10 @@ public:
       return;
     }
 
-    int siIdx = -1, sio2Idx = -1, maskIdx = -1;
-    for (int i = static_cast<int>(levelSets.size()) - 1; i >= 0; --i) {
-      const auto mat = matMap->getMaterialAtIdx(i);
-      if (siIdx < 0 && (mat == siliconMaterial_ || mat == Material::BulkSi ||
-                        mat == Material::PolySi || mat == Material::aSi))
-        siIdx = i;
-      if (sio2Idx < 0 && mat == oxideMaterial_)
-        sio2Idx = i;
-      if (maskIdx < 0 && mat == maskMaterial_)
-        maskIdx = i;
-    }
+    const auto idx = findMaterialIndices(*domain);
+    const int siIdx = idx.si, sio2Idx = idx.sio2, maskIdx = idx.mask;
 
-    if (siIdx < 0 || sio2Idx < 0) {
+    if (!idx.valid()) {
       Logger::getInstance()
           .addWarning("Oxidation: missing Silicon or Oxide layer for volume "
                       "mesh extraction.")
@@ -524,8 +504,32 @@ public:
   }
 
 private:
-  bool doApplyPreAdvect(NumericType /*processTime*/,
-                        SmartPointer<Domain<NumericType, D>> domainPtr) {
+  struct MaterialIndices {
+    int si = -1, sio2 = -1, mask = -1;
+    bool valid() const { return si >= 0 && sio2 >= 0; }
+  };
+
+  MaterialIndices
+  findMaterialIndices(const Domain<NumericType, D> &domain) const {
+    MaterialIndices idx;
+    const auto &levelSets = domain.getLevelSets();
+    const auto matMap = domain.getMaterialMap();
+    if (!matMap)
+      return idx;
+    for (int i = static_cast<int>(levelSets.size()) - 1; i >= 0; --i) {
+      const auto mat = matMap->getMaterialAtIdx(i);
+      if (idx.si < 0 && (mat == siliconMaterial_ || mat == Material::BulkSi ||
+                         mat == Material::PolySi || mat == Material::aSi))
+        idx.si = i;
+      if (idx.sio2 < 0 && mat == oxideMaterial_)
+        idx.sio2 = i;
+      if (idx.mask < 0 && mat == maskMaterial_)
+        idx.mask = i;
+    }
+    return idx;
+  }
+
+  bool run(SmartPointer<Domain<NumericType, D>> domainPtr) {
     namespace ls = viennals;
 
     auto &domain = *domainPtr;
@@ -541,17 +545,8 @@ private:
 
     // Find Si (reaction), SiO2 (ambient), and optional mask level-set indices.
     // Scan top-down so we pick the topmost layer of each material.
-    int siIdx = -1, sio2Idx = -1, maskIdx = -1;
-    for (int i = static_cast<int>(levelSets.size()) - 1; i >= 0; --i) {
-      const auto mat = matMap->getMaterialAtIdx(i);
-      if (siIdx < 0 && (mat == siliconMaterial_ || mat == Material::BulkSi ||
-                        mat == Material::PolySi || mat == Material::aSi))
-        siIdx = i;
-      if (sio2Idx < 0 && mat == oxideMaterial_)
-        sio2Idx = i;
-      if (maskIdx < 0 && mat == maskMaterial_)
-        maskIdx = i;
-    }
+    const auto idx = findMaterialIndices(domain);
+    const int siIdx = idx.si, sio2Idx = idx.sio2, maskIdx = idx.mask;
 
     if (siIdx < 0) {
       Logger::getInstance()
@@ -737,8 +732,7 @@ private:
 
   void logCFLStep(const std::string &label, unsigned substep,
                   NumericType elapsed, NumericType requestedDt,
-                  NumericType actualDt,
-                  NumericType maxVelocity = NumericType(-1)) const {
+                  NumericType actualDt) const {
     if (!Logger::hasInfo())
       return;
 
@@ -746,8 +740,6 @@ private:
                           ": t=" + std::to_string(elapsed) +
                           " hr, requested_dt=" + std::to_string(requestedDt) +
                           " hr, actual_dt=" + std::to_string(actualDt) + " hr";
-    if (maxVelocity >= NumericType(0))
-      message += ", max_velocity=" + std::to_string(maxVelocity) + " um/hr";
     if (actualDt < requestedDt * (NumericType(1) - NumericType(1e-8)))
       message += " (CFL-limited)";
     Logger::getInstance().addInfo(message).print();

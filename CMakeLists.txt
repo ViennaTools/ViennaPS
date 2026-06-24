@@ -178,12 +178,7 @@ endif()
 CPMAddPackage(
   NAME ViennaLS
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-  # REMOVE BEFORE RELEASE: temporary pin for validating the ViennaLS VTK target reuse fix.
-  GIT_TAG ba1462b551399ae40f022960aca9a53ca545e958
-  # ------------------
-  # ADD BEFORE RELEASE:
-  # GIT_TAG v5.8.3
-  # ------------------
+  GIT_TAG v5.8.3
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}"
           "VIENNALS_VTK_RENDERING ${VIENNAPS_VTK_RENDERING}" "VIENNALS_USE_GPU ${VIENNAPS_USE_GPU}")
