@@ -175,23 +175,18 @@ if(VIENNAPS_BUILD_PYTHON)
   set(CMAKE_SKIP_INSTALL_RULES TRUE)
 endif()
 
-# VTK was bundled via CPM add_subdirectory (Linux Python path): VTK::CommonCore exists
-# but VTK_FOUND is unset. Suppress find_package(VTK) inside ViennaLS so it falls to
-# its CPM path, CPM sees VTK already downloaded (VTK_ADDED=FALSE), skips add_subdirectory,
-# and the existing targets are reused — no system-VTK conflict.
-if(TARGET VTK::CommonCore AND NOT VTK_FOUND)
-  set(CMAKE_DISABLE_FIND_PACKAGE_VTK TRUE)
-endif()
-
 CPMAddPackage(
   NAME ViennaLS
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-  GIT_TAG v5.8.2
+  # REMOVE BEFORE RELEASE: temporary pin for validating the ViennaLS VTK target reuse fix.
+  GIT_TAG ba1462b551399ae40f022960aca9a53ca545e958
+  # ------------------
+  # ADD BEFORE RELEASE:
+  # GIT_TAG v5.8.3
+  # ------------------
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}"
           "VIENNALS_VTK_RENDERING ${VIENNAPS_VTK_RENDERING}" "VIENNALS_USE_GPU ${VIENNAPS_USE_GPU}")
-
-unset(CMAKE_DISABLE_FIND_PACKAGE_VTK)
 
 if(_VIENNAPS_HAD_CMAKE_SKIP_INSTALL_RULES)
   set(CMAKE_SKIP_INSTALL_RULES "${_VIENNAPS_PREVIOUS_CMAKE_SKIP_INSTALL_RULES}")
