@@ -255,7 +255,7 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/GDSR
 This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/finOxidation) simulates thermal oxidation of a silicon fin structure. Oxide grows simultaneously on the fin top, both sidewalls, and the surrounding substrate. The image shows the initial bare Si fin on the left and the oxidized structure on the right (together with the pressure field) after thermal oxidation, with the grown SiO<sub>2</sub> shell visible around the fin. Anisotropic oxidation rates produce a non-uniform oxide shell: the (110)-oriented sidewalls oxidize about 1.45x faster than the (100) top surface. The fin corners progressively round as the oxide thickens.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/oxide-growth/assets/fin_oxidation.png" width=700 style="background-color:white;">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/fin_oxidation.png" width=700 style="background-color:white;">
 </div>
 
 ### LOCOS Oxidation
@@ -263,7 +263,7 @@ This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/finO
 This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/locosOxidation) simulates Local Oxidation of Silicon (LOCOS), the classical process for field-oxide isolation in CMOS technology. A silicon nitride (Si<sub>3</sub>N<sub>4</sub>) pad mask blocks oxidation on the protected side; the open window oxidizes freely. At the mask edge, lateral diffusion of oxidant beneath the nitride produces the characteristic **bird's beak**: a wedge-shaped oxide intrusion that tapers from the full field-oxide thickness to nothing under the mask center. The model fully couples a Deal-Grove diffusion solve, a viscous Stokes deformation solver, and a nitride mask bending solver, all iterated to self-consistency at each time step. The image shows the  Si<sub>3</sub>N<sub>4</sub>/SiO<sub>2</sub> material stack on the left half and the corresponding compressive stress in the nitride mask and pressure field in the oxide on the right half, after thermal oxidation.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/oxide-growth/assets/locos.png" width=700 style="background-color:white;">
+  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/locos.png" width=700 style="background-color:white;">
 </div>
 
 
