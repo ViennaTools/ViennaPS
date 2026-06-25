@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 
 REQUIRED_NVCC_MAJOR = 12
-DEFAULT_VIENNALS_VERSION = "5.8.2"
+DEFAULT_VIENNALS_VERSION = "5.8.3"
 
 # Detect OS
 IS_WINDOWS = sys.platform == "win32" or os.name == "nt"

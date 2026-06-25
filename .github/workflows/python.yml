@@ -65,13 +65,32 @@ jobs:
         if: ${{ startsWith(matrix.os, 'macos-') }}
         run: brew install embree tbb vtk
 
+      - name: 🔑 Prepare vcpkg cache key (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          $manifest = Get-Content vcpkg.json -Raw | ConvertFrom-Json
+          $cacheKey = [ordered]@{
+            dependencies = $manifest.dependencies
+            features = $manifest.features
+            defaultFeatures = $manifest.'default-features'
+            overrides = $manifest.overrides
+            builtinBaseline = $manifest.'builtin-baseline'
+          }
+          $cacheKey | ConvertTo-Json -Depth 20 | Out-File -FilePath vcpkg-cache-key.json -Encoding utf8
+          Get-Content vcpkg-cache-key.json
+
       - name: 🦥 Cache vcpkg installed (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         id: vcpkg-installed-cache
         uses: actions/cache@v5
         with:
-          path: ${{ github.workspace }}/vcpkg_installed
-          key: vcpkg-installed-${{ matrix.os }}-${{ env.VCPKG_COMMIT }}-${{ hashFiles('vcpkg.json') }}
+          path: |
+            ${{ github.workspace }}/vcpkg_installed
+            ${{ github.workspace }}/.vcpkg-bincache
+          key: vcpkg-installed-${{ matrix.os }}-${{ env.VCPKG_COMMIT }}-${{ hashFiles('vcpkg-cache-key.json') }}
+          restore-keys: |
+            vcpkg-installed-${{ matrix.os }}-${{ env.VCPKG_COMMIT }}-
 
       - name: 🛠️ Build Dependencies (Windows)
         if: ${{ matrix.os == 'windows-latest' && steps.vcpkg-installed-cache.outputs.cache-hit != 'true' }}
@@ -148,6 +167,7 @@ jobs:
           path: venv
 
   package:
+    if: ${{ github.event_name == 'release' || github.event.inputs.publish == 'true' || github.event_name == 'workflow_dispatch' }}
     strategy:
       fail-fast: false
 
@@ -246,8 +266,8 @@ jobs:
           CIBW_ARCHS_WINDOWS: auto64
           CIBW_ARCHS_MACOS: ${{ matrix.archs }}
           CIBW_BEFORE_TEST: >-
-            python -m pip install "ViennaLS>=5.8.2" ||
-            python -m pip install "git+https://github.com/ViennaTools/ViennaLS.git@v5.8.2#egg=ViennaLS"
+            python -m pip install "ViennaLS>=5.8.3" ||
+            python -m pip install "git+https://github.com/ViennaTools/ViennaLS.git@v5.8.3#egg=ViennaLS"
           CIBW_TEST_COMMAND: >-
             python -c "import viennaps;
             print(viennaps.__file__);

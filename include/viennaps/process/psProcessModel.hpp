@@ -44,6 +44,8 @@ public:
   virtual void finalize(SmartPointer<Domain<NumericType, D>> domain,
                         const NumericType processedDuration) {}
   virtual bool useFluxEngine() { return false; }
+  virtual bool managesOwnPhysics() const { return false; }
+  virtual void applyModel(SmartPointer<Domain<NumericType, D>>) {}
   virtual SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() {
     VIENNACORE_LOG_WARNING("Cannot convert CPU model to GPU model.");
     return nullptr;

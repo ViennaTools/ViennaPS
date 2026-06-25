@@ -20,7 +20,6 @@ jobs:
         os:
           - macos-15-intel
           - macos-latest
-          - windows-latest
 
         include:
           - os: ubuntu-latest
@@ -29,6 +28,8 @@ jobs:
           - os: ubuntu-latest
             config: Debug
             container: ghcr.io/viennatools/vienna-builder:suite
+          - os: windows-latest
+            config: Release+Debug
 
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
@@ -73,7 +74,6 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit 1 }
             "CPM_ViennaLS_SOURCE=$((Get-Location).Path)/_viennals" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           }
-
       - name: 🖥️ Setup vcpkg (Windows)
         shell: pwsh
         if: ${{ matrix.os == 'windows-latest' }}
@@ -92,13 +92,32 @@ jobs:
         if: ${{ startsWith(matrix.os, 'macos-') }}
         run: brew install vtk embree tbb
 
+      - name: 🔑 Prepare vcpkg cache key (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          $manifest = Get-Content vcpkg.json -Raw | ConvertFrom-Json
+          $cacheKey = [ordered]@{
+            dependencies = $manifest.dependencies
+            features = $manifest.features
+            defaultFeatures = $manifest.'default-features'
+            overrides = $manifest.overrides
+            builtinBaseline = $manifest.'builtin-baseline'
+          }
+          $cacheKey | ConvertTo-Json -Depth 20 | Out-File -FilePath vcpkg-cache-key.json -Encoding utf8
+          Get-Content vcpkg-cache-key.json
+
       - name: 🦥 Cache vcpkg installed (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         id: vcpkg-installed-cache
         uses: actions/cache@v5
         with:
-          path: ${{ github.workspace }}/vcpkg_installed
-          key: vcpkg-installed-${{ matrix.os }}-${{ env.VCPKG_COMMIT }}-${{ hashFiles('vcpkg.json') }}
+          path: |
+            ${{ github.workspace }}/vcpkg_installed
+            ${{ github.workspace }}/.vcpkg-bincache
+          key: vcpkg-installed-${{ matrix.os }}-${{ env.VCPKG_COMMIT }}-${{ hashFiles('vcpkg-cache-key.json') }}
+          restore-keys: |
+            vcpkg-installed-${{ matrix.os }}-${{ env.VCPKG_COMMIT }}-
 
       - name: 🛠️ Build Dependencies (Windows)
         if: ${{ matrix.os == 'windows-latest' && steps.vcpkg-installed-cache.outputs.cache-hit != 'true' }}
@@ -113,7 +132,8 @@ jobs:
           $cpmArgs = @()
           if ($env:CPM_ViennaLS_SOURCE) { $cpmArgs += "-DCPM_ViennaLS_SOURCE=$env:CPM_ViennaLS_SOURCE" }
           cmake -DVIENNAPS_BUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows -DVCPKG_INSTALLED_DIR=${{ github.workspace }}/vcpkg_installed -DVCPKG_MANIFEST_INSTALL=OFF @cpmArgs -B build
-          cmake --build build --config ${{ matrix.config }}
+          cmake --build build --config Release --parallel
+          cmake --build build --config Debug --parallel
 
       - name: 🏗️ Compile (other)
         if: ${{ matrix.os != 'windows-latest' }}
@@ -122,5 +142,13 @@ jobs:
           cmake --build build --config ${{ matrix.config }}
 
       - name: 🧪 Test
+        if: ${{ matrix.os != 'windows-latest' }}
         run: |
           ctest --output-on-failure -E "Benchmark|Performance" -C ${{ matrix.config }} --test-dir build
+
+      - name: 🧪 Test (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          ctest --output-on-failure -E "Benchmark|Performance" -C Release --test-dir build
+          ctest --output-on-failure -E "Benchmark|Performance" -C Debug --test-dir build
