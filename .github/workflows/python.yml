@@ -8,13 +8,14 @@ on:
     branches:
       - master
   pull_request:
-    branches:
-      - master
   workflow_dispatch:
     inputs:
       publish:
         type: boolean
         description: Publish on PyPi
+
+env:
+  VCPKG_COMMIT: 72d876b20f06129a1b1e0db80c7075fe3e419d7c
 
 jobs:
   test-bindings:
@@ -26,13 +27,13 @@ jobs:
           - os: ubuntu-latest
             container: ghcr.io/viennatools/vienna-builder:cuda-suite-python
           - os: windows-latest
+          - os: macos-15-intel
           - os: macos-latest
 
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
 
     env:
-      VCPKG_COMMIT: c3867e714dd3a51c272826eea77267876517ed99
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
 
     name: "🐍 Test Bindings on ${{ matrix.os }}"
@@ -61,27 +62,39 @@ jobs:
           New-Item -ItemType Directory -Force -Path "${{ env.VCPKG_DEFAULT_BINARY_CACHE }}"
 
       - name: 📋 Install MacOS Dependencies
-        if: ${{ matrix.os == 'macos-latest' }}
+        if: ${{ startsWith(matrix.os, 'macos-') }}
         run: brew install embree tbb vtk
 
-      - name: 🦥 Cache vcpkg binary
-        if: ${{ matrix.os == 'windows-latest' }}
-        uses: actions/cache@v5
-        with:
-          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-          key: vcpkg-${{ matrix.os }}-Release-${{ env.VCPKG_COMMIT }}
-
-      - name: 🛠️ Build Dependencies (Windows)
+      - name: 🔑 Prepare vcpkg cache key (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         shell: pwsh
         run: |
-          ./vcpkg/vcpkg install --triplet x64-windows
+          $manifest = Get-Content vcpkg.json -Raw | ConvertFrom-Json
+          $cacheKey = [ordered]@{
+            dependencies = $manifest.dependencies
+            features = $manifest.features
+            defaultFeatures = $manifest.'default-features'
+            overrides = $manifest.overrides
+            builtinBaseline = $manifest.'builtin-baseline'
+          }
+          $cacheKey | ConvertTo-Json -Depth 20 | Out-File -FilePath vcpkg-cache-key.json -Encoding utf8
+          Get-Content vcpkg-cache-key.json
 
-      - name: 🛠️ Enable GPU Bindings (Linux)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+      - name: 🦥 Cache vcpkg installed (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        id: vcpkg-installed-cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ github.workspace }}/vcpkg_installed
+          key: vcpkg-installed-${{ matrix.os }}-${{ env.VCPKG_COMMIT }}-${{ hashFiles('vcpkg-cache-key.json') }}
+          restore-keys: |
+            vcpkg-installed-${{ matrix.os }}-${{ env.VCPKG_COMMIT }}-
+
+      - name: 🛠️ Build Dependencies (Windows)
+        if: ${{ matrix.os == 'windows-latest' && steps.vcpkg-installed-cache.outputs.cache-hit != 'true' }}
+        shell: pwsh
         run: |
-          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_USE_GPU=ON", "-DVIENNACORE_LINK_CUDA_DRIVER=OFF"/g' pyproject.toml
-          cat pyproject.toml
+          ./vcpkg/vcpkg install --triplet x64-windows
 
       - name: 🐍 Build and check Python Module (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
@@ -89,18 +102,60 @@ jobs:
         run: |
           python -m venv venv
           $toolchain = "${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake".Replace('\', '/')
+          $vcpkgInstalled = "${{ github.workspace }}/vcpkg_installed".Replace('\', '/')
+          $viennalsVer = python -c "import re; print(re.search(r'ViennaLS>=([0-9.]+)', open('pyproject.toml').read()).group(1))"
 
           .\venv\Scripts\python -m pip install --upgrade pip
-          .\venv\Scripts\python -m pip install . `
+          $cmakeExtra = "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF"
+          .\venv\Scripts\python -m pip install "ViennaLS>=$viennalsVer"
+          if ($LASTEXITCODE -ne 0) {
+            git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+            $env:CMAKE_ARGS = $cmakeExtra
+            .\venv\Scripts\python -m pip install ./_viennals `
+              --config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE="$toolchain" `
+              --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows" `
+              --config-settings=cmake.define.VCPKG_INSTALLED_DIR="$vcpkgInstalled" `
+              --config-settings=cmake.define.VCPKG_MANIFEST_INSTALL=OFF
+            $cmakeExtra = "$cmakeExtra -DCPM_ViennaLS_SOURCE=$((Get-Location).Path)/_viennals"
+          }
+          $env:CMAKE_ARGS = $cmakeExtra
+          .\venv\Scripts\python -m pip install . --no-deps `
             --config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE="$toolchain" `
-            --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows"
+            --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows" `
+            --config-settings=cmake.define.VCPKG_INSTALLED_DIR="$vcpkgInstalled" `
+            --config-settings=cmake.define.VCPKG_MANIFEST_INSTALL=OFF
           .\venv\Scripts\python -c "import viennaps; print(viennaps.__doc__)"
 
-      - name: 🐍 Build and check Python Module (Other)
-        if: ${{ matrix.os != 'windows-latest' }}
+      - name: 🐍 Build and check Python Module (Linux)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           python -m venv venv
-          CMAKE_ARGS=-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF ./venv/bin/pip install .
+          VIENNALS_VER=$(python3 -c "import re; print(re.search(r'ViennaLS>=([0-9.]+)', open('pyproject.toml').read()).group(1))")
+          CMAKE_EXTRA="-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF -DVIENNAPS_USE_GPU=ON -DVIENNACORE_LINK_CUDA_DRIVER=OFF"
+          if ! ./venv/bin/pip install "ViennaLS>=${VIENNALS_VER}"; then
+            rm -rf _viennals
+            git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
+            CMAKE_ARGS="${CMAKE_EXTRA}" ./venv/bin/pip install ./_viennals
+            CMAKE_EXTRA="${CMAKE_EXTRA} -DCPM_ViennaLS_SOURCE=$(pwd)/_viennals"
+          fi
+          CMAKE_ARGS="${CMAKE_EXTRA}" ./venv/bin/pip install . --no-deps
+          ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
+
+      - name: 🐍 Build and check Python Module (macOS)
+        if: ${{ startsWith(matrix.os, 'macos-') }}
+        run: |
+          python -m venv venv
+          ./venv/bin/python -m pip install --upgrade pip
+          VIENNALS_VER=$(python3 -c "import re; print(re.search(r'ViennaLS>=([0-9.]+)', open('pyproject.toml').read()).group(1))")
+          CMAKE_EXTRA="-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF"
+          if ! ./venv/bin/pip install "ViennaLS>=${VIENNALS_VER}"; then
+            rm -rf _viennals
+            git clone --depth 1 --branch master https://github.com/ViennaTools/ViennaLS.git _viennals
+            CMAKE_ARGS="${CMAKE_EXTRA}" ./venv/bin/pip install ./_viennals
+            CMAKE_EXTRA="${CMAKE_EXTRA} -DCPM_ViennaLS_SOURCE=$(pwd)/_viennals"
+          fi
+          CMAKE_ARGS="${CMAKE_EXTRA}" ./venv/bin/pip install . --no-deps
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 📦 Upload Artifact
@@ -117,17 +172,26 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            skip: "cp38-* cp39-* pp38-* pp39-* pp310-* *-manylinux_i686 *-musllinux_*"
+            skip: "cp38-* cp39-* *-manylinux_i686 *-musllinux_*"
 
           - os: windows-latest
-            skip: "cp38-* cp39-* pp38-* pp39-* pp310-*"
+            skip: "cp38-* cp39-*"
 
-          - os: macos-latest
-            skip: "cp38-* cp39-* cp310-* pp38-* pp39-* pp310-*"
+          - os: macos-15-intel
+            archs: x86_64
+            skip: "cp38-* cp39-* cp310-*"
+
+          - os: macos-15
+            archs: arm64
+            skip: "cp38-* cp39-* cp310-*"
 
     runs-on: ${{ matrix.os }}
 
     name: "🐍 Package Bindings on ${{ matrix.os }}"
+
+    env:
+      VCPKG_COMMIT: 72d876b20f06129a1b1e0db80c7075fe3e419d7c
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-bincache
 
     steps:
       - name: 📥 Checkout
@@ -141,23 +205,30 @@ jobs:
       - name: 🛞 CIBuildWheel
         run: pip install cibuildwheel==3.4.0 --break-system-packages
 
-      - name: 🛠️ Use VTK-Python Libs
+      - name: Inspect OpenMP runtime (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
         run: |
-          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
-          type pyproject.toml
+          $roots = @(
+            $env:llvmX64,
+            $env:VCToolsRedistDir,
+            $env:VCINSTALLDIR,
+            $env:VCToolsInstallDir,
+            'C:\Program Files\LLVM\bin',
+            'C:\Program Files (x86)\LLVM\bin'
+          ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
 
-      - name: 🛠️ Use VTK-Python Libs
-        if: ${{ matrix.os == 'macos-latest' }}
-        run: |
-          sed -i .bak 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON"/g' pyproject.toml
-          cat pyproject.toml
+          $matches = @()
+          foreach ($root in $roots) {
+            Write-Host "Searching $root"
+            $matches += Get-ChildItem -Path $root -Filter libomp140.x86_64.dll -Recurse -ErrorAction SilentlyContinue
+          }
 
-      - name: 🛠️ Use VTK-Python Libs
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          sed -i 's/\(DVIENNAPS_BUILD_PYTHON=ON"\)/\1,"-DVIENNAPS_PACKAGE_PYTHON=ON","-DVIENNAPS_IS_CI=ON", "-DVIENNAPS_USE_GPU=ON", "-DVIENNACORE_LINK_CUDA_DRIVER=OFF"/g' pyproject.toml
-          cat pyproject.toml
+          if ($matches.Count -eq 0) {
+            Write-Warning "libomp140.x86_64.dll was not found in the Visual Studio or LLVM runtime locations."
+          } else {
+            $matches | Select-Object -ExpandProperty FullName
+          }
 
       - name: 🏗️ Build Wheels (Linux)
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -165,6 +236,25 @@ jobs:
         env:
           CIBW_SKIP: ${{ matrix.skip }}
           CIBW_MANYLINUX_X86_64_IMAGE: ghcr.io/viennatools/vienna-builder:cuda-python
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >-
+            auditwheel repair
+            --exclude libcuda.so.1
+            --exclude libcudart.so.12
+            --exclude libcusparse.so.12
+            --exclude libnvJitLink.so.12
+            -w {dest_dir} {wheel}
+          CIBW_TEST_COMMAND: >-
+            python -c "import viennaps;
+            print(viennaps.__file__);
+            print(viennaps.d2);
+            print(viennaps.d3)"
+          CIBW_CONFIG_SETTINGS: >-
+            cmake.define.VIENNAPS_PACKAGE_PYTHON=ON
+            cmake.define.VIENNAPS_IS_CI=ON
+            cmake.define.VIENNAPS_USE_GPU=ON
+            cmake.define.VIENNACORE_LINK_CUDA_DRIVER=OFF
+            cmake.define.VIENNAPS_VTK_RENDERING=ON
+            cmake.define.USE_IPO=OFF
 
       - name: 🏗️ Build Wheels (Other)
         if: ${{ matrix.os != 'ubuntu-latest' }}
@@ -172,6 +262,73 @@ jobs:
         env:
           CIBW_SKIP: ${{ matrix.skip }}
           CIBW_ARCHS_WINDOWS: auto64
+          CIBW_ARCHS_MACOS: ${{ matrix.archs }}
+          CIBW_BEFORE_TEST: >-
+            python -m pip install "ViennaLS>=5.8.3" ||
+            python -m pip install "git+https://github.com/ViennaTools/ViennaLS.git@v5.8.3#egg=ViennaLS"
+          CIBW_TEST_COMMAND: >-
+            python -c "import viennaps;
+            print(viennaps.__file__);
+            print(viennaps.d2);
+            print(viennaps.d3)"
+          CIBW_CONFIG_SETTINGS: >-
+            cmake.define.VIENNAPS_PACKAGE_PYTHON=ON
+            cmake.define.VIENNAPS_IS_CI=ON
+            cmake.define.VIENNAPS_VTK_RENDERING=ON
+
+      - name: 🔎 Inspect wheel contents
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+          import zipfile
+
+          missing = []
+
+          for wheel in glob.glob("wheelhouse/*.whl"):
+              print("\n" + wheel)
+              with zipfile.ZipFile(wheel) as zf:
+                  entries = sorted(zf.infolist(), key=lambda item: item.file_size, reverse=True)
+                  for entry in entries[:40]:
+                      size_mb = entry.file_size / 1024 / 1024
+                      print(f"{size_mb:8.2f} MB  {entry.filename}")
+
+                  names = [entry.filename for entry in entries]
+                  if "win_amd64" in wheel:
+                      libs = [name for name in names if name.startswith("viennaps.libs/")]
+                      libs_lower = [n.lower() for n in libs]
+                      openmp = [n for n in libs_lower if "libomp140" in n]
+                      embree = [n for n in libs_lower if "embree" in n]
+                      tbb = [n for n in libs_lower if "tbb" in n]
+                      core = next(
+                          name
+                          for name in names
+                          if name.startswith("viennaps/_core") and name.endswith(".pyd")
+                      )
+                      core_bytes = zf.read(core)
+
+                      print("\nWindows runtime libraries:")
+                      for name in libs:
+                          print(f"  {name}")
+
+                      if not libs:
+                          missing.append(f"{wheel}: missing viennaps.libs/")
+                      if not openmp:
+                          missing.append(f"{wheel}: missing viennaps.libs/libomp140.x86_64.dll")
+                      if not embree:
+                          missing.append(f"{wheel}: missing viennaps.libs/embree*.dll")
+                      if not tbb:
+                          missing.append(f"{wheel}: missing viennaps.libs/tbb*.dll")
+                      if b"omp_set_nested" in core_bytes:
+                          missing.append(f"{wheel}: _core.pyd still references deprecated omp_set_nested")
+
+          if missing:
+              print("\nWheel runtime checks failed:", file=sys.stderr)
+              for item in missing:
+                  print(f"  {item}", file=sys.stderr)
+              raise SystemExit(1)
+          PY
 
       - name: 📦 Upload Artifact
         uses: actions/upload-artifact@v7

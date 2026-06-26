@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 project(ViennaPS_Python LANGUAGES CXX)
 
 add_custom_target(${PROJECT_NAME} ALL)
@@ -59,15 +59,29 @@ target_link_libraries(${VIENNAPS_PYTHON_MODULE_NAME} PRIVATE ViennaPS)
 target_compile_definitions(${VIENNAPS_PYTHON_MODULE_NAME}
                            PRIVATE VIENNAPS_MODULE_NAME=${VIENNAPS_PYTHON_MODULE_NAME})
 
+if(APPLE AND VIENNAPS_PACKAGE_PYTHON)
+  # Do not install viennaps.libs manually on macOS. These build-tree rpaths only
+  # let delocate resolve VTK/Embree/TBB @rpath dependencies during wheel repair;
+  # delocate then vendors the dylibs into viennaps/.dylibs and strips them.
+  # TBB may be "tbb" (system FindTBB) or "TBB::tbb" (oneTBB built from source).
+  foreach(DEPENDENCY_TARGET VTK::CommonCore embree tbb TBB::tbb)
+    if(TARGET ${DEPENDENCY_TARGET})
+      set_property(
+        TARGET ${VIENNAPS_PYTHON_MODULE_NAME}
+        APPEND
+        PROPERTY INSTALL_RPATH "$<TARGET_FILE_DIR:${DEPENDENCY_TARGET}>")
+    endif()
+  endforeach()
+endif()
+
 # To prevent symbol clashes when multiple python scripts which use VTK modules are loaded, the modules have to be initialized here
 if(VIENNALS_VTK_RENDERING)
-  # We need to find VTK again here to get the proper module targets
-  # TODO: Refactor to avoid multiple finds
-  CPMFindPackage(
-    NAME VTK
-    GIT_TAG v9.3.1
-    VERSION 9.0.0
-    GIT_REPOSITORY "https://gitlab.kitware.com/vtk/vtk")
+  if(NOT TARGET VTK::CommonCore)
+    if(NOT COMMAND viennaps_prepare_vtk)
+      include("../cmake/vtk.cmake")
+    endif()
+    viennaps_prepare_vtk()
+  endif()
 
   # These modules need to be initialized for VTK rendering to work properly
   vtk_module_autoinit(TARGETS ${VIENNAPS_PYTHON_MODULE_NAME} MODULES ${VTK_LIBRARIES})
@@ -100,11 +114,19 @@ if(VIENNAPS_USE_GPU)
 endif()
 
 # Install into site-packages/<pkg>/  (RELATIVE path!)
-install(
-  TARGETS ${VIENNAPS_PYTHON_MODULE_NAME}
-  LIBRARY DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
-  RUNTIME DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
-  ARCHIVE DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
+if(WIN32)
+  install(
+    TARGETS ${VIENNAPS_PYTHON_MODULE_NAME} RUNTIME_DEPENDENCY_SET viennaps_python_runtime_deps
+    LIBRARY DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
+    RUNTIME DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
+    ARCHIVE DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
+else()
+  install(
+    TARGETS ${VIENNAPS_PYTHON_MODULE_NAME}
+    LIBRARY DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
+    RUNTIME DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
+    ARCHIVE DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
+endif()
 
 # Package files
 install(FILES ${PROJECT_SOURCE_DIR}/__init__.py DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
@@ -117,13 +139,184 @@ add_dependencies(${PROJECT_NAME} ${VIENNAPS_PYTHON_MODULE_NAME})
 set(VIENNAPS_LIB_FOLDER "${VIENNAPS_LIBRARY_OUTPUT_DIR}/${VIENNAPS_PYTHON_PACKAGE_NAME}.libs")
 
 if(VIENNAPS_PACKAGE_PYTHON OR MSVC)
-  # Copy the required libraries to the lib folder, this is required for packaging and on Windows
-  viennacore_setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
-  viennacore_setup_vtk_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
-  viennacore_setup_tbb_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+  # macOS wheels let delocate own dylib vendoring to avoid duplicate copies.
+  # Other package builds still need this staged dependency folder.
+  if(NOT APPLE AND NOT WIN32)
+    viennacore_setup_embree_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+    viennacore_setup_vtk_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+    viennacore_setup_tbb_env(${VIENNAPS_PYTHON_MODULE_NAME} "${VIENNAPS_LIB_FOLDER}")
+  endif()
+
+  if(MSVC)
+    # /openmp:llvm links against the LLVM OpenMP runtime, which is usually
+    # available on GitHub runners but not on end-user Windows machines.
+    set(CMAKE_INSTALL_OPENMP_LIBRARIES TRUE)
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+    include(InstallRequiredSystemLibraries)
+
+    get_filename_component(_VIENNAPS_COMPILER_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    set(_VIENNAPS_OPENMP_DLL_CANDIDATES)
+
+    foreach(_VIENNAPS_SYSTEM_RUNTIME IN LISTS CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS)
+      get_filename_component(_VIENNAPS_SYSTEM_RUNTIME_NAME "${_VIENNAPS_SYSTEM_RUNTIME}" NAME)
+      if(_VIENNAPS_SYSTEM_RUNTIME_NAME MATCHES "^libomp.*\\.dll$")
+        list(APPEND _VIENNAPS_OPENMP_DLL_CANDIDATES "${_VIENNAPS_SYSTEM_RUNTIME}")
+      endif()
+    endforeach()
+
+    if(DEFINED ENV{VCINSTALLDIR})
+      list(APPEND _VIENNAPS_OPENMP_DLL_CANDIDATES
+           "$ENV{VCINSTALLDIR}/Tools/Llvm/bin/libomp140.x86_64.dll"
+           "$ENV{VCINSTALLDIR}/Tools/Llvm/x64/bin/libomp140.x86_64.dll")
+    endif()
+
+    if(DEFINED ENV{VCToolsInstallDir})
+      list(APPEND _VIENNAPS_OPENMP_DLL_CANDIDATES
+           "$ENV{VCToolsInstallDir}/../../Llvm/bin/libomp140.x86_64.dll"
+           "$ENV{VCToolsInstallDir}/../../Llvm/x64/bin/libomp140.x86_64.dll")
+    endif()
+
+    if(DEFINED ENV{llvmX64})
+      list(APPEND _VIENNAPS_OPENMP_DLL_CANDIDATES "$ENV{llvmX64}/libomp140.x86_64.dll")
+    endif()
+
+    if(DEFINED ENV{VCToolsRedistDir})
+      file(GLOB_RECURSE _VIENNAPS_OPENMP_REDIST_DLLS "$ENV{VCToolsRedistDir}/*libomp140.x86_64.dll")
+      list(APPEND _VIENNAPS_OPENMP_DLL_CANDIDATES ${_VIENNAPS_OPENMP_REDIST_DLLS})
+    endif()
+
+    if(DEFINED ENV{VCINSTALLDIR})
+      file(GLOB_RECURSE _VIENNAPS_OPENMP_VC_REDIST_DLLS
+           "$ENV{VCINSTALLDIR}/Redist/MSVC/*libomp140.x86_64.dll")
+      list(APPEND _VIENNAPS_OPENMP_DLL_CANDIDATES ${_VIENNAPS_OPENMP_VC_REDIST_DLLS})
+    endif()
+
+    find_file(
+      _VIENNAPS_OPENMP_DLL_FROM_PATH
+      NAMES libomp140.x86_64.dll
+      PATHS ENV PATH
+      NO_DEFAULT_PATH)
+    if(_VIENNAPS_OPENMP_DLL_FROM_PATH)
+      list(APPEND _VIENNAPS_OPENMP_DLL_CANDIDATES "${_VIENNAPS_OPENMP_DLL_FROM_PATH}")
+    endif()
+
+    list(
+      APPEND
+      _VIENNAPS_OPENMP_DLL_CANDIDATES
+      "${_VIENNAPS_COMPILER_BIN_DIR}/libomp140.x86_64.dll"
+      "${_VIENNAPS_COMPILER_BIN_DIR}/../libomp140.x86_64.dll"
+      "${_VIENNAPS_COMPILER_BIN_DIR}/../../bin/libomp140.x86_64.dll"
+      "${_VIENNAPS_COMPILER_BIN_DIR}/../../../../../Llvm/bin/libomp140.x86_64.dll"
+      "${_VIENNAPS_COMPILER_BIN_DIR}/../../../../../Llvm/x64/bin/libomp140.x86_64.dll"
+      "${_VIENNAPS_COMPILER_BIN_DIR}/../../../../../../Tools/Llvm/bin/libomp140.x86_64.dll"
+      "${_VIENNAPS_COMPILER_BIN_DIR}/../../../../../../Tools/Llvm/x64/bin/libomp140.x86_64.dll")
+
+    list(REMOVE_DUPLICATES _VIENNAPS_OPENMP_DLL_CANDIDATES)
+
+    unset(_VIENNAPS_OPENMP_DLL)
+    set(_VIENNAPS_OPENMP_DLL_SEARCH_LOG)
+    foreach(_VIENNAPS_OPENMP_DLL_CANDIDATE IN LISTS _VIENNAPS_OPENMP_DLL_CANDIDATES)
+      get_filename_component(_VIENNAPS_OPENMP_DLL_CANDIDATE_REAL
+                             "${_VIENNAPS_OPENMP_DLL_CANDIDATE}" ABSOLUTE)
+      list(APPEND _VIENNAPS_OPENMP_DLL_SEARCH_LOG "${_VIENNAPS_OPENMP_DLL_CANDIDATE_REAL}")
+      if(EXISTS "${_VIENNAPS_OPENMP_DLL_CANDIDATE_REAL}")
+        set(_VIENNAPS_OPENMP_DLL "${_VIENNAPS_OPENMP_DLL_CANDIDATE_REAL}")
+        break()
+      endif()
+    endforeach()
+
+    if(_VIENNAPS_OPENMP_DLL)
+      message(STATUS "[ViennaPS] Bundling LLVM OpenMP runtime: ${_VIENNAPS_OPENMP_DLL}")
+      add_custom_command(
+        TARGET ${VIENNAPS_PYTHON_MODULE_NAME}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${VIENNAPS_LIB_FOLDER}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_VIENNAPS_OPENMP_DLL}"
+                "${VIENNAPS_LIB_FOLDER}/"
+        VERBATIM)
+
+      if(VIENNAPS_PACKAGE_PYTHON)
+        install(PROGRAMS "${_VIENNAPS_OPENMP_DLL}" DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs)
+      endif()
+    elseif(VIENNAPS_PACKAGE_PYTHON)
+      string(REPLACE ";" "\n  " _VIENNAPS_OPENMP_DLL_SEARCH_LOG_TEXT
+                     "${_VIENNAPS_OPENMP_DLL_SEARCH_LOG}")
+      message(
+        FATAL_ERROR
+          "[ViennaPS] Could not locate libomp140.x86_64.dll for a Windows wheel build. "
+          "The produced wheel would fail to import on machines without the LLVM OpenMP runtime. "
+          "Searched:\n  ${_VIENNAPS_OPENMP_DLL_SEARCH_LOG_TEXT}")
+    else()
+      message(
+        WARNING "[ViennaPS] Could not locate libomp140.x86_64.dll. Windows wheels built "
+                "with /openmp:llvm may fail to import on machines without the LLVM OpenMP runtime.")
+    endif()
+  endif()
 endif()
 
-install(
-  DIRECTORY ${VIENNAPS_LIB_FOLDER}
-  DESTINATION .
-  OPTIONAL)
+if(WIN32)
+  # Embree and TBB are not reliably detected by RUNTIME_DEPENDENCY_SET on Windows
+  # (TBB is loaded by embree via LoadLibrary, embree4.dll is not found by the scanner).
+  # Bundle both explicitly, the same way libomp140 is handled above.
+  if(VIENNAPS_PACKAGE_PYTHON)
+    foreach(_VIENNAPS_TBB_TARGET TBB::tbb TBB::tbbmalloc tbb)
+      if(TARGET ${_VIENNAPS_TBB_TARGET})
+        install(
+          PROGRAMS $<TARGET_FILE:${_VIENNAPS_TBB_TARGET}>
+          DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs
+          OPTIONAL)
+      endif()
+    endforeach()
+
+    foreach(_VIENNAPS_EMBREE_TARGET embree embree4)
+      if(TARGET ${_VIENNAPS_EMBREE_TARGET})
+        get_target_property(_VIENNAPS_EMBREE_TYPE ${_VIENNAPS_EMBREE_TARGET} TYPE)
+        if(NOT _VIENNAPS_EMBREE_TYPE STREQUAL "STATIC_LIBRARY" AND NOT _VIENNAPS_EMBREE_TYPE
+                                                                   STREQUAL "INTERFACE_LIBRARY")
+          install(
+            PROGRAMS $<TARGET_FILE:${_VIENNAPS_EMBREE_TARGET}>
+            DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs
+            OPTIONAL)
+        endif()
+      endif()
+    endforeach()
+
+  endif()
+
+  set(VIENNAPS_RUNTIME_DEPENDENCY_DIRS)
+  # TBB may be exposed as bare "tbb" (system FindTBB) or "TBB::tbb" (oneTBB built from source).
+  foreach(DEPENDENCY_TARGET VTK::CommonCore embree tbb TBB::tbb)
+    if(TARGET ${DEPENDENCY_TARGET})
+      list(APPEND VIENNAPS_RUNTIME_DEPENDENCY_DIRS "$<TARGET_FILE_DIR:${DEPENDENCY_TARGET}>")
+    endif()
+  endforeach()
+
+  install(
+    RUNTIME_DEPENDENCY_SET
+    viennaps_python_runtime_deps
+    DESTINATION
+    ${VIENNAPS_PYTHON_PACKAGE_NAME}.libs
+    DIRECTORIES
+    ${VIENNAPS_RUNTIME_DEPENDENCY_DIRS}
+    PRE_EXCLUDE_REGEXES
+    "api-ms-"
+    "ext-ms-"
+    "^python[0-9]+[a-z]*\\.dll$"
+    POST_EXCLUDE_REGEXES
+    "[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\][Ss][Yy][Ss][Tt][Ee][Mm]32[/\\\\]"
+    "[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\][Ss][Yy][Ss][Ww][Oo][Ww]64[/\\\\]"
+    "[/\\\\][Ww][Ii][Nn][Ss][Xx][Ss][/\\\\]"
+    "[/\\\\]Python[0-9]+[/\\\\]"
+    "[/\\\\]python[0-9]+[a-z]*\\.dll$"
+    "[/\\\\]vcruntime[0-9]+.*\\.dll$"
+    "[/\\\\]msvcp[0-9]+.*\\.dll$")
+else()
+  # Only install shared libraries (.so/.so.*). Static archives (.a) are
+  # already linked into _core.so and must not be distributed in the wheel.
+  install(
+    DIRECTORY ${VIENNAPS_LIB_FOLDER}
+    DESTINATION .
+    OPTIONAL FILES_MATCHING
+    PATTERN "*.so"
+    PATTERN "*.so.*")
+endif()

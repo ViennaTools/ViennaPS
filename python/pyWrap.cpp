@@ -2,12 +2,15 @@
 
 PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.doc() =
-      "ViennaPS is a topography simulation library for microelectronic "
-      "fabrication processes. It models the evolution of 2D and 3D surfaces "
-      "during etching, deposition, and related steps, combining advanced "
-      "level-set methods for surface evolution with Monte Carlo ray tracing "
-      "for flux calculation. This allows accurate, feature-scale simulation of "
-      "complex fabrication geometries.";
+      "ViennaPS is a header-only C++ library for process and topography "
+      "simulation in microelectronic fabrication. It models the evolution of "
+      "2D and 3D surfaces during etching, deposition, oxidation, and related "
+      "steps, combining advanced level-set methods for surface evolution with "
+      "Monte Carlo ray tracing for flux calculation and physics-based solvers "
+      "for coupled processes. The oxidation model simulates LOCOS and trench "
+      "oxidation through a fully coupled diffusion-viscous flow solver with "
+      "nitride mask deformation, capturing bird's beak formation and "
+      "stress-driven oxide redistribution.";
 
   // set version string of python module
   module.attr("__version__") = versionString();
@@ -18,6 +21,30 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   module.def("gpuAvailable", &gpuAvailable,
              "Check if ViennaPS was compiled with GPU support.");
+
+  py::native_enum<OxidantType>(module, "OxidantType", "enum.IntEnum")
+      .value("Dry", OxidantType::Dry)
+      .value("Wet", OxidantType::Wet)
+      .finalize();
+
+  py::native_enum<SiliconOrientation>(module, "SiliconOrientation",
+                                      "enum.IntEnum")
+      .value("Si100", SiliconOrientation::Si100)
+      .value("Si110", SiliconOrientation::Si110)
+      .value("Si111", SiliconOrientation::Si111)
+      .value("PolySi", SiliconOrientation::PolySi)
+      .finalize();
+
+  py::native_enum<GpuMode>(module, "GpuMode", "enum.IntEnum")
+      .value("Gpu", GpuMode::Gpu)
+      .value("Cpu", GpuMode::Cpu)
+      .finalize();
+
+  py::native_enum<GpuPreconditioner>(module, "GpuPreconditioner",
+                                     "enum.IntEnum")
+      .value("Jacobi", GpuPreconditioner::Jacobi)
+      .value("ILU0", GpuPreconditioner::ILU0)
+      .finalize();
 
   // Logger
   py::class_<Logger, SmartPointer<Logger>>(module, "Logger", py::module_local())
@@ -170,12 +197,14 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("FULL", MetaDataLevel::FULL)
       .finalize();
 
+#ifdef VIENNALS_VTK_RENDERING
   // Render Mode Enum
   py::native_enum<RenderMode>(module, "RenderMode", "enum.IntEnum")
       .value("SURFACE", RenderMode::SURFACE)
       .value("INTERFACE", RenderMode::INTERFACE)
       .value("VOLUME", RenderMode::VOLUME)
       .finalize();
+#endif
 
   // HoleShape Enum
   py::native_enum<HoleShape>(module, "HoleShape", "enum.IntEnum")
@@ -238,6 +267,13 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // MaterialValueMap
   py::class_<MaterialValueMap<T>>(module, "MaterialValueMap")
       .def(py::init<>())
+      .def(py::init([](py::dict d) {
+             MaterialValueMap<T> m;
+             for (auto item : d)
+               m.set(item.first.cast<Material>(), item.second.cast<T>());
+             return m;
+           }),
+           py::arg("d"))
       .def("set", &MaterialValueMap<T>::set, py::arg("material"),
            py::arg("value"))
       .def("get",
@@ -247,6 +283,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("getDefault", &MaterialValueMap<T>::getDefault)
       .def("setDefault", &MaterialValueMap<T>::setDefault, py::arg("value"))
       .def("clearAll", &MaterialValueMap<T>::clearAll);
+  py::implicitly_convertible<py::dict, MaterialValueMap<T>>();
 
   // ProcessParams
   py::class_<ProcessParams<T>, SmartPointer<ProcessParams<T>>>(module,
@@ -266,6 +303,40 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
            (const std::vector<T> &(ProcessParams<T>::*)() const) &
                ProcessParams<T>::getScalarData)
       .def("getScalarDataLabel", &ProcessParams<T>::getScalarDataLabel);
+
+  // Neutral Transport Parameters
+  py::class_<NeutralTransportParameters<T>>(module,
+                                            "NeutralTransportParameters")
+      .def(py::init<>())
+      .def_readwrite("incomingFlux",
+                     &NeutralTransportParameters<T>::incomingFlux)
+      .def_readwrite("zeroCoverageSticking",
+                     &NeutralTransportParameters<T>::zeroCoverageSticking)
+      .def_readwrite("etchFrontSticking",
+                     &NeutralTransportParameters<T>::etchFrontSticking)
+      .def_readwrite("desorptionRate",
+                     &NeutralTransportParameters<T>::desorptionRate)
+      .def_readwrite("surfaceSiteDensity",
+                     &NeutralTransportParameters<T>::surfaceSiteDensity)
+      .def_readwrite("coverageTimeStep",
+                     &NeutralTransportParameters<T>::coverageTimeStep)
+      .def_readwrite("useSteadyStateCoverage",
+                     &NeutralTransportParameters<T>::useSteadyStateCoverage)
+      .def_readwrite(
+          "surfaceDiffusionCoefficient",
+          &NeutralTransportParameters<T>::surfaceDiffusionCoefficient)
+      //   .def_readwrite("surfaceDiffusionRadius",
+      //                  &NeutralTransportParameters<T>::surfaceDiffusionRadius)
+      //   .def_readwrite("surfaceDiffusionTolerance",
+      //                  &NeutralTransportParameters<T>::surfaceDiffusionTolerance)
+      //   .def_readwrite("etchRate", &NeutralTransportParameters<T>::etchRate)
+      .def_readwrite("sourceDistributionPower",
+                     &NeutralTransportParameters<T>::sourceDistributionPower)
+      .def_readwrite("etchFrontMaterial",
+                     &NeutralTransportParameters<T>::etchFrontMaterial)
+      .def_readwrite("fluxLabel", &NeutralTransportParameters<T>::fluxLabel)
+      .def_readwrite("coverageLabel",
+                     &NeutralTransportParameters<T>::coverageLabel);
 
   // Plasma Etching Parameters
   py::class_<PlasmaEtchingParameters<T>::MaskType>(
@@ -536,6 +607,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &impl::RateSet<T>::calculateVisibility)
       .def("print", &impl::RateSet<T>::print);
 
+  // Single Particle ALD
+  py::class_<SingleParticleALDParams>(module, "SingleParticleALDParams")
+      .def(py::init<>())
+      .def_readwrite("stickingProbability",
+                     &SingleParticleALDParams::stickingProbability)
+      .def_readwrite("gasMeanFreePath",
+                     &SingleParticleALDParams::gasMeanFreePath)
+      .def_readwrite("growthPerCycle", &SingleParticleALDParams::growthPerCycle)
+      .def_readwrite("evaporationFlux",
+                     &SingleParticleALDParams::evaporationFlux)
+      .def_readwrite("incomingFlux", &SingleParticleALDParams::incomingFlux)
+      .def_readwrite("s0", &SingleParticleALDParams::s0)
+      .def_readwrite("coverageDiffusionCoefficient",
+                     &SingleParticleALDParams::coverageDiffusionCoefficient);
+
   // ***************************************************************************
   //                                 PROCESS
   // ***************************************************************************
@@ -638,10 +724,30 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &AtomicLayerProcessParameters::coverageTimeStep)
       .def_readwrite("purgePulseTime",
                      &AtomicLayerProcessParameters::purgePulseTime)
+      .def_readwrite("purgeTimeStep",
+                     &AtomicLayerProcessParameters::purgeTimeStep)
       .def("toMetaData", &AtomicLayerProcessParameters::toMetaData,
            "Convert the ALD process parameters to a metadata dict.")
       .def("toMetaDataString", &AtomicLayerProcessParameters::toMetaDataString,
            "Convert the ALD process parameters to a metadata string.");
+
+  // SurfaceDiffusionParameters
+  py::class_<SurfaceDiffusionParameters>(module, "SurfaceDiffusionParameters")
+      .def(py::init<>())
+      .def_readwrite("stabilityFactor",
+                     &SurfaceDiffusionParameters::stabilityFactor)
+      .def_readwrite("kNeighbors", &SurfaceDiffusionParameters::kNeighbors)
+      .def_readwrite("radius", &SurfaceDiffusionParameters::radius)
+      .def_readwrite("normalCutoff", &SurfaceDiffusionParameters::normalCutoff)
+      .def_readwrite("sigmaNormal", &SurfaceDiffusionParameters::sigmaNormal)
+      .def_readwrite("normalizeByLocalScale",
+                     &SurfaceDiffusionParameters::normalizeByLocalScale)
+      .def_readwrite("symmetrizeWeights",
+                     &SurfaceDiffusionParameters::symmetrizeWeights)
+      .def("toMetaData", &SurfaceDiffusionParameters::toMetaData,
+           "Convert the surface diffusion parameters to a metadata dict.")
+      .def("toMetaDataString", &SurfaceDiffusionParameters::toMetaDataString,
+           "Convert the surface diffusion parameters to a metadata string.");
 
   //   ***************************************************************************
   //                                  OTHER
@@ -662,6 +768,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                   "Calculate the mean free path of a gas molecule.");
   m_constants.def("gasMeanThermalVelocity", &constants::gasMeanThermalVelocity,
                   "Calculate the mean thermal velocity of a gas molecule.");
+  m_constants.def("molecularEffusionFlux", &constants::molecularEffusionFlux,
+                  "Calculate the molecular effusion flux of a gas.");
 
   // Utility functions
   auto m_util = module.def_submodule("util", "Utility functions.");

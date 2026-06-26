@@ -1,0 +1,46 @@
+# Step oxidation example configuration.
+# Lengths are in micrometers, time is in hours, pressure is in atm.
+#
+# Geometry: a half-fin (step) centred at the reflective boundary x = 0.
+# The step wall is at x = finWidth / 2.  In the visible simulation domain
+# [0, xExtent] the raised platform occupies x in [0, finWidth/2] and the
+# flat substrate occupies x in [finWidth/2, xExtent].
+#
+# dimensions: 2 (default) or 3. For 3D, zExtent (default: xExtent) sets
+# the half-depth of the domain in the extrusion direction.
+#
+# Grid sizing guide (the Cartesian solve scales as N^D):
+#   2D: gridDelta=0.025 is fine (~24k points across domain)
+#   3D: gridDelta=0.05  ->  ~3M points (practical for 3D)
+#       gridDelta=0.1   -> ~384k points (fast 3D test)
+# Override the solver limit with maxGridPoints if needed.
+
+numThreads=16
+dimensions=2
+
+gridDelta=0.005
+xExtent=1.
+# zExtent=1.  # 3D only; defaults to xExtent if omitted
+# maxGridPoints=10000000  # raise if solver aborts with "exceeds maxGridPoints"
+
+# Step (half-fin) geometry (micrometers)
+finWidth=0.5       # step wall at x = finWidth/2 = 0.25 µm from domain centre
+finHeight=1.0      # height of the raised platform above the substrate
+
+# oxideThickness: optional. If omitted or 0, a seed of gridDelta thickness is
+# created automatically so the solver always has resolvable oxide nodes.
+oxideThickness=0.0
+
+oxidationTime=0.1
+temperature=1000.
+pressure=1.
+oxidant=wet
+orientation=100
+
+outputPrefix=ps_step_oxidation
+
+# GPU solver backend (requires ViennaLS built with VIENNALS_USE_GPU=ON)
+# useGpu: cpu (default) | gpu
+# gpuPreconditioner: jacobi (default) | ilu0
+# useGpu=cpu
+# gpuPreconditioner=jacobi

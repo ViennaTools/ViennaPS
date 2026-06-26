@@ -115,6 +115,7 @@ struct AtomicLayerProcessParameters {
   double pulseTime = 1.0;
   double coverageTimeStep = 1.0;
   double purgePulseTime = 0.0;
+  double purgeTimeStep = 1.0;
 
   auto toMetaData() const {
     std::unordered_map<std::string, std::vector<double>> metaData;
@@ -122,10 +123,44 @@ struct AtomicLayerProcessParameters {
     metaData["PulseTime"] = {pulseTime};
     metaData["CoverageTimeStep"] = {coverageTimeStep};
     metaData["PurgePulseTime"] = {purgePulseTime};
+    metaData["PurgeTimeStep"] = {purgeTimeStep};
     return metaData;
   }
 
   auto toMetaDataString() const { return util::metaDataToString(toMetaData()); }
+};
+
+struct SurfaceDiffusionParameters {
+  double stabilityFactor = 1.0;
+  int kNeighbors = 16;
+  double radius = 0.;
+  double normalCutoff = 0.25;
+  double sigmaNormal = 0.35;
+  bool normalizeByLocalScale = true;
+  bool symmetrizeWeights = true;
+
+  auto toMetaData() const {
+    std::unordered_map<std::string, std::vector<double>> metaData;
+    metaData["StabilityFactor"] = {stabilityFactor};
+    metaData["KNeighbors"] = {static_cast<double>(kNeighbors)};
+    metaData["Radius"] = {radius};
+    metaData["NormalCutoff"] = {normalCutoff};
+    metaData["SigmaNormal"] = {sigmaNormal};
+    metaData["NormalizeByLocalScale"] = {
+        static_cast<double>(normalizeByLocalScale)};
+    metaData["SymmetrizeWeights"] = {static_cast<double>(symmetrizeWeights)};
+    return metaData;
+  }
+
+  auto toMetaDataString() const {
+    return "\nStabilityFactor: " + util::toString(stabilityFactor) +
+           "\nKNeighbors: " + util::toString(kNeighbors) +
+           "\nRadius: " + util::toString(radius) +
+           "\nNormalCutoff: " + util::toString(normalCutoff) +
+           "\nSigmaNormal: " + util::toString(sigmaNormal) +
+           "\nNormalizeByLocalScale: " + util::toString(normalizeByLocalScale) +
+           "\nSymmetrizeWeights: " + util::toString(symmetrizeWeights);
+  }
 };
 
 template <typename NumericType> class ProcessParams {

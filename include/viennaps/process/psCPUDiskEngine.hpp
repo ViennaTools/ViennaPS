@@ -1,5 +1,6 @@
 #pragma once
 
+#include "psDesorptionSource.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
 
@@ -70,16 +71,11 @@ public:
     assert(diskMesh != nullptr);
     assert(model_ != nullptr);
 
-    auto points = diskMesh->getNodes();
-    auto normals = *diskMesh->getCellData().getVectorData("Normals");
-    auto materialIds = *diskMesh->getCellData().getScalarData("MaterialIds");
-
+    const auto &[points, normals, materialIds] = context.getDiskMeshData();
     if (context.rayTracingParams.diskRadius == 0.) {
-      rayTracer_.setGeometry(points, normals,
-                             context.domain->getGrid().getGridDelta());
+      rayTracer_.setGeometry(points, normals, context.domain->getGridDelta());
     } else {
-      rayTracer_.setGeometry(points, normals,
-                             context.domain->getGrid().getGridDelta(),
+      rayTracer_.setGeometry(points, normals, context.domain->getGridDelta(),
                              context.rayTracingParams.diskRadius);
     }
     rayTracer_.setMaterialIds(materialIds);
@@ -88,38 +84,75 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateFluxes(
-      ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+  ProcessResult
+  calculateSourceFluxes(ProcessContext<NumericType, D> &context,
+                        SmartPointer<PointData<NumericType>> &fluxes) override {
     assert(model_ != nullptr);
     this->timer_.start();
-    viennaray::TracingData<NumericType> rayTracingData;
-    auto surfaceModel = context.model->getSurfaceModel();
 
-    // move coverages to the ray tracer
+    // set coverages in the ray tracer
     if (context.flags.useCoverages) {
-      rayTracingData = movePointDataToRayData(surfaceModel->getCoverages());
+      rayTracer_.setGlobalData(model_->getSurfaceModel()->getCoverages());
     }
-
-    if (context.flags.useProcessParams) {
-      // store scalars in addition to coverages
-      auto processParams = surfaceModel->getProcessParameters();
-      NumericType numParams = processParams->getScalarData().size();
-      rayTracingData.setNumberOfScalarData(numParams);
-      for (size_t i = 0; i < numParams; ++i) {
-        rayTracingData.setScalarData(i, processParams->getScalarData(i),
-                                     processParams->getScalarDataLabel(i));
-      }
-    }
-
-    if (context.flags.useCoverages || context.flags.useProcessParams)
-      rayTracer_.setGlobalData(rayTracingData);
 
     runRayTracer(context, fluxes);
 
-    // move coverages back in the model
-    if (context.flags.useCoverages)
-      moveRayDataToPointData(surfaceModel->getCoverages(), rayTracingData);
+    this->timer_.finish();
+
+    return ProcessResult::SUCCESS;
+  }
+
+  ProcessResult calculateSurfaceFluxes(
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<PointData<NumericType>> &fluxes) override {
+
+    this->timer_.start();
+
+    const auto &[nodes, normals, materialIds] = context.getDiskMeshData();
+    const auto desorptionWeights = model_->getSurfaceModel()
+                                       ->getDesorptionWeights(materialIds)
+                                       .value_or(std::vector<NumericType>{});
+
+    if (desorptionWeights.size() != nodes.size()) {
+      VIENNACORE_LOG_WARNING(
+          "Desorption weights size does not match number of mesh nodes. "
+          "Skipping surface flux calculation.");
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    const auto gridDelta = context.domain->getGridDelta();
+    const auto diskRadius =
+        context.rayTracingParams.diskRadius == 0.
+            ? static_cast<NumericType>(gridDelta * rayInternal::DiskFactor<D>)
+            : static_cast<NumericType>(context.rayTracingParams.diskRadius);
+    auto sourceData = makeDiskDesorptionSourceData<NumericType, NumericType, D>(
+        context.diskMesh->getNodes(), normals, desorptionWeights, gridDelta,
+        diskRadius, true);
+    if (!sourceData.hasSource) {
+      // No active desorption sources, skip ray tracing
+      VIENNACORE_LOG_DEBUG(
+          "No active desorption sources found. Skipping ray tracing.");
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    // set coverages in the ray tracer
+    if (context.flags.useCoverages) {
+      rayTracer_.setGlobalData(model_->getSurfaceModel()->getCoverages());
+    }
+
+    auto source = std::make_shared<DesorptionSource<NumericType, D>>(
+        std::move(sourceData), context.rayTracingParams.raysPerPoint);
+
+    rayTracer_.setSource(source);
+    runRayTracer(context, fluxes);
+
+    // reset source
+    if (auto source = model_->getSource()) {
+      rayTracer_.setSource(source);
+    } else {
+      rayTracer_.resetSource();
+    }
+
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
@@ -127,7 +160,7 @@ public:
 
 private:
   void runRayTracer(ProcessContext<NumericType, D> const &context,
-                    SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+                    SmartPointer<PointData<NumericType>> &fluxes) {
     assert(fluxes != nullptr);
     assert(model_ != nullptr);
     fluxes->clear();
@@ -157,8 +190,13 @@ private:
       // fill up fluxes vector with fluxes from this particle type
       auto &localData = rayTracer_.getLocalData();
       int numFluxes = particle->getLocalDataLabels().size();
+      std::vector<std::vector<NumericType>> particleFluxes;
+      std::vector<std::string> particleFluxLabels;
+      particleFluxes.reserve(numFluxes);
+      particleFluxLabels.reserve(numFluxes);
+
       for (int i = 0; i < numFluxes; ++i) {
-        auto &flux = localData.getVectorData(i);
+        auto flux = std::move(*localData.getScalarData(i));
 
         // normalize and smooth
         rayTracer_.normalizeFlux(flux,
@@ -167,36 +205,19 @@ private:
           rayTracer_.smoothFlux(flux,
                                 context.rayTracingParams.smoothingNeighbors);
 
-        fluxes->insertNextScalarData(std::move(flux),
-                                     localData.getVectorDataLabel(i));
+        particleFluxLabels.push_back(localData.getScalarDataLabel(i));
+        particleFluxes.push_back(std::move(flux));
       }
 
       model_->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
+
+      for (int i = 0; i < numFluxes; ++i) {
+        fluxes->insertNextScalarData(std::move(particleFluxes[i]),
+                                     particleFluxLabels[i]);
+      }
+
       ++particleIdx;
     }
-  }
-
-  static viennaray::TracingData<NumericType> movePointDataToRayData(
-      SmartPointer<viennals::PointData<NumericType>> pointData) {
-    viennaray::TracingData<NumericType> rayData;
-    const auto numData = pointData->getScalarDataSize();
-    rayData.setNumberOfVectorData(numData);
-    for (size_t i = 0; i < numData; ++i) {
-      auto label = pointData->getScalarDataLabel(i);
-      rayData.setVectorData(i, std::move(*pointData->getScalarData(label)),
-                            label);
-    }
-    return rayData;
-  }
-
-  static void moveRayDataToPointData(
-      SmartPointer<viennals::PointData<NumericType>> pointData,
-      viennaray::TracingData<NumericType> &rayData) {
-    pointData->clear();
-    const auto numData = rayData.getVectorData().size();
-    for (size_t i = 0; i < numData; ++i)
-      pointData->insertNextScalarData(std::move(rayData.getVectorData(i)),
-                                      rayData.getVectorDataLabel(i));
   }
 
 private:

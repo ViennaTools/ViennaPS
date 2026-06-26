@@ -4,6 +4,7 @@
 #include "../psElementToPointData.hpp"
 #include "../psPointToElementData.hpp"
 
+#include "psDesorptionSource.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
 
@@ -71,16 +72,25 @@ public:
 
     model_->initializeParticleDataLogs();
 
+    surfaceMesh_ = MeshType::New();
+    elementKdTree_ = KDTreeType::New();
+
+    postProcessing_.setDataLabels(model_->getParticleDataLabels());
+    postProcessing_.setConversionRadius(
+        context.domain->getGridDelta() *
+        (context.rayTracingParams.smoothingNeighbors + 1));
+    postProcessing_.setSurfaceMesh(surfaceMesh_);
+    postProcessing_.setElementKdTree(elementKdTree_);
+    postProcessing_.setDiskMesh(context.diskMesh);
+
     return ProcessResult::SUCCESS;
   }
 
   ProcessResult
   updateSurface(ProcessContext<NumericType, D> &context) override {
     this->timer_.start();
-    if (!surfaceMesh_)
-      surfaceMesh_ = MeshType::New();
-    if (!elementKdTree_)
-      elementKdTree_ = KDTreeType::New();
+    assert(surfaceMesh_ != nullptr);
+    assert(elementKdTree_ != nullptr);
 
     CreateSurfaceMesh<NumericType, float, D>(
         context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
@@ -130,18 +140,9 @@ public:
       surfaceMesh_->maximumExtent = triangleMesh.maximumExtent;
     }
 
-    auto const &pointMaterialIds =
-        *context.diskMesh->getCellData().getScalarData("MaterialIds");
+    auto const &pointMaterialIds = *context.diskMesh->getMaterialIds();
     std::vector<int> elementMaterialIds;
-    auto &pointKdTree = context.translationField->getKdTree();
-    if (!pointKdTree) {
-      pointKdTree = KDTreeType::New();
-      context.translationField->setKdTree(pointKdTree);
-    }
-    if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
-      pointKdTree->setPoints(context.diskMesh->nodes);
-      pointKdTree->build();
-    }
+    auto pointKdTree = context.getPointKdTree();
     PointToElementDataSingle<NumericType, NumericType, int, float>(
         pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
         .apply();
@@ -154,50 +155,29 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateFluxes(
-      ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+  ProcessResult
+  calculateSourceFluxes(ProcessContext<NumericType, D> &context,
+                        SmartPointer<PointData<NumericType>> &fluxes) override {
     this->timer_.start();
-    viennaray::TracingData<NumericType> rayTracingData;
     auto surfaceModel = context.model->getSurfaceModel();
 
-    // copy coverages to the ray tracer
+    // set coverages in ray tracer
     if (context.flags.useCoverages) {
-      auto &pointKdTree = context.translationField->getKdTree();
-      if (!pointKdTree) {
-        pointKdTree = KDTreeType::New();
-        context.translationField->setKdTree(pointKdTree);
-      }
-      if (pointKdTree->getNumberOfPoints() != context.diskMesh->nodes.size()) {
-        pointKdTree->setPoints(context.diskMesh->nodes);
-        pointKdTree->build();
-      }
-      // Coverages are copied to elementData so there is no need to move them
-      // back to the model
-      viennals::PointData<NumericType> elementData;
+      auto globalTracingData = PointData<NumericType>::New();
+      auto pointKdTree = context.getPointKdTree();
       PointToElementData<NumericType, float>(
-          elementData, surfaceModel->getCoverages(), *pointKdTree, surfaceMesh_,
-          Logger::hasIntermediate())
+          *globalTracingData, surfaceModel->getCoverages(), *pointKdTree,
+          surfaceMesh_, Logger::hasIntermediate())
           .apply();
-      // Move data from PointData to TracingData
-      rayTracingData = MovePointDataToRayData(elementData);
+      rayTracer_.setGlobalData(globalTracingData);
     }
 
-    if (context.flags.useProcessParams) {
-      // store scalars in addition to coverages
-      auto processParams = surfaceModel->getProcessParameters();
-      NumericType numParams = processParams->getScalarData().size();
-      rayTracingData.setNumberOfScalarData(numParams);
-      for (size_t i = 0; i < numParams; ++i) {
-        rayTracingData.setScalarData(i, processParams->getScalarData(i),
-                                     processParams->getScalarDataLabel(i));
-      }
-    }
+    auto elementFluxes = runRayTracer(context);
 
-    if (context.flags.useCoverages || context.flags.useProcessParams)
-      rayTracer_.setGlobalData(rayTracingData);
-
-    runRayTracer(context, fluxes);
+    // post-process fluxes
+    postProcessing_.setPointData(fluxes);
+    postProcessing_.setElementDataArrays(std::move(elementFluxes));
+    postProcessing_.apply();
 
     // output
     if (Logger::hasIntermediate() && D == 3) {
@@ -213,13 +193,77 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-private:
-  void runRayTracer(ProcessContext<NumericType, D> const &context,
-                    SmartPointer<viennals::PointData<NumericType>> &fluxes) {
-    assert(fluxes != nullptr);
-    fluxes->clear();
+  ProcessResult calculateSurfaceFluxes(
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<PointData<NumericType>> &fluxes) override {
 
+    this->timer_.start();
+
+    const auto &[nodes, normals, materialIds] = context.getDiskMeshData();
+    auto desorptionWeights = model_->getSurfaceModel()
+                                 ->getDesorptionWeights(materialIds)
+                                 .value_or(std::vector<NumericType>{});
+
+    if (desorptionWeights.size() != nodes.size()) {
+      VIENNACORE_LOG_WARNING(
+          "Desorption weights size does not match number of mesh nodes. "
+          "Skipping surface flux calculation.");
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    // Map desorption weights from disk mesh nodes to surface mesh elements
+    auto pointKdTree = context.getPointKdTree();
+    assert(surfaceMesh_ && "Surface mesh not initialized.");
+    std::vector<NumericType> elementWeights;
+    PointToElementDataSingle<NumericType, NumericType, NumericType, float>(
+        desorptionWeights, elementWeights, *pointKdTree, surfaceMesh_)
+        .apply();
+
+    const auto &triangles = surfaceMesh_->triangles;
+    const auto &triangleNodes = surfaceMesh_->nodes;
+    const auto triangleNormals = surfaceMesh_->getNormals();
+    assert(triangleNormals);
+
+    auto sourceData = makeTriangleDesorptionSourceData<NumericType>(
+        triangleNodes, triangles, *triangleNormals, elementWeights,
+        static_cast<NumericType>(context.domain->getGridDelta()));
+    if (!sourceData.hasSource) {
+      // No active desorption sources, skip ray tracing
+      VIENNACORE_LOG_DEBUG(
+          "No active desorption sources found. Skipping ray tracing.");
+      return ProcessResult::INVALID_INPUT;
+    }
+
+    auto source = std::make_shared<DesorptionSource<NumericType, D>>(
+        std::move(sourceData), context.rayTracingParams.raysPerPoint);
+
+    rayTracer_.setSource(source);
+    auto elementFluxes = runRayTracer(context);
+
+    // post-process fluxes
+    fluxes->clear();
+    postProcessing_.setPointData(fluxes);
+    postProcessing_.setElementDataArrays(std::move(elementFluxes));
+    postProcessing_.prepare(true); // prepare without building the tree again
+    postProcessing_.validate();
+    postProcessing_.convert();
+
+    // reset source
+    if (auto modelSource = model_->getSource()) {
+      rayTracer_.setSource(modelSource);
+    } else {
+      rayTracer_.resetSource();
+    }
+
+    this->timer_.finish();
+
+    return ProcessResult::SUCCESS;
+  }
+
+private:
+  auto runRayTracer(ProcessContext<NumericType, D> &context) {
     std::vector<std::vector<NumericType>> elementFluxes;
+    std::vector<std::string> elementFluxLabels;
 
     unsigned particleIdx = 0;
     for (auto &particle : model_->getParticleTypes()) {
@@ -246,58 +290,56 @@ private:
       // fill up fluxes vector with fluxes from this particle type
       auto &localData = rayTracer_.getLocalData();
       int numFluxes = particle->getLocalDataLabels().size();
+      std::vector<std::vector<NumericType>> particleFluxes;
+      particleFluxes.reserve(numFluxes);
+      std::vector<std::string> particleFluxLabels;
+      particleFluxLabels.reserve(numFluxes);
       for (int i = 0; i < numFluxes; ++i) {
-        auto &flux = localData.getVectorData(i);
+        auto flux = std::move(*localData.getScalarData(i));
 
         // normalize
         rayTracer_.normalizeFlux(flux,
                                  context.rayTracingParams.normalizationType);
 
-        // output
-        if (Logger::hasIntermediate()) {
-          std::vector<float> debugFlux(flux.size());
-          for (size_t j = 0; j < flux.size(); ++j) {
-            debugFlux[j] = static_cast<float>(flux[j]);
-          }
-          surfaceMesh_->getCellData().insertReplaceScalarData(
-              std::move(debugFlux), particle->getLocalDataLabels()[i]);
-        }
+        particleFluxLabels.push_back(localData.getScalarDataLabel(i));
+        particleFluxes.push_back(std::move(flux));
+      }
 
-        elementFluxes.push_back(std::move(flux));
+      for (int i = 0; i < numFluxes; ++i) {
+        elementFluxLabels.push_back(std::move(particleFluxLabels[i]));
+        elementFluxes.push_back(std::move(particleFluxes[i]));
       }
 
       model_->mergeParticleData(rayTracer_.getDataLog(), particleIdx);
       ++particleIdx;
     }
 
-    // map fluxes to points
-    PostProcessingType postProcessing(
-        model_->getParticleDataLabels(), fluxes, elementKdTree_,
-        context.diskMesh, surfaceMesh_,
-        context.domain->getGridDelta() *
-            (context.rayTracingParams.smoothingNeighbors + 1));
-    postProcessing.setElementDataArrays(std::move(elementFluxes));
-    postProcessing.apply();
+    saveElementFluxesToTriangleMesh(elementFluxes, elementFluxLabels);
+    context.triangleMesh = surfaceMesh_;
+
+    return elementFluxes;
   }
 
-  static viennaray::TracingData<NumericType>
-  MovePointDataToRayData(viennals::PointData<NumericType> &pointData) {
-    viennaray::TracingData<NumericType> rayData;
+  void saveElementFluxesToTriangleMesh(
+      const std::vector<std::vector<NumericType>> &elementFluxes,
+      const std::vector<std::string> &elementFluxLabels) {
+    assert(elementFluxes.size() == elementFluxLabels.size());
 
-    const auto numData = pointData.getScalarDataSize();
-    rayData.setNumberOfVectorData(numData);
-    for (size_t i = 0; i < numData; ++i) {
-      auto label = pointData.getScalarDataLabel(i);
-      rayData.setVectorData(i, std::move(*pointData.getScalarData(label)),
-                            label);
+    for (std::size_t dataIdx = 0; dataIdx < elementFluxes.size(); ++dataIdx) {
+      std::vector<float> values(elementFluxes[dataIdx].size());
+      for (std::size_t i = 0; i < elementFluxes[dataIdx].size(); ++i) {
+        values[i] = static_cast<float>(elementFluxes[dataIdx][i]);
+      }
+
+      surfaceMesh_->getCellData().insertReplaceScalarData(
+          std::move(values), elementFluxLabels[dataIdx]);
     }
-
-    return std::move(rayData);
   }
 
 private:
   viennaray::TraceTriangle<NumericType, D> rayTracer_;
   SmartPointer<ProcessModelCPU<NumericType, D>> model_;
+  PostProcessingType postProcessing_;
 
   KDTreeType elementKdTree_;
   MeshType surfaceMesh_;

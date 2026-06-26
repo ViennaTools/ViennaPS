@@ -138,7 +138,7 @@ public:
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
-      coverages = viennals::PointData<NumericType>::New();
+      coverages = PointData<NumericType>::New();
     } else {
       coverages->clear();
     }
@@ -151,7 +151,7 @@ public:
   void initializeSurfaceData(unsigned numGeometryPoints) override {
     if (Logger::hasIntermediate()) {
       if (surfaceData == nullptr) {
-        surfaceData = viennals::PointData<NumericType>::New();
+        surfaceData = PointData<NumericType>::New();
       } else {
         surfaceData->clear();
       }
@@ -164,7 +164,7 @@ public:
   }
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
+  calculateVelocities(SmartPointer<PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
     const auto numPoints = materialIds.size();
@@ -264,7 +264,7 @@ public:
     return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
-  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
+  void updateCoverages(SmartPointer<PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
 
     const auto ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
@@ -360,11 +360,10 @@ public:
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
+                        PointData<NumericType> &localData,
+                        const PointData<NumericType> *globalData,
                         RNG &) override final {
     // collect data for this hit
-    assert(primID < localData.getVectorData(0).size() && "id out of bounds");
     assert(E >= 0 && "Negative energy ion");
 
     const auto cosTheta = -rayInternal::DotProduct(rayDir, geomNormal);
@@ -383,27 +382,30 @@ public:
     const auto sqrtE = std::sqrt(E);
 
     // sputtering yield Y_s
-    localData.getVectorData(0)[primID] +=
+    localData.addToScalarData(
+        0, primID,
         A_sp * std::max(sqrtE - std::sqrt(Eth_sp), (NumericType)0) *
-        (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta;
+            (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta);
 
     // ion enhanced etching yield Y_ie
-    localData.getVectorData(1)[primID] +=
-        A_ie * std::max(sqrtE - std::sqrt(Eth_ie), (NumericType)0) * cosTheta;
+    localData.addToScalarData(
+        1, primID,
+        A_ie * std::max(sqrtE - std::sqrt(Eth_ie), (NumericType)0) * cosTheta);
 
     // polymer yield Y_p
     if (matParams.id != Material::Polymer)
       matParams = p.getMaterialParameters(Material::Polymer);
-    localData.getVectorData(2)[primID] +=
+    localData.addToScalarData(
+        2, primID,
         matParams.A_ie *
-        std::max(sqrtE - std::sqrt(matParams.Eth_ie), (NumericType)0) *
-        cosTheta;
+            std::max(sqrtE - std::sqrt(matParams.Eth_ie), (NumericType)0) *
+            cosTheta);
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primId, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &Rng) override final {
 
     auto cosTheta = getCosTheta(rayDir, geomNormal);
@@ -446,25 +448,23 @@ public:
       : p_(parameters), label_(label) {}
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
-                        const int,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
-                        RNG &) override final {
+                        const int, PointData<NumericType> &localData,
+                        const PointData<NumericType> *, RNG &) override final {
     // collect data for this hit
-    localData.getVectorData(0)[primID] += rayWeight;
+    localData.addToScalarData(0, primID, rayWeight);
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &Rng) override final {
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
 
-    const auto &phi_e = globalData->getVectorData(0)[primID];
-    const auto &phi_p = globalData->getVectorData(1)[primID];
-    NumericType Seff = std::max(1 - phi_e - phi_p, (NumericType)0);
+    const auto &phi_e = globalData->getScalarData(0)->at(primID);
+    const auto &phi_p = globalData->getScalarData(1)->at(primID);
+    NumericType Seff = std::max(1 - phi_e - phi_p, NumericType(0));
 
     if (Seff > 0) {
       Seff *= p_.getMaterialParameters(MaterialMap::mapToMaterial(materialId))

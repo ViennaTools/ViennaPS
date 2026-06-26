@@ -45,8 +45,6 @@ geometry.applyBooleanOperation(horiBox, ls.BooleanOperationEnum.RELATIVE_COMPLEM
 
 geometry.saveSurfaceMesh("SingleParticleALD_initial")
 
-model = ps.SingleParticleProcess(rate=1.0, stickingProbability=1e-4)
-
 geometry.duplicateTopLevelSet(ps.Material.Al2O3)
 
 gasMFP = ps.constants.gasMeanFreePath(
@@ -54,17 +52,18 @@ gasMFP = ps.constants.gasMeanFreePath(
 )
 print("Mean free path: ", gasMFP, " um")
 
-model = ps.SingleParticleALD(
-    stickingProbability=params["stickingProbability"],
-    numCycles=int(params["numCycles"]),
-    growthPerCycle=params["growthPerCycle"],
-    totalCycles=int(params["totalCycles"]),
-    coverageTimeStep=params["coverageTimeStep"],
-    evFlux=params["evFlux"],
-    inFlux=params["inFlux"],
-    s0=params["s0"],
-    gasMFP=gasMFP,
-)
+gpc = params["totalCycles"] / params["numCycles"] * params["growthPerCycle"]
+
+aldParams = ps.SingleParticleALDParams()
+aldParams.stickingProbability = params["stickingProbability"]
+aldParams.gasMeanFreePath = gasMFP
+aldParams.growthPerCycle = gpc
+aldParams.evaporationFlux = params["evFlux"]
+aldParams.incomingFlux = params["inFlux"]
+aldParams.s0 = params["s0"]
+aldParams.coverageDiffusionCoefficient = params["coverageDiffusionCoefficient"]
+
+model = ps.SingleParticleALD(aldParams)
 
 alpParams = ps.AtomicLayerProcessParameters()
 alpParams.pulseTime = params["pulseTime"]
