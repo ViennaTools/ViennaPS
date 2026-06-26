@@ -26,6 +26,7 @@ ViennaPS provides ready-to-use process models for common etching, deposition, an
 * [Selective Epitaxy]({% link models/prebuilt/selectiveEpitaxy.md %})
 * [Geometric Models]({% link models/prebuilt/geometric.md %})
 * [Oxide Regrowth]({% link models/prebuilt/oxideRegrowth.md %})
+* [Thermal Oxidation]({% link models/prebuilt/oxidation.md %})
 
 ## Exposed Models With Example Coverage
 
