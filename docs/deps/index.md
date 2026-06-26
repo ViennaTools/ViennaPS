@@ -11,11 +11,27 @@ nav_order: 2
 
 ![]({% link assets/images/ViennaPS_framework.png %})
 
-ViennaPS is part of the ViennaTools ecosystem and depends on several lightweight, header-only ViennaTools libraries. During configuration, CMake will fetch them automatically as part of the ViennaPS build. **No separate installation step is required for these dependencies**:
+ViennaPS is part of the ViennaTools ecosystem and depends on several
+ViennaTools libraries. During configuration, CMake will fetch them
+automatically as part of the ViennaPS build. **No separate installation step is
+required for these dependencies**:
 
 ## [ViennaLS](https://github.com/ViennaTools/ViennaLS)
 
-Handles topography simulation using an efficient level-set implementation based on a hierarchical run-length encoded (HRLE) data structure. ViennaLS also integrates the Visualization Toolkit (VTK) for geometry import/export, enabling processed geometries to be saved in the VTK format and visualized using ParaView.
+Provides the level-set algorithms used for topography evolution, geometry
+operations, and surface/volume mesh generation. ViennaLS also provides the
+physics solver stack used by the ViennaPS thermal oxidation model, including
+the coupled oxidant diffusion, viscous oxide-flow, stress/pressure, and nitride
+mask-deformation solves needed for LOCOS and trench oxidation simulations.
+
+ViennaLS integrates the Visualization Toolkit (VTK) for geometry import/export,
+enabling processed geometries and solver fields to be written in VTK formats
+and visualized with tools such as ParaView.
+
+## [ViennaHRLE](https://github.com/ViennaTools/ViennaHRLE)
+
+Provides the hierarchical run-length encoded data structure used by ViennaLS to
+store sparse level-set grids efficiently.
 
 <!-- ViennaLS forms the foundation of the process simulator, applying the level-set surface representation concepts for topography simulations. This module not only stores the level-set surface but also encompasses essential algorithms for geometry initialization, level-set value manipulation based on a velocity field, surface feature analysis, and seamless conversion of the level-set representation to other commonly employed material representations in device simulators. -->
 

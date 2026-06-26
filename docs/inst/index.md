@@ -28,7 +28,7 @@ include(cmake/CPM.cmake) # Download from https://github.com/cpm-cmake/CPM.cmake/
 
 CPMAddPackage(
     NAME ViennaPS
-    VERSION 4.2.1
+    VERSION 4.6.1
     GIT_REPOSITORY "https://github.com/ViennaTools/ViennaPS.git")
 
 add_executable(my_executable main.cpp)
@@ -72,8 +72,8 @@ The `-G Ninja` option can be omitted if you prefer to use _Unix Makefiles_ as th
 
 ## Building the Python package locally
 
-In order to build the Python bindings, the [pybind11](https://github.com/pybind/pybind11) library is required. On Linux based system (Ubuntu/Debian), pybind11 can be installed via the package manager: `sudo apt install pybind11-dev`. For macOS, the installation via Homebrew is recommended: `brew install pybind11`. 
-The ViennaPS Python package can be built and installed using the `pip` command:
+The ViennaPS Python package can be built and installed using the `pip`
+command:
 
 ```bash
 git clone https://github.com/ViennaTools/ViennaPS.git
@@ -83,7 +83,39 @@ pip install .
 ```
 
 {: .note}
-> Some functionalities of the ViennaPS Python module only work in combination with the ViennaLS Python module. It is therefore necessary to additionally install the ViennaLS Python module on your system. Instructions to do so can be found in the [ViennaLS Git Repository](https://github.com/ViennaTools/viennals).
+> Some functionalities of the ViennaPS Python module only work in combination
+> with the ViennaLS Python module. For local builds, ViennaPS and ViennaLS
+> should both be built locally. Mixing a local ViennaPS build with a ViennaLS
+> PyPI wheel, or the other way around, is not supported.
+
+### Python installation scripts
+
+For local Python installations, helper scripts are available in
+`python/scripts`.
+
+Use `install_ViennaPS.py` when building ViennaPS locally. The script creates or
+reuses a virtual environment, installs a compatible local ViennaLS build, and
+then installs ViennaPS from the selected checkout:
+
+```bash
+python python/scripts/install_ViennaPS.py
+```
+
+When working from existing local checkouts, pass the ViennaLS source directory
+explicitly:
+
+```bash
+python python/scripts/install_ViennaPS.py --viennals-dir ../ViennaLS
+```
+
+GPU support is enabled by default in this script. On systems with a compatible
+CUDA toolkit, this builds ViennaPS and ViennaLS with GPU support, enabling GPU
+ray tracing in ViennaPS and the GPU BiCGSTAB solver used by the oxidation
+model. For a CPU-only setup, pass:
+
+```bash
+python python/scripts/install_ViennaPS.py --no-gpu
+```
 
 ## Integration in CMake projects
 
@@ -91,7 +123,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@4.2.1")
+  CPMAddPackage("gh:viennatools/viennaps@4.6.1")
   ```
 
 * With a local installation

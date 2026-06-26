@@ -5,7 +5,7 @@ parent: Installing the Library
 nav_order: 1
 ---
 
-# Installing the GPU Module 
+# Installing the GPU Module
 {: .fs-9 .fw-500 }
 
 ---
@@ -24,56 +24,56 @@ The GPU ray tracing module is implemented using [**OptiX 8.0**](https://develope
 
 ## Python Bindings Installation
 
-For a convenient setup, a helper script is provided. It builds **ViennaPS** and **ViennaLS** with GPU support directly from source inside the `ViennaTools` folder.
+The Python package can be built with GPU support using helper scripts in
+`python/scripts`. GPU support enables GPU ray tracing in ViennaPS and the GPU
+BiCGSTAB solver used by the oxidation model.
 
-Run:
+### Existing ViennaPS Checkout
+
+Use `install_ViennaPS.py` when working from a ViennaPS checkout. It creates or
+reuses a virtual environment, installs a compatible local ViennaLS build, and
+then installs ViennaPS from the selected checkout.
 
 ```sh
-wget https://raw.githubusercontent.com/ViennaTools/ViennaPS/refs/tags/v4.2.1/python/scripts/install_ViennaTools.py && python3 install_ViennaTools.py
+python python/scripts/install_ViennaPS.py
 ```
 
-The script performs the following steps:
+When working from existing local ViennaPS and ViennaLS checkouts, pass the
+ViennaLS source directory explicitly:
 
-* Creates a virtual environment (`.venv`) in the `ViennaTools` directory.
-* Builds and installs **ViennaLS** and **ViennaPS** with GPU support enabled.
-* Installs required system dependencies (**VTK**, **Embree**).
+```sh
+python python/scripts/install_ViennaPS.py --viennals-dir ../ViennaLS
+```
 
-> **Note:** Installing system dependencies requires `sudo` privileges.
+Use `--no-gpu` for a CPU-only local build.
 
----
+### Fresh ViennaTools Setup
 
-There are two installation scripts available in the `python/scripts` directory, with different compatibility and functionality:
+Use `install_ViennaTools.py` for a broader fresh setup. It creates a
+`ViennaTools` directory, installs supported system dependencies, clones
+ViennaLS and ViennaPS, creates a virtual environment, and builds both Python
+packages.
 
-### 1. `install_ViennaPS.py` 
+From a ViennaPS checkout:
 
-- **Compatibility:** All Linux distributions and Windows 
-- **Functionality:**  
-   - Builds and installs **ViennaPS** locally
-   - Checks for an existing local build of **ViennaLS**
-   - Checks for OptiX installation, downloads if not found
-- **Limitations:**  
-   - Assumes you have already installed dependencies like VTK and embree manually. Otherwise, they will be built from source, which can take a long time.
+```sh
+python python/scripts/install_ViennaTools.py
+```
 
-### 2. `install_ViennaTools.py`
+Or download the script directly from a tagged release:
 
-- **Compatibility:** 
-  - Linux: Ubuntu 22.04+, Debian 11+, Fedora 35+, Rocky Linux 8+, AlmaLinux 8+, Arch Linux, Manjaro, openSUSE Leap 15.3+, openSUSE Tumbleweed
-  - macOS: macOS 12+ (Monterey and later) with Homebrew (only CPU support, no GPU)
-- **Prerequisites**:
-  - For Linux:
-    - `sudo` privileges for installing system packages
-    - Git
-    - Python 3.8+
+```sh
+wget https://raw.githubusercontent.com/ViennaTools/ViennaPS/refs/tags/v4.6.1/python/scripts/install_ViennaTools.py
+python3 install_ViennaTools.py
+```
 
-  - For macOS:
-    - [Homebrew](https://brew.sh/) package manager
-    - Xcode Command Line Tools (will be installed automatically if missing)
-    - Git (usually comes with Xcode Command Line Tools)
-    - Python 3.8+
-- **Functionality:**  
-  - Installs all required dependencies: `VTK`, `embree`, and others using `apt`  
-  - Builds and installs **ViennaLS** and **ViennaPS** in a local folder named `ViennaTools`  
-  - Suitable for a fresh installation on Ubuntu systems  
+GPU support is enabled by default on Linux when CUDA is available. Use
+`--no-gpu` for a CPU-only setup. On macOS, GPU support is disabled because
+NVIDIA CUDA/OptiX is not available.
+
+{: .note }
+Installing system dependencies with `install_ViennaTools.py` may require
+administrator privileges on Linux.
 
 ## CMake Configuration
 
@@ -100,11 +100,11 @@ include("cmake/cpm.cmake") # Include CPM.cmake (get from: https://github.com/cpm
 
 CPMFindPackage(
   NAME ViennaPS
-  VERSION 4.2.1
+  VERSION 4.6.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaPS"
   OPTIONS "VIENNAPS_USE_GPU ON")
 
 # Link against ViennaPS
 add_executable(example_gpu main.cpp)
-target_link_libraries(example_gpu PRIVATE ViennaPS)
+target_link_libraries(example_gpu PRIVATE ViennaTools::ViennaPS)
 ```

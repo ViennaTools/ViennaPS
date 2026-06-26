@@ -17,55 +17,98 @@ Process Simulation Library
 
 ---
 
-ViennaPS is a header-only C++ library for topography simulation in microelectronic fabrication processes. It models the evolution of 2D and 3D surfaces during etching, deposition, and related steps, combining advanced level-set methods for surface evolution with Monte Carlo ray tracing for flux calculation. This allows accurate, feature-scale simulation of complex fabrication geometries.
+ViennaPS is a header-only C++ library for process and topography simulation in
+microelectronic fabrication. It models the evolution of 2D and 3D surfaces
+during etching, deposition, oxidation, and related steps, combining advanced
+level-set methods for surface evolution with Monte Carlo ray tracing for flux
+calculation and physics-based solvers for coupled processes.
 
-ViennaPS supports both physical process models and fast emulation approaches, enabling flexible and efficient development of semiconductor processes. It can be easily integrated into existing C++ projects and also provides Python bindings for use in Python-based workflows. The library is actively developed and continuously improved to address the needs of process and topography simulation in microelectronics.
+ViennaPS supports both physics-based process models and fast emulation
+approaches, enabling flexible and efficient development of semiconductor
+processes. It can be integrated into existing C++ projects and also provides
+Python bindings for Python-based workflows.
 
 {: .note }
 > ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know on [GitHub][ViennaPS issues] or contact us directly at [viennatools@iue.tuwien.ac.at](mailto:viennatools@iue.tuwien.ac.at)!
 
-This documentation is your guide to using and getting the most out of our process simulation library. Whether you're a researcher looking to improve your simulation workflows or an engineer working to optimize fabrication processes, this library offers a flexible and powerful platform to support your work.
-
-Inside, you'll find clear explanations, practical examples, and recommended workflows to help you use the library effectively. Our goal is to give you the knowledge and tools needed to accurately simulate a wide range of fabrication processes, enabling better insights, informed decisions, and innovation in the field.
+This documentation is your guide to installing ViennaPS, building C++ and
+Python workflows, selecting process models, and running the provided examples.
 
 ---
 
-> ⚙️ **ViennaPS v4.0.0 Released — Major Framework Update**
->
-> This release introduces a complete rework of the process framework, unified Python bindings, and extended GPU and material support.
+## Quick Start
 
-## What's New
+Install the Python package from PyPI:
 
-### Core framework
-- Modular **flux engine** with new options: `AUTO` (default), `CPU_DISK`, `GPU_DISK`, `GPU_LINE`, `GPU_TRIANGLE`.
-- `AUTO` automatically selects CPU or GPU based on build and model support.
-- **AtomicLayerProcess** removed; ALD handled by standard `Process()`.
-- New parameter structs:
-  - `AtomicLayerProcessParameters`
-  - `CoverageParameters`
-  - `RayTracingParameters`
-  - `AdvectionParameters`
-- All parameter structs now use a single `setParameters()` function.
+```bash
+pip install ViennaPS
+```
 
-### Python interface
-- Unified package: `viennaps` replaces `viennaps2d` and `viennaps3d`.
-- Dimension modules available under `viennaps.d2` and `viennaps.d3`.
-- Default dimension is 2D; can be changed via `viennaps.setDimension()`.
+Then import it in Python:
 
-### Models and simulation
-- Extended **material list** with common semiconductor materials.
-- **Fluorocarbon model** now supports arbitrary material combinations.
-- Fixed issue where **underlying materials** were not etched in geometric models.
+```python
+import viennaps as vps
+```
 
-### I/O and utilities
-- Updated `saveSurfaceMesh()`:
-  - Removed `addMaterialIds`
-  - Added `addInterfaces` to export all material interfaces.
-- Improved extrusion and slicing functions.
+By default, ViennaPS operates in 2D. Use `vps.setDimension(3)` for 3D
+workflows.
 
-### Build system
-- GPU builds now **auto-download OptiX headers** if missing.
-- Updated CI, OpenMP handling, and dependencies.
+For C++ projects, ViennaPS is usually consumed with
+[CPM.cmake](https://github.com/cpm-cmake/CPM.cmake):
+
+```cmake
+CPMAddPackage("gh:viennatools/viennaps@4.6.1")
+target_link_libraries(${PROJECT_NAME} PUBLIC ViennaTools::ViennaPS)
+```
+
+See [Installing the Library]({% link inst/index.md %}) for full installation
+instructions.
+
+## Dependencies
+
+ViennaPS is part of the ViennaTools ecosystem. During CMake configuration, the
+required ViennaTools libraries are fetched automatically:
+
+* [ViennaCore](https://github.com/ViennaTools/ViennaCore)
+* [ViennaLS](https://github.com/ViennaTools/ViennaLS)
+* [ViennaHRLE](https://github.com/ViennaTools/ViennaHRLE)
+* [ViennaRay](https://github.com/ViennaTools/ViennaRay)
+* [ViennaCS](https://github.com/ViennaTools/ViennaCS)
+
+The main external dependencies are:
+
+* [VTK](https://vtk.org/) 9.0.0 or newer
+* [Embree](https://www.embree.org/) 4.0.0 or newer
+
+CMake checks for these dependencies during configuration. If they are not
+available, they can be built from source as part of the build. To prefer local
+installations, pass their prefixes through `VIENNAPS_LOOKUP_DIRS` or
+`CMAKE_PREFIX_PATH`.
+
+## Supported Platforms
+
+ViennaPS supports Linux, macOS, and Windows with a C++20 compiler and OpenMP
+support.
+
+## GPU Acceleration
+
+ViennaPS supports experimental GPU acceleration for ray tracing and for the
+diffusion solver in the physics-based oxidation model. GPU builds require a
+CUDA-capable system. See [Installing the GPU Module]({% link inst/gpu.md %})
+for details.
+
+## Tests
+
+ViennaPS uses CTest. To build and run the regular test suite:
+
+```bash
+git clone https://github.com/ViennaTools/ViennaPS.git
+cd ViennaPS
+
+cmake -B build -DVIENNAPS_BUILD_TESTS=ON
+cmake --build build
+ctest -E "Benchmark|Performance" --test-dir build
+```
 
 ---
 
@@ -89,8 +132,9 @@ Contact us via: [viennatools@iue.tuwien.ac.at](mailto:viennatools@iue.tuwien.ac.
 
 ## License 
 
-ViennaPS is licensed under the [MIT License](https://github.com/ViennaTools/ViennaPS/blob/master/LICENSE).
+Versions older than 4.3.0 were released under the MIT License. Starting with
+version 4.3.0, ViennaPS is licensed under the
+[GPL-3.0 License](https://github.com/ViennaTools/ViennaPS/blob/master/LICENSE).
 
 [ViennaPS repo]: https://github.com/ViennaTools/ViennaPS
 [ViennaPS issues]: https://github.com/ViennaTools/ViennaPS/issues
-

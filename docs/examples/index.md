@@ -48,6 +48,7 @@ Individual examples can also be build by calling `make` in their respective buil
 | **Ion Beam Etching**<br/>[![]({% link assets/examples/IBE.png %})](https://github.com/ViennaTools/ViennaPS/tree/master/examples/ionBeamEtching) | **Selective Epitaxy**<br/>[![]({% link assets/examples/epitaxy.png %})](https://github.com/ViennaTools/ViennaPS/tree/master/examples/selectiveEpitaxy) |
 | **Sputter Deposition**<br/>[![]({% link assets/examples/sputterDepo.png %})](https://github.com/ViennaTools/ViennaPS/tree/master/examples/sputterDeposition) | **Stack Etching**<br/>[![]({% link assets/examples/stackEtching.png %})](https://github.com/ViennaTools/ViennaPS/tree/master/examples/stackEtching) |
 | **TEOS Trench Deposition**<br/>[![]({% link assets/examples/TEOS.png %})](https://github.com/ViennaTools/ViennaPS/tree/master/examples/TEOSTrenchDeposition) | **Trench Deposition**<br/>[![]({% link assets/examples/trenchDepo.png %})](https://github.com/ViennaTools/ViennaPS/tree/master/examples/trenchDeposition) |
+| **Fin Oxidation**<br/>[![]({% link assets/examples/finOxidation.png %})](https://github.com/ViennaTools/ViennaPS/tree/master/examples/finOxidation) | **LOCOS Oxidation**<br/>[![]({% link assets/examples/locos.png %})](https://github.com/ViennaTools/ViennaPS/tree/master/examples/locosOxidation) |
 
 More Examples:
 * [Custom Example Process](https://github.com/ViennaTools/ViennaPS/tree/master/examples/exampleProcess)
@@ -58,5 +59,7 @@ More Examples:
 * [Fin Oxidation](https://github.com/ViennaTools/ViennaPS/tree/master/examples/finOxidation)
 * [Trench Oxidation](https://github.com/ViennaTools/ViennaPS/tree/master/examples/trenchOxidation)
 * [LOCOS Oxidation](https://github.com/ViennaTools/ViennaPS/tree/master/examples/locosOxidation)
+* [Neutral Transport Cylinder](https://github.com/ViennaTools/ViennaPS/tree/master/examples/neutralTransportCylinder)
+* [Surface Diffusion](https://github.com/ViennaTools/ViennaPS/tree/master/examples/surfaceDiffusion)
 * [SiGe Selective Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/SiGeSelectiveEtching)
 * [Trench Deposition Geometric](https://github.com/ViennaTools/ViennaPS/tree/master/examples/trenchDepositionGeometric)

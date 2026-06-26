@@ -66,10 +66,14 @@ cov.maxIterations = 10;
 ps::AtomicLayerProcessParameters<T> alp;
 alp.numCycles = 2;
 
+ps::SurfaceDiffusionParameters sd;
+sd.kNeighbors = 16;
+
 process.setParameters(adv);
 process.setParameters(rt);
 process.setParameters(cov);
 process.setParameters(alp);
+process.setParameters(sd);
 
 // Run
 process.apply();
@@ -107,10 +111,14 @@ cov.maxIterations = 10
 alp = vps.AtomicLayerProcessParameters()
 alp.numCycles = 2
 
+sd = vps.SurfaceDiffusionParameters()
+sd.kNeighbors = 16
+
 process.setParameters(adv)
 process.setParameters(rt)
 process.setParameters(cov)
 process.setParameters(alp)
+process.setParameters(sd)
 
 process.apply()
 ```
@@ -198,6 +206,7 @@ void setParameters(const AdvectionParameters<NumericType>&)
 void setParameters(const RayTracingParameters<NumericType, D>&)
 void setParameters(const CoverageParameters<NumericType>&)
 void setParameters(const AtomicLayerProcessParameters<NumericType>&)
+void setParameters(const SurfaceDiffusionParameters&)
 ```
 
 ### Set flux engine type
@@ -217,4 +226,3 @@ void setIntermediateOutputPath(const std::string &path)
 ```c++
 void apply()
 ```
-
