@@ -244,9 +244,11 @@ public:
     fluxes->clear();
     postProcessing_.setPointData(fluxes);
     postProcessing_.setElementDataArrays(std::move(elementFluxes));
+    postProcessing_.setPostFix("_surface");
     postProcessing_.prepare(true); // prepare without building the tree again
     postProcessing_.validate();
     postProcessing_.convert();
+    postProcessing_.setPostFix(""); // clear postfix
 
     // reset source
     if (auto modelSource = model_->getSource()) {

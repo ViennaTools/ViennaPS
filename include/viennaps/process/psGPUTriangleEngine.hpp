@@ -284,6 +284,7 @@ public:
     // Prepare post-processing
     fluxes->clear();
     postProcessing_.setPointData(fluxes);
+    postProcessing_.setPostFix("_surface");
     postProcessing_.prepare(true);
 
     rayTracer_.normalizeResults();
@@ -292,7 +293,8 @@ public:
 
     postProcessing_.setElementDataArrays(std::move(desorptionResults));
     postProcessing_.validate();
-    postProcessing_.convert(); // run post-processing
+    postProcessing_.convert();      // run post-processing
+    postProcessing_.setPostFix(""); // clear postfix
 
     if (Logger::hasDebug()) {
       viennals::VTKWriter<float>(

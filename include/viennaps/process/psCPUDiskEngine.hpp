@@ -144,7 +144,7 @@ public:
         std::move(sourceData), context.rayTracingParams.raysPerPoint);
 
     rayTracer_.setSource(source);
-    runRayTracer(context, fluxes);
+    runRayTracer(context, fluxes, "_surface");
 
     // reset source
     if (auto source = model_->getSource()) {
@@ -160,7 +160,8 @@ public:
 
 private:
   void runRayTracer(ProcessContext<NumericType, D> const &context,
-                    SmartPointer<PointData<NumericType>> &fluxes) {
+                    SmartPointer<PointData<NumericType>> &fluxes,
+                    std::string const &postFix = "") {
     assert(fluxes != nullptr);
     assert(model_ != nullptr);
     fluxes->clear();
@@ -213,7 +214,7 @@ private:
 
       for (int i = 0; i < numFluxes; ++i) {
         fluxes->insertNextScalarData(std::move(particleFluxes[i]),
-                                     particleFluxLabels[i]);
+                                     particleFluxLabels[i] + postFix);
       }
 
       ++particleIdx;

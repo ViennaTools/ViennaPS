@@ -188,9 +188,13 @@ public:
   void updateCoverages(SmartPointer<PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
     auto neutralFlux = fluxes->getScalarData(params.fluxLabel);
+    auto desorbedFlux =
+        fluxes->getScalarData(params.fluxLabel + "_surface", true);
     auto coverage = coverages->getScalarData(params.coverageLabel);
     assert(neutralFlux && coverage);
     assert(neutralFlux->size() == materialIds.size());
+    assert(desorbedFlux == nullptr ||
+           desorbedFlux->size() == materialIds.size());
 
     coverage->resize(neutralFlux->size());
 
@@ -207,9 +211,11 @@ public:
           MaterialMap::isMaterial(materialIds[i], params.etchFrontMaterial)
               ? params.etchFrontSticking
               : params.zeroCoverageSticking;
+      const auto desorbed = desorbedFlux ? desorbedFlux->at(i) : 0.;
       const auto adsorptionCoefficient =
           params.surfaceSiteDensity > 0.
-              ? sticking * params.incomingFlux * neutralFlux->at(i) /
+              ? sticking * params.incomingFlux *
+                    (neutralFlux->at(i) + desorbed) /
                     (constants::N_A * params.surfaceSiteDensity)
               : NumericType(0.);
       const auto etchLossRate =
