@@ -21,6 +21,7 @@ class ElementToPointData {
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
   NumericType conversionRadius_;
+  std::string postFix_ = "";
 
   struct CloseElements {
     std::vector<size_t> indices;
@@ -75,6 +76,8 @@ public:
     elementKdTree_ = elementKdTree;
   }
 
+  void setPostFix(const std::string &postFix) { postFix_ = postFix; }
+
   void prepare(bool skipBuild = false) {
     const auto numData = dataLabels_.size();
     const auto &points = diskMesh_->nodes;
@@ -89,7 +92,7 @@ public:
     pointData_->clear();
     for (const auto &label : dataLabels_) {
       std::vector<NumericType> data(numPoints, 0.);
-      pointData_->insertNextScalarData(std::move(data), label);
+      pointData_->insertNextScalarData(std::move(data), label + postFix_);
     }
 
     if (skipBuild)

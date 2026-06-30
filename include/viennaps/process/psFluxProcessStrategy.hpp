@@ -316,7 +316,7 @@ private:
       auto desorptionFlux = PointData<NumericType>::New();
       if (fluxEngine_->calculateSurfaceFluxes(context, desorptionFlux) ==
           ProcessResult::SUCCESS) {
-        fluxes->mergeScalarData(*desorptionFlux);
+        fluxes->append(*desorptionFlux);
       }
     }
 
@@ -325,12 +325,12 @@ private:
       PROCESS_CHECK(calculateSurfaceDiffusion(context, fluxes));
     }
 
-    // Update coverages
+    // Update coverages in surface model
     if (context.flags.useCoverages) {
       PROCESS_CHECK(updateCoverages(context, fluxes));
     }
 
-    // Calculate velocities in model
+    // Calculate velocities in surface model
     auto velocities = calculateVelocities(context, fluxes);
     context.model->getVelocityField()->prepare(context.domain, velocities,
                                                context.processTime);

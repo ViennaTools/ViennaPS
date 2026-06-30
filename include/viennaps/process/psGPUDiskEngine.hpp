@@ -226,7 +226,7 @@ public:
     auto desorptionResults = rayTracer_.getResults();
 
     copyResultsToPointData(*fluxes, context.rayTracingParams.smoothingNeighbors,
-                           desorptionResults);
+                           desorptionResults, "_surface");
 
     rayTracer_.clearSurfaceSource();
     this->timer_.finish();
@@ -259,7 +259,8 @@ private:
 
   void copyResultsToPointData(
       PointData<NumericType> &pointData, int smoothingNeighbors,
-      std::vector<std::vector<viennaray::gpu::ResultType>> results) {
+      std::vector<std::vector<viennaray::gpu::ResultType>> results,
+      const std::string &postFix = "") {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();
     assert(numRates > 0);
@@ -276,7 +277,8 @@ private:
 
         std::vector<NumericType> diskFluxCasted(diskFlux.begin(),
                                                 diskFlux.end());
-        pointData.insertReplaceScalarData(std::move(diskFluxCasted), name);
+        pointData.insertReplaceScalarData(std::move(diskFluxCasted),
+                                          name + postFix);
       }
       offset += particles[pIdx].dataLabels.size();
     }

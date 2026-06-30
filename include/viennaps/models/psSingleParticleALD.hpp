@@ -215,7 +215,8 @@ public:
 
     // particles
     viennaray::gpu::Particle<NumericType> particle{
-        .name = "SingleParticle", .sticking = params_.stickingProbability};
+        .name = "SingleParticle",
+        .sticking = static_cast<NumericType>(params_.stickingProbability)};
     particle.dataLabels.push_back("ParticleFlux");
 
     std::unordered_map<std::string, unsigned> pMap = {{"SingleParticle", 0}};
