@@ -194,6 +194,56 @@ public:
     callback_->anneal().setSolidSolubilityArrhenius(C0, Ea_eV);
   }
 
+  // ── Damage-gated (BIC/SPER) activation ────────────────────────────────────
+  // Active fraction from the local implant-damage field:
+  //   f_active = f_floor + (1-f_floor)·(1-exp(-(damage/D_amorph)^beta))
+  // Amorphizing regions regrow by SPER → f_active→1; crystalline regions stay
+  // BIC-limited at the floor. Composes with the solid-solubility cap.
+  void enableDamageActivation(bool enable = true) {
+    callback_->anneal().enableDamageActivation(enable);
+  }
+
+  void setActivationFloor(NumericType floor) {
+    callback_->anneal().setActivationFloor(floor);
+  }
+
+  void setAmorphizationThreshold(NumericType damageThreshold,
+                                 NumericType beta = NumericType(2)) {
+    callback_->anneal().setAmorphizationThreshold(damageThreshold, beta);
+  }
+
+  // Fill the contiguous buried amorphous layer (SPER) up to the surface.
+  void enableAmorphousLayerFill(bool enable = true) {
+    callback_->anneal().enableAmorphousLayerFill(enable);
+  }
+
+  // Dopant segregation into blocking materials (oxide) at interfaces:
+  // J = v_seg·C, applied to interface-adjacent cells.
+  void setInterfaceSegregation(NumericType velocity,
+                              NumericType width = NumericType(0)) {
+    callback_->anneal().setInterfaceSegregation(velocity, width);
+  }
+
+  // Restrict trapping / segregation to interfaces with these blocking
+  // neighbour materials (empty = all blocking).
+  void setTrapMaterials(const std::vector<Material> &materials) {
+    callback_->anneal().setTrapMaterials(toIntIds(materials));
+  }
+  void setSegregationMaterials(const std::vector<Material> &materials) {
+    callback_->anneal().setSegregationMaterials(toIntIds(materials));
+  }
+
+  // Dopant trapping at blocking-material interfaces (interfacial pile-up):
+  // captured into an immobile companion field, dose-conserving.
+  void setInterfaceTrap(NumericType velocity,
+                        NumericType width = NumericType(0)) {
+    callback_->anneal().setInterfaceTrap(velocity, width);
+  }
+
+  void setTrappedLabel(const std::string &label) {
+    callback_->anneal().setTrappedLabel(label);
+  }
+
   // ── Defect coupling (interstitials / vacancies) ──────────────────────────
 
   void enableDefectCoupling(bool enable = true) {
@@ -268,6 +318,24 @@ public:
                                    NumericType normalization) {
     callback_->anneal().setDefectEnhancedDiffusion(tedCoefficient,
                                                     normalization);
+  }
+
+  // ── Fermi-level (concentration-dependent) diffusivity enhancement ────────
+  //
+  // Accounts for the Fermi-level effect on B-in-Si diffusion:
+  //   D_eff(z) = D(T) * [f*(p/ni) + (1-f)*(ni/p)]
+  // where p is the local hole concentration (from the dopant field via the
+  // mass-action law) and ni is the intrinsic carrier density (computed
+  // internally from the Varshni bandgap model for Si).
+  //
+  // chargedFraction: fraction of diffusion via I^- mechanism; 0.9 for B in Si.
+  // Must call enableFermiEnhancement(true) to activate.
+  void enableFermiEnhancement(bool enable = true) {
+    callback_->anneal().enableFermiEnhancement(enable);
+  }
+
+  void setFermiChargedFraction(NumericType chargedFraction) {
+    callback_->anneal().setFermiChargedFraction(chargedFraction);
   }
 
   void setTEDFromDamageFactor(

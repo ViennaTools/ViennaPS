@@ -1127,6 +1127,25 @@ template <int D> void bindApi(py::module &module) {
       .def("setSolidSolubilityArrhenius",
            &Anneal<T, D>::setSolidSolubilityArrhenius, py::arg("C0"),
            py::arg("Ea_eV"))
+      // Damage-gated (BIC/SPER) activation
+      .def("enableDamageActivation", &Anneal<T, D>::enableDamageActivation,
+           py::arg("enable") = true)
+      .def("setActivationFloor", &Anneal<T, D>::setActivationFloor,
+           py::arg("floor"))
+      .def("setAmorphizationThreshold",
+           &Anneal<T, D>::setAmorphizationThreshold, py::arg("damageThreshold"),
+           py::arg("beta") = 2.0)
+      .def("enableAmorphousLayerFill",
+           &Anneal<T, D>::enableAmorphousLayerFill, py::arg("enable") = true)
+      .def("setInterfaceSegregation", &Anneal<T, D>::setInterfaceSegregation,
+           py::arg("velocity"), py::arg("width") = 0.0)
+      .def("setTrapMaterials", &Anneal<T, D>::setTrapMaterials,
+           py::arg("materials"))
+      .def("setSegregationMaterials", &Anneal<T, D>::setSegregationMaterials,
+           py::arg("materials"))
+      .def("setInterfaceTrap", &Anneal<T, D>::setInterfaceTrap,
+           py::arg("velocity"), py::arg("width") = 0.0)
+      .def("setTrappedLabel", &Anneal<T, D>::setTrappedLabel, py::arg("label"))
       // Defect coupling
       .def("enableDefectCoupling", &Anneal<T, D>::enableDefectCoupling,
            py::arg("enable") = true)
@@ -1168,6 +1187,18 @@ template <int D> void bindApi(py::module &module) {
            py::arg("damageFactor"),
            py::arg("coefficientScale") = T(0.5),
            py::arg("normalization") = T(1e20))
+      // Fermi-level (concentration-dependent) diffusivity enhancement
+      .def("enableFermiEnhancement", &Anneal<T, D>::enableFermiEnhancement,
+           py::arg("enable") = true,
+           "Enable Fermi-level concentration-dependent diffusivity.\n\n"
+           "D_eff(z) = D(T) * [f*(p/ni) + (1-f)*(ni/p)]\n"
+           "where p is the local hole concentration from the dopant field\n"
+           "and ni is the Si intrinsic carrier density (Varshni model).\n"
+           "Intended for p-type dopants (B) in Si.")
+      .def("setFermiChargedFraction", &Anneal<T, D>::setFermiChargedFraction,
+           py::arg("chargedFraction"),
+           "Set the fraction of diffusion via negatively-charged interstitials.\n"
+           "Typical value for B in Si: 0.9 (default).")
       // Defect clustering
       .def("enableDefectClustering",
            &Anneal<T, D>::enableDefectClustering, py::arg("enable") = true)
