@@ -144,7 +144,9 @@ else()
   CPMAddPackage(
     NAME ViennaCS
     GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
-    GIT_TAG implant
+    # Pinned to the calibrated-model kernel commit on the 'implant' branch
+    # (immutable SHA rather than the moving branch ref, for reproducibility).
+    GIT_TAG 27992a12ef2b76069464957fc676027d9d6229fd
     EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 endif()
 
