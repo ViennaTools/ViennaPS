@@ -24,6 +24,13 @@ template <typename NumericType> struct PlasmaEtchingParameters {
           1.0); // default to 1.0 for all materials
   NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
 
+  // Effective surface diffusion coefficients for the coverage fields, in the
+  // active length²/time units. A value <= 0 disables diffusion of the
+  // corresponding coverage (operator-split, applied after the local reaction
+  // update). etchant -> "eCoverage", passivation -> "pCoverage".
+  NumericType etchantDiffusionCoefficient = 0.;
+  NumericType passivationDiffusionCoefficient = 0.;
+
   // Mask
   struct MaskType {
     // density
@@ -115,6 +122,13 @@ template <typename NumericType> struct PlasmaEtchingParameters {
 
     if (etchStopDepth != std::numeric_limits<NumericType>::lowest())
       processData["Etch Stop Depth"] = {etchStopDepth};
+
+    if (etchantDiffusionCoefficient > 0.)
+      processData["Etchant Diffusion Coefficient"] = {
+          etchantDiffusionCoefficient};
+    if (passivationDiffusionCoefficient > 0.)
+      processData["Passivation Diffusion Coefficient"] = {
+          passivationDiffusionCoefficient};
 
     // Mask
     processData["Mask Rho"] = {Mask.rho};

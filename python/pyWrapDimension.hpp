@@ -51,6 +51,7 @@
 #include <process/psVelocityField.hpp>
 
 // models
+#include <models/psCF4ArEtching.hpp>
 #include <models/psCF4O2Etching.hpp>
 #include <models/psCSVFileProcess.hpp>
 #include <models/psDirectionalProcess.hpp>
@@ -913,6 +914,27 @@ template <int D> void bindApi(py::module &module) {
       .def("setParameters", &CF4O2Etching<T, D>::setParameters)
       .def("getParameters", &CF4O2Etching<T, D>::getParameters,
            py::return_value_policy::reference);
+
+  // CF4Ar Etching
+  py::class_<CF4ArEtching<T, D>, SmartPointer<CF4ArEtching<T, D>>>(
+      module, "CF4ArEtching", processModel)
+      .def(py::init<>())
+      .def(py::init(&SmartPointer<CF4ArEtching<T, D>>::template New<
+                    double /*ionFlux*/, double /*fluorineFlux*/,
+                    double /*cfxFlux*/, T /*meanIonEnergy*/,
+                    T /*sigmaIonEnergy*/, T /*ionExponent*/,
+                    T /*cfxSputterYield*/, T /*etchStopDepth*/>),
+           py::arg("ionFlux"), py::arg("fluorineFlux"), py::arg("cfxFlux") = 0.,
+           py::arg("meanIonEnergy") = 100., py::arg("sigmaIonEnergy") = 10.,
+           py::arg("ionExponent") = 100., py::arg("cfxSputterYield") = 3.,
+           py::arg("etchStopDepth") = std::numeric_limits<T>::lowest())
+      .def(py::init(&SmartPointer<CF4ArEtching<T, D>>::template New<
+                    const PlasmaEtchingParameters<T> &>),
+           py::arg("parameters"))
+      .def("setParameters", &CF4ArEtching<T, D>::setParameters)
+      .def("getParameters", &CF4ArEtching<T, D>::getParameters,
+           py::return_value_policy::reference)
+      .def_static("defaultParameters", &CF4ArEtching<T, D>::defaultParameters);
 
   // Fluorocarbon Etching
   py::class_<FluorocarbonEtching<T, D>,

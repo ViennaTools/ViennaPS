@@ -416,6 +416,11 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &PlasmaEtchingParameters<T>::passivationFlux)
       .def_readwrite("etchStopDepth",
                      &PlasmaEtchingParameters<T>::etchStopDepth)
+      .def_readwrite("etchantDiffusionCoefficient",
+                     &PlasmaEtchingParameters<T>::etchantDiffusionCoefficient)
+      .def_readwrite(
+          "passivationDiffusionCoefficient",
+          &PlasmaEtchingParameters<T>::passivationDiffusionCoefficient)
       .def_readwrite("rateFactors", &PlasmaEtchingParameters<T>::rateFactors)
       .def_readwrite("beta_E", &PlasmaEtchingParameters<T>::beta_E)
       .def_readwrite("beta_P", &PlasmaEtchingParameters<T>::beta_P)

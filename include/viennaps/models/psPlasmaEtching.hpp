@@ -139,6 +139,22 @@ public:
     return SmartPointer<std::vector<NumericType>>::New(std::move(etchRate));
   }
 
+  std::optional<std::unordered_map<std::string, NumericType>>
+  getDiffusionCoefficients() const override {
+    // Operator-split surface diffusion of the coverage fields. The keys must
+    // match the coverage names created in initializeCoverages so the process
+    // applies the diffusion to the computed coverages.
+    std::unordered_map<std::string, NumericType> coefficients;
+    if (params.etchantDiffusionCoefficient > 0.)
+      coefficients["eCoverage"] = params.etchantDiffusionCoefficient;
+    if (params.passivationDiffusionCoefficient > 0.)
+      coefficients["pCoverage"] = params.passivationDiffusionCoefficient;
+
+    if (coefficients.empty())
+      return std::nullopt;
+    return coefficients;
+  }
+
   void updateCoverages(SmartPointer<PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
     // update coverages based on fluxes
