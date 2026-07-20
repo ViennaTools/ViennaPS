@@ -117,7 +117,10 @@ jobs:
               --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows" `
               --config-settings=cmake.define.VCPKG_INSTALLED_DIR="$vcpkgInstalled" `
               --config-settings=cmake.define.VCPKG_MANIFEST_INSTALL=OFF
-            $cmakeExtra = "$cmakeExtra -DCPM_ViennaLS_SOURCE=$((Get-Location).Path)/_viennals"
+            # Forward slashes: CMake treats a backslash as an escape, so a raw
+            # Windows path like D:\a\ViennaPS fails to parse on '\a'.
+            $viennalsSource = (Get-Location).Path.Replace('\', '/')
+            $cmakeExtra = "$cmakeExtra -DCPM_ViennaLS_SOURCE=$viennalsSource/_viennals"
           }
           $env:CMAKE_ARGS = $cmakeExtra
           .\venv\Scripts\python -m pip install . --no-deps `
