@@ -1,6 +1,6 @@
 {
   "name": "viennaps-ci",
-  "version-string": "4.6.1",
+  "version-string": "4.6.2",
   "dependencies": [
     "vtk",
     "embree",
