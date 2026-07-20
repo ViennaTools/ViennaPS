@@ -978,7 +978,19 @@ template <int D> void bindApi(py::module &module) {
            py::arg("headFraction"),
            py::arg("headLateralMu"), py::arg("headLateralSigma"),
            py::arg("tailLateralMu"), py::arg("tailLateralSigma"),
-           "Weighted sum of two Pearson IV components (head fraction in head).");
+           "Weighted sum of two Pearson IV components (head fraction in head).")
+      .def(py::init<const PearsonIVParameters<T> &,
+                    const PearsonIVParameters<T> &, T, T, T, T, T,
+                    SmartPointer<viennacs::ScreenEnergyLoss<T>>, T>(),
+           py::arg("headParams"), py::arg("tailParams"),
+           py::arg("headFraction"),
+           py::arg("headLateralMu"), py::arg("headLateralSigma"),
+           py::arg("tailLateralMu"), py::arg("tailLateralSigma"),
+           py::arg("screenModel"), py::arg("screenThickness"),
+           "As above, but with a screen energy-loss model applied: the "
+           "projected range is scaled for the given screen thickness "
+           "(k==1 at the model's reference thickness, leaving shapes "
+           "untouched there).");
 
   // Pearson IV with exponential channeling tail.
   py::class_<ImplantPearsonIVChanneling<T, D>,

@@ -2,6 +2,7 @@
 
 #include "psImplantConstants.hpp"
 #include <csImplantModel.hpp>
+#include <csScreenEnergyLoss.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -159,16 +160,20 @@ template <class NumericType, int D>
 class ImplantPearsonIV final : public ImplantModel<NumericType, D> {
 public:
   ImplantPearsonIV(const constants::PearsonIVParameters<NumericType> &params,
-                   NumericType lateralMu, NumericType lateralSigma)
-      : ImplantPearsonIV(params, LateralStraggleParameters<NumericType>{
-                                     LateralStraggleModel::Constant, lateralMu,
-                                     lateralSigma}) {}
+                   NumericType lateralMu, NumericType lateralSigma,
+                   NumericType rangeScale = NumericType(1))
+      : ImplantPearsonIV(params,
+                         LateralStraggleParameters<NumericType>{
+                             LateralStraggleModel::Constant, lateralMu,
+                             lateralSigma},
+                         rangeScale) {}
 
   ImplantPearsonIV(
       const constants::PearsonIVParameters<NumericType> &params,
-      const LateralStraggleParameters<NumericType> &lateralParams)
-      : params_(params), lateralParams_(lateralParams),
-        maxDepth_(std::max(params.mu + NumericType(8) * params.sigma,
+      const LateralStraggleParameters<NumericType> &lateralParams,
+      NumericType rangeScale = NumericType(1))
+      : params_(scaledRange(params, rangeScale)), lateralParams_(lateralParams),
+        maxDepth_(std::max(params_.mu + NumericType(8) * params_.sigma,
                            NumericType(0))) {
     const auto integrationStep =
         std::max(params_.sigma / NumericType(50), NumericType(1e-3));
@@ -203,6 +208,16 @@ protected:
     if (depth < NumericType(0))
       return NumericType(0);
     return constants::PearsonIV(depth, params_);
+  }
+
+  // Screen energy-loss: scale the projected range mu -> rangeScale * mu while
+  // leaving the straggle/shape (sigma, beta, gamma) unchanged, so the Pearson-IV
+  // stays valid. rangeScale == 1 leaves the shape untouched.
+  static constants::PearsonIVParameters<NumericType>
+  scaledRange(constants::PearsonIVParameters<NumericType> params,
+              NumericType rangeScale) {
+    params.mu *= rangeScale;
+    return params;
   }
 
 private:
@@ -305,22 +320,42 @@ public:
       const constants::PearsonIVParameters<NumericType> &tailParams,
       NumericType headFraction, NumericType headLateralMu,
       NumericType headLateralSigma, NumericType tailLateralMu,
-      NumericType tailLateralSigma)
+      NumericType tailLateralSigma, NumericType rangeScale = NumericType(1))
       : ImplantDualPearsonIV(
             headParams, tailParams, headFraction,
             LateralStraggleParameters<NumericType>{LateralStraggleModel::Constant,
                                                    headLateralMu, headLateralSigma},
             LateralStraggleParameters<NumericType>{LateralStraggleModel::Constant,
-                                                   tailLateralMu, tailLateralSigma}) {}
+                                                   tailLateralMu, tailLateralSigma},
+            rangeScale) {}
+
+  // Screen energy-loss: an ion passing through `screenThickness` of screen loses
+  // energy, so its projected range is reduced by the factor the screen model
+  // returns (mu -> k*mu, straggle unchanged). k == 1 at the model's reference
+  // thickness, so the calibrated shapes are untouched there.
+  ImplantDualPearsonIV(
+      const constants::PearsonIVParameters<NumericType> &headParams,
+      const constants::PearsonIVParameters<NumericType> &tailParams,
+      NumericType headFraction, NumericType headLateralMu,
+      NumericType headLateralSigma, NumericType tailLateralMu,
+      NumericType tailLateralSigma,
+      SmartPointer<viennacs::ScreenEnergyLoss<NumericType>> screenModel,
+      NumericType screenThickness)
+      : ImplantDualPearsonIV(
+            headParams, tailParams, headFraction, headLateralMu,
+            headLateralSigma, tailLateralMu, tailLateralSigma,
+            screenModel ? screenModel->rangeScale(screenThickness)
+                        : NumericType(1)) {}
 
   ImplantDualPearsonIV(
       const constants::PearsonIVParameters<NumericType> &headParams,
       const constants::PearsonIVParameters<NumericType> &tailParams,
       NumericType headFraction,
       const LateralStraggleParameters<NumericType> &headLateralParams,
-      const LateralStraggleParameters<NumericType> &tailLateralParams)
-      : headImplant_(headParams, headLateralParams),
-        tailImplant_(tailParams, tailLateralParams),
+      const LateralStraggleParameters<NumericType> &tailLateralParams,
+      NumericType rangeScale = NumericType(1))
+      : headImplant_(headParams, headLateralParams, rangeScale),
+        tailImplant_(tailParams, tailLateralParams, rangeScale),
         headFraction_(
             std::clamp(headFraction, NumericType(0), NumericType(1))),
         maxDepth_(std::max(headImplant_.getMaxDepth(),

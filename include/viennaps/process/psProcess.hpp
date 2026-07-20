@@ -28,8 +28,21 @@ inline bool gpuAvailable() {
   if (deviceContext)
     return deviceContext->foundCuda();
 
-  deviceContext = DeviceContext::createContext();
-  return deviceContext != nullptr && deviceContext->foundCuda();
+  CudaHandle cudaHandle;
+  if (!cudaHandle.isLoaded()) {
+    return false;
+  }
+
+  if (cudaHandle.cuInit_(0) != CUDA_SUCCESS) {
+    return false;
+  }
+
+  int numDevices = 0;
+  if (cudaHandle.cuDeviceGetCount_(&numDevices) != CUDA_SUCCESS) {
+    return false;
+  }
+
+  return numDevices > 0;
 #else
   return false;
 #endif
@@ -237,10 +250,21 @@ private:
       return deviceContext;
     }
 
+    if (!gpuAvailable()) {
+      VIENNACORE_LOG_ERROR("No CUDA capable device available.");
+      return nullptr;
+    }
+
     VIENNACORE_LOG_INFO("Auto-generating GPU device context.");
 
-    deviceContext =
-        DeviceContext::createContext(VIENNACORE_KERNELS_PATH, gpuDeviceId_);
+    try {
+      deviceContext =
+          DeviceContext::createContext(VIENNACORE_KERNELS_PATH, gpuDeviceId_);
+    } catch (const std::exception &e) {
+      VIENNACORE_LOG_ERROR("Failed to create GPU device context: " +
+                           std::string(e.what()));
+      return nullptr;
+    }
     if (!deviceContext) {
       VIENNACORE_LOG_ERROR("Failed to create GPU device context.");
     }

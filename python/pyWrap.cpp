@@ -724,6 +724,23 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                ", gamma=" + std::to_string(p.gamma) + ")";
       });
 
+  // Screen-oxide energy-loss (range-reduction) model — analytic power-law ranges
+  py::class_<viennacs::ScreenEnergyLoss<T>,
+             SmartPointer<viennacs::ScreenEnergyLoss<T>>>(module,
+                                                          "ScreenEnergyLoss")
+      .def(py::init<T, T, T, T, T>(), py::arg("screenRangePrefactor"),
+           py::arg("screenRangeExponent"), py::arg("substrateRangeExponent"),
+           py::arg("energyKeV"), py::arg("referenceThicknessNm"),
+           "Analytic screen energy-loss model: power-law ranges Rp(E)=a*E^p. "
+           "Returns the projected-range scale factor k relative to the "
+           "reference screen thickness (k==1 at the reference).")
+      .def("rangeScale", &viennacs::ScreenEnergyLoss<T>::rangeScale,
+           py::arg("screenThicknessNm"),
+           "Projected-range scale factor k for the given screen thickness.")
+      .def("residualEnergy", &viennacs::ScreenEnergyLoss<T>::residualEnergy,
+           py::arg("screenThicknessNm"),
+           "Residual ion energy [keV] after passing through the screen.");
+
   //   ***************************************************************************
   //                                  MAIN API
   //   ***************************************************************************
