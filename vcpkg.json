@@ -3,7 +3,14 @@
   "version-string": "4.6.1",
   "dependencies": [
     "vtk",
-    "embree"
+    "embree",
+    {
+      "name": "hdf5",
+      "default-features": false,
+      "features": [
+        "zlib"
+      ]
+    }
   ],
   "builtin-baseline": "72d876b20f06129a1b1e0db80c7075fe3e419d7c"
 }
