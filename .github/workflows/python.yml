@@ -117,7 +117,10 @@ jobs:
               --config-settings=cmake.define.VCPKG_TARGET_TRIPLET="x64-windows" `
               --config-settings=cmake.define.VCPKG_INSTALLED_DIR="$vcpkgInstalled" `
               --config-settings=cmake.define.VCPKG_MANIFEST_INSTALL=OFF
-            $cmakeExtra = "$cmakeExtra -DCPM_ViennaLS_SOURCE=$((Get-Location).Path)/_viennals"
+            # Forward slashes: CMake treats a backslash as an escape, so a raw
+            # Windows path like D:\a\ViennaPS fails to parse on '\a'.
+            $viennalsSource = (Get-Location).Path.Replace('\', '/')
+            $cmakeExtra = "$cmakeExtra -DCPM_ViennaLS_SOURCE=$viennalsSource/_viennals"
           }
           $env:CMAKE_ARGS = $cmakeExtra
           .\venv\Scripts\python -m pip install . --no-deps `
@@ -264,8 +267,8 @@ jobs:
           CIBW_ARCHS_WINDOWS: auto64
           CIBW_ARCHS_MACOS: ${{ matrix.archs }}
           CIBW_BEFORE_TEST: >-
-            python -m pip install "ViennaLS>=5.8.3" ||
-            python -m pip install "git+https://github.com/ViennaTools/ViennaLS.git@v5.8.3#egg=ViennaLS"
+            python -m pip install "ViennaLS>=5.8.5" ||
+            python -m pip install "git+https://github.com/ViennaTools/ViennaLS.git@v5.8.5#egg=ViennaLS"
           CIBW_TEST_COMMAND: >-
             python -c "import viennaps;
             print(viennaps.__file__);

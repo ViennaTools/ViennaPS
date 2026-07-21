@@ -113,6 +113,23 @@ if(VIENNAPS_USE_GPU)
   install(DIRECTORY "${VIENNACORE_NVCC_PTX_DIR}/" DESTINATION "${VIENNAPS_PYTHON_PACKAGE_NAME}/ptx")
 endif()
 
+# ViennaLS keeps its CUDA BiCGSTAB kernels in a separate shared library that it
+# opens with dlopen() on first use, so that ViennaLS (and therefore ViennaPS)
+# carries no hard dependency on the CUDA runtime and still imports on machines
+# without one. Nothing links against it, so it has to be installed explicitly,
+# next to the extension module where ViennaLS's loader looks for it.
+if(TARGET ViennaLS_GPU)
+  set_target_properties(
+    ViennaLS_GPU PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${VIENNAPS_LIBRARY_OUTPUT_DIR}"
+                            RUNTIME_OUTPUT_DIRECTORY "${VIENNAPS_LIBRARY_OUTPUT_DIR}")
+  add_dependencies(${VIENNAPS_PYTHON_MODULE_NAME} ViennaLS_GPU)
+
+  install(
+    TARGETS ViennaLS_GPU
+    LIBRARY DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME}
+    RUNTIME DESTINATION ${VIENNAPS_PYTHON_PACKAGE_NAME})
+endif()
+
 # Install into site-packages/<pkg>/  (RELATIVE path!)
 if(WIN32)
   install(
