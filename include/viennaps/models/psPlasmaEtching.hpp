@@ -20,11 +20,15 @@ class PlasmaEtchingSurfaceModel : public SurfaceModel<NumericType> {
 public:
   using SurfaceModel<NumericType>::coverages;
   using SurfaceModel<NumericType>::surfaceData;
-  const PlasmaEtchingParameters<NumericType> &params;
+  const PlasmaEtchingParameters<NumericType> &params_;
+
+  double totalSputterRate_ = 0.;
+  double totalIonEnhancedRate_ = 0.;
+  double totalChemicalRate_ = 0.;
 
   explicit PlasmaEtchingSurfaceModel(
       const PlasmaEtchingParameters<NumericType> &pParams)
-      : params(pParams) {}
+      : params_(pParams) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
@@ -60,7 +64,7 @@ public:
     std::vector<NumericType> etchRate(numPoints, 0.);
 
     std::vector<NumericType> ionEnhancedFlux, ionSputterFlux;
-    if (params.ionFlux > 0) {
+    if (params_.ionFlux > 0) {
       ionEnhancedFlux = *fluxes->getScalarData("ionEnhancedFlux");
       ionSputterFlux = *fluxes->getScalarData("ionSputterFlux");
     } else {
@@ -89,35 +93,42 @@ public:
     const double unitConversion =
         units::Time::convertSecond() / units::Length::convertNanometer();
 
-#pragma omp parallel for reduction(|| : stop)
+    double totalSputterRate = 0.;
+    double totalIonEnhancedRate = 0.;
+    double totalChemicalRate = 0.;
+
+#pragma omp parallel for reduction(|| : stop)                                  \
+    reduction(+ : totalSputterRate, totalIonEnhancedRate, totalChemicalRate)
     for (size_t i = 0; i < numPoints; ++i) {
-      if (coordinates[i][D - 1] < params.etchStopDepth || stop) {
+      if (coordinates[i][D - 1] < params_.etchStopDepth || stop) {
         stop = true;
         continue;
       }
 
-      const auto sputterRate = ionSputterFlux[i] * params.ionFlux;
+      const auto rateFactor =
+          params_.rateFactors.get(Material::fromLegacyId(materialIds[i]));
+      const auto sputterRate = ionSputterFlux[i] * params_.ionFlux;
       const auto ionEnhancedRate =
-          eCoverage->at(i) * ionEnhancedFlux[i] * params.ionFlux;
+          eCoverage->at(i) * ionEnhancedFlux[i] * params_.ionFlux;
       const auto chemicalRate =
-          params.Substrate.k_sigma * eCoverage->at(i) / 4.;
+          params_.Substrate.k_sigma * eCoverage->at(i) / 4.;
 
       if (MaterialMap::isHardmask(materialIds[i])) {
-        etchRate[i] = -(1 / params.Mask.rho) * sputterRate * unitConversion;
+        etchRate[i] = -(1 / params_.Mask.rho) * sputterRate * unitConversion;
         if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = 0.;
           chRate->at(i) = 0.;
         }
       } else if (MaterialMap::isMaterial(materialIds[i], Material::Polymer)) {
-        etchRate[i] = -(1 / params.Polymer.rho) * sputterRate * unitConversion;
+        etchRate[i] = -(1 / params_.Polymer.rho) * sputterRate * unitConversion;
         if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = 0.;
           chRate->at(i) = 0.;
         }
       } else {
-        etchRate[i] = -(1 / params.Substrate.rho) *
+        etchRate[i] = -(1 / params_.Substrate.rho) *
                       (chemicalRate + sputterRate + ionEnhancedRate) *
                       unitConversion;
         if (Logger::hasIntermediate()) {
@@ -125,11 +136,18 @@ public:
           ieRate->at(i) = ionEnhancedRate;
           chRate->at(i) = chemicalRate;
         }
+
+        totalSputterRate += sputterRate * rateFactor;
+        totalIonEnhancedRate += ionEnhancedRate * rateFactor;
+        totalChemicalRate += chemicalRate * rateFactor;
       }
 
-      etchRate[i] *=
-          params.rateFactors.get(Material::fromLegacyId(materialIds[i]));
+      etchRate[i] *= rateFactor;
     }
+
+    totalSputterRate_ += totalSputterRate;
+    totalIonEnhancedRate_ += totalIonEnhancedRate;
+    totalChemicalRate_ += totalChemicalRate;
 
     if (stop) {
       std::fill(etchRate.begin(), etchRate.end(), 0.);
@@ -148,19 +166,19 @@ public:
                              *ionEnhancedFlux = nullptr,
                              *ionEnhancedPassivationFlux = nullptr;
 
-    if (params.etchantFlux > 0) {
+    if (params_.etchantFlux > 0) {
       etchantFlux = fluxes->getScalarData("etchantFlux");
     } else {
       etchantFlux = &zero;
     }
 
-    if (params.passivationFlux > 0) {
+    if (params_.passivationFlux > 0) {
       passivationFlux = fluxes->getScalarData("passivationFlux");
     } else {
       passivationFlux = &zero;
     }
 
-    if (params.ionFlux > 0) {
+    if (params_.ionFlux > 0) {
       ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
       ionEnhancedPassivationFlux =
           fluxes->getScalarData("ionEnhancedPassivationFlux");
@@ -178,29 +196,47 @@ public:
 
 #pragma omp parallel for
     for (size_t i = 0; i < numPoints; ++i) {
-      auto Gb_E = etchantFlux->at(i) * params.etchantFlux;
-      auto Gb_P = passivationFlux->at(i) * params.passivationFlux;
-      auto GY_ie = ionEnhancedFlux->at(i) * params.ionFlux;
-      auto GY_p = ionEnhancedPassivationFlux->at(i) * params.ionFlux;
+      auto Gb_E = etchantFlux->at(i) * params_.etchantFlux;
+      auto Gb_P = passivationFlux->at(i) * params_.passivationFlux;
+      auto GY_ie = ionEnhancedFlux->at(i) * params_.ionFlux;
+      auto GY_p = ionEnhancedPassivationFlux->at(i) * params_.ionFlux;
 
       if (Gb_P < 1e-6) {
         // No passivation case - avoid division by zero
         eCoverage->at(i) =
             Gb_E < 1e-6 ? 0.
-                        : Gb_E / (Gb_E + params.Substrate.k_sigma + 2 * GY_ie);
+                        : Gb_E / (Gb_E + params_.Substrate.k_sigma + 2 * GY_ie);
         pCoverage->at(i) = 0.;
       } else if (Gb_E < 1e-6) {
         // No etchant case - avoid division by zero
         eCoverage->at(i) = 0.;
-        pCoverage->at(i) = Gb_P / (Gb_P + params.Substrate.beta_sigma + GY_p);
+        pCoverage->at(i) = Gb_P / (Gb_P + params_.Substrate.beta_sigma + GY_p);
       } else {
         // Normal case with both fluxes present
-        auto a = (params.Substrate.k_sigma + 2 * GY_ie) / Gb_E;
-        auto b = (params.Substrate.beta_sigma + GY_p) / Gb_P;
+        auto a = (params_.Substrate.k_sigma + 2 * GY_ie) / Gb_E;
+        auto b = (params_.Substrate.beta_sigma + GY_p) / Gb_P;
         eCoverage->at(i) = 1 / (1 + (a * (1 + 1 / b)));
         pCoverage->at(i) = 1 / (1 + (b * (1 + 1 / a)));
       }
     }
+  }
+
+  void resetTotalRates() {
+    totalSputterRate_ = 0.;
+    totalIonEnhancedRate_ = 0.;
+    totalChemicalRate_ = 0.;
+  }
+
+  void logTotalRates() {
+    double totalRate =
+        totalSputterRate_ + totalIonEnhancedRate_ + totalChemicalRate_;
+    VIENNACORE_LOG_INFO("Substrate etch rate components (normalized):");
+    VIENNACORE_LOG_INFO("Chemical: " +
+                        std::to_string(totalChemicalRate_ / totalRate));
+    VIENNACORE_LOG_INFO("Ion Enhanced: " +
+                        std::to_string(totalIonEnhancedRate_ / totalRate));
+    VIENNACORE_LOG_INFO("Sputter: " +
+                        std::to_string(totalSputterRate_ / totalRate));
   }
 };
 

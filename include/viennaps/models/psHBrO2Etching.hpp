@@ -28,6 +28,26 @@ public:
 
   ~HBrO2Etching() override { this->processData.free(); }
 
+  void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                  const NumericType processDuration) override {
+    auto surfModel = std::dynamic_pointer_cast<
+        impl::PlasmaEtchingSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    assert(surfModel != nullptr &&
+           "Surface model is not of type PlasmaEtchingSurfaceModel");
+    surfModel->resetTotalRates();
+  }
+
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) override {
+    auto surfModel = std::dynamic_pointer_cast<
+        impl::PlasmaEtchingSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    assert(surfModel != nullptr &&
+           "Surface model is not of type PlasmaEtchingSurfaceModel");
+    surfModel->logTotalRates();
+  }
+
 private:
   void initializeModel() {
     // particles
@@ -225,6 +245,26 @@ public:
     defParams.Ions.thetaRMin = constants::degToRad(70.);
     defParams.Ions.thetaRMax = constants::degToRad(90.);
     return defParams;
+  }
+
+  void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                  const NumericType processDuration) override {
+    auto surfModel = std::dynamic_pointer_cast<
+        impl::PlasmaEtchingSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    assert(surfModel != nullptr &&
+           "Surface model is not of type PlasmaEtchingSurfaceModel");
+    surfModel->resetTotalRates();
+  }
+
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) override {
+    auto surfModel = std::dynamic_pointer_cast<
+        impl::PlasmaEtchingSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    assert(surfModel != nullptr &&
+           "Surface model is not of type PlasmaEtchingSurfaceModel");
+    surfModel->logTotalRates();
   }
 
 private:
