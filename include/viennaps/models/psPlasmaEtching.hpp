@@ -429,4 +429,145 @@ public:
     return {fluxLabel};
   }
 };
-} // namespace viennaps::impl
+
+template <typename NumericType, int D>
+auto castSurfaceModelToPlasmaEtching(
+    SmartPointer<SurfaceModel<NumericType>> surfaceModel) {
+  auto model =
+      std::dynamic_pointer_cast<PlasmaEtchingSurfaceModel<NumericType, D>>(
+          surfaceModel);
+  if (!model) {
+    VIENNACORE_LOG_ERROR(
+        "Surface model is not of type PlasmaEtchingSurfaceModel");
+  }
+  return model;
+}
+
+template <typename NumericType, int D>
+double getSubstratePosition(
+    SmartPointer<Domain<NumericType, D>> domain,
+    SmartPointer<PlasmaEtchingSurfaceModel<NumericType, D>> surfModel) {
+
+  auto surface = domain->getDiskMesh();
+  const auto &nodes = surface->getNodes();
+  const auto materialIds = surface->getMaterialIds();
+  const auto &materialRates = surfModel->params_.rateFactors;
+
+  double position = std::numeric_limits<double>::max();
+#pragma omp parallel for reduction(min : position)
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    auto material = Material::fromLegacyId(materialIds->at(i));
+    if (MaterialMap::isMaterial(material, Material::Mask) ||
+        MaterialMap::isMaterial(material, Material::Polymer) ||
+        materialRates.get(material) < 1e-6) {
+      continue;
+    }
+
+    position = std::min(position, static_cast<double>(nodes[i][D - 1]));
+  }
+
+  if (position == std::numeric_limits<double>::max()) {
+    VIENNACORE_LOG_WARNING(
+        "No substrate material found in the domain. Returning 0 as position.");
+    position = 0.;
+  }
+
+  return position;
+}
+
+VIENNAPS_TEMPLATE_ND(NumericType, D)
+class PlasmaModelCPU : public ProcessModelCPU<NumericType, D> {
+  bool initialized = false;
+  double initialPosition;
+
+public:
+  void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                  const NumericType processDuration) override {
+    if (initialized) {
+      return;
+    }
+
+    auto surfModel = castSurfaceModelToPlasmaEtching<NumericType, D>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->resetTotalRates();
+      initialPosition = getSubstratePosition<NumericType, D>(domain, surfModel);
+      VIENNACORE_LOG_DEBUG(
+          "Initial substrate position: " + std::to_string(initialPosition) +
+          " " + units::Length::toString());
+    }
+
+    initialized = true;
+  }
+
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) override {
+    auto surfModel = castSurfaceModelToPlasmaEtching<NumericType, D>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->logTotalRates();
+      double finalPosition =
+          getSubstratePosition<NumericType, D>(domain, surfModel);
+      VIENNACORE_LOG_DEBUG(
+          "Final substrate position: " + std::to_string(finalPosition) + " " +
+          units::Length::toString());
+      double etchDepth = std::abs(initialPosition - finalPosition);
+      VIENNACORE_LOG_INFO("Etch depth: " + std::to_string(etchDepth) + " " +
+                          units::Length::toString());
+    }
+
+    initialized = false;
+  }
+};
+
+#ifdef VIENNACORE_COMPILE_GPU
+VIENNAPS_TEMPLATE_ND(NumericType, D)
+class PlasmaModelGPU : public viennaps::gpu::ProcessModelGPU<NumericType, D> {
+  bool initialized = false;
+  double initialPosition;
+
+public:
+  void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                  const NumericType processDuration) override {
+    if (initialized) {
+      return;
+    }
+
+    auto surfModel = castSurfaceModelToPlasmaEtching<NumericType, D>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->resetTotalRates();
+      initialPosition = getSubstratePosition<NumericType, D>(domain, surfModel);
+      VIENNACORE_LOG_DEBUG(
+          "Initial substrate position: " + std::to_string(initialPosition) +
+          " " + units::Length::toString());
+    }
+
+    initialized = true;
+  }
+
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) override {
+    auto surfModel = castSurfaceModelToPlasmaEtching<NumericType, D>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->logTotalRates();
+      double finalPosition =
+          getSubstratePosition<NumericType, D>(domain, surfModel);
+      VIENNACORE_LOG_DEBUG(
+          "Final substrate position: " + std::to_string(finalPosition) + " " +
+          units::Length::toString());
+      double etchDepth = std::abs(initialPosition - finalPosition);
+      VIENNACORE_LOG_INFO("Etch depth: " + std::to_string(etchDepth) + " " +
+                          units::Length::toString());
+    }
+
+    initialized = false;
+  }
+};
+#endif
+}; // namespace viennaps::impl

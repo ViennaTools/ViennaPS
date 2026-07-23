@@ -18,7 +18,8 @@ using namespace viennacore;
 namespace gpu {
 /// GPU Version of the SF6/O2 plasma etching model
 template <typename NumericType, int D>
-class SF6O2Etching final : public ProcessModelGPU<NumericType, D> {
+class SF6O2Etching final
+    : public viennaps::impl::PlasmaModelGPU<NumericType, D> {
 public:
   explicit SF6O2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
       : params(pParams), deviceParams(pParams) {
@@ -26,26 +27,6 @@ public:
   }
 
   ~SF6O2Etching() override { this->processData.free(); }
-
-  void initialize(SmartPointer<Domain<NumericType, D>> domain,
-                  const NumericType processDuration) override {
-    auto surfModel = std::dynamic_pointer_cast<
-        viennaps::impl::PlasmaEtchingSurfaceModel<NumericType, D>>(
-        this->getSurfaceModel());
-    assert(surfModel != nullptr &&
-           "Surface model is not of type PlasmaEtchingSurfaceModel");
-    surfModel->resetTotalRates();
-  }
-
-  void finalize(SmartPointer<Domain<NumericType, D>> domain,
-                const NumericType processedDuration) override {
-    auto surfModel = std::dynamic_pointer_cast<
-        viennaps::impl::PlasmaEtchingSurfaceModel<NumericType, D>>(
-        this->getSurfaceModel());
-    assert(surfModel != nullptr &&
-           "Surface model is not of type PlasmaEtchingSurfaceModel");
-    surfModel->logTotalRates();
-  }
 
 private:
   void initializeModel() {
@@ -145,7 +126,7 @@ private:
 // Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
 // DOI: https://doi.org/10.1116/1.1830495
 template <typename NumericType, int D>
-class SF6O2Etching : public ProcessModelCPU<NumericType, D> {
+class SF6O2Etching : public impl::PlasmaModelCPU<NumericType, D> {
 public:
   SF6O2Etching() {
     params = defaultParameters();
@@ -245,26 +226,6 @@ public:
     defParams.Ions.thetaRMin = constants::degToRad(70.);
     defParams.Ions.thetaRMax = constants::degToRad(90.);
     return defParams;
-  }
-
-  void initialize(SmartPointer<Domain<NumericType, D>> domain,
-                  const NumericType processDuration) override {
-    auto surfModel = std::dynamic_pointer_cast<
-        impl::PlasmaEtchingSurfaceModel<NumericType, D>>(
-        this->getSurfaceModel());
-    assert(surfModel != nullptr &&
-           "Surface model is not of type PlasmaEtchingSurfaceModel");
-    surfModel->resetTotalRates();
-  }
-
-  void finalize(SmartPointer<Domain<NumericType, D>> domain,
-                const NumericType processedDuration) override {
-    auto surfModel = std::dynamic_pointer_cast<
-        impl::PlasmaEtchingSurfaceModel<NumericType, D>>(
-        this->getSurfaceModel());
-    assert(surfModel != nullptr &&
-           "Surface model is not of type PlasmaEtchingSurfaceModel");
-    surfModel->logTotalRates();
   }
 
 private:
