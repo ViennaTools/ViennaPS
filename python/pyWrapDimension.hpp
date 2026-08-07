@@ -1144,6 +1144,25 @@ template <int D> void bindApi(py::module &module) {
            "Native-oxide seed thickness in µm when no SiO2 layer exists.")
       .def("setTransferCoefficient", &Oxidation<T, D>::setTransferCoefficient,
            py::arg("coefficient"), "Gas-transfer coefficient in µm/hr.")
+      .def("setInitialTimeStep", &Oxidation<T, D>::setInitialTimeStep,
+           py::arg("dtHr"),
+           "Cap only the FIRST internal substep (hr); 0 = model default "
+           "(0.004 hr conservative cold start).")
+      .def("setMaskBarrierOnly", &Oxidation<T, D>::setMaskBarrierOnly,
+           py::arg("enable"),
+           "Mask acts as a diffusion barrier only; mechanically transparent, "
+           "carried by the oxide. Exact for a full-width mask.")
+      .def("setDealGroveRates", &Oxidation<T, D>::setDealGroveRates,
+           py::arg("B"), py::arg("BoA"),
+           "Override Deal-Grove B (um^2/hr) and B/A (um/hr); 0 = Arrhenius "
+           "table.")
+      .def("setMaskPermeabilityRatio",
+           &Oxidation<T, D>::setMaskPermeabilityRatio,
+           py::arg("permeability_ratio"),
+           "Diffusion through the mask: the mask body is meshed into the "
+           "oxidant solve with D_mask = D_SiO2/gamma. The level-set mask "
+           "thickness is the physical barrier thickness and must be grid-"
+           "resolved. 0 = impermeable (default).")
       .def(
           "setReactionActivationVolume",
           &Oxidation<T, D>::setReactionActivationVolume, py::arg("volume"),

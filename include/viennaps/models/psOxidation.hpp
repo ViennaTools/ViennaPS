@@ -77,9 +77,19 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   SiliconOrientation orientation_ = SiliconOrientation::Si100;
   NumericType timeStep_ =
       0.; // 0 = no user cap; internal steps remain CFL-limited
+  // First internal substep cap (hr).  0 = model default (0.004): start where
+  // the cold coupled solve accepts, ramp recovers full step size.
+  NumericType initialTimeStep_ = NumericType(0);
   NumericType cflFactor_ = NumericType(0.499);
   NumericType initialOxideThickness_ = NumericType(0.002); // µm (2 nm)
   NumericType transferCoefficient_ = NumericType(100);
+  // Meshed mask diffusion: gamma = D_SiO2/D_mask.  The mask body joins the
+  // oxidant diffusion solve with D/gamma; its resistance follows the actual
+  // level-set geometry.  0 = impermeable mask (upstream default).
+  NumericType maskBarrierPermeabilityRatio_ = NumericType(0);
+  bool maskBarrierOnly_ = false;
+  NumericType rateB_override_ = NumericType(0);   // 0 = use Arrhenius table
+  NumericType rateBoA_override_ = NumericType(0); // 0 = use Arrhenius table
   NumericType reactionActivationVolume_ = NumericType(1.76e-35);
   NumericType diffusionActivationVolume_ = NumericType(0);
   std::size_t maxGridPoints_ = 5000000;
@@ -181,6 +191,9 @@ public:
   // Default (0): no user cap, only the CFL limit and remaining process time.
   void setTimeStep(NumericType dtHr) { timeStep_ = dtHr; }
 
+  // Cap only the FIRST internal substep (hr); 0 = model default (0.004 hr).
+  void setInitialTimeStep(NumericType dtHr) { initialTimeStep_ = dtHr; }
+
   // Courant number used for CFL-limited internal stepping (default 0.499).
   // The actual internal step is min(user timeStep cap, CFL step, remaining).
   void setCFLFactor(NumericType factor) {
@@ -195,6 +208,31 @@ public:
   // Gas-transfer coefficient in µm/hr; large values approximate C_s = C*.
   void setTransferCoefficient(NumericType coefficient) {
     transferCoefficient_ = coefficient;
+  }
+
+  // Diffusion THROUGH the mask: the mask body is meshed into the oxidant
+  // diffusion solve with D_mask = D_SiO2/gamma, so the oxidant enters the
+  // film's outer surface, diffuses across it, and continues through the oxide
+  // to react at the Si interface.  The film's resistance follows its actual
+  // geometry — the level-set mask thickness IS the barrier thickness e_c, and
+  // it must be resolved by the grid (>= ~3 cells).  For a uniform flat film
+  // this reproduces Deal-Grove A_coated = A + 2*gamma*e_c (Drob et al. 2025).
+  //   permeabilityRatio: gamma = D_SiO2/D_mask (dimensionless).
+  // 0 (default) = impermeable mask (upstream zero-flux behaviour).
+  void setMaskPermeabilityRatio(NumericType permeabilityRatio) {
+    maskBarrierPermeabilityRatio_ = permeabilityRatio;
+  }
+
+  // Mask as diffusion barrier only: mechanically transparent, carried by the
+  // oxide.  Exact for a full-width mask (uniform growth = pure translation).
+  void setMaskBarrierOnly(bool enable) { maskBarrierOnly_ = enable; }
+
+  // Override Deal-Grove parabolic rate B (um^2/hr) and linear rate B/A
+  // (um/hr), e.g. to match measured kinetics (Drob 2025 p-type substrate).
+  // Pass 0 for either to revert to the built-in Arrhenius table.
+  void setDealGroveRates(NumericType B, NumericType BoA) {
+    rateB_override_ = std::max(B, NumericType(0));
+    rateBoA_override_ = std::max(BoA, NumericType(0));
   }
 
   // Stress-coupling activation volume for interface reaction rate (m^3).
@@ -613,7 +651,16 @@ private:
         (rates.BoA > NumericType(0) && beta > NumericType(1))
             ? rates.BoA * (beta - NumericType(1)) / beta
             : (rates.BoA > NumericType(0) ? rates.BoA : NumericType(0));
-    const NumericType seedStep = cflStep(maxSurfaceVelocity);
+    // Conservative cold start: the first coupled solve is the most fragile
+    // (no warm start), and each rejected attempt burns the full coupling
+    // iteration budget before halving dt.  Start at a step the coupling
+    // accepts and let the x2 growth ramp recover full size within a few
+    // substeps.  initialTimeStep_ > 0 overrides the default cap.
+    const NumericType coldStartCap =
+        initialTimeStep_ > NumericType(0) ? initialTimeStep_
+                                          : NumericType(0.004);
+    const NumericType seedStep =
+        std::min(cflStep(maxSurfaceVelocity), coldStartCap);
     const NumericType userStepCap =
         timeStep_ > NumericType(0) ? timeStep_
                                    : std::numeric_limits<NumericType>::max();
@@ -682,6 +729,7 @@ private:
         }
         locos->setMaskBendingBounds(mbMin, mbMax);
       }
+      locos->setMaskBarrierOnly(maskBarrierOnly_);
       locos->setMaskCouplingIterations(maskCouplingIterations_);
       locos->setMaskCouplingTolerance(maskCouplingTolerance_);
     }
@@ -768,6 +816,14 @@ private:
     p.reactionRate = rates.BoA;
     p.transferCoefficient = transferCoefficient_;
     p.equilibriumConcentration = 1.;
+    // Meshed mask diffusion: the mask body joins the diffusion domain with
+    // D_mask = D/gamma.  Oxidant enters the film's outer surface at the
+    // ambient Robin BC, diffuses through it, crosses into the oxide, and
+    // reacts at the Si interface.  The film's resistance comes from its
+    // actual level-set geometry, so the LS mask thickness IS the physical
+    // barrier thickness e_c.
+    if (maskBarrierPermeabilityRatio_ > NumericType(0))
+      p.maskPermeabilityRatio = maskBarrierPermeabilityRatio_;
     p.oxidantMoleculeDensity = 1.;
     p.expansionCoefficient = 2.27; // V_SiO2 / V_Si
     p.velocitySign = -1.;          // reaction interface moves inward
@@ -833,6 +889,9 @@ private:
     p.mechanicsTolerance = mechanicsTolerance_;
     p.pressureIterations = pressureIterations_;
     p.stokesIterations = stokesIterations_;
+    // The harmonic (velocity-extension) solve shares the Stokes budget: its
+    // default 500 stagnates beyond ~60k nodes with the Jacobi preconditioner.
+    p.harmonicIterations = stokesIterations_;
     p.pressureTolerance = pressureTolerance_;
     p.stokesTolerance = stokesTolerance_;
     p.tolerance = 1e-7;
@@ -908,8 +967,15 @@ private:
     const NumericType T_K = temperature_ + NumericType(273.15);
     const auto row = dealGroveRow();
     const NumericType pressure = std::max(pressure_, NumericType(0));
-    return {pressure * row.B0 * std::exp(-row.EB / (kB_ * T_K)),
-            pressure * row.BoA0 * std::exp(-row.EBoA / (kB_ * T_K))};
+    const NumericType B =
+        (rateB_override_ > NumericType(0))
+            ? rateB_override_
+            : pressure * row.B0 * std::exp(-row.EB / (kB_ * T_K));
+    const NumericType BoA =
+        (rateBoA_override_ > NumericType(0))
+            ? rateBoA_override_
+            : pressure * row.BoA0 * std::exp(-row.EBoA / (kB_ * T_K));
+    return {B, BoA};
   }
 
   DealGroveRow dealGroveRow() const {

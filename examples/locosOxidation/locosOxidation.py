@@ -37,7 +37,19 @@ cfg = {
     "padOxideThickness":   0.03,
     "maskThickness":       0.05,
     "maskEdge":            0.0,
+    # Diffusion through the mask: gamma = D_SiO2/D_mask.  The mask body is
+    # meshed into the oxidant solve with D/gamma, so maskThickness is the
+    # physical barrier thickness and must be resolved by gridDelta.
+    # 0 = impermeable mask (default).
+    "maskPermeabilityRatio": 0.0,
+    # Mask as diffusion barrier only (mechanically transparent, carried by the
+    # oxide).  The mode for full-wafer barrier validation.
+    "maskBarrierOnly":     False,
+    # Deal-Grove overrides (0 = built-in Arrhenius table).
+    "dealGroveB":          0.0,
+    "dealGroveBoA":        0.0,
     "oxidationTime":       0.1,
+    "initialTimeStep":     0.0,   # first-substep cap; 0 = model default
     "timeStep":            0.01,
     "temperature":      1000.0,
     "pressure":            1.0,
@@ -70,6 +82,9 @@ cfg = {
     "maskAnchorBoundaryDirection": 0,
     "maskAnchorBoundarySide":   -1,
     "maskAnchorBoundaryLayers":  1,
+    # Roller anchor: clamp only the boundary-normal component so the mask can
+    # glide vertically at the mirror plane instead of being welded to it.
+    "maskAnchorNormalOnly":      False,
     "useGpu":            "cpu",    # cpu | gpu
     "gpuPreconditioner": "jacobi", # jacobi | ilu0
 }
@@ -165,7 +180,11 @@ if mask_thickness > 0.0:
     mask_geom = vls.MakeGeometry(
         mask_ls,
         vls.Box(
-            [-x_extent, pad_oxide_thickness - mask_contact_eps],
+            # Overhang the left domain edge: a box ending exactly on the
+            # boundary leaves uncovered oxide cells there, which classify as
+            # AMBIENT and admit unbarriered oxidant.  Same applies on the
+            # right for a full-width mask (set maskEdge > xExtent for that).
+            [-2.0 * x_extent, pad_oxide_thickness - mask_contact_eps],
             [mask_edge,  pad_oxide_thickness + mask_thickness],
         ),
     )
@@ -179,7 +198,13 @@ model.setTemperature(temperature)
 model.setOxidant(oxidant)
 model.setPressure(pressure)
 model.setOrientation(orientation)
+if cfg["maskPermeabilityRatio"] > 0.0:
+    model.setMaskPermeabilityRatio(cfg["maskPermeabilityRatio"])
+model.setMaskBarrierOnly(cfg["maskBarrierOnly"])
+if cfg["dealGroveB"] > 0.0 or cfg["dealGroveBoA"] > 0.0:
+    model.setDealGroveRates(cfg["dealGroveB"], cfg["dealGroveBoA"])
 model.setTimeStep(time_step)
+model.setInitialTimeStep(cfg["initialTimeStep"])
 model.setMaxGridPoints(max_grid_points)
 model.setMechanicsIterations(cfg["mechanicsIterations"])
 model.setPressureIterations(cfg["pressureIterations"])
@@ -209,6 +234,7 @@ mask_params.multigridSmootherOmega = cfg["maskSmootherOmega"]
 mask_params.anchorBoundaryDirection = cfg["maskAnchorBoundaryDirection"]
 mask_params.anchorBoundarySide = cfg["maskAnchorBoundarySide"]
 mask_params.anchorBoundaryLayers = cfg["maskAnchorBoundaryLayers"]
+mask_params.anchorNormalOnly = cfg["maskAnchorNormalOnly"]
 model.setMaskParameters(mask_params)
 model.setMechanicsTolerance(cfg["mechanicsTolerance"])
 model.setPressureTolerance(cfg["pressureTolerance"])
