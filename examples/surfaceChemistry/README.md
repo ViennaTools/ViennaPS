@@ -21,7 +21,7 @@ from one material to the next.
 |---|---|
 | `surfaceChemistry.cpp` | the C++ driver: reads a mechanism file, builds the model, runs a trench or a hole |
 | `surfaceChemistry.py` | the same in Python, reading either the `.yaml` or the mechanism data |
-| `reactions/` | eleven reaction files, each with its compiled `.mechanism.json` |
+| `reactions/` | twelve reaction files, each with its compiled `.mechanism.json` |
 | `demoMultiMaterial.py` | selective growth on a SiGe/Si superlattice |
 | `demoPassivation.py` | a polymer film competing with an etch in a masked trench |
 | `validation/diamondRadicalFraction.py` | the diamond mechanism against its published closed form |
@@ -90,7 +90,8 @@ that does not know the version refuses the file rather than guessing.
 | `silane_kads.yaml` | a sticking coefficient derived from an adsorption rate constant, `s = 4k_ads/v̄` | same chemistry, different input form |
 | `silane_selective.yaml` | a chemistry restricted to one material | illustrative |
 | `sige_stack.yaml` | per-material sticking *and* barrier on a SiGe/Si stack | illustrative; the Ge-catalysed H desorption is real |
-| `gaas_reversible.yaml` | two site types (cation and anion) and a reversible step | Mountziaris & Jensen 1991, Table II, (110) surface |
+| `gaas_reversible.yaml` | two site types (cation and anion) and a reversible step | Mountziaris & Jensen 1991, Table II, reduced to [S5], [S11], [S22] |
+| `gaas_full.yaml` | the same paper's **complete** mechanism: 26 surface reactions, 7 coverages, two solids | Mountziaris & Jensen 1991, Table II, in full |
 | `gaas_toy.yaml` | the smallest two-site mechanism, for the site-type tests | illustrative |
 | `diamond.yaml` | a mechanism whose central step is **reversible** | Bristol CVD Diamond Group "standard growth model"; reproduces the published radical fraction to 0.26 % over 900–1400 K |
 | `ar_sputter.yaml` | physical sputtering: an ion yield instead of a rate constant | illustrative; the threshold form is standard |
@@ -98,19 +99,29 @@ that does not know the version refuses the file rather than guessing.
 | `sf6o2.yaml` | **the acceptance test**: ViennaPS's own SF₆/O₂ silicon etch, written as a reaction file | every number from `SF6O2Etching::defaultParameters()`; matches the hand-written model to 0.16 % |
 | `polymer_etch.yaml` | passivation competing with the etch: two solids, one deposited while the other is removed | illustrative; the forms are standard |
 
-## Demonstrations that need their own geometry
+## Demonstrations beyond the driver
 
-The driver builds a trench or a hole. Two results need more than that, so they
-are their own scripts — each still reading nothing but a reaction file:
+The driver grows or etches one mechanism in a trench or a hole. Three results
+need more than that, so they are their own scripts — each still reading nothing
+but a reaction file:
 
 ```bash
 python demoMultiMaterial.py      # a SiGe/Si superlattice with a trench through it
 python demoPassivation.py        # a masked trench with a polymer layer on top
+python demoGaAsMechanism.py      # 26 reactions against 3, analytically (--trench too)
 ```
 
 `demoMultiMaterial.py` exposes both materials side by side on the sidewall: the
 film decorates the SiGe bands at 6.4× the Si rate, and the contrast decays from
 6.38× to 1.19× as the growing film buries them.
+
+`demoGaAsMechanism.py` asks what a reduced mechanism costs. At the paper's own
+conditions the three-reaction reduction is within 0.007 % of all 26, and holds
+that across 800-1300 K. Feed the surface the methyl radicals that TMG pyrolysis
+releases, though, and [S24] strips the hydrogen off adsorbed AsH while [S26]
+grows on the bare arsenic over a 20 kcal/mol barrier against [S22]'s 29.3 -- a
+second, faster growth channel the reduction cannot see. At three times the
+methylgallium flux it carries 4.3 % of the growth.
 
 `demoPassivation.py` shows why a Bosch-type process works: the trench floor
 faces the ion source, loses its film and etches ~27 nm, while the sidewalls see
@@ -132,7 +143,7 @@ is a check of the framework rather than a demonstration of it.
 
 ## What this directory does and does not contain
 
-**Running any of the eleven mechanisms needs nothing but this directory** and a
+**Running any of the twelve mechanisms needs nothing but this directory** and a
 ViennaPS install. That holds for the C++ driver, the Python driver, both demos
 and the validation script.
 

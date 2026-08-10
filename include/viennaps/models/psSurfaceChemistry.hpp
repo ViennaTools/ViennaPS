@@ -476,10 +476,16 @@ template <typename NumericType> struct ChemicalMechanism {
 
   // Newton solve of sum_j nu_ij r_j = 0, clamped to the physical simplex.
   // theta is used as the initial guess and overwritten with the solution.
+  // The Newton step is damped to keep every coverage in [0,1] and each site
+  // type's sum below 1, so a mechanism starting from a bare surface under a
+  // large flux climbs in halvings and can need a few hundred steps. The loop
+  // exits the moment the step falls below `tolerance`, so a generous cap costs
+  // nothing where convergence is quick, and is the difference between a
+  // converged answer and a stopped one where it is not.
   void solveCoverages(const std::vector<NumericType> &gamma,
                       const std::vector<NumericType> &k,
                       std::vector<NumericType> &theta,
-                      int maxIterations = 100,
+                      int maxIterations = 500,
                       NumericType tolerance = 1e-13) const {
     const size_t n = coverageNames.size();
     if (n == 0)
@@ -530,13 +536,15 @@ template <typename NumericType> struct ChemicalMechanism {
       if (!denseSolve(J, F, dx))
         break;
 
-      // damp so the step keeps each theta_i >= 0 and each type's sum <= 1
+      // Damp so the step keeps each theta_i >= 0 and each type's sum <= 1.
+      // A coverage already AT zero must not scale the step: it has no room to
+      // give, so scaling by it would be scaling by nothing and the solve would
+      // stand still while the rest of the system is still far from balance.
+      // The clamp below holds it at zero instead.
       NumericType scale = 1.;
       for (size_t i = 0; i < n; ++i)
-        if (theta[i] + dx[i] < 0. && dx[i] < 0.)
-          scale = std::min(scale, theta[i] > 0.
-                                      ? NumericType(0.5) * theta[i] / (-dx[i])
-                                      : NumericType(0.));
+        if (theta[i] > 0. && theta[i] + dx[i] < 0. && dx[i] < 0.)
+          scale = std::min(scale, NumericType(0.5) * theta[i] / (-dx[i]));
       for (int t = 0; t < numSiteTypes; ++t) {
         NumericType cur = 0., step = 0.;
         for (size_t i = 0; i < n; ++i)

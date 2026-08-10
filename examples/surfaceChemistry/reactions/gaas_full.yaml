@@ -1,0 +1,156 @@
+name: gaas_movpe_full
+temperature: 1000.0       # K, near the growth-rate maximum
+energyUnit: kcal/mol      # as published
+
+# GaAs MOVPE from trimethylgallium and arsine: the COMPLETE (110) surface
+# mechanism of
+#   T. J. Mountziaris and K. F. Jensen, J. Electrochem. Soc. 138, 2426 (1991),
+#   Table II -- all 26 surface reactions, with the paper's own rate parameters.
+#
+# `gaas_reversible.yaml` beside this file is the same mechanism reduced to the
+# three reactions the paper's sensitivity analysis identifies as dominant
+# ([S5], [S11], [S22]). Running the two on the same gas phase shows what the
+# other 23 contribute.
+#
+# TWO SITE TYPES, as the paper defines them:
+#   G  "Ga-sites": unoccupied As surface atoms, where methyl-gallium adsorbs
+#   A  "As-sites": unoccupied Ga surface atoms, where arsenic hydrides adsorb
+# For the (110) surface the two are equally numerous, Psi = 0.5, so each holds
+# half of S0 = 4.425e14 cm^-2.
+#
+# RATE LAWS. The paper's Eq [1]-[5] map onto this framework directly:
+#   [1],[2]  adsorption at the kinetic-theory collision rate times a sticking
+#            coefficient: `type: adsorption` with s0 = 1, Ea = 0
+#   [3]      single-site adsorption carries (1 - theta_j): one free site on the
+#            left, which site conservation infers
+#   [4]      two-site adsorption carries (1 - theta_A)(1 - theta_G)
+#   [5]      abstraction by a colliding gas radical: the collision rate times a
+#            coverage, so `type: adsorption` again, with the coverage as the
+#            only surface factor
+#
+# UNITS. The paper writes surface rates in mol/s/cm^2 with surface
+# concentrations C = theta * S0 / N_A, so its constants convert to this
+# framework's areal rates (1e15 /cm^2 /s per unit coverage) as
+#   one adsorbate:   k = k0 * S0 / 1e15
+#   two adsorbates:  k = k0 * S0_i * S0_j / (N_A * 1e15)
+# with S0_G = S0_A = 2.2125e14 cm^-2. So [S22]'s 5e18 becomes 4.0643e8, and the
+# 1e14 desorption prefactors of [S5] and [S11] become 2.2125e13.
+#
+# THE GAS PHASE. The paper computes the composition above the surface from a
+# 17-reaction gas-phase mechanism. That level is not modelled here, so the
+# fluxes are supplied: monomethylgallium and AsH carry the inlet partial
+# pressures of TMG and arsine, exactly as in the reduced file, and the species
+# that only a gas-phase calculation could populate are left at zero. Raise any
+# of them to see the corresponding chemistry switch on -- `compare_gaas.py`
+# sweeps the methyl radical flux for precisely that reason.
+species:
+  # --- gas: the adsorbing species, in the paper's order
+  H:       {phase: gas, flux: 0.0}          # [S1],[S2],[S16],[S17]
+  CH3:     {phase: gas, flux: 0.0}          # [S3],[S4],[S14],[S15],[S24]
+  GaCH3:   {phase: gas, flux: 1.653e4}      # [S5], from p(TMG) = 0.137 torr
+  GaC2H6:  {phase: gas, flux: 0.0}          # [S6]  Ga(CH3)2
+  GaC3H9:  {phase: gas, flux: 0.0}          # [S7]  Ga(CH3)3, trimethylgallium
+  GaCH2:   {phase: gas, flux: 0.0}          # [S8]  gallium carbene
+  GaC2H5:  {phase: gas, flux: 0.0}          # [S9]  Ga(CH3)CH2
+  GaC3H8:  {phase: gas, flux: 0.0}          # [S10] Ga(CH3)2CH2
+  AsH:     {phase: gas, flux: 3.187e5}      # [S11], from p(AsH3) = 2.50 torr
+  AsH2:    {phase: gas, flux: 0.0}          # [S12]
+  AsH3:    {phase: gas, flux: 0.0}          # [S13] arsine
+
+  # --- gas: the products that leave
+  CH4:     {phase: gas, reemit_only: true}
+  H2:      {phase: gas, reemit_only: true}
+  C2H6:    {phase: gas, reemit_only: true}
+  As2:     {phase: gas, reemit_only: true}
+
+  # --- surface: seven adsorbed species on two kinds of site
+  H_G*:    {phase: surface, site: G, atoms: {H: 1}}
+  H_A*:    {phase: surface, site: A, atoms: {H: 1}}
+  CH3_G*:  {phase: surface, site: G, atoms: {C: 1, H: 3}}
+  CH3_A*:  {phase: surface, site: A, atoms: {C: 1, H: 3}}
+  GaCH3*:  {phase: surface, site: G}
+  AsH*:    {phase: surface, site: A}
+  As*:     {phase: surface, site: A}
+
+  # --- solid: the film, and the carbon that replaces arsenic in it
+  GaAs:    {phase: solid, rho: 2.2}         # 1e22 formula units/cm3
+  GaC:     {phase: solid, rho: 2.2}         # carbon on an As lattice site
+
+siteTypes:
+  - {name: G, density: 2.2125e14}           # cm^-2, half of S0 = 4.425e14
+  - {name: A, density: 2.2125e14}
+
+surface:
+  # ==== adsorption, all at unity sticking and no barrier (Eq [1]-[4]) ========
+
+  # [S1],[S2] atomic hydrogen adsorbs on either kind of site
+  - {eq: "H -> H_G*", type: adsorption, s0: 1.0, Ea: 0.0}
+  - {eq: "H -> H_A*", type: adsorption, s0: 1.0, Ea: 0.0}
+
+  # [S3],[S4] methyl radicals adsorb on either kind, and desorb again
+  - {eq: "CH3 <-> CH3_G*", type: adsorption, s0: 1.0, Ea: 0.0,
+     k0_rev: 2.2125e11, Ea_rev: 20.0}       # 1e12 /s
+  - {eq: "CH3 <-> CH3_A*", type: adsorption, s0: 1.0, Ea: 0.0,
+     k0_rev: 2.2125e11, Ea_rev: 20.0}
+
+  # [S5] monomethylgallium adsorbs on a Ga-site, and desorbs again
+  - {eq: "GaCH3 <-> GaCH3*", type: adsorption, s0: 1.0, Ea: 0.0,
+     k0_rev: 2.2125e13, Ea_rev: 40.0}       # 1e14 /s
+
+  # [S6],[S7] the heavier methylgalliums adsorb dissociatively, shedding methyl
+  - {eq: "GaC2H6 -> GaCH3* + CH3",      type: adsorption, s0: 1.0, Ea: 0.0}
+  - {eq: "GaC3H9 -> GaCH3* + 2CH3",     type: adsorption, s0: 1.0, Ea: 0.0}
+
+  # [S8]-[S10] two-site dissociative adsorption of the gallium carbenes, the
+  # carbon-incorporation pathway. The pair of empty sites appears in the RATE
+  # (Eq [4]) while no coverage changes, so the order states it explicitly.
+  - {eq: "GaCH2 -> GaC + H2",           type: adsorption, s0: 1.0, Ea: 0.0,
+     order: {"*G": 1, "*A": 1}}
+  - {eq: "GaC2H5 -> GaC + CH3 + H2",    type: adsorption, s0: 1.0, Ea: 0.0,
+     order: {"*G": 1, "*A": 1}}
+  - {eq: "GaC3H8 -> GaC + 2CH3 + H2",   type: adsorption, s0: 1.0, Ea: 0.0,
+     order: {"*G": 1, "*A": 1}}
+
+  # [S11] AsH adsorbs on an As-site, and desorbs again
+  - {eq: "AsH <-> AsH*", type: adsorption, s0: 1.0, Ea: 0.0,
+     k0_rev: 2.2125e13, Ea_rev: 40.0}       # 1e14 /s
+
+  # [S12],[S13] the arsenic hydrides adsorb dissociatively
+  - {eq: "AsH2 -> AsH* + H",  type: adsorption, s0: 1.0, Ea: 0.0}
+  - {eq: "AsH3 -> AsH* + H2", type: adsorption, s0: 1.0, Ea: 0.0}
+
+  # ==== abstraction by a colliding gas radical (Eq [5]) =====================
+
+  # [S14]-[S17] methane formation: a gas radical takes an adsorbed partner
+  - {eq: "CH3 + H_G* -> CH4",   type: adsorption, s0: 1.0, Ea: 0.0}
+  - {eq: "CH3 + H_A* -> CH4",   type: adsorption, s0: 1.0, Ea: 0.0}
+  - {eq: "H + CH3_G* -> CH4",   type: adsorption, s0: 1.0, Ea: 0.0}
+  - {eq: "H + CH3_A* -> CH4",   type: adsorption, s0: 1.0, Ea: 0.0}
+
+  # [S24] a methyl radical strips the hydrogen off an adsorbed AsH
+  - {eq: "CH3 + AsH* -> As* + CH4", type: adsorption, s0: 1.0, Ea: 20.0}
+
+  # ==== bimolecular recombination between adsorbed species ==================
+
+  # [S18],[S19] an adsorbed H and an adsorbed methyl leave as methane
+  - {eq: "H_G* + CH3_A* -> CH4", type: surface, k0: 8.1285e6, Ea: 10.0}  # 1e17
+  - {eq: "H_A* + CH3_G* -> CH4", type: surface, k0: 8.1285e6, Ea: 10.0}  # 1e17
+  # [S20] two adsorbed hydrogens leave as H2
+  - {eq: "H_A* + H_G* -> H2",    type: surface, k0: 9.7542e6, Ea: 20.0}  # 1.2e17
+  # [S21] two adsorbed methyls leave as ethane
+  - {eq: "CH3_A* + CH3_G* -> C2H6", type: surface, k0: 8.1285e6, Ea: 20.0} # 1e17
+
+  # ==== growth, and the arsenic that leaves instead ========================
+
+  # [S22] THE GROWTH STEP: an adsorbed methylgallium and an adsorbed AsH make a
+  # GaAs formula unit and release methane
+  - {eq: "GaCH3* + AsH* -> GaAs + CH4", type: surface, k0: 4.0643e8, Ea: 29.3} # 5e18
+
+  # [S23] two adsorbed AsH leave as As2, competing with growth for AsH*
+  - {eq: "AsH* + AsH* -> As2 + H2", type: surface, k0: 8.1285e6, Ea: 35.0}  # 1e17
+
+  # [S25] two adsorbed arsenic atoms leave as As2
+  - {eq: "As* + As* -> As2", type: surface, k0: 8.1285e7, Ea: 30.0}        # 1e18
+
+  # [S26] the second growth step, on a dehydrogenated arsenic
+  - {eq: "GaCH3* + As* -> GaAs + CH3", type: surface, k0: 4.0643e8, Ea: 20.0} # 5e18
