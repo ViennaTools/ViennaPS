@@ -13,12 +13,6 @@ license = { file = "LICENSE" }
 description = "Topography simulation library for microelectronic fabrication processes"
 dependencies = ["ViennaLS>=5.8.3"]
 
-# Reaction files are compiled by ViennaChem. The C++ side reads the compiled
-# mechanism on its own, so this is needed only to author or edit chemistry:
-#   pip install ViennaPS[chemistry]
-[project.optional-dependencies]
-chemistry = ["viennachem>=0.1"]
-
 [project.urls]
 Homepage = "https://viennatools.github.io/ViennaPS/"
 Documentation = "https://viennatools.github.io/ViennaPS/"

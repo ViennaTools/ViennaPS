@@ -141,7 +141,7 @@ equations, checking the atom balance, inferring the free sites, deriving the
 stoichiometry -- is ViennaChem's job:
 
 ```bash
-pip install ViennaPS[chemistry]     # or: pip install viennachem
+pip install git+https://github.com/ViennaTools/ViennaChem@main
 ```
 
 Then the `.yaml` path works directly. Without it the driver still runs every
