@@ -80,6 +80,7 @@ using MaterialInfo = MaterialInfoType<false>;
   X(58, PMMA, Hardmask, 1.18, false, 0xec407a)                                 \
   X(59, PHS, Hardmask, 1.2, false, 0xffe082)                                   \
   X(60, HSQ, OxideNitride, 1.3, false, 0x81d4fa)                               \
+  X(61, Diamond, Hardmask, 3.51, false, 0xb3e5fc)                              \
   /* Metals */                                                                 \
   X(70, W, Metal, 19.3, true, 0x6e6e6e)                                        \
   X(71, Cu, Metal, 8.96, true, 0xb87333)                                       \

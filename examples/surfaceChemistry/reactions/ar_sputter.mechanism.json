@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "name": "ar_physical_sputtering",
+  "siteTypes": [
+    {
+      "name": "default",
+      "density": null
+    }
+  ],
+  "coverages": [],
+  "gas": [
+    {
+      "name": "Si_s",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    }
+  ],
+  "solids": [
+    {
+      "name": "Si",
+      "rho": 5.02,
+      "rhoMaterials": {}
+    }
+  ],
+  "solid": {
+    "name": "Si",
+    "rho": 5.02,
+    "rhoMaterials": {}
+  },
+  "ionSource": {
+    "name": "Ar_ion",
+    "flux": 50.0,
+    "meanEnergy": 100.0,
+    "sigmaEnergy": 10.0,
+    "exponent": 200.0,
+    "inflectAngle": 89.0,
+    "n_l": 10.0,
+    "minAngle": 80.0,
+    "thetaRMin": 70.0,
+    "thetaRMax": 90.0
+  },
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "Ar_ion + Si -> Si_s",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [],
+      "solidAtoms": [
+        -1.0
+      ],
+      "ionYield": {
+        "ion": "Ar_ion",
+        "label": "R1_yieldFlux",
+        "flux": 50.0,
+        "meanEnergy": 100.0,
+        "A": 0.02,
+        "Eth": 20.0,
+        "B": 0.0,
+        "enhanced": false,
+        "materials": {
+          "Mask": {
+            "A": 0.002,
+            "Eth": 40.0
+          }
+        }
+      }
+    }
+  ],
+  "constants": {
+    "temperature": 300.0
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

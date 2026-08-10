@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "name": "silane_polySi_LPCVD_kads",
+  "siteTypes": [
+    {
+      "name": "default",
+      "density": null
+    }
+  ],
+  "coverages": [
+    {
+      "name": "SiH3*",
+      "site": 0
+    },
+    {
+      "name": "H*",
+      "site": 0
+    }
+  ],
+  "gas": [
+    {
+      "name": "SiH4",
+      "traced": true,
+      "label": "SiH4_flux",
+      "flux": 1000.0,
+      "sticking": {
+        "reaction": "R1",
+        "s0": 30.00053212247908,
+        "Ea": 0.6,
+        "beta": -0.5,
+        "site": 0,
+        "freeSiteExp": 2
+      }
+    },
+    {
+      "name": "H2",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    }
+  ],
+  "solids": [
+    {
+      "name": "Si",
+      "rho": 5.02,
+      "rhoMaterials": {}
+    }
+  ],
+  "solid": {
+    "name": "Si",
+    "rho": 5.02,
+    "rhoMaterials": {}
+  },
+  "ionSource": null,
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "SiH4 + 2* -> SiH3* + H*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 30.00053212247908,
+        "Ea": 0.6,
+        "beta": -0.5
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        2
+      ],
+      "nu": [
+        1.0,
+        1.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R2",
+      "eq": "SiH3* -> Si + H* + H2",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 6800000000000.0,
+        "Ea": 1.5,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -1.0,
+        1.0
+      ],
+      "solidAtoms": [
+        1.0
+      ]
+    },
+    {
+      "id": "R3",
+      "eq": "2H* -> H2 + 2*",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 680000000000.0,
+        "Ea": 1.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 1,
+          "exp": 2
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        -2.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    }
+  ],
+  "constants": {
+    "temperature": 900.0
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "name": "gaas_movpe_reversible",
+  "siteTypes": [
+    {
+      "name": "G",
+      "density": 221250000000000.0
+    },
+    {
+      "name": "A",
+      "density": 221250000000000.0
+    }
+  ],
+  "coverages": [
+    {
+      "name": "GaCH3*",
+      "site": 0
+    },
+    {
+      "name": "AsH*",
+      "site": 1
+    }
+  ],
+  "gas": [
+    {
+      "name": "GaCH3",
+      "traced": true,
+      "label": "GaCH3_flux",
+      "flux": 16530.0,
+      "sticking": {
+        "reaction": "R1",
+        "s0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 1
+      }
+    },
+    {
+      "name": "AsH",
+      "traced": true,
+      "label": "AsH_flux",
+      "flux": 318700.0,
+      "sticking": {
+        "reaction": "R2",
+        "s0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 1,
+        "freeSiteExp": 1
+      }
+    }
+  ],
+  "solids": [
+    {
+      "name": "GaAs",
+      "rho": 2.2,
+      "rhoMaterials": {}
+    }
+  ],
+  "solid": {
+    "name": "GaAs",
+    "rho": 2.2,
+    "rhoMaterials": {}
+  },
+  "ionSource": null,
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "GaCH3 + *G -> GaCH3*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        1,
+        0
+      ],
+      "nu": [
+        1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R1r",
+      "eq": "GaCH3* -> GaCH3 + *G",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 22125000000000.0,
+        "Ea": 1.7345641696720373,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0,
+        0
+      ],
+      "nu": [
+        -1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "reverseOf": "R1"
+    },
+    {
+      "id": "R2",
+      "eq": "AsH + *A -> AsH*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        0,
+        1
+      ],
+      "nu": [
+        0.0,
+        1.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R2r",
+      "eq": "AsH* -> AsH + *A",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 22125000000000.0,
+        "Ea": 1.7345641696720373,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0,
+        0
+      ],
+      "nu": [
+        0.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "reverseOf": "R2"
+    },
+    {
+      "id": "R3",
+      "eq": "GaCH3* + AsH* -> GaAs + CH4 + *G + *A",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 406400000.0,
+        "Ea": 1.2705682542847674,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        },
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0,
+        0
+      ],
+      "nu": [
+        -1.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        1.0
+      ]
+    }
+  ],
+  "constants": {
+    "temperature": 1000.0
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "kcal/mol",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

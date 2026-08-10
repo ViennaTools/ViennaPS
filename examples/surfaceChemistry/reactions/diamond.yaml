@@ -1,0 +1,53 @@
+name: diamond_cvd_standard_growth_model
+temperature: 1200.0       # K, substrate
+energyUnit: kcal/mol
+
+# Diamond CVD, the "standard growth model" used by the Bristol CVD Diamond Group
+#   https://www.chm.bris.ac.uk/pt/diamond/growthmodel.htm
+# and in the SURFACE CHEMKIN mechanism of the accompanying thesis
+#   https://www.chm.bris.ac.uk/pt/diamond/rolythesis/chapter8.htm
+#
+# A diamond surface carbon is either terminated by hydrogen or left as a radical
+# (a dangling bond). Growth happens only on the radical sites, and the radical
+# fraction is set by a REVERSIBLE hydrogen abstraction:
+#
+#   [1] H* + H  <-> H2 + *     abstraction by gas-phase H, and its reverse
+#   [2] H  + *   -> H*         re-addition of H, refilling the site
+#   [3] CH3 + *  -> C + H* + H2   methyl adds and its carbon joins the lattice
+#
+# Here the free site "*" IS the radical, and the coverage H* is the
+# hydrogen-terminated site, so the radical fraction is R = theta_* = 1 - theta_H.
+#
+# Reversibility is not a refinement here, it is the mechanism. Solving the
+# balance gives the published closed form
+#
+#   R = 1 / (1 + 0.3 exp(3430/Ts) + 0.1 exp(-4420/Ts) [H2]/[H])
+#
+# in which the last term exists ONLY because the abstraction runs backwards.
+# Drop the reverse step and that term vanishes: the model would predict a
+# radical fraction independent of the H2 background, which is wrong.
+#
+# Rate parameters: the ratios are fixed by the closed form above
+# (A2/A1 = 0.3 with (E1-E2)/R = 3430 K; A-1/A1 = 0.1 with (E1-E-1)/R = -4420 K),
+# which gives E1 = 6.82 and E-1 = 15.60 kcal/mol with E2 = 0. These agree with
+# the thesis SURF.INP table, where the H-abstraction barrier is 7.3 kcal/mol,
+# H re-addition is barrierless with a sticking coefficient of 0.3, and methyl
+# addition is barrierless with 0.33.
+#
+# Fluxes: hot-filament conditions, 20 torr, 1% CH4 in H2, with mole fractions
+# x(H) = 5e-3, x(H2) = 0.98, x(CH3) = 5e-5 and a kinetic-theory wall flux.
+species:
+  H:   {phase: gas,     flux: 1.0100e5}    # 1e15/cm2/s
+  H2:  {phase: gas,     flux: 1.3998e7}
+  CH3: {phase: gas,     flux: 2.6152e2}
+  H*:  {phase: surface}                    # hydrogen-terminated site
+  C:   {phase: solid,   rho: 17.6}         # 1e22 atoms/cm3, diamond
+
+surface:
+  # [1] reversible H abstraction: this is what sets the radical fraction
+  - {eq: "H* + H <-> H2", type: adsorption, s0: 1.0, Ea: 6.816,
+     k0_rev: 0.1, Ea_rev: 15.600}
+  # [2] H re-addition, barrierless
+  - {eq: "H -> H*",       type: adsorption, s0: 0.3, Ea: 0.0}
+  # [3] methyl addition, barrierless; the carbon joins the lattice
+  - {eq: "CH3 -> C + H* + H2", type: adsorption, s0: 0.33, Ea: 0.0}

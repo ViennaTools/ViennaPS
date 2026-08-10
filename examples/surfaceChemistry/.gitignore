@@ -1,0 +1,4 @@
+# simulation output: the drivers and demos write these where they are run
+*.vtp
+*.vtu
+__pycache__/

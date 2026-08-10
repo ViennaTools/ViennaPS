@@ -1,0 +1,39 @@
+name: ar_physical_sputtering
+temperature: 300.0        # K, irrelevant here: the step has no thermal barrier
+
+# CAPABILITY DEMONSTRATION: physical sputtering, the simplest ion-driven step.
+#
+# An energetic ion strikes the surface and knocks a substrate atom off. There is
+# no chemistry involved: no adsorbate, no coverage, no thermal barrier. The rate
+# is set entirely by the ion's energy and its angle of incidence,
+#
+#     Y = A * max(sqrt(E) - sqrt(Eth), 0) * f(theta)
+#
+# which is the standard threshold form used for sputter yields.
+#
+# The point of interest for this toolchain: that yield does NOT fit a
+# mass-action rate law, because it depends on the energy distribution of the
+# ions and on the local incidence angle, both resolved per ray rather than per
+# surface point. The way it fits anyway is that the ION PARTICLE evaluates the
+# yield at every hit and deposits a YIELD-WEIGHTED flux. The surface chemistry
+# then sees an ordinary flux and stays mass action, and the solver needs no
+# notion of ions at all.
+#
+# Etching rather than deposition falls out of the stoichiometry: the solid is on
+# the LEFT, so the reaction consumes it and `solidAtoms` is negative, which
+# makes the surface velocity negative.
+#
+# The rate parameters are illustrative. Real Ar-on-Si sputter thresholds are of
+# this order (tens of eV) but the prefactor here is not from a paper.
+species:
+  Ar_ion: {phase: ion,   flux: 5.0e1,      # 1e15 /cm^2 /s
+           meanEnergy: 100.0, sigmaEnergy: 10.0, exponent: 200.0}
+  Si_s:   {phase: gas,   reemit_only: true,   # the sputtered atom leaves
+           atoms: {Si: 1}}                    # 'Si' is the solid, so it needs a name
+  Si:     {phase: solid, rho: 5.02}           # 1e22 atoms/cm^3
+
+surface:
+  # the ion removes one substrate atom; the mask is far harder to sputter
+  - {eq: "Ar_ion + Si -> Si_s", type: sputtering,
+     yield: {A: 0.02, Eth: 20.0,
+             materials: {Mask: {A: 0.002, Eth: 40.0}}}}

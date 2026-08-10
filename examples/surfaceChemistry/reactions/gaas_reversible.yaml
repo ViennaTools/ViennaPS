@@ -1,0 +1,38 @@
+name: gaas_movpe_reversible
+temperature: 1000.0       # K, near the growth-rate maximum
+energyUnit: kcal/mol      # as published
+
+# GaAs MOVPE from trimethylgallium and arsine, the (110) surface mechanism of
+#   T. J. Mountziaris and K. F. Jensen, J. Electrochem. Soc. 138, 2426 (1991),
+#   Table II, reduced to the three reactions the paper's own sensitivity
+#   analysis identifies as dominant.
+#
+# Two site types, because a III-V surface offers two kinds of site:
+#   G  "Ga-sites", unoccupied As surface atoms, where methyl-gallium adsorbs
+#   A  "As-sites", unoccupied Ga surface atoms, where arsenic hydrides adsorb
+#
+# [S5] and [S11] are written with '<->': the reverse rate constants are given
+# alongside the forward ones, and the front end expands each into a second
+# reaction with mass action on the product side and the stoichiometry negated.
+# The desorption they describe is what makes the growth rate fall again at high
+# temperature.
+species:
+  GaCH3:  {phase: gas,     flux: 1.653e4}    # 1e15/cm2/s, from p(TMG) = 0.137 torr
+  AsH:    {phase: gas,     flux: 3.187e5}    # 1e15/cm2/s, from p(AsH3) = 2.50 torr
+  GaCH3*: {phase: surface, site: G}
+  AsH*:   {phase: surface, site: A}
+  GaAs:   {phase: solid,   rho: 2.2}        # 1e22 formula units/cm3
+
+siteTypes:
+  - {name: G, density: 2.2125e14}           # cm^-2, half of S0 = 4.425e14
+  - {name: A, density: 2.2125e14}
+
+surface:
+  # [S5]  reversible adsorption of monomethylgallium on a Ga-site
+  - {eq: "GaCH3 <-> GaCH3*", type: adsorption, s0: 1.0, Ea: 0.0,
+     k0_rev: 2.2125e13, Ea_rev: 40.0}
+  # [S11] reversible adsorption of AsH on an As-site
+  - {eq: "AsH <-> AsH*",     type: adsorption, s0: 1.0, Ea: 0.0,
+     k0_rev: 2.2125e13, Ea_rev: 40.0}
+  # [S22] the growth step, irreversible
+  - {eq: "GaCH3* + AsH* -> GaAs + CH4", type: surface, k0: 4.064e8, Ea: 29.3}

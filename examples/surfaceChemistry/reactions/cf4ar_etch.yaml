@@ -1,0 +1,44 @@
+name: cf4_ar_ion_enhanced_etch
+temperature: 300.0        # K
+
+# CAPABILITY DEMONSTRATION: ion-enhanced etching, the step that makes plasma
+# etching a chemistry rather than pure sputtering.
+#
+# Fluorine adsorbs on the silicon surface, and an energetic ion striking a
+# fluorinated site removes silicon far faster than the ion could sputter bare
+# silicon, and far faster than fluorine alone could etch it. That synergy is the
+# defining feature of reactive ion etching, and it shows up here as a rate that
+# multiplies an ION YIELD by a COVERAGE:
+#
+#     r = Y_ie(E, theta_inc) * Gamma_ion * theta_F^4
+#
+# The ion particle evaluates Y_ie at each hit and deposits it as a flux, so this
+# is still an ordinary mass-action rate law to the solver. The coverage factor
+# comes from the fluorinated sites on the left of the equation.
+#
+# An ion is a projectile: it delivers energy and leaves neutralised, so it takes
+# no part in the atom balance.
+#
+# The rate parameters are illustrative. The forms are the standard ones: a
+# threshold yield sqrt(E) - sqrt(Eth), with the ion-enhanced angular dependence.
+species:
+  F:      {phase: gas,   flux: 5.0e3}       # 1e15 /cm^2 /s
+  Ar_ion: {phase: ion,   flux: 5.0e1,
+           meanEnergy: 100.0, sigmaEnergy: 10.0, exponent: 200.0}
+  SiF4:   {phase: gas,   reemit_only: true}
+  F*:     {phase: surface}
+  Si:     {phase: solid, rho: 5.02}
+
+surface:
+  # fluorine sticks to a free site
+  - {eq: "F -> F*", type: adsorption, s0: 0.3, Ea: 0.0}
+
+  # an ion striking four fluorinated sites removes one silicon atom
+  - {eq: "Ar_ion + 4F* + Si -> SiF4", type: ion_enhanced,
+     yield: {A: 0.15, Eth: 10.0,
+             materials: {Mask: {A: 0.005, Eth: 40.0}}}}
+
+  # the ion can also sputter bare silicon, far more slowly
+  - {eq: "Ar_ion + Si -> SiF4", type: sputtering,
+     yield: {A: 0.01, Eth: 25.0,
+             materials: {Mask: {A: 0.001, Eth: 45.0}}}}

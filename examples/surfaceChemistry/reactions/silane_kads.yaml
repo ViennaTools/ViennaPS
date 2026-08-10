@@ -1,0 +1,25 @@
+name: silane_polySi_LPCVD_kads
+temperature: 900.0        # K
+
+species:
+  SiH4:  {phase: gas,     flux: 1.0e3}          # Gamma in 1e15 /cm^2 /s
+  H2:    {phase: gas,     reemit_only: true}
+  SiH3*: {phase: surface}
+  H*:    {phase: surface}
+  Si:    {phase: solid,   rho: 5.02}            # 1e22 atoms/cm^3
+
+# The same mechanism as silane.yaml, with the adsorption step given as an
+# adsorption rate constant k_ads [cm/s] instead of a sticking coefficient.
+# Kinetic theory converts it: the wall flux is (1/4) n vbar, so
+#
+#     k_ads n = s (1/4) n vbar   =>   s = 4 k_ads / vbar,
+#
+# with vbar = sqrt(8 R T / pi M). The molar mass M comes from the formula, so
+# k_ads is the only number asked for. Because vbar ~ sqrt(T), the derived
+# sticking carries a T^(-1/2) factor on top of the Arrhenius term.
+#
+# This k_ads reproduces s0 = 1.0 at 900 K, so it matches silane.yaml there.
+surface:
+  - {eq: "SiH4 -> SiH3* + H*",    type: adsorption, k_ads: 1.9257e4, Ea: 0.6}
+  - {eq: "SiH3* -> Si + H* + H2", type: surface,    k0: 6.8e12, Ea: 1.5}
+  - {eq: "2H* -> H2",             type: desorption, k0: 6.8e11, Ea: 1.0}

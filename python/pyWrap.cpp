@@ -498,6 +498,224 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("Passivation", &CF4O2Parameters<T>::Passivation)
       .def_readwrite("Ions", &CF4O2Parameters<T>::Ions);
 
+  // Chemical Mechanism (data-driven CVD surface chemistry)
+  py::class_<ChemicalMechanism<T>>(module, "ChemicalMechanism")
+      .def(py::init<>())
+      .def_static("fromFile", &readChemicalMechanism<T>, py::arg("filename"),
+                  "Read a mechanism from a mechanism file, as written by "
+                  "ViennaChem. The same reader a C++ example uses.")
+      .def_static("fromJSON", &parseChemicalMechanism<T>, py::arg("text"),
+                  "Read a mechanism from mechanism data held in memory, e.g. "
+                  "`json.dumps(viennachem.from_file(...))`. The same reader as "
+                  "fromFile, so there is one implementation, not two.")
+      .def_readwrite("name", &ChemicalMechanism<T>::name)
+      .def_readwrite("temperature", &ChemicalMechanism<T>::temperature)
+      .def_readwrite("rhoSolid", &ChemicalMechanism<T>::rhoSolid)
+      .def_readwrite("siteDensity", &ChemicalMechanism<T>::siteDensity)
+      .def("setSiteTypeCount", &ChemicalMechanism<T>::setSiteTypeCount,
+           py::arg("count"),
+           "Declare how many surface site types the mechanism has (default 1).")
+      .def("addCoverage", &ChemicalMechanism<T>::addCoverage, py::arg("name"),
+           py::arg("diffusion") = 0., py::arg("site") = 0,
+           "Declare a coverage field on site type `site`. Returns its index.")
+      .def("addGasSpecies", &ChemicalMechanism<T>::addGasSpecies,
+           py::arg("label"), py::arg("sourceFlux"), py::arg("traced"),
+           "Declare a gas species. Returns its index.")
+      .def("setSticking", &ChemicalMechanism<T>::setSticking,
+           py::arg("gasIndex"), py::arg("s0"), py::arg("Ea"),
+           py::arg("freeSiteExponent"), py::arg("beta") = 0., py::arg("site") = 0,
+           "Sticking of the adsorption step that consumes this species. beta is "
+           "the temperature exponent, -0.5 when derived from k_ads; site is the "
+           "site type its free sites belong to.")
+      .def("addReaction", &ChemicalMechanism<T>::addReaction,
+           py::arg("prefactor"), py::arg("Ea"), py::arg("isAdsorption"),
+           py::arg("freeSiteExponent"), py::arg("nu"), py::arg("solidAtoms"),
+           py::arg("beta") = 0.,
+           "Add a reaction. k = prefactor * T^beta * exp(-Ea/kT). "
+           "freeSiteExponent is a list with one entry per site type. Returns "
+           "its index.")
+      .def(
+          "setMaterialConstant",
+          [](ChemicalMechanism<T> &m, int reactionIndex,
+             const std::string &material, T prefactor, T Ea, T beta) {
+            m.setMaterialConstant(reactionIndex,
+                                  Material(builtInMaterialFromString(material)),
+                                  prefactor, Ea, beta);
+          },
+          py::arg("reactionIndex"), py::arg("material"), py::arg("prefactor"),
+          py::arg("Ea"), py::arg("beta") = 0.,
+          "The rate constant this reaction takes on the named material. The "
+          "prefactor, the barrier and the temperature exponent may each differ; "
+          "a prefactor of zero means the step does not occur there.")
+      .def("setMaterialConstantDefault",
+           &ChemicalMechanism<T>::setMaterialConstantDefault,
+           py::arg("reactionIndex"), py::arg("prefactor"), py::arg("Ea"),
+           py::arg("beta") = 0.,
+           "The rate constant for every material not named explicitly.")
+      .def(
+          "setStickingMaterialConstant",
+          [](ChemicalMechanism<T> &m, int gasIndex, const std::string &material,
+             T s0, T Ea, T beta) {
+            m.setStickingMaterialConstant(
+                gasIndex, Material(builtInMaterialFromString(material)), s0, Ea,
+                beta);
+          },
+          py::arg("gasIndex"), py::arg("material"), py::arg("s0"),
+          py::arg("Ea"), py::arg("beta") = 0.,
+          "The sticking this species takes on the named material, so the "
+          "particle re-emits according to the material it hit.")
+      .def("setStickingMaterialConstantDefault",
+           &ChemicalMechanism<T>::setStickingMaterialConstantDefault,
+           py::arg("gasIndex"), py::arg("s0"), py::arg("Ea"),
+           py::arg("beta") = 0.,
+           "The sticking for every material not named explicitly.")
+      .def("setIonSource", &ChemicalMechanism<T>::setIonSource,
+           py::arg("meanEnergy"), py::arg("sigmaEnergy"), py::arg("exponent"),
+           "Declare the ion source: mean and spread of the energy, and the "
+           "source distribution power.")
+      .def("setIonReflection", &ChemicalMechanism<T>::setIonReflection,
+           py::arg("inflectAngle"), py::arg("n_l"), py::arg("minAngle"),
+           py::arg("thetaRMin"), py::arg("thetaRMax"),
+           "Angles governing how an ion loses energy and reflects, in degrees.")
+      .def("addIonYield", &ChemicalMechanism<T>::addIonYield, py::arg("label"),
+           py::arg("A"), py::arg("Eth"), py::arg("B") = 0.,
+           py::arg("enhanced") = false, py::arg("sourceFlux") = 1.,
+           "Declare a yield channel Y = A*max(sqrt(E)-sqrt(Eth),0)*f(theta). "
+           "Returns the gas index carrying that yield-weighted flux, so an "
+           "ion-driven reaction takes it as an ordinary gas factor.")
+      .def(
+          "setIonYieldMaterial",
+          [](ChemicalMechanism<T> &m, int yieldIndex,
+             const std::string &material, T A, T Eth) {
+            m.setIonYieldMaterial(yieldIndex,
+                                  Material(builtInMaterialFromString(material)),
+                                  A, Eth);
+          },
+          py::arg("yieldIndex"), py::arg("material"), py::arg("A"),
+          py::arg("Eth"),
+          "The yield prefactor and threshold on the named material, for "
+          "selectivity to a mask or a stop layer.")
+      .def("addGasFactor", &ChemicalMechanism<T>::addGasFactor,
+           py::arg("reactionIndex"), py::arg("gasIndex"), py::arg("exponent"))
+      .def("addCoverageFactor", &ChemicalMechanism<T>::addCoverageFactor,
+           py::arg("reactionIndex"), py::arg("coverageIndex"),
+           py::arg("exponent"))
+      .def("rateConstants", &ChemicalMechanism<T>::rateConstants)
+      .def("stickingOf",
+           static_cast<T (ChemicalMechanism<T>::*)(int) const>(
+               &ChemicalMechanism<T>::stickingOf),
+           py::arg("gasIndex"),
+           "Sticking of this species, using the default material.")
+      .def(
+          "stickingOf",
+          [](const ChemicalMechanism<T> &m, int gasIndex,
+             const std::string &material) {
+            return m.stickingOf(gasIndex,
+                                Material(builtInMaterialFromString(material)));
+          },
+          py::arg("gasIndex"), py::arg("material"),
+          "Sticking of this species on the named material.")
+      .def(
+          "solveCoverages",
+          [](const ChemicalMechanism<T> &m, const std::vector<T> &gamma,
+             std::vector<T> theta) {
+            m.solveCoverages(gamma, m.rateConstants(), theta);
+            return theta;
+          },
+          py::arg("gamma"), py::arg("theta0"),
+          "Steady-state coverages for a given local flux vector.")
+      .def(
+          "growthRate",
+          [](const ChemicalMechanism<T> &m, const std::vector<T> &gamma,
+             const std::vector<T> &theta) {
+            return m.growthRate(gamma, m.rateConstants(), theta);
+          },
+          py::arg("gamma"), py::arg("theta"),
+          "Growth rate in nm/s for given coverages and local flux.")
+      .def(
+          "sourceFluxes",
+          [](const ChemicalMechanism<T> &m, const std::string &material) {
+            return m.sourceFluxes(
+                material.empty() ? Material(BuiltInMaterial::Undefined)
+                                 : Material(builtInMaterialFromString(material)));
+          },
+          py::arg("material") = "",
+          "Incident flux of every gas species, with an ion yield channel "
+          "evaluated at normal incidence.")
+      .def_property_readonly(
+          "coverageNames",
+          [](const ChemicalMechanism<T> &m) { return m.coverageNames; })
+      .def_property_readonly("solidNames",
+                             [](const ChemicalMechanism<T> &m) {
+                               std::vector<std::string> out;
+                               for (const auto &s : m.solids)
+                                 out.push_back(s.name);
+                               return out;
+                             })
+      .def_property_readonly("particleLabels",
+                             [](const ChemicalMechanism<T> &m) {
+                               std::vector<std::string> out;
+                               for (const auto &g : m.gas)
+                                 if (g.traced && !g.isIonChannel)
+                                   out.push_back(g.label);
+                               return out;
+                             })
+      .def_property_readonly(
+          "hasIonSource",
+          [](const ChemicalMechanism<T> &m) { return m.ionSource.present; })
+      .def_property_readonly(
+          "ionMeanEnergy",
+          [](const ChemicalMechanism<T> &m) { return m.ionSource.meanEnergy; })
+      .def(
+          "reactionSummary",
+          [](const ChemicalMechanism<T> &m) {
+            std::vector<std::string> out;
+            out.reserve(m.reactions.size());
+            for (const auto &r : m.reactions)
+              out.push_back(r.equation);
+            return out;
+          },
+          "The reactions as written in the mechanism file.")
+      .def(
+          "solveCoveragesOn",
+          [](const ChemicalMechanism<T> &m, const std::vector<T> &gamma,
+             std::vector<T> theta, const std::string &material) {
+            const auto mat = Material(builtInMaterialFromString(material));
+            m.solveCoverages(gamma, m.rateConstantsFor(mat), theta);
+            return theta;
+          },
+          py::arg("gamma"), py::arg("theta0"), py::arg("material"),
+          "Steady-state coverages on a named material, using its rate "
+          "constants.")
+      .def(
+          "growthRateOn",
+          [](const ChemicalMechanism<T> &m, const std::vector<T> &gamma,
+             const std::vector<T> &theta, const std::string &material) {
+            const auto mat = Material(builtInMaterialFromString(material));
+            return m.growthRate(gamma, m.rateConstantsFor(mat), theta, mat);
+          },
+          py::arg("gamma"), py::arg("theta"), py::arg("material"),
+          "Growth rate on a named material: its rate constants and its solid "
+          "densities.")
+      .def("addSolid", &ChemicalMechanism<T>::addSolid, py::arg("name"),
+           py::arg("rho"),
+           "Declare a solid phase and its density. Returns its index.")
+      .def("setSolidDensity",
+           [](ChemicalMechanism<T> &m, int solidIndex,
+              const std::string &material, T rho) {
+             m.setSolidDensity(solidIndex,
+                               Material(builtInMaterialFromString(material)),
+                               rho);
+           },
+           py::arg("solidIndex"), py::arg("material"), py::arg("rho"),
+           "Density of this solid on a named material, when it differs.")
+      .def("setEquation", &ChemicalMechanism<T>::setEquation,
+           py::arg("reactionIndex"), py::arg("equation"),
+           "The reaction as written in the file, kept for reporting.")
+      .def("setSolidAtoms", &ChemicalMechanism<T>::setSolidAtoms,
+           py::arg("reactionIndex"), py::arg("solidIndex"), py::arg("atoms"),
+           "Atoms of a given solid added (or, negative, removed) per event.");
+
   // Fluorocarbon Parameters
   py::class_<FluorocarbonParameters<T>::MaterialParameters>(
       module, "FluorocarbonMaterialParameters")

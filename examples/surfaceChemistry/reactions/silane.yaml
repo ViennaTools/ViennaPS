@@ -1,0 +1,17 @@
+name: silane_polySi_LPCVD
+temperature: 900.0        # K
+
+species:
+  SiH4:  {phase: gas,     flux: 1.0e3}          # Gamma in 1e15 /cm^2 /s
+  H2:    {phase: gas,     reemit_only: true}
+  SiH3*: {phase: surface}
+  H*:    {phase: surface}
+  Si:    {phase: solid,   rho: 5.02}            # 1e22 atoms/cm^3
+
+# Only the reactions and their rate constants. Free sites, rate laws, coverage
+# balance, steady-state relations and the growth rate are all derived. Free
+# sites (*) are inferred from site conservation, so they are not written here.
+surface:
+  - {eq: "SiH4 -> SiH3* + H*",    type: adsorption, s0: 1.0,    Ea: 0.6}
+  - {eq: "SiH3* -> Si + H* + H2", type: surface,    k0: 6.8e12, Ea: 1.5}
+  - {eq: "2H* -> H2",             type: desorption, k0: 6.8e12, Ea: 2.0}

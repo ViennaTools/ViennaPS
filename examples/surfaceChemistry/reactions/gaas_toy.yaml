@@ -1,0 +1,17 @@
+name: gaas_toy_twosite
+temperature: 900.0        # K
+
+# A minimal two-site-type mechanism: Ga adsorbs on cation sites (A), As on anion
+# sites (B), and a cross reaction deposits GaAs, freeing one site of each type.
+# The free fraction of type A must respond only to coverages on A.
+species:
+  Ga:   {phase: gas,     flux: 1.0e2}
+  As:   {phase: gas,     flux: 1.0e2}
+  Ga*:  {phase: surface, site: A}
+  As*:  {phase: surface, site: B}
+  GaAs: {phase: solid,   rho: 2.2}
+
+surface:
+  - {eq: "Ga -> Ga*",         type: adsorption, s0: 1.0,    Ea: 0.3}
+  - {eq: "As -> As*",         type: adsorption, s0: 1.0,    Ea: 0.3}
+  - {eq: "Ga* + As* -> GaAs", type: surface,    k0: 1.0e12, Ea: 1.0}

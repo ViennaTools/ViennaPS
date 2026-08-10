@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "name": "polymer_passivated_etch",
+  "siteTypes": [
+    {
+      "name": "default",
+      "density": null
+    }
+  ],
+  "coverages": [
+    {
+      "name": "CF2*",
+      "site": 0
+    },
+    {
+      "name": "F*",
+      "site": 0
+    }
+  ],
+  "gas": [
+    {
+      "name": "CF2",
+      "traced": true,
+      "label": "CF2_flux",
+      "flux": 300.0,
+      "sticking": {
+        "reaction": "R1",
+        "s0": 0.26,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 1
+      }
+    },
+    {
+      "name": "F",
+      "traced": true,
+      "label": "F_flux",
+      "flux": 1000.0,
+      "sticking": {
+        "reaction": "R5",
+        "s0": 0.3,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 1,
+        "materialConstants": {
+          "Si": {
+            "prefactor": 0.3,
+            "Ea": 0.0,
+            "beta": 0.0
+          },
+          "PolySi": {
+            "prefactor": 0.3,
+            "Ea": 0.0,
+            "beta": 0.0
+          }
+        },
+        "materialDefault": {
+          "prefactor": 0.0,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      }
+    },
+    {
+      "name": "SiF4",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    },
+    {
+      "name": "CF4",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    },
+    {
+      "name": "C_s",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    }
+  ],
+  "solids": [
+    {
+      "name": "C",
+      "rho": 2.2,
+      "rhoMaterials": {}
+    },
+    {
+      "name": "Si",
+      "rho": 5.02,
+      "rhoMaterials": {}
+    }
+  ],
+  "solid": {
+    "name": "C",
+    "rho": 2.2,
+    "rhoMaterials": {}
+  },
+  "ionSource": {
+    "name": "Ar_ion",
+    "flux": 20.0,
+    "meanEnergy": 150.0,
+    "sigmaEnergy": 15.0,
+    "exponent": 500.0,
+    "inflectAngle": 89.0,
+    "n_l": 10.0,
+    "minAngle": 80.0,
+    "thetaRMin": 70.0,
+    "thetaRMax": 90.0
+  },
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "CF2 + * -> CF2*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.26,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        1
+      ],
+      "nu": [
+        1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R2",
+      "eq": "2CF2* -> C + CF4 + 2*",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 200.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 2
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -2.0,
+        0.0
+      ],
+      "solidAtoms": [
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R3",
+      "eq": "Ar_ion + CF2* -> CF2 + *",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ],
+      "ionYield": {
+        "ion": "Ar_ion",
+        "label": "R3_yieldFlux",
+        "flux": 20.0,
+        "meanEnergy": 150.0,
+        "A": 0.9,
+        "Eth": 10.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {}
+      }
+    },
+    {
+      "id": "R4",
+      "eq": "Ar_ion + C -> C_s",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        -1.0,
+        0.0
+      ],
+      "ionYield": {
+        "ion": "Ar_ion",
+        "label": "R4_yieldFlux",
+        "flux": 20.0,
+        "meanEnergy": 150.0,
+        "A": 0.0,
+        "Eth": 5.0,
+        "B": 9.3,
+        "enhanced": false,
+        "materials": {
+          "Polymer": {
+            "A": 0.08,
+            "Eth": 5.0
+          }
+        }
+      }
+    },
+    {
+      "id": "R5",
+      "eq": "F + * -> F*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.3,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        1
+      ],
+      "nu": [
+        0.0,
+        1.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ],
+      "materialConstants": {
+        "Si": {
+          "prefactor": 0.3,
+          "Ea": 0.0,
+          "beta": 0.0
+        },
+        "PolySi": {
+          "prefactor": 0.3,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      },
+      "materialDefault": {
+        "prefactor": 0.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      }
+    },
+    {
+      "id": "R6",
+      "eq": "Ar_ion + 4F* + Si -> SiF4 + 4*",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        -4.0
+      ],
+      "solidAtoms": [
+        0.0,
+        -1.0
+      ],
+      "ionYield": {
+        "ion": "Ar_ion",
+        "label": "R6_yieldFlux",
+        "flux": 20.0,
+        "meanEnergy": 150.0,
+        "A": 2.5,
+        "Eth": 15.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {
+          "Mask": {
+            "A": 0.0,
+            "Eth": 15.0
+          },
+          "Polymer": {
+            "A": 0.0,
+            "Eth": 15.0
+          }
+        }
+      }
+    }
+  ],
+  "constants": {
+    "temperature": 300.0
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

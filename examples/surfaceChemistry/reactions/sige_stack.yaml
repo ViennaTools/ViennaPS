@@ -1,0 +1,52 @@
+name: sige_si_selective_epi
+temperature: 900.0        # K
+
+# CAPABILITY DEMONSTRATION. The rate constants below are illustrative, not taken
+# from a paper. What IS taken from the literature is the mechanism they encode.
+#
+# In silane CVD the rate-limiting step is hydrogen desorption: the surface is
+# H-terminated and growth needs free sites. Germanium on the surface catalyses
+# that desorption, which is why SiGe grows faster than Si:
+#
+#   "the presence of germanium on the surface increases the hydrogen desorption
+#    rate. Consequently growth rates are increased by the addition of germane"
+#   "Ge acts as a desorption center for mobile hydrogen adatoms on the surface"
+#
+#   D. W. Greve, Si-Ge-C Growth and Devices;
+#   Thin Solid Films 494 (2006) on H desorption from SiH4-adsorbed SiGe(001);
+#   Thin Solid Films 602 (2016) on Si/SiGe epitaxy below 500 C.
+#
+# So the lower H2 desorption barrier on SiGe (R3) is the real physics. The
+# numbers chosen for it, and for the adsorption differences, are illustrative.
+#
+# Selective epitaxy on exposed Si but not on oxide or nitride is likewise real
+# and industrial; the inert SiO2 here stands in for it phenomenologically. This
+# model has no nucleation, so it represents that as a rate of zero rather than
+# as an incubation time, which is how selectivity actually fails in practice.
+#
+# A `materials:` entry is either
+#
+#   a number         scales the prefactor, leaving the barrier alone
+#   a mapping        overrides any of s0/k0, Ea and beta on that material
+#
+# and `default:` covers every material not named. A prefactor of zero means the
+# step does not occur there, which is how a reaction is restricted to one
+# material.
+species:
+  SiH4:  {phase: gas,     flux: 1.0e3}
+  H2:    {phase: gas,     reemit_only: true}
+  SiH3*: {phase: surface}
+  H*:    {phase: surface}
+  Si:    {phase: solid,   rho: 5.02}
+
+surface:
+  - {eq: "SiH4 -> SiH3* + H*", type: adsorption, s0: 1.0, Ea: 0.60,
+     materials: {default: 0.0,
+                 SiGe: {s0: 0.80, Ea: 0.45},
+                 Si:   {s0: 1.00, Ea: 0.60},
+                 PolySi: 1.0}}
+
+  - {eq: "SiH3* -> Si + H* + H2", type: surface, k0: 6.8e12, Ea: 1.5}
+
+  - {eq: "2H* -> H2", type: desorption, k0: 6.8e12, Ea: 2.0,
+     materials: {SiGe: {Ea: 1.6}}}

@@ -1,0 +1,67 @@
+name: sf6o2_silicon_etch
+temperature: 300.0        # K, the model has no thermal barrier
+
+# THE ACCEPTANCE TEST. This is the SF6/O2 silicon etch model that ViennaPS ships
+# as hand-written C++ (`psSF6O2Etching.hpp` + `psPlasmaEtching.hpp`), written
+# here as a reaction file. Every number below is the model's own default, taken
+# from `SF6O2Etching::defaultParameters()`. Nothing is invented, and nothing
+# about this chemistry is compiled: the mechanism is built from this file.
+#
+# The published model (Belen et al., and the ViennaPS implementation of it) is:
+#
+#   dtheta_F/dt = J_F*(1-theta_F-theta_O) - k_sigma*theta_F - 2*Y_ie*J_ion*theta_F
+#   dtheta_O/dt = J_O*(1-theta_F-theta_O) - beta_sigma*theta_O - Y_p*J_ion*theta_O
+#   ER = (1/rho) * (k_sigma*theta_F/4 + Y_sp*J_ion + Y_ie*J_ion*theta_F)
+#
+# Two things in it are NOT mass action, and both are stated explicitly below:
+#
+#  1. The chemical etch consumes four fluorine atoms per SiF4 but is FIRST ORDER
+#     in theta_F. Mass action would give theta_F^4. `order: {F*: 1}` says so; the
+#     stoichiometry is untouched, so the balance still loses 4r = k_sigma*theta_F.
+#
+#  2. The ion-enhanced step likewise removes one silicon while consuming two
+#     fluorine, first order in theta_F.
+#
+# The mask is far denser than the substrate (500 vs 5.02), so the same removal
+# rate moves the two surfaces at very different speeds. That is the `rho`
+# mapping on the solid.
+species:
+  F:      {phase: gas, flux: 1.8e3}      # etchantFlux, 1e15 /cm2 /s
+  O:      {phase: gas, flux: 1.0e2}      # passivationFlux
+  Ar_ion: {phase: ion, flux: 1.2e1,      # ionFlux
+           meanEnergy: 100.0, sigmaEnergy: 10.0, exponent: 500.0,
+           inflectAngle: 89.0, n_l: 10.0, minAngle: 80.0,
+           thetaRMin: 70.0, thetaRMax: 90.0}
+  SiF4:   {phase: gas, reemit_only: true}     # the chemical etch product
+  SiF2:   {phase: gas, reemit_only: true}     # the ion-enhanced etch product
+  Si_s:   {phase: gas, reemit_only: true, atoms: {Si: 1}}   # a sputtered atom
+  F*:     {phase: surface}               # eCoverage
+  O*:     {phase: surface}               # pCoverage
+  Si:     {phase: solid, rho: {default: 5.02, Mask: 500.0}}
+
+surface:
+  # --- the neutrals stick to free sites; beta_E and beta_P are their sticking
+  - {eq: "F -> F*", type: adsorption, s0: 0.7, Ea: 0.0}
+  - {eq: "O -> O*", type: adsorption, s0: 1.0, Ea: 0.0}
+
+  # --- spontaneous chemical etch, k_sigma, first order in theta_F
+  - {eq: "4F* + Si -> SiF4", type: surface, k0: 7.5e1, Ea: 0.0,
+     order: {F*: 1},
+     materials: {default: 0.0, Si: 1.0}}          # substrate only
+
+  # --- ion-enhanced etch: two fluorine consumed per silicon, first order
+  - {eq: "Ar_ion + 2F* + Si -> SiF2", type: ion_enhanced,
+     order: {F*: 1},
+     yield: {A: 7.0, Eth: 15.0,
+             materials: {Mask: {A: 0.0, Eth: 15.0}}}}   # substrate only
+
+  # --- physical sputtering, on every material, with its own A per material
+  - {eq: "Ar_ion + Si -> Si_s", type: sputtering,
+     yield: {A: 0.0337, Eth: 20.0, B: 9.3,
+             materials: {Mask: {A: 0.0139, Eth: 20.0}}}}
+
+  # --- the passivation layer is removed by ions, and desorbs thermally
+  - {eq: "Ar_ion + O* -> O", type: ion_enhanced,
+     order: {O*: 1},
+     yield: {A: 3.0, Eth: 10.0}}
+  - {eq: "O* -> O", type: surface, k0: 4.0e-2, Ea: 0.0}

@@ -52,6 +52,7 @@
 
 // models
 #include <models/psCF4ArEtching.hpp>
+#include <models/psSurfaceChemistry.hpp>
 #include <models/psCF4O2Etching.hpp>
 #include <models/psCSVFileProcess.hpp>
 #include <models/psDirectionalProcess.hpp>
@@ -66,6 +67,7 @@
 #include <models/psOxidation.hpp>
 #include <models/psOxideRegrowth.hpp>
 #include <models/psSF6C4F8Etching.hpp>
+#include <models/psChemicalMechanismIO.hpp>
 #include <models/psSF6O2Etching.hpp>
 #include <models/psSelectiveEpitaxy.hpp>
 #include <models/psSingleParticleALD.hpp>
@@ -935,6 +937,17 @@ template <int D> void bindApi(py::module &module) {
       .def("getParameters", &CF4ArEtching<T, D>::getParameters,
            py::return_value_policy::reference)
       .def_static("defaultParameters", &CF4ArEtching<T, D>::defaultParameters);
+
+  // Chemical Deposition (data-driven CVD from a reaction mechanism)
+  py::class_<SurfaceChemistry<T, D>, SmartPointer<SurfaceChemistry<T, D>>>(
+      module, "SurfaceChemistry", processModel)
+      .def(py::init<>())
+      .def(py::init(&SmartPointer<SurfaceChemistry<T, D>>::template New<
+                    const ChemicalMechanism<T> &>),
+           py::arg("mechanism"))
+      .def("setMechanism", &SurfaceChemistry<T, D>::setMechanism)
+      .def("getMechanism", &SurfaceChemistry<T, D>::getMechanism,
+           py::return_value_policy::reference);
 
   // Fluorocarbon Etching
   py::class_<FluorocarbonEtching<T, D>,

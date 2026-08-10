@@ -22,6 +22,7 @@
 #include <process/psSurfaceDiffusion.hpp>
 
 #include <models/psCF4ArEtching.hpp>
+#include <models/psSurfaceChemistry.hpp>
 #include <models/psCF4O2Etching.hpp>
 #include <models/psCSVFileProcess.hpp>
 #include <models/psDirectionalProcess.hpp>

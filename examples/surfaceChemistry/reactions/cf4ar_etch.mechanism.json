@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "name": "cf4_ar_ion_enhanced_etch",
+  "siteTypes": [
+    {
+      "name": "default",
+      "density": null
+    }
+  ],
+  "coverages": [
+    {
+      "name": "F*",
+      "site": 0
+    }
+  ],
+  "gas": [
+    {
+      "name": "F",
+      "traced": true,
+      "label": "F_flux",
+      "flux": 5000.0,
+      "sticking": {
+        "reaction": "R1",
+        "s0": 0.3,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 1
+      }
+    },
+    {
+      "name": "SiF4",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    }
+  ],
+  "solids": [
+    {
+      "name": "Si",
+      "rho": 5.02,
+      "rhoMaterials": {}
+    }
+  ],
+  "solid": {
+    "name": "Si",
+    "rho": 5.02,
+    "rhoMaterials": {}
+  },
+  "ionSource": {
+    "name": "Ar_ion",
+    "flux": 50.0,
+    "meanEnergy": 100.0,
+    "sigmaEnergy": 10.0,
+    "exponent": 200.0,
+    "inflectAngle": 89.0,
+    "n_l": 10.0,
+    "minAngle": 80.0,
+    "thetaRMin": 70.0,
+    "thetaRMax": 90.0
+  },
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "F + * -> F*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.3,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        1
+      ],
+      "nu": [
+        1.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R2",
+      "eq": "Ar_ion + 4F* + Si -> SiF4 + 4*",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 4
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -4.0
+      ],
+      "solidAtoms": [
+        -1.0
+      ],
+      "ionYield": {
+        "ion": "Ar_ion",
+        "label": "R2_yieldFlux",
+        "flux": 50.0,
+        "meanEnergy": 100.0,
+        "A": 0.15,
+        "Eth": 10.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {
+          "Mask": {
+            "A": 0.005,
+            "Eth": 40.0
+          }
+        }
+      }
+    },
+    {
+      "id": "R3",
+      "eq": "Ar_ion + Si -> SiF4",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0
+      ],
+      "solidAtoms": [
+        -1.0
+      ],
+      "ionYield": {
+        "ion": "Ar_ion",
+        "label": "R3_yieldFlux",
+        "flux": 50.0,
+        "meanEnergy": 100.0,
+        "A": 0.01,
+        "Eth": 25.0,
+        "B": 0.0,
+        "enhanced": false,
+        "materials": {
+          "Mask": {
+            "A": 0.001,
+            "Eth": 45.0
+          }
+        }
+      }
+    }
+  ],
+  "constants": {
+    "temperature": 300.0
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

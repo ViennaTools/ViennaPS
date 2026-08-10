@@ -1,0 +1,71 @@
+name: polymer_passivated_etch
+temperature: 300.0        # K
+
+# CAPABILITY DEMONSTRATION: a passivating polymer competing with the etch, the
+# last piece of a plasma etch. This is the Bosch/fluorocarbon idea, where a
+# fluorocarbon film deposits everywhere and the ions must sputter through it
+# before the substrate is etched. Sidewalls, which the directional ions barely
+# reach, keep their film and stop etching; the trench floor, which the ions
+# strike head on, is cleared and etches.
+#
+# WHAT IS NEW HERE: two solids. Until now a mechanism deposited or etched ONE
+# solid, so its density was a single number. Here the polymer is deposited and
+# the silicon is removed in the same mechanism, and the two have different
+# densities (2.2 vs 5.02), so every step divides by the density of the solid IT
+# moves:
+#
+#     v_n = sum_j n_(S,j) r_j / rho_(solid of j)
+#
+# The competition is a sum of ordinary mass-action terms, not a case switch:
+# where the polymer flux wins, v is positive and the film grows; where the ion
+# flux wins, v is negative and the surface etches.
+#
+# The per-material blocks are what stop the substrate etching through the film:
+# the silicon steps are declared on Si (and PolySi) only, so a point covered by
+# polymer runs the polymer chemistry alone.
+#
+# The rate constants are illustrative, not from a paper. The forms are the
+# standard ones: a threshold sputter yield, and the ion-enhanced angular
+# dependence for the polymer removal.
+species:
+  CF2:    {phase: gas, flux: 3.0e2}        # the polymer precursor
+  F:      {phase: gas, flux: 1.0e3}        # the etchant
+  Ar_ion: {phase: ion, flux: 2.0e1,
+           meanEnergy: 150.0, sigmaEnergy: 15.0, exponent: 500.0}
+  SiF4:   {phase: gas, reemit_only: true}
+  CF4:    {phase: gas, reemit_only: true}
+  C_s:    {phase: gas, reemit_only: true, atoms: {C: 1}}  # sputtered film
+  CF2*:   {phase: surface}                 # an adsorbed polymer fragment
+  F*:     {phase: surface}                 # an adsorbed fluorine
+  C:      {phase: solid, rho: 2.2}         # the polymer film
+  Si:     {phase: solid, rho: 5.02}        # the substrate
+
+surface:
+  # --- the polymer: a fragment sticks, then it is built into the film
+  - {eq: "CF2 -> CF2*", type: adsorption, s0: 0.26, Ea: 0.0}
+  - {eq: "2CF2* -> C + CF4", type: surface, k0: 2.0e2, Ea: 0.0}
+
+  # --- ions sputter the polymer fragments back off, which is what clears the
+  #     floor of the trench while the sidewalls keep their film
+  - {eq: "Ar_ion + CF2* -> CF2", type: ion_enhanced,
+     order: {CF2*: 1},
+     yield: {A: 0.9, Eth: 10.0}}
+
+  # --- ions sputter the FILM itself, which is the competition that matters:
+  #     the trench floor faces the ion source and loses its film, the sidewalls
+  #     see almost no ion flux and keep theirs. A = 0 everywhere but on the
+  #     film, since only a film can be sputtered away.
+  - {eq: "Ar_ion + C -> C_s", type: sputtering,
+     yield: {A: 0.0, Eth: 5.0, B: 9.3,
+             materials: {Polymer: {A: 0.08, Eth: 5.0}}}}
+
+  # --- the etchant, and the ion-enhanced silicon etch, on the substrate only
+  # fluorine only reaches the silicon where the film has been cleared, so its
+  # adsorption is declared on the substrate; on the film it reflects away
+  - {eq: "F -> F*", type: adsorption, s0: 0.3, Ea: 0.0,
+     materials: {default: 0.0, Si: 1.0, PolySi: 1.0}}
+  - {eq: "Ar_ion + 4F* + Si -> SiF4", type: ion_enhanced,
+     order: {F*: 1},
+     yield: {A: 2.5, Eth: 15.0,
+             materials: {Mask: {A: 0.0, Eth: 15.0},
+                         Polymer: {A: 0.0, Eth: 15.0}}}}

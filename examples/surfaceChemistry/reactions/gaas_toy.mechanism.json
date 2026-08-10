@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "name": "gaas_toy_twosite",
+  "siteTypes": [
+    {
+      "name": "A",
+      "density": null
+    },
+    {
+      "name": "B",
+      "density": null
+    }
+  ],
+  "coverages": [
+    {
+      "name": "Ga*",
+      "site": 0
+    },
+    {
+      "name": "As*",
+      "site": 1
+    }
+  ],
+  "gas": [
+    {
+      "name": "Ga",
+      "traced": true,
+      "label": "Ga_flux",
+      "flux": 100.0,
+      "sticking": {
+        "reaction": "R1",
+        "s0": 1.0,
+        "Ea": 0.3,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 1
+      }
+    },
+    {
+      "name": "As",
+      "traced": true,
+      "label": "As_flux",
+      "flux": 100.0,
+      "sticking": {
+        "reaction": "R2",
+        "s0": 1.0,
+        "Ea": 0.3,
+        "beta": 0.0,
+        "site": 1,
+        "freeSiteExp": 1
+      }
+    }
+  ],
+  "solids": [
+    {
+      "name": "GaAs",
+      "rho": 2.2,
+      "rhoMaterials": {}
+    }
+  ],
+  "solid": {
+    "name": "GaAs",
+    "rho": 2.2,
+    "rhoMaterials": {}
+  },
+  "ionSource": null,
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "Ga + *A -> Ga*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 1.0,
+        "Ea": 0.3,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        1,
+        0
+      ],
+      "nu": [
+        1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R2",
+      "eq": "As + *B -> As*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 1.0,
+        "Ea": 0.3,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        0,
+        1
+      ],
+      "nu": [
+        0.0,
+        1.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R3",
+      "eq": "Ga* + As* -> GaAs + *A + *B",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1000000000000.0,
+        "Ea": 1.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        },
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0,
+        0
+      ],
+      "nu": [
+        -1.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        1.0
+      ]
+    }
+  ],
+  "constants": {
+    "temperature": 900.0
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

@@ -1,5 +1,6 @@
 // #pragma once
 
+#include "SurfaceChemistry.cuh"
 #include "FaradayCage.cuh"
 #include "IonBeamEtching.cuh"
 #include "MultiParticle.cuh"
@@ -66,6 +67,40 @@ extern "C" __device__ void
 __direct_callable__singleALDNeutralCollision(const void *sbtData,
                                              viennaray::gpu::PerRayData *prd) {
   singleALDNeutralCollision(sbtData, prd);
+}
+
+//
+// --- SurfaceChemistry pipeline
+//
+
+extern "C" __device__ void
+__direct_callable__chemicalNeutralCollision(const void *sbtData,
+                                            viennaray::gpu::PerRayData *prd) {
+  chemicalNeutralCollision(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__chemicalNeutralReflection(const void *sbtData,
+                                             viennaray::gpu::PerRayData *prd) {
+  chemicalNeutralReflection(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__chemicalIonCollision(const void *sbtData,
+                                        viennaray::gpu::PerRayData *prd) {
+  chemicalIonCollision(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__chemicalIonReflection(const void *sbtData,
+                                         viennaray::gpu::PerRayData *prd) {
+  chemicalIonReflection(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__chemicalIonInit(const void *,
+                                   viennaray::gpu::PerRayData *prd) {
+  chemicalIonInit(prd);
 }
 
 //
