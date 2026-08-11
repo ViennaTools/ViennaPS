@@ -50,6 +50,18 @@ cfg = {
     "dealGroveBoA":        0.0,
     "oxidationTime":       0.1,
     "initialTimeStep":     0.0,   # first-substep cap; 0 = model default
+    # One-shot persistent regrid: coarsen the whole stack to this delta (um)
+    # once the thinnest oxide layer exceeds 2x it.  0 = disabled.
+    "regridDelta":         0.0,
+    # Oxide penalty bulk modulus (Pa); 0 = model preset (7.5e8).
+    "bulkModulus":         0.0,
+    # SIMPLE pressure under-relaxation (scale down when raising bulkModulus).
+    "simplePressureRelaxation": 0.0,   # 0 = model default (0.5)
+    # Kao stress feedback: reaction/diffusion activation volumes (m^3).
+    # 0 = model defaults (reaction 1.76e-35 ~ nil, diffusion 0 = off).
+    # Literature (Kao/Akiyama): reaction ~7.9e-30.
+    "reactionActivationVolume":  0.0,
+    "diffusionActivationVolume": 0.0,
     "timeStep":            0.01,
     "temperature":      1000.0,
     "pressure":            1.0,
@@ -205,6 +217,16 @@ if cfg["dealGroveB"] > 0.0 or cfg["dealGroveBoA"] > 0.0:
     model.setDealGroveRates(cfg["dealGroveB"], cfg["dealGroveBoA"])
 model.setTimeStep(time_step)
 model.setInitialTimeStep(cfg["initialTimeStep"])
+if cfg["regridDelta"] > 0.0:
+    model.setRegrid(cfg["regridDelta"])
+if cfg["bulkModulus"] > 0.0:
+    model.setBulkModulus(cfg["bulkModulus"])
+if cfg["simplePressureRelaxation"] > 0.0:
+    model.setSimplePressureRelaxation(cfg["simplePressureRelaxation"])
+if cfg["reactionActivationVolume"] > 0.0:
+    model.setReactionActivationVolume(cfg["reactionActivationVolume"])
+if cfg["diffusionActivationVolume"] > 0.0:
+    model.setDiffusionActivationVolume(cfg["diffusionActivationVolume"])
 model.setMaxGridPoints(max_grid_points)
 model.setMechanicsIterations(cfg["mechanicsIterations"])
 model.setPressureIterations(cfg["pressureIterations"])

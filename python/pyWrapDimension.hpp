@@ -1144,6 +1144,15 @@ template <int D> void bindApi(py::module &module) {
            "Native-oxide seed thickness in µm when no SiO2 layer exists.")
       .def("setTransferCoefficient", &Oxidation<T, D>::setTransferCoefficient,
            py::arg("coefficient"), "Gas-transfer coefficient in µm/hr.")
+      .def("setBulkModulus", &Oxidation<T, D>::setBulkModulus,
+           py::arg("modulus"),
+           "Penalty bulk modulus (Pa) for the oxide pressure equation; "
+           "0 = preset (7.5e8).")
+      .def("setRegrid", &Oxidation<T, D>::setRegrid,
+           py::arg("coarseDelta"), py::arg("factor") = 2.0,
+           "One-shot persistent regrid: coarsen the whole level-set stack to "
+           "coarseDelta (um) once the thinnest oxide layer exceeds "
+           "factor*coarseDelta. 0 = disabled.")
       .def("setInitialTimeStep", &Oxidation<T, D>::setInitialTimeStep,
            py::arg("dtHr"),
            "Cap only the FIRST internal substep (hr); 0 = model default "

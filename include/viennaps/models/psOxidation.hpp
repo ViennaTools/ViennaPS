@@ -29,6 +29,7 @@
 #include <lsOxidationDeformation.hpp>
 #include <lsOxidationDiffusion.hpp>
 #include <lsOxidationPresets.hpp>
+#include <lsResample.hpp>
 #include <lsToMesh.hpp>
 #include <lsVTKWriter.hpp>
 
@@ -40,6 +41,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <unordered_map>
 #include <limits>
 #include <string>
 
@@ -80,6 +82,18 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   // First internal substep cap (hr).  0 = model default (0.004): start where
   // the cold coupled solve accepts, ramp recovers full step size.
   NumericType initialTimeStep_ = NumericType(0);
+  // One-shot persistent regrid (TODO.md unified design, Mode 1): when the
+  // thinnest oxide layer clears regridFactor_ * regridDelta_, resample the
+  // ENTIRE level-set stack once onto regridDelta_ and continue coarse.
+  // 0 = disabled.  Fine grid is spent only while the thin seed needs it.
+  NumericType regridDelta_ = NumericType(0);
+  NumericType regridFactor_ = NumericType(2);
+  // Penalty bulk modulus override (Pa) for the SIMPLE pressure equation.
+  // 0 = preset (7.5e8).  The preset is ~50x softer than physical SiO2
+  // (37 GPa); the retained continuity error div(v) ~ p/K makes the oxide
+  // numerically compressible under contact pressure — the volume-conversion
+  // deficit under a bending mask.  Raise toward physical to close it.
+  NumericType bulkModulusOverride_ = NumericType(0);
   NumericType cflFactor_ = NumericType(0.499);
   NumericType initialOxideThickness_ = NumericType(0.002); // µm (2 nm)
   NumericType transferCoefficient_ = NumericType(100);
@@ -193,6 +207,19 @@ public:
 
   // Cap only the FIRST internal substep (hr); 0 = model default (0.004 hr).
   void setInitialTimeStep(NumericType dtHr) { initialTimeStep_ = dtHr; }
+
+  // One-shot persistent regrid: coarsen the whole level-set stack to
+  // coarseDelta (um) once the thinnest oxide layer exceeds factor*coarseDelta.
+  // 0 disables (default).  See TODO.md "unified design", Mode 1.
+  void setRegrid(NumericType coarseDelta, NumericType factor = NumericType(2)) {
+    regridDelta_ = coarseDelta;
+    regridFactor_ = std::max(factor, NumericType(1));
+  }
+
+  // Penalty bulk modulus (Pa) for the oxide pressure equation; 0 = preset.
+  void setBulkModulus(NumericType modulus) {
+    bulkModulusOverride_ = std::max(modulus, NumericType(0));
+  }
 
   // Courant number used for CFL-limited internal stepping (default 0.499).
   // The actual internal step is min(user timeStep cap, CFL step, remaining).
@@ -522,9 +549,10 @@ public:
     // files alongside the volume mesh.  Uses the pre-Boolean-op level sets so
     // the pointData arrays are intact; lsToMesh + lsVTKWriter propagate them
     // faithfully, unlike lsWriteVisualizationMesh which strips all point data.
-    const auto &oxLS = levelSets[sio2Idx];
-    if (oxLS->getPointData().getScalarDataSize() > 0 ||
-        oxLS->getPointData().getVectorDataSize() > 0) {
+    // Written unconditionally: at step 0 (before any solve) the meshes carry
+    // geometry + LSValues only; solver fields appear from the first solve on.
+    {
+      const auto &oxLS = levelSets[sio2Idx];
       auto oxFieldMesh = ls::SmartPointer<ls::Mesh<NumericType>>::New();
       ls::ToMesh<NumericType, D>(oxLS, oxFieldMesh).apply();
       ls::VTKWriter<NumericType>(oxFieldMesh, baseName + "_oxide_fields.vtp")
@@ -532,12 +560,10 @@ public:
     }
     if (maskIdx >= 0) {
       const auto &maskLS = levelSets[maskIdx];
-      if (maskLS->getPointData().getVectorDataSize() > 0) {
-        auto maskFieldMesh = ls::SmartPointer<ls::Mesh<NumericType>>::New();
-        ls::ToMesh<NumericType, D>(maskLS, maskFieldMesh).apply();
-        ls::VTKWriter<NumericType>(maskFieldMesh, baseName + "_mask_fields.vtp")
-            .apply();
-      }
+      auto maskFieldMesh = ls::SmartPointer<ls::Mesh<NumericType>>::New();
+      ls::ToMesh<NumericType, D>(maskLS, maskFieldMesh).apply();
+      ls::VTKWriter<NumericType>(maskFieldMesh, baseName + "_mask_fields.vtp")
+          .apply();
     }
   }
 
@@ -631,7 +657,7 @@ private:
                                           false);
     }
 
-    const NumericType gridDelta = reactionInterface->getGrid().getGridDelta();
+    NumericType gridDelta = reactionInterface->getGrid().getGridDelta();
 
     auto cflStep = [&](NumericType maxVel) -> NumericType {
       if (maxVel <= NumericType(0))
@@ -749,6 +775,42 @@ private:
           std::min({userStepCap, growthLimitedStep, time_ - time});
       if (requestedDt <= NumericType(0))
         break;
+
+      // One-shot persistent regrid (Mode 1): once the thinnest oxide layer
+      // is comfortably resolvable at the coarse target, resample the whole
+      // stack in place and continue on the coarse grid.  In-place deepCopy
+      // keeps every held SmartPointer valid; the solvers rebuild from the
+      // current grids each substep; the index-keyed concentration warm-start
+      // cannot survive a grid change and is cleared (one cold-started
+      // substep, recovered by the quasi-steady solve).
+      if (regridDelta_ > gridDelta) {
+        const NumericType minOxide =
+            minOxideLayerUm(reactionInterface, ambientInterface, gridDelta);
+        if (minOxide < std::numeric_limits<NumericType>::max() &&
+            minOxide >= regridFactor_ * regridDelta_) {
+          Logger::getInstance()
+              .addInfo(modeLabel + ": REGRID event at t=" +
+                       std::to_string(time) + " hr — min oxide layer " +
+                       std::to_string(minOxide * 1e3) + " nm; resampling " +
+                       std::to_string(levelSets.size()) +
+                       " level sets from delta=" + std::to_string(gridDelta) +
+                       " to " + std::to_string(regridDelta_) + " um")
+              .print();
+          for (auto &ls : levelSets) {
+            ls::Resample<NumericType, D> resampler(ls, regridDelta_);
+            resampler.apply();
+            if (resampler.getResult())
+              ls->deepCopy(resampler.getResult());
+          }
+          locos->setConcentrationCache({});
+          gridDelta = regridDelta_;
+          if (maskIdx >= 0 && !useMaskBendingBounds_) {
+            auto [mbMin, mbMax] = computeLevelSetBounds(levelSets[maskIdx], 4);
+            locos->setMaskBendingBounds(mbMin, mbMax);
+          }
+          regridDelta_ = NumericType(0); // one-shot: disarm
+        }
+      }
 
       locos->setDeformationParameters(computeDefParams(requestedDt));
 
@@ -882,7 +944,9 @@ private:
         viennals::OxidationPresets::oxideMechanics1000C(1.0);
     viennals::OxidationDeformationParameters p;
     p.viscosity = viscosity;
-    p.bulkModulus = basePreset.bulkModulus;
+    p.bulkModulus = (bulkModulusOverride_ > NumericType(0))
+                        ? bulkModulusOverride_
+                        : basePreset.bulkModulus;
     p.shearModulus = basePreset.shearModulus;
     p.stressTimeStep = dt;
     p.mechanicsIterations = mechanicsIterations_;
@@ -962,6 +1026,59 @@ private:
     NumericType B = 0.;   // µm²/hr
     NumericType BoA = 0.; // µm/hr
   };
+
+  /// Minimum oxide-layer thickness (um): per-column difference between the
+  /// ambient (oxide top) and reaction (Si) interface heights along the
+  /// growth axis.  Column heights come from each level set's near-surface
+  /// defined points (y_surf = (i_y - phi) * delta), so the measure is not
+  /// limited by narrow-band width.  Returns max() when no column has both
+  /// interfaces measurable — callers must treat that as "unknown", never as
+  /// "thick".
+  NumericType
+  minOxideLayerUm(SmartPointer<ls::Domain<NumericType, D>> reaction,
+                  SmartPointer<ls::Domain<NumericType, D>> ambient,
+                  NumericType delta) const {
+    using It = viennahrle::ConstSparseIterator<
+        typename ls::Domain<NumericType, D>::DomainType>;
+    auto columnKey = [](const viennahrle::Index<D> &idx) -> long long {
+      if constexpr (D == 2)
+        return static_cast<long long>(idx[0]);
+      else
+        return (static_cast<long long>(idx[0]) << 32) ^
+               static_cast<long long>(static_cast<unsigned int>(idx[1]));
+    };
+    // column -> (best |phi|, surface height) from the tightest defined point
+    auto columnHeights = [&](SmartPointer<ls::Domain<NumericType, D>> ls) {
+      std::unordered_map<long long, std::pair<NumericType, NumericType>> cols;
+      for (It it(ls->getDomain()); !it.isFinished(); ++it) {
+        if (!it.isDefined())
+          continue;
+        const NumericType v = it.getValue();
+        if (std::abs(v) > NumericType(0.9))
+          continue;
+        const auto idx = it.getStartIndices();
+        const NumericType ySurf =
+            (NumericType(idx[D - 1]) - v) * delta; // phi positive above
+        auto [entry, inserted] =
+            cols.try_emplace(columnKey(idx), std::abs(v), ySurf);
+        if (!inserted && std::abs(v) < entry->second.first)
+          entry->second = {std::abs(v), ySurf};
+      }
+      return cols;
+    };
+    const auto reacCols = columnHeights(reaction);
+    const auto ambCols = columnHeights(ambient);
+    NumericType minTh = std::numeric_limits<NumericType>::max();
+    for (const auto &[key, rc] : reacCols) {
+      const auto found = ambCols.find(key);
+      if (found == ambCols.end())
+        continue;
+      const NumericType th = found->second.second - rc.second;
+      if (th > NumericType(0))
+        minTh = std::min(minTh, th);
+    }
+    return minTh;
+  }
 
   DealGroveRates computeDealGroveRates() const {
     const NumericType T_K = temperature_ + NumericType(273.15);
