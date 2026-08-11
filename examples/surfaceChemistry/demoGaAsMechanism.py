@@ -61,6 +61,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--trench", action="store_true",
                     help="also grow both mechanisms in a trench (needs ViennaPS)")
+    ap.add_argument("--gpu", action="store_true",
+                    help="trace the trench on the device")
     args = ap.parse_args()
 
     full = vc.from_file(FULL)
@@ -128,10 +130,10 @@ def main():
     print("   rate whatever the gas phase does.")
 
     if args.trench:
-        trench(full, reduced)
+        trench(full, reduced, args.gpu)
 
 
-def trench(full, reduced):
+def trench(full, reduced, gpu=False):
     """Both mechanisms through the same feature."""
     import json
     import numpy as np
@@ -161,7 +163,8 @@ def trench(full, reduced):
 
         t0, b0 = bounds()
         p = ps.Process(dom, ps.SurfaceChemistry(mech), 1.0)
-        p.setFluxEngineType(ps.FluxEngineType.CPU_DISK)
+        p.setFluxEngineType(ps.FluxEngineType.GPU_TRIANGLE if gpu
+                            else ps.FluxEngineType.CPU_DISK)
         c = ps.CoverageParameters(); c.tolerance = 1e-4; c.maxIterations = 20
         p.setParameters(c)
         r = ps.RayTracingParameters(); r.raysPerPoint = 1000; p.setParameters(r)

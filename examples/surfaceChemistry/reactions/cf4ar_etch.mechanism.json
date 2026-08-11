@@ -34,6 +34,13 @@
       "label": null,
       "flux": null,
       "sticking": null
+    },
+    {
+      "name": "Si_s",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
     }
   ],
   "solids": [
@@ -131,7 +138,7 @@
     },
     {
       "id": "R3",
-      "eq": "Ar_ion + Si -> SiF4",
+      "eq": "Ar_ion + Si -> Si_s",
       "constant": {
         "kind": "arrhenius",
         "k0": 1.0,

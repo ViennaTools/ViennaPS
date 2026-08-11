@@ -14,6 +14,8 @@ The rate constants are illustrative; the forms are the standard ones. Run with
 the ViennaPS venv:  .venv/bin/python polymer_demo.py
 """
 
+import argparse
+
 import numpy as np
 import viennaps as ps
 import viennals
@@ -29,6 +31,7 @@ ps.Logger.setLogLevel(ps.LogLevel.WARNING)
 
 MECH, _ = load(REACTIONS / "polymer_etch.yaml", None)
 TIME = 4.0
+ENGINE = ps.FluxEngineType.CPU_DISK   # replaced by --gpu
 
 
 def nodes(dom):
@@ -44,6 +47,12 @@ def wall_position(pts, y_lo, y_hi):
 
 
 def main():
+    global ENGINE
+    ap = argparse.ArgumentParser(description="A polymer film competing with an etch.")
+    ap.add_argument("--gpu", action="store_true", help="trace on the device")
+    if ap.parse_args().gpu:
+        ENGINE = ps.FluxEngineType.GPU_TRIANGLE
+
     print("Passivation competing with the etch\n")
 
     print(f"mechanism : {MECH.name}\n")
@@ -68,7 +77,7 @@ def main():
     dom.saveVolumeMesh("polymer_initial")
 
     process = ps.Process(dom, ps.SurfaceChemistry(MECH), TIME)
-    process.setFluxEngineType(ps.FluxEngineType.CPU_DISK)
+    process.setFluxEngineType(ENGINE)
     cov = ps.CoverageParameters(); cov.tolerance = 1e-4; cov.maxIterations = 20
     process.setParameters(cov)
     ray = ps.RayTracingParameters(); ray.raysPerPoint = 3000

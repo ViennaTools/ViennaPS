@@ -19,7 +19,8 @@ namespace viennaps {
 // The exponent is indexed by launchParams.particleIdx, because a mechanism may
 // trace several gas species whose adsorption steps take different site counts.
 struct SurfaceChemistryParamsGPU {
-  static constexpr int maxParticles = 8;
+  static constexpr int maxParticles = 16; // a published mechanism
+                                          // can adsorb a dozen species
   static constexpr int maxCoverages = 16;
   static constexpr int maxMaterials = 8; // per-particle sticking overrides
 
@@ -56,6 +57,18 @@ struct SurfaceChemistryParamsGPU {
   float yieldOverrideA[maxYields][maxMaterials] = {};
   float yieldOverrideEth[maxYields][maxMaterials] = {};
 };
+
+// The host and the device each carry their own copy of this struct, and a
+// difference between them is silent: the device reads the right bytes at the
+// wrong offsets, so a coverage's site index becomes garbage and the chemistry
+// quietly changes. Both copies assert the same shape, so editing one without
+// the other fails the build instead.
+static_assert(SurfaceChemistryParamsGPU::maxParticles == 16 &&
+                  SurfaceChemistryParamsGPU::maxCoverages == 16 &&
+                  SurfaceChemistryParamsGPU::maxMaterials == 8 &&
+                  SurfaceChemistryParamsGPU::maxYields == 6,
+              "SurfaceChemistryParamsGPU must have the same shape in "
+              "psSurfaceChemistry.hpp and gpu/models/SurfaceChemistry.cuh");
 
 } // namespace viennaps
 

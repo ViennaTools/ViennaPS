@@ -25,7 +25,9 @@ species:
   F:      {phase: gas,   flux: 5.0e3}       # 1e15 /cm^2 /s
   Ar_ion: {phase: ion,   flux: 5.0e1,
            meanEnergy: 100.0, sigmaEnergy: 10.0, exponent: 200.0}
-  SiF4:   {phase: gas,   reemit_only: true}
+  SiF4:   {phase: gas,   reemit_only: true}   # the ion-enhanced etch product
+  Si_s:   {phase: gas,   reemit_only: true,   # a sputtered silicon atom
+           atoms: {Si: 1}}                    # 'Si' is the solid, so it needs a name
   F*:     {phase: surface}
   Si:     {phase: solid, rho: 5.02}
 
@@ -38,7 +40,8 @@ surface:
      yield: {A: 0.15, Eth: 10.0,
              materials: {Mask: {A: 0.005, Eth: 40.0}}}}
 
-  # the ion can also sputter bare silicon, far more slowly
-  - {eq: "Ar_ion + Si -> SiF4", type: sputtering,
+  # the ion can also sputter bare silicon, far more slowly. There is no
+  # fluorine in this channel, so the atom that leaves is a silicon atom.
+  - {eq: "Ar_ion + Si -> Si_s", type: sputtering,
      yield: {A: 0.01, Eth: 25.0,
              materials: {Mask: {A: 0.001, Eth: 45.0}}}}
