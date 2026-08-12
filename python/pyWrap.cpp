@@ -688,9 +688,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   // ***************************************************************************
 
   // Dose control enum (re-exported from ViennaCS via ViennaPS)
-  py::native_enum<ImplantDoseControl>(module, "ImplantDoseControl",
-                                       "enum.IntEnum",
-                                       "Implant dose control mode")
+  py::native_enum<ImplantDoseControl>(
+      module, "ImplantDoseControl", "enum.IntEnum", "Implant dose control mode")
       .value("Off", ImplantDoseControl::Off)
       .value("WaferDose", ImplantDoseControl::WaferDose)
       .value("BeamDose", ImplantDoseControl::BeamDose)
@@ -698,7 +697,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Anneal solver mode (re-exported from ViennaCS via ViennaPS)
   py::native_enum<AnnealMode>(module, "AnnealMode", "enum.IntEnum",
-                               "Anneal diffusion solver mode")
+                              "Anneal diffusion solver mode")
       .value("Explicit", AnnealMode::Explicit)
       .value("GaussSeidel", AnnealMode::GaussSeidel)
 #ifdef VIENNACS_USE_EIGEN
@@ -724,7 +723,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                ", gamma=" + std::to_string(p.gamma) + ")";
       });
 
-  // Screen-oxide energy-loss (range-reduction) model — analytic power-law ranges
+  // Screen-oxide energy-loss (range-reduction) model — analytic power-law
+  // ranges
   py::class_<viennacs::ScreenEnergyLoss<T>,
              SmartPointer<viennacs::ScreenEnergyLoss<T>>>(module,
                                                           "ScreenEnergyLoss")

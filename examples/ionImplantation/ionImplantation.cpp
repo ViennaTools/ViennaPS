@@ -17,8 +17,8 @@
 //   post_anneal.vtu  — dopant total/active concentration + I/V fields
 
 #include "exampleConfig.hpp"
-#include <psDomain.hpp>
 #include <process/psProcess.hpp>
+#include <psDomain.hpp>
 
 #include <lsBooleanOperation.hpp>
 #include <lsGeometries.hpp>
@@ -47,7 +47,8 @@ static int runIonImplantation(int argc, char *argv[]) {
     return 1;
   }
 
-  // Determine mode: if 'projectedRange' is omitted, use the table-driven DB defaults.
+  // Determine mode: if 'projectedRange' is omitted, use the table-driven DB
+  // defaults.
   const bool useTable = params.m.count("projectedRange") == 0;
 
   if (useTable) {
@@ -58,19 +59,18 @@ static int runIonImplantation(int argc, char *argv[]) {
             << " Implant & Anneal (config: " << cfgPath << ") ---\n";
 
   // ── Geometry parameters ───────────────────────────────────────────────────
-  const T gridDelta      = params.get("gridDelta");
-  const T xExtent        = params.get("xExtent");
-  const T topSpace       = params.get("topSpace");
+  const T gridDelta = params.get("gridDelta");
+  const T xExtent = params.get("xExtent");
+  const T topSpace = params.get("topSpace");
   const T substrateDepth = params.get("substrateDepth");
-  const T openingWidth   = params.get("openingWidth");
-  const T maskHeight     = params.get("maskHeight");
-  const T oxideThickness =
-      params.m.count("screenOxideThickness")
-          ? params.get("screenOxideThickness")
-          : params.get("oxideThickness");
-  const T screenThickness =
-      params.m.count("screenThickness") ? params.get("screenThickness")
-                                        : oxideThickness;
+  const T openingWidth = params.get("openingWidth");
+  const T maskHeight = params.get("maskHeight");
+  const T oxideThickness = params.m.count("screenOxideThickness")
+                               ? params.get("screenOxideThickness")
+                               : params.get("oxideThickness");
+  const T screenThickness = params.m.count("screenThickness")
+                                ? params.get("screenThickness")
+                                : oxideThickness;
 
   // ── Build domain with the same y-bounds as the ViennaCS example ──────────
   //   y ∈ [−substrateDepth, topSpace + oxideThickness + maskHeight]
@@ -94,8 +94,7 @@ static int runIonImplantation(int argc, char *argv[]) {
     T origin[D] = {}, normal[D] = {};
     origin[D - 1] = -substrateDepth;
     normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls,
-                                 viennals::Plane<T, D>::New(origin, normal))
+    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
         .apply();
     domain->insertNextLevelSetAsMaterial(ls, Material::Si);
   }
@@ -104,8 +103,7 @@ static int runIonImplantation(int argc, char *argv[]) {
     auto ls = makels();
     T origin[D] = {}, normal[D] = {};
     normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls,
-                                 viennals::Plane<T, D>::New(origin, normal))
+    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
         .apply();
     domain->insertNextLevelSetAsMaterial(ls, Material::Si);
   }
@@ -115,20 +113,19 @@ static int runIonImplantation(int argc, char *argv[]) {
     T origin[D] = {}, normal[D] = {};
     origin[D - 1] = oxideThickness;
     normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls,
-                                 viennals::Plane<T, D>::New(origin, normal))
+    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
         .apply();
     domain->insertNextLevelSetAsMaterial(ls, Material::SiO2);
   }
-  // Level set 3: hard mask (y = oxideThickness to y = oxideThickness + maskHeight)
+  // Level set 3: hard mask (y = oxideThickness to y = oxideThickness +
+  // maskHeight)
   //              with a window of width openingWidth centred at x = 0
   {
     auto ls = makels();
     T origin[D] = {}, normal[D] = {};
     origin[D - 1] = oxideThickness + maskHeight;
     normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls,
-                                 viennals::Plane<T, D>::New(origin, normal))
+    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
         .apply();
     domain->insertNextLevelSetAsMaterial(ls, Material::Mask);
 
@@ -136,8 +133,7 @@ static int runIonImplantation(int argc, char *argv[]) {
     auto window = makels();
     T wMin[D] = {-0.5 * openingWidth, oxideThickness - gridDelta};
     T wMax[D] = {0.5 * openingWidth, oxideThickness + maskHeight + gridDelta};
-    viennals::MakeGeometry<T, D>(window,
-                                 viennals::Box<T, D>::New(wMin, wMax))
+    viennals::MakeGeometry<T, D>(window, viennals::Box<T, D>::New(wMin, wMax))
         .apply();
     domain->applyBooleanOperation(
         window, viennals::BooleanOperationEnum::RELATIVE_COMPLEMENT);
@@ -158,7 +154,8 @@ static int runIonImplantation(int argc, char *argv[]) {
   const auto annealSchedule = ionimpl::readAnnealSchedule<T>(rawParams);
   const T peakT = viennaps::peakAnnealTemperature(annealSchedule);
 
-  std::string labelTotal, labelActive, labelDamage, labelInterstitial, labelVacancy;
+  std::string labelTotal, labelActive, labelDamage, labelInterstitial,
+      labelVacancy;
 
   if (useTable) {
     const auto implantConfig =
@@ -168,11 +165,11 @@ static int runIonImplantation(int argc, char *argv[]) {
 
     std::cout << "Annealing: peak T = " << (peakT - T(273.15)) << " C ...\n";
     const auto annealConfig = ionimpl::makeAnnealSetup<T>(
-        params, annealSchedule, implantConfig, peakT,
-        {viennaps::Material::Si},
+        params, annealSchedule, implantConfig, peakT, {viennaps::Material::Si},
         {viennaps::Material::Mask, viennaps::Material::SiO2},
         /*defaultUseModelDb=*/true);
-    std::cout << "Anneal parameter source: " << annealConfig.model.source << "\n";
+    std::cout << "Anneal parameter source: " << annealConfig.model.source
+              << "\n";
     viennaps::applyAnnealSetup(*anneal, annealConfig);
 
     labelTotal = implantConfig.labels.total;
@@ -188,11 +185,11 @@ static int runIonImplantation(int argc, char *argv[]) {
 
     std::cout << "Annealing: peak T = " << (peakT - T(273.15)) << " C ...\n";
     const auto annealConfig = ionimpl::makeAnnealSetup<T>(
-        params, annealSchedule, implantConfig, peakT,
-        {viennaps::Material::Si},
+        params, annealSchedule, implantConfig, peakT, {viennaps::Material::Si},
         {viennaps::Material::Mask, viennaps::Material::SiO2},
         /*defaultUseModelDb=*/false);
-    std::cout << "Anneal parameter source: " << annealConfig.model.source << "\n";
+    std::cout << "Anneal parameter source: " << annealConfig.model.source
+              << "\n";
     viennaps::applyAnnealSetup(*anneal, annealConfig);
 
     labelTotal = implantConfig.labels.total;
@@ -211,7 +208,8 @@ static int runIonImplantation(int argc, char *argv[]) {
 
   std::cout << "\n--- POST-ANNEAL STATS (ViennaPS C++) ---\n";
   auto printFieldStats = [&](const std::string &label) {
-    if (label.empty()) return;
+    if (label.empty())
+      return;
     auto field = domain->getCellSet()->getScalarData(label);
     if (!field) {
       std::cout << label << " <missing>\n";
@@ -223,8 +221,8 @@ static int runIonImplantation(int argc, char *argv[]) {
       maxVal = std::max(maxVal, v);
       sumVal += static_cast<long double>(v);
     }
-    std::cout << label << " max=" << maxVal << " sum=" << static_cast<double>(sumVal)
-              << "\n";
+    std::cout << label << " max=" << maxVal
+              << " sum=" << static_cast<double>(sumVal) << "\n";
   };
   printFieldStats(labelTotal);
   printFieldStats(labelActive);
@@ -235,10 +233,10 @@ static int runIonImplantation(int argc, char *argv[]) {
 
   std::cout << "Done.\n";
   std::cout << "  initial" << outSuffix << "      : geometry + material IDs\n";
-  std::cout << "  post_implant" << outSuffix << " : " << labelTotal
-            << " + " << labelDamage << " fields\n";
-  std::cout << "  post_anneal" << outSuffix << "  : " << labelTotal
-            << " + " << labelActive << " + I/V fields\n";
+  std::cout << "  post_implant" << outSuffix << " : " << labelTotal << " + "
+            << labelDamage << " fields\n";
+  std::cout << "  post_anneal" << outSuffix << "  : " << labelTotal << " + "
+            << labelActive << " + I/V fields\n";
   return 0;
 }
 

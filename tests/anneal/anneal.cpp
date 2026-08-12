@@ -1,8 +1,8 @@
 #include <models/psAnneal.hpp>
 
 #include <geometries/psMakePlane.hpp>
-#include <psDomain.hpp>
 #include <process/psProcess.hpp>
+#include <psDomain.hpp>
 
 #include <vcTestAsserts.hpp>
 
@@ -23,8 +23,7 @@ static constexpr T kGridDelta = 2.0; // nm
 ps::SmartPointer<ps::Domain<T, D>> makeSubstrate() {
   auto domain = ps::Domain<T, D>::New();
   ps::MakePlane<T, D>(domain, kGridDelta, /*xExtent=*/100., /*yExtent=*/200.,
-                      /*baseHeight=*/0., /*isPeriodic=*/false,
-                      ps::Material::Si)
+                      /*baseHeight=*/0., /*isPeriodic=*/false, ps::Material::Si)
       .apply();
   domain->generateCellSet(/*position=*/300., ps::Material::Air,
                           /*isAboveSurface=*/true);
@@ -78,7 +77,7 @@ void testDiffusionSpreads() {
 
   auto model = ps::SmartPointer<ps::Anneal<T, D>>::New();
   model->setDiffusionCoefficient(100.0); // length²/s
-  model->setDuration(1.0);              // seconds
+  model->setDuration(1.0);               // seconds
   model->setMode(ps::AnnealMode::Explicit);
   model->setDiffusionMaterials({ps::Material::Air});
   model->setBlockingMaterials({ps::Material::Si});
@@ -137,7 +136,8 @@ void testTemperatureSchedule() {
 }
 
 // --- Test 3: solid activation writes a bounded active_concentration field ---
-// With total_C = 1e22 and C_SS = 1e19, the active fraction ≈ C_SS * total / (C_SS + total).
+// With total_C = 1e22 and C_SS = 1e19, the active fraction ≈ C_SS * total /
+// (C_SS + total).
 void testSolidActivation() {
   auto domain = makeSubstrate();
   auto cs = domain->getCellSet();
@@ -153,7 +153,7 @@ void testSolidActivation() {
       (*conc)[i] = 1e22;
 
   auto model = ps::SmartPointer<ps::Anneal<T, D>>::New();
-  model->setDiffusionCoefficient(0.);  // no diffusion; only activation
+  model->setDiffusionCoefficient(0.); // no diffusion; only activation
   model->setDuration(1.0);
   model->enableSolidActivation(true);
   // C_SS(T) = 1e19 · exp(0) = 1e19 (temperature-independent with Ea = 0)
@@ -170,7 +170,7 @@ void testSolidActivation() {
     if (static_cast<int>((*mats)[i]) != airId)
       continue;
     const T total = (*conc)[i];
-    const T act   = (*active)[i];
+    const T act = (*active)[i];
     VC_TEST_ASSERT(act >= 0.);
     VC_TEST_ASSERT(act <= total + 1e-10);
     // active = C_SS · C_total / (C_SS + C_total)

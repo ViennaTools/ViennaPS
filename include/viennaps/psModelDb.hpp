@@ -58,31 +58,74 @@ inline std::string modelDataKindName(const ModelDataKind kind) {
 
 inline std::string missingModelDataMessage(const ModelDataKind kind,
                                            const std::string &path,
-                                           const std::string &details = "") {
+                                           const std::string &details = "",
+                                           const std::string &species = "",
+                                           const std::string &material = "") {
+  const auto kindName = modelDataKindName(kind);
+  const bool named = !species.empty() || !material.empty();
   std::ostringstream msg;
-  msg << "ViennaPS model data is missing";
+
+  if (named) {
+    msg << "ViennaPS: the public model database has no " << kindName
+        << " data for ";
+    if (!species.empty())
+      msg << species;
+    if (!species.empty() && !material.empty())
+      msg << " in ";
+    if (!material.empty())
+      msg << material;
+    msg << ".";
+  } else {
+    msg << "ViennaPS: the " << kindName << " model database could not be read.";
+  }
   if (!path.empty())
-    msg << ":\n  " << path;
+    msg << "\n  looked for: " << path;
   msg << "\n\n";
   if (!details.empty())
     msg << details << "\n\n";
-  msg << "This " << modelDataKindName(kind)
-      << " model is table/model-DB driven, but the private model DB is not "
-         "available at the configured path.\n\n"
-      << "You can fix this in one of these ways:\n"
-      << "  1. Install the private ViennaPS model DB at `ViennaPS/modeldb`, "
-         "or set `VIENNAPS_MODELDB_ROOT` to its location.\n"
-      << "  2. Provide your own CSV table and pass that path through the "
-         "corresponding recipe/table-file parameter.\n"
-      << "  3. Provide calibrated parameters manually instead of using table "
-         "lookup. In the ion implantation examples this means using explicit "
-         "implant moments and manual anneal parameters in the config file; "
-         "damage also needs manual damage moments if defect-coupled anneal is "
-         "used without the DB.\n\n"
-      << "To request access to the private model DB, contact "
+
+  msg << "This is the public release of ViennaPS. Its bundled model database "
+         "is generic and literature-based, and ships tables for a limited set "
+         "of dopants and materials (the initial public release covers boron "
+         "and phosphorus in silicon). Other dopants, materials, energies, or "
+         "process conditions are not part of the public data set.\n\n";
+
+  msg << "You can proceed by:\n";
+  if (!named)
+    msg << "  - making sure the model DB is installed and reachable (it ships "
+           "under `ViennaPS/modeldb`; set `VIENNAPS_MODELDB_ROOT` to its "
+           "location if it is not found automatically),\n";
+  msg << "  - providing your own CSV table for this " << kindName
+      << " and passing its path through the recipe/table-file parameter,\n"
+      << "  - or using explicit, manually specified parameters instead of a "
+         "table lookup (in the ion implantation example: explicit implant "
+         "moments and manual anneal parameters in the config file, plus manual "
+         "damage moments for a defect-coupled anneal run without the DB).\n\n";
+
+  msg << "The extended, measurement-calibrated model database covers "
+         "additional dopants, materials, and process ranges. To request it, or "
+         "coverage for a specific dopant / material / process range, contact "
          "filipovic@iue.tuwien.ac.at with subject `ViennaPS Model Data "
-         "Request` and include your affiliation, usage context, and the "
-         "dopant/material/process range you need.";
+         "Request` and include your affiliation and usage context.";
+  return msg.str();
+}
+
+// Message for a request that is inside the covered species/material but outside
+// the tabulated *range* (an energy beyond the grid, or a tilt away from the
+// single tabulated channeling geometry). `details` is the specific range
+// message from the table layer.
+inline std::string outOfRangeModelDataMessage(const std::string &details) {
+  std::ostringstream msg;
+  msg << "ViennaPS: " << details << "\n\n"
+      << "The public model database interpolates within the tabulated range "
+         "but does not extrapolate, and it provides a single representative "
+         "tilt/twist geometry. Choose a condition inside the tabulated range, "
+         "provide your own CSV table, or use explicit implant moments in the "
+         "config file instead of a table lookup.\n\n"
+      << "The extended, measurement-calibrated model database covers a wider "
+         "range of energies, tilts, and process conditions. To request it, "
+         "contact filipovic@iue.tuwien.ac.at with subject `ViennaPS Model "
+         "Data Request` and include your affiliation and usage context.";
   return msg.str();
 }
 

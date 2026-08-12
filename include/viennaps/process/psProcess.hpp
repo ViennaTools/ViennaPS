@@ -321,8 +321,8 @@ public:
     // Resolve AUTO only when GPU is available — CPU fallback is deferred to
     // apply() so that callback-only and geometric models never touch the flux
     // engine path at all.
-    if (fluxEngineType_ == FluxEngineType::AUTO &&
-        gpuAvailable() && context_.model->hasGPUModel()) {
+    if (fluxEngineType_ == FluxEngineType::AUTO && gpuAvailable() &&
+        context_.model->hasGPUModel()) {
       fluxEngineType_ = context_.flags.domainHasPeriodicBoundaries
                             ? FluxEngineType::GPU_DISK
                             : FluxEngineType::GPU_TRIANGLE;

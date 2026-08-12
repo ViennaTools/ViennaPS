@@ -20,6 +20,15 @@
 
 namespace viennaps::tables {
 
+// Thrown when a requested implant/damage condition lies outside the tabulated
+// range on a guarded shape axis (energy or tilt). The model refuses to
+// extrapolate rather than silently clamp to the nearest tabulated value; the
+// model-DB layer turns this into a clear "outside the covered range" message.
+class TableRangeError final : public std::out_of_range {
+public:
+  using std::out_of_range::out_of_range;
+};
+
 template <typename NumericType> struct ImplantTableEntry {
   std::string species;
   std::string material;
@@ -241,6 +250,36 @@ template <typename NumericType>
 inline NumericType normalizedDistance(NumericType lhs, NumericType rhs,
                                       NumericType scale) {
   return std::abs(lhs - rhs) / std::max(scale, NumericType(1e-9));
+}
+
+// Coverage guard for a genuine shape axis (energy, tilt): refuse to extrapolate
+// beyond the tabulated range. A request within [min-tol, max+tol] passes, so
+// exact hits and interior points (which the caller then brackets and
+// interpolates) are fine; anything further out throws TableRangeError. This is
+// what stops a single-valued axis -- e.g. tilt tabulated only at 7 deg -- from
+// silently standing in for a very different request.
+template <typename NumericType, typename EntryPtr, typename Accessor>
+inline void requireAxisInRange(const std::vector<EntryPtr> &candidates,
+                               NumericType target, const char *axisName,
+                               Accessor accessor, NumericType absTol,
+                               NumericType relTol, const std::string &context) {
+  if (candidates.empty())
+    return;
+  NumericType lo = std::numeric_limits<NumericType>::infinity();
+  NumericType hi = -std::numeric_limits<NumericType>::infinity();
+  for (const auto *entry : candidates) {
+    const auto value = accessor(*entry);
+    lo = std::min(lo, value);
+    hi = std::max(hi, value);
+  }
+  const auto tol = absTol + relTol * std::abs(target);
+  if (target < lo - tol || target > hi + tol) {
+    std::ostringstream message;
+    message << "Requested " << axisName << "=" << target
+            << " is outside the tabulated range [" << lo << ", " << hi
+            << "] for " << context << ".";
+    throw TableRangeError(message.str());
+  }
 }
 
 template <typename NumericType>
@@ -585,6 +624,21 @@ public:
                                " in " + material + " (" + substrateType + ").");
     }
 
+    // Refuse to extrapolate on the genuine shape axes. Energy is interpolated
+    // within its tabulated range; tilt is tabulated at a single crystalline
+    // channeling geometry. Dose is applied separately as amplitude and the
+    // screen oxide via the screen energy-loss model, so those are not guarded.
+    const std::string coverageContext =
+        species + " in " + material + " (" + substrateType + ")";
+    impl::requireAxisInRange<NumericType>(
+        candidates, energyKeV, "energyKeV",
+        [](const ImplantTableEntry<NumericType> &e) { return e.energyKeV; },
+        NumericType(1e-6), NumericType(1e-3), coverageContext);
+    impl::requireAxisInRange<NumericType>(
+        candidates, tiltDeg, "tiltDeg",
+        [](const ImplantTableEntry<NumericType> &e) { return e.tiltDeg; },
+        NumericType(0.05), NumericType(0), coverageContext);
+
     auto restrictToLocalGrid =
         [](std::vector<const ImplantTableEntry<NumericType> *> &entries,
            NumericType target, auto accessor) {
@@ -896,6 +950,18 @@ public:
       throw std::runtime_error("No damage table entries found for " + species +
                                " in " + material + ".");
     }
+
+    // Refuse to extrapolate on the genuine shape axes (see
+    // ImplantTable::lookup).
+    const std::string coverageContext = species + " in " + material;
+    impl::requireAxisInRange<NumericType>(
+        candidates, energyKeV, "energyKeV",
+        [](const DamageTableEntry<NumericType> &e) { return e.energyKeV; },
+        NumericType(1e-6), NumericType(1e-3), coverageContext);
+    impl::requireAxisInRange<NumericType>(
+        candidates, tiltDeg, "tiltDeg",
+        [](const DamageTableEntry<NumericType> &e) { return e.tiltDeg; },
+        NumericType(0.05), NumericType(0), coverageContext);
 
     auto restrictToLocalGrid =
         [](std::vector<const DamageTableEntry<NumericType> *> &entries,

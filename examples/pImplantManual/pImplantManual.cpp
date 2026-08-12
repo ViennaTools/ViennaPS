@@ -17,8 +17,8 @@
 //   profile_post_anneal.csv  — dopant total/active + I/V vs depth
 
 #include "../ionImplantation/exampleConfig.hpp"
-#include <psDomain.hpp>
 #include <process/psProcess.hpp>
+#include <psDomain.hpp>
 
 #include <lsBooleanOperation.hpp>
 #include <lsGeometries.hpp>
@@ -43,13 +43,14 @@ using namespace viennaps;
 // The "sum" column integrates the concentration laterally at each depth —
 // useful for checking conserved dose; the "max" column gives the peak
 // concentration at that depth (would match a 1-D full-dose simulation at x=0).
-// Note: the domain uses a reflective boundary at x=0, so the physical half-width
-// is xExtent/2; the sum therefore represents the half-domain integral.
+// Note: the domain uses a reflective boundary at x=0, so the physical
+// half-width is xExtent/2; the sum therefore represents the half-domain
+// integral.
 template <typename T, int D>
-static void writeDepthProfile(
-    const SmartPointer<viennaps::Domain<T, D>> &domain,
-    const std::vector<std::string> &labels,
-    const std::string &filename) {
+static void
+writeDepthProfile(const SmartPointer<viennaps::Domain<T, D>> &domain,
+                  const std::vector<std::string> &labels,
+                  const std::string &filename) {
 
   auto cs = domain->getCellSet();
   const std::size_t nCells = cs->getNumberOfCells();
@@ -82,7 +83,8 @@ static void writeDepthProfile(
     auto &bin = it->second;
     bin.count++;
     for (std::size_t f = 0; f < labels.size(); ++f) {
-      if (!fields[f]) continue;
+      if (!fields[f])
+        continue;
       const T v = (*fields[f])[idx];
       bin.sum[f] += v;
       bin.max[f] = std::max(bin.max[f], v);
@@ -91,7 +93,8 @@ static void writeDepthProfile(
 
   std::ofstream out(filename);
   out << "# Vertical depth profile\n";
-  out << "# depth_nm: positive distance into substrate (surface y=0 minus cell centre y)\n";
+  out << "# depth_nm: positive distance into substrate (surface y=0 minus cell "
+         "centre y)\n";
   out << "# _sum: sum of field over all x-cells at this depth\n";
   out << "# _max: peak field value across x at this depth\n";
   out << "depth_nm";
@@ -129,16 +132,16 @@ int main(int argc, char *argv[]) {
             << ") ---\n";
 
   // ── Geometry parameters ───────────────────────────────────────────────────
-  const T gridDelta      = params.get("gridDelta");
-  const T xExtent        = params.get("xExtent");
-  const T topSpace       = params.get("topSpace");
+  const T gridDelta = params.get("gridDelta");
+  const T xExtent = params.get("xExtent");
+  const T topSpace = params.get("topSpace");
   const T substrateDepth = params.get("substrateDepth");
-  const T openingWidth   = params.get("openingWidth");
-  const T maskHeight     = params.get("maskHeight");
+  const T openingWidth = params.get("openingWidth");
+  const T maskHeight = params.get("maskHeight");
   const T oxideThickness = params.get("oxideThickness");
-  const T screenThickness =
-      params.m.count("screenThickness") ? params.get("screenThickness")
-                                        : oxideThickness;
+  const T screenThickness = params.m.count("screenThickness")
+                                ? params.get("screenThickness")
+                                : oxideThickness;
 
   T bounds[2 * D] = {-0.5 * xExtent, 0.5 * xExtent, -substrateDepth,
                      topSpace + oxideThickness + maskHeight};
@@ -205,7 +208,7 @@ int main(int argc, char *argv[]) {
 
   // ── Process models ────────────────────────────────────────────────────────
   auto implant = SmartPointer<IonImplantation<T, D>>::New();
-  auto anneal  = SmartPointer<Anneal<T, D>>::New();
+  auto anneal = SmartPointer<Anneal<T, D>>::New();
 
   const auto annealSchedule = ionimpl::readAnnealSchedule<T>(rawParams);
   const T peakT = viennaps::peakAnnealTemperature(annealSchedule);
@@ -217,8 +220,7 @@ int main(int argc, char *argv[]) {
 
   std::cout << "Annealing: peak T = " << (peakT - T(273.15)) << " C ...\n";
   const auto annealConfig = ionimpl::makeAnnealSetup<T>(
-      params, annealSchedule, implantConfig, peakT,
-      {viennaps::Material::Si},
+      params, annealSchedule, implantConfig, peakT, {viennaps::Material::Si},
       {viennaps::Material::Mask, viennaps::Material::SiO2},
       /*defaultUseModelDb=*/false);
   std::cout << "Anneal parameter source: " << annealConfig.model.source << "\n";
@@ -227,13 +229,14 @@ int main(int argc, char *argv[]) {
   // ── Run and write profiles ────────────────────────────────────────────────
   Process<T, D>(domain, implant, T(0)).apply();
   domain->getCellSet()->writeVTU("post_implant.vtu");
-  writeDepthProfile<T, D>(domain,
-      {implantConfig.labels.total, implantConfig.labels.damage},
+  writeDepthProfile<T, D>(
+      domain, {implantConfig.labels.total, implantConfig.labels.damage},
       "profile_post_implant.csv");
 
   Process<T, D>(domain, anneal, T(0)).apply();
   domain->getCellSet()->writeVTU("post_anneal.vtu");
-  writeDepthProfile<T, D>(domain,
+  writeDepthProfile<T, D>(
+      domain,
       {implantConfig.labels.total, implantConfig.labels.active,
        implantConfig.labels.damage, implantConfig.labels.interstitial,
        implantConfig.labels.vacancy},
@@ -242,9 +245,13 @@ int main(int argc, char *argv[]) {
   // ── Stats ─────────────────────────────────────────────────────────────────
   std::cout << "\n--- POST-ANNEAL STATS ---\n";
   auto printFieldStats = [&](const std::string &label) {
-    if (label.empty()) return;
+    if (label.empty())
+      return;
     auto field = domain->getCellSet()->getScalarData(label);
-    if (!field) { std::cout << label << " <missing>\n"; return; }
+    if (!field) {
+      std::cout << label << " <missing>\n";
+      return;
+    }
     T maxVal = 0.;
     long double sumVal = 0.;
     for (const auto &v : *field) {

@@ -44,6 +44,12 @@ template <typename NumericType> struct AnnealParams {
   bool enableSolidActivation = true;
   NumericType solidSolubilityC0 = 0;
   NumericType solidSolubilityEa_eV = 0;
+
+  // Instantaneous effective TED: D_eff = D*(1 + factor*damage/norm) from the
+  // static implant-damage field (no dynamic defect solver).
+  // Literature-magnitude effective enhancement (Cowern/Packan/Stolk boron TED).
+  NumericType tedStaticFactor = 0;
+  NumericType tedStaticNorm = 1;
 };
 
 template <typename NumericType, int D>
@@ -76,10 +82,12 @@ inline void applyAnnealParams(Anneal<NumericType, D> &anneal,
                                        p.solidSolubilityEa_eV);
   }
   if (p.enableTedFromScoreDFactor)
-    anneal.setTEDFromDamageFactor(
-        p.scoreDFactor, p.tedCoefficientScale, p.tedNormalization);
+    anneal.setTEDFromDamageFactor(p.scoreDFactor, p.tedCoefficientScale,
+                                  p.tedNormalization);
   else if (p.tedCoefficient > NumericType(0))
     anneal.setDefectEnhancedDiffusion(p.tedCoefficient, p.tedNormalization);
+  if (p.tedStaticFactor > NumericType(0))
+    anneal.setStaticDamageTED(p.tedStaticFactor, p.tedStaticNorm);
   if (p.enableDefectClustering) {
     anneal.enableDefectClustering(true);
     anneal.setDefectClusterKinetics(p.clusterKfi, p.clusterKfc, p.clusterKr);

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <csImplantModel.hpp>
 #include "psImplantPearson.hpp"
+#include <csImplantModel.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -12,42 +12,39 @@ namespace viennaps {
 template <class NumericType, int D>
 class ImplantDamageHobler final : public ImplantModel<NumericType, D> {
 public:
-  ImplantDamageHobler(
-      NumericType projectedRange, NumericType verticalSigma,
-      NumericType lambda, NumericType defectsPerIon, NumericType lateralSigma,
-      NumericType lateralDeltaSigma = NumericType(0))
-      : ImplantDamageHobler(projectedRange, verticalSigma, lambda,
-                            defectsPerIon,
-                            LateralStraggleParameters<NumericType>{
-                                LateralStraggleModel::LinearDepthScale, NumericType(0),
-                                lateralSigma, NumericType(1), NumericType(1),
-                                lateralDeltaSigma, projectedRange}) {}
+  ImplantDamageHobler(NumericType projectedRange, NumericType verticalSigma,
+                      NumericType lambda, NumericType defectsPerIon,
+                      NumericType lateralSigma,
+                      NumericType lateralDeltaSigma = NumericType(0))
+      : ImplantDamageHobler(
+            projectedRange, verticalSigma, lambda, defectsPerIon,
+            LateralStraggleParameters<NumericType>{
+                LateralStraggleModel::LinearDepthScale, NumericType(0),
+                lateralSigma, NumericType(1), NumericType(1), lateralDeltaSigma,
+                projectedRange}) {}
 
   ImplantDamageHobler(
-      NumericType projectedRange, NumericType verticalSigma,
-      NumericType lambda, NumericType defectsPerIon,
+      NumericType projectedRange, NumericType verticalSigma, NumericType lambda,
+      NumericType defectsPerIon,
       const LateralStraggleParameters<NumericType> &lateralParams)
       : rp_(std::max(projectedRange, NumericType(0))),
-        sigma_(std::max(verticalSigma, NumericType(1e-9))),
-        lambda_(lambda),
+        sigma_(std::max(verticalSigma, NumericType(1e-9))), lambda_(lambda),
         defectsPerIon_(std::max(defectsPerIon, NumericType(0))),
         lateralParams_(lateralParams) {
     maxDepth_ = std::max(rp_ + NumericType(8) * sigma_, NumericType(0));
     const auto lambdaAbs = std::abs(lambda_);
     if (lambdaAbs > NumericType(1e-9)) {
-      const auto x0 =
-          lambda_ > NumericType(0)
-              ? rp_ - (sigma_ * sigma_) / lambdaAbs
-              : rp_ + (sigma_ * sigma_) / lambdaAbs;
+      const auto x0 = lambda_ > NumericType(0)
+                          ? rp_ - (sigma_ * sigma_) / lambdaAbs
+                          : rp_ + (sigma_ * sigma_) / lambdaAbs;
       maxDepth_ = std::max(maxDepth_, x0 + NumericType(10) * lambdaAbs);
     }
 
     const auto integrationStep =
         std::max(sigma_ / NumericType(50), NumericType(1e-3));
-    depthNormalization_ =
-        impl::integrateTrapezoidal<NumericType>(
-            [this](NumericType depth) { return rawDepthShape(depth); },
-            NumericType(0), maxDepth_, integrationStep);
+    depthNormalization_ = impl::integrateTrapezoidal<NumericType>(
+        [this](NumericType depth) { return rawDepthShape(depth); },
+        NumericType(0), maxDepth_, integrationStep);
     if (depthNormalization_ <= NumericType(0))
       depthNormalization_ = NumericType(1);
 

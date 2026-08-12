@@ -73,11 +73,11 @@
 #include <models/psWetEtching.hpp>
 
 // Ion implantation and annealing
+#include <csNetDoping.hpp>
+#include <csSheetResistance.hpp>
 #include <models/psAnneal.hpp>
 #include <models/psImplantProfile.hpp>
 #include <models/psIonImplantation.hpp>
-#include <csNetDoping.hpp>
-#include <csSheetResistance.hpp>
 
 // visualization
 #include <psToDiskMesh.hpp>
@@ -547,8 +547,7 @@ template <int D> void bindApi(py::module &module) {
       .def("generateCellSet", &Domain<T, D>::generateCellSet,
            py::arg("position"), py::arg("coverMaterial"),
            py::arg("isAboveSurface") = false,
-           py::arg("withEmbeddedBoundaries") = false,
-           "Generate the cell set.")
+           py::arg("withEmbeddedBoundaries") = false, "Generate the cell set.")
       .def("getLevelSets", &Domain<T, D>::getLevelSets)
       .def("getMaterialsInDomain", &Domain<T, D>::getMaterialsInDomain,
            "Get the material IDs present in the domain.")
@@ -964,8 +963,8 @@ template <int D> void bindApi(py::module &module) {
   // Single Pearson IV: depth profile from four moments, Gaussian lateral spread
   py::class_<ImplantPearsonIV<T, D>, SmartPointer<ImplantPearsonIV<T, D>>,
              ImplantProfileModel<T, D>>(module, "ImplantPearsonIV")
-      .def(py::init<const PearsonIVParameters<T> &, T, T>(),
-           py::arg("params"), py::arg("lateralMu"), py::arg("lateralSigma"),
+      .def(py::init<const PearsonIVParameters<T> &, T, T>(), py::arg("params"),
+           py::arg("lateralMu"), py::arg("lateralSigma"),
            "Construct from PearsonIVParameters and Gaussian lateral spread.");
 
   // Dual Pearson IV: head + tail components (amorphous + channeling)
@@ -975,18 +974,18 @@ template <int D> void bindApi(py::module &module) {
       .def(py::init<const PearsonIVParameters<T> &,
                     const PearsonIVParameters<T> &, T, T, T, T, T>(),
            py::arg("headParams"), py::arg("tailParams"),
-           py::arg("headFraction"),
-           py::arg("headLateralMu"), py::arg("headLateralSigma"),
-           py::arg("tailLateralMu"), py::arg("tailLateralSigma"),
+           py::arg("headFraction"), py::arg("headLateralMu"),
+           py::arg("headLateralSigma"), py::arg("tailLateralMu"),
+           py::arg("tailLateralSigma"),
            "Weighted sum of two Pearson IV components (head fraction in head).")
       .def(py::init<const PearsonIVParameters<T> &,
                     const PearsonIVParameters<T> &, T, T, T, T, T,
                     SmartPointer<viennacs::ScreenEnergyLoss<T>>, T>(),
            py::arg("headParams"), py::arg("tailParams"),
-           py::arg("headFraction"),
-           py::arg("headLateralMu"), py::arg("headLateralSigma"),
-           py::arg("tailLateralMu"), py::arg("tailLateralSigma"),
-           py::arg("screenModel"), py::arg("screenThickness"),
+           py::arg("headFraction"), py::arg("headLateralMu"),
+           py::arg("headLateralSigma"), py::arg("tailLateralMu"),
+           py::arg("tailLateralSigma"), py::arg("screenModel"),
+           py::arg("screenThickness"),
            "As above, but with a screen energy-loss model applied: the "
            "projected range is scaled for the given screen thickness "
            "(k==1 at the model's reference thickness, leaving shapes "
@@ -1003,38 +1002,36 @@ template <int D> void bindApi(py::module &module) {
            "Single Pearson IV plus exponential channeling tail.");
 
   // Hobler damage model: Gaussian/exponential damage depth profile
-  py::class_<ImplantDamageHobler<T, D>,
-             SmartPointer<ImplantDamageHobler<T, D>>,
+  py::class_<ImplantDamageHobler<T, D>, SmartPointer<ImplantDamageHobler<T, D>>,
              ImplantProfileModel<T, D>>(module, "ImplantDamageHobler")
-      .def(py::init<T, T, T, T, T, T>(),
-           py::arg("projectedRange"), py::arg("verticalSigma"),
-           py::arg("lambda"), py::arg("defectsPerIon"),
-           py::arg("lateralSigma"), py::arg("lateralDeltaSigma") = T(0),
-           "Hobler damage depth profile with linear-depth-scale lateral spread.");
+      .def(py::init<T, T, T, T, T, T>(), py::arg("projectedRange"),
+           py::arg("verticalSigma"), py::arg("lambda"),
+           py::arg("defectsPerIon"), py::arg("lateralSigma"),
+           py::arg("lateralDeltaSigma") = T(0),
+           "Hobler damage depth profile with linear-depth-scale lateral "
+           "spread.");
 
   py::class_<ImplantTableModel<T, D>, SmartPointer<ImplantTableModel<T, D>>,
              ImplantProfileModel<T, D>>(module, "ImplantTableModel")
-      .def(py::init<const std::string &, const std::string &,
-                    const std::string &, const std::string &, T, T, T, T, T, T,
-                    const std::string &>(),
-           py::arg("fileName"), py::arg("species"), py::arg("material"),
-           py::arg("substrateType"), py::arg("energyKeV"),
-           py::arg("tiltDeg"), py::arg("rotationDeg"),
-           py::arg("dosePerCm2") = T(0),
-           py::arg("screenThickness") = T(0),
-           py::arg("damageLevel") = T(0),
-           py::arg("preferredModel") = "auto",
-           "Table-backed implant profile model. Pass an explicit modeldb CSV "
-           "path; the selected row is interpolated and converted to a profile.");
+      .def(
+          py::init<const std::string &, const std::string &,
+                   const std::string &, const std::string &, T, T, T, T, T, T,
+                   const std::string &>(),
+          py::arg("fileName"), py::arg("species"), py::arg("material"),
+          py::arg("substrateType"), py::arg("energyKeV"), py::arg("tiltDeg"),
+          py::arg("rotationDeg"), py::arg("dosePerCm2") = T(0),
+          py::arg("screenThickness") = T(0), py::arg("damageLevel") = T(0),
+          py::arg("preferredModel") = "auto",
+          "Table-backed implant profile model. Pass an explicit modeldb CSV "
+          "path; the selected row is interpolated and converted to a profile.");
 
   py::class_<DamageTableModel<T, D>, SmartPointer<DamageTableModel<T, D>>,
              ImplantProfileModel<T, D>>(module, "DamageTableModel")
       .def(py::init<const std::string &, const std::string &,
                     const std::string &, T, T, T, T, T>(),
            py::arg("fileName"), py::arg("species"), py::arg("material"),
-           py::arg("energyKeV"), py::arg("tiltDeg"),
-           py::arg("rotationDeg"), py::arg("dosePerCm2") = T(0),
-           py::arg("screenThickness") = T(0),
+           py::arg("energyKeV"), py::arg("tiltDeg"), py::arg("rotationDeg"),
+           py::arg("dosePerCm2") = T(0), py::arg("screenThickness") = T(0),
            "Table-backed implant-damage profile model. Pass an explicit "
            "modeldb CSV path.");
 
@@ -1043,13 +1040,11 @@ template <int D> void bindApi(py::module &module) {
       module, "IonImplantation", processModel)
       .def(py::init(&SmartPointer<IonImplantation<T, D>>::template New<>))
       .def("setImplantModel", &IonImplantation<T, D>::setImplantModel,
-           py::arg("model"),
-           "Set the dopant concentration profile model.")
+           py::arg("model"), "Set the dopant concentration profile model.")
       .def("setDamageModel", &IonImplantation<T, D>::setDamageModel,
-           py::arg("model"),
-           "Set the damage profile model (optional).")
-      .def("setDose", &IonImplantation<T, D>::setDose,
-           py::arg("dosePerCm2"), "Implant dose in ions/cm².")
+           py::arg("model"), "Set the damage profile model (optional).")
+      .def("setDose", &IonImplantation<T, D>::setDose, py::arg("dosePerCm2"),
+           "Implant dose in ions/cm².")
       .def("setTiltAngle", &IonImplantation<T, D>::setTiltAngle,
            py::arg("angleDeg"), "Beam tilt angle in degrees (0 = normal).")
       .def("setLengthUnit", &IonImplantation<T, D>::setLengthUnit,
@@ -1067,8 +1062,8 @@ template <int D> void bindApi(py::module &module) {
            "Materials ignored by implantation rays; usually set from the "
            "domain cover material automatically.")
       .def("setConcentrationLabel",
-           &IonImplantation<T, D>::setConcentrationLabel,
-           py::arg("label"), "Cell-set field name for deposited concentration.")
+           &IonImplantation<T, D>::setConcentrationLabel, py::arg("label"),
+           "Cell-set field name for deposited concentration.")
       .def("setDamageLabel", &IonImplantation<T, D>::setDamageLabel,
            py::arg("label"), "Cell-set field name for accumulated damage.")
       .def("setLastDamageLabel", &IonImplantation<T, D>::setLastDamageLabel,
@@ -1076,8 +1071,7 @@ template <int D> void bindApi(py::module &module) {
       .def("setBeamHitsLabel", &IonImplantation<T, D>::setBeamHitsLabel,
            py::arg("label"), "Field name for optional beam-hit counts.")
       .def("enableBeamHits", &IonImplantation<T, D>::enableBeamHits,
-           py::arg("enable") = true,
-           "Write the optional beam-hit count field.")
+           py::arg("enable") = true, "Write the optional beam-hit count field.")
       .def("setOutputConcentrationInCm3",
            &IonImplantation<T, D>::setOutputConcentrationInCm3,
            py::arg("enable") = true,
@@ -1088,30 +1082,32 @@ template <int D> void bindApi(py::module &module) {
       .def("enableEmbeddedBoundaries",
            &IonImplantation<T, D>::enableEmbeddedBoundaries,
            py::arg("enable") = true,
-           "Rebuild the cell set with embedded boundary points before implanting.\n"
-           "Enables sub-grid surface offsets via ray-plane intersection for tilt accuracy.");
+           "Rebuild the cell set with embedded boundary points before "
+           "implanting.\n"
+           "Enables sub-grid surface offsets via ray-plane intersection for "
+           "tilt accuracy.");
 
-  // ── Anneal Process Model ────────────────────────────────────────────────────
+  // ── Anneal Process Model
+  // ────────────────────────────────────────────────────
   py::class_<Anneal<T, D>, SmartPointer<Anneal<T, D>>>(module, "Anneal",
-                                                         processModel)
+                                                       processModel)
       .def(py::init(&SmartPointer<Anneal<T, D>>::template New<>))
       // Temperature (simple isothermal)
       .def("setTemperature", &Anneal<T, D>::setTemperature,
            py::arg("temperatureK"))
       .def("setDuration", &Anneal<T, D>::setDuration, py::arg("seconds"))
       // Temperature schedule (ramp/soak)
-      .def("clearTemperatureSchedule",
-           &Anneal<T, D>::clearTemperatureSchedule)
+      .def("clearTemperatureSchedule", &Anneal<T, D>::clearTemperatureSchedule)
       .def("addIsothermalStep", &Anneal<T, D>::addIsothermalStep,
            py::arg("duration"), py::arg("temperatureK"))
-      .def("addRampStep", &Anneal<T, D>::addRampStep,
-           py::arg("duration"), py::arg("startT"), py::arg("endT"))
+      .def("addRampStep", &Anneal<T, D>::addRampStep, py::arg("duration"),
+           py::arg("startT"), py::arg("endT"))
       .def("setTemperatureSchedule", &Anneal<T, D>::setTemperatureSchedule,
            py::arg("durations"), py::arg("temperatures"),
            "N durations + N (isothermal) or N+1 (ramp) temperatures.")
       // Diffusivity
-      .def("setDiffusionCoefficient",
-           &Anneal<T, D>::setDiffusionCoefficient, py::arg("diffCoeff"))
+      .def("setDiffusionCoefficient", &Anneal<T, D>::setDiffusionCoefficient,
+           py::arg("diffCoeff"))
       .def("setArrheniusParameters", &Anneal<T, D>::setArrheniusParameters,
            py::arg("D0"), py::arg("Ea_eV"))
       .def("setTimeStep", &Anneal<T, D>::setTimeStep, py::arg("dt"))
@@ -1119,8 +1115,7 @@ template <int D> void bindApi(py::module &module) {
            py::arg("factor"))
       // Solver
       .def("setMode", &Anneal<T, D>::setMode, py::arg("mode"))
-      .def("setImplicitSolverOptions",
-           &Anneal<T, D>::setImplicitSolverOptions,
+      .def("setImplicitSolverOptions", &Anneal<T, D>::setImplicitSolverOptions,
            py::arg("maxIterations"), py::arg("relativeTolerance"),
            py::arg("relaxation") = T(1))
       // Material roles
@@ -1147,8 +1142,8 @@ template <int D> void bindApi(py::module &module) {
       .def("setAmorphizationThreshold",
            &Anneal<T, D>::setAmorphizationThreshold, py::arg("damageThreshold"),
            py::arg("beta") = 2.0)
-      .def("enableAmorphousLayerFill",
-           &Anneal<T, D>::enableAmorphousLayerFill, py::arg("enable") = true)
+      .def("enableAmorphousLayerFill", &Anneal<T, D>::enableAmorphousLayerFill,
+           py::arg("enable") = true)
       .def("setInterfaceSegregation", &Anneal<T, D>::setInterfaceSegregation,
            py::arg("velocity"), py::arg("width") = 0.0)
       .def("setTrapMaterials", &Anneal<T, D>::setTrapMaterials,
@@ -1180,8 +1175,8 @@ template <int D> void bindApi(py::module &module) {
            py::arg("kRecombination"), py::arg("kInterstitialSink"),
            py::arg("kVacancySink"))
       // Defect equilibrium
-      .def("enableDefectEquilibrium",
-           &Anneal<T, D>::enableDefectEquilibrium, py::arg("enable") = true)
+      .def("enableDefectEquilibrium", &Anneal<T, D>::enableDefectEquilibrium,
+           py::arg("enable") = true)
       .def("setDefectEquilibrium", &Anneal<T, D>::setDefectEquilibrium,
            py::arg("Ieq"), py::arg("Veq"))
       .def("setDefectEquilibriumArrhenius",
@@ -1192,12 +1187,10 @@ template <int D> void bindApi(py::module &module) {
            &Anneal<T, D>::clearEquilibriumArrhenius)
       // TED
       .def("setDefectEnhancedDiffusion",
-           &Anneal<T, D>::setDefectEnhancedDiffusion,
-           py::arg("tedCoefficient"), py::arg("normalization"))
-      .def("setTEDFromDamageFactor",
-           &Anneal<T, D>::setTEDFromDamageFactor,
-           py::arg("damageFactor"),
-           py::arg("coefficientScale") = T(0.5),
+           &Anneal<T, D>::setDefectEnhancedDiffusion, py::arg("tedCoefficient"),
+           py::arg("normalization"))
+      .def("setTEDFromDamageFactor", &Anneal<T, D>::setTEDFromDamageFactor,
+           py::arg("damageFactor"), py::arg("coefficientScale") = T(0.5),
            py::arg("normalization") = T(1e20))
       // Fermi-level (concentration-dependent) diffusivity enhancement
       .def("enableFermiEnhancement", &Anneal<T, D>::enableFermiEnhancement,
@@ -1209,15 +1202,15 @@ template <int D> void bindApi(py::module &module) {
            "Intended for p-type dopants (B) in Si.")
       .def("setFermiChargedFraction", &Anneal<T, D>::setFermiChargedFraction,
            py::arg("chargedFraction"),
-           "Set the fraction of diffusion via negatively-charged interstitials.\n"
+           "Set the fraction of diffusion via negatively-charged "
+           "interstitials.\n"
            "Typical value for B in Si: 0.9 (default).")
       // Defect clustering
-      .def("enableDefectClustering",
-           &Anneal<T, D>::enableDefectClustering, py::arg("enable") = true)
+      .def("enableDefectClustering", &Anneal<T, D>::enableDefectClustering,
+           py::arg("enable") = true)
       .def("setDefectClusterLabel", &Anneal<T, D>::setDefectClusterLabel,
            py::arg("label"))
-      .def("setDefectClusterKinetics",
-           &Anneal<T, D>::setDefectClusterKinetics,
+      .def("setDefectClusterKinetics", &Anneal<T, D>::setDefectClusterKinetics,
            py::arg("kfi"), py::arg("kfc"), py::arg("kr"))
       .def("setDefectClusterInitFraction",
            &Anneal<T, D>::setDefectClusterInitFraction, py::arg("fraction"))
@@ -1225,29 +1218,30 @@ template <int D> void bindApi(py::module &module) {
       .def("enableDiagnostics", &Anneal<T, D>::enableDiagnostics,
            py::arg("enable") = true)
       .def("setDiagnosticsMaterialFilter",
-           &Anneal<T, D>::setDiagnosticsMaterialFilter,
-           py::arg("materialId"))
+           &Anneal<T, D>::setDiagnosticsMaterialFilter, py::arg("materialId"))
       .def("clearDefectDiagnostics", &Anneal<T, D>::clearDefectDiagnostics)
       .def("getDefectDiagnostics", &Anneal<T, D>::getDefectDiagnostics,
            py::return_value_policy::reference_internal)
       .def("setClampNonNegative", &Anneal<T, D>::setClampNonNegative,
            py::arg("enable") = true)
-      .def("setSourceField", &Anneal<T, D>::setSourceField,
-           py::arg("source"),
-           "Set an external source term (cell-indexed vector) added each time step.")
+      .def("setSourceField", &Anneal<T, D>::setSourceField, py::arg("source"),
+           "Set an external source term (cell-indexed vector) added each time "
+           "step.")
       .def("clearSourceField", &Anneal<T, D>::clearSourceField,
            "Remove the previously set source field.")
-      .def("applyActivation", &Anneal<T, D>::applyActivation,
-           py::arg("domain"),
-           "Apply only the solid-activation model without running diffusion.\n\n"
-           "Equivalent to Sentaurus 'diffuse time=0': writes the active-\n"
-           "concentration field immediately after implantation so that\n"
-           "SheetResistance and NetDoping work before the full thermal anneal.\n\n"
-           "Prerequisites: enableSolidActivation(True) and\n"
-           "setSolidSolubilityArrhenius(C0, Ea) must be configured.");
+      .def(
+          "applyActivation", &Anneal<T, D>::applyActivation, py::arg("domain"),
+          "Apply only the solid-activation model without running diffusion.\n\n"
+          "Equivalent to Sentaurus 'diffuse time=0': writes the active-\n"
+          "concentration field immediately after implantation so that\n"
+          "SheetResistance and NetDoping work before the full thermal "
+          "anneal.\n\n"
+          "Prerequisites: enableSolidActivation(True) and\n"
+          "setSolidSolubilityArrhenius(C0, Ea) must be configured.");
 
   // ── SheetResistance ──────────────────────────────────────────────────────
-  py::class_<viennacs::SheetResistance<T, D>>(module, "SheetResistance",
+  py::class_<viennacs::SheetResistance<T, D>>(
+      module, "SheetResistance",
       "Compute sheet resistance (Rsh, Ω/□) from an active-concentration\n"
       "field stored in the domain's cell set.\n\n"
       "Default settings target ViennaPS nm-unit domains:\n"
@@ -1260,26 +1254,21 @@ template <int D> void bindApi(py::module &module) {
       "  sr.setConcentrationLabel(\"P_active\")\n"
       "  rsh = sr.computeElectron()   # Masetti n-type (P in Si)")
       .def(py::init<>())
-      .def("setCellSet",
-           &viennacs::SheetResistance<T, D>::setCellSet,
-           py::arg("cellSet"),
-           "Attach the cell set to analyse.")
+      .def("setCellSet", &viennacs::SheetResistance<T, D>::setCellSet,
+           py::arg("cellSet"), "Attach the cell set to analyse.")
       .def("setConcentrationLabel",
            &viennacs::SheetResistance<T, D>::setConcentrationLabel,
            py::arg("label"),
            "Name of the scalar field containing the active concentration "
            "(default: 'active_concentration').")
-      .def("setDepthAxis",
-           &viennacs::SheetResistance<T, D>::setDepthAxis,
-           py::arg("axis"),
-           "Cell-centre axis index for depth  (default: D−1).")
+      .def("setDepthAxis", &viennacs::SheetResistance<T, D>::setDepthAxis,
+           py::arg("axis"), "Cell-centre axis index for depth  (default: D−1).")
       .def("setSurfacePosition",
            &viennacs::SheetResistance<T, D>::setSurfacePosition,
            py::arg("surfacePosition"),
            "Wafer-surface coordinate along the depth axis. Depth is computed "
            "as surfacePosition minus the cell-centre coordinate.")
-      .def("setLengthUnit",
-           &viennacs::SheetResistance<T, D>::setLengthUnit,
+      .def("setLengthUnit", &viennacs::SheetResistance<T, D>::setLengthUnit,
            py::arg("lu_cm"),
            "Length-unit → cm conversion factor "
            "(default: 1e-7 for nm domains). "
@@ -1289,20 +1278,20 @@ template <int D> void bindApi(py::module &module) {
            py::arg("unit"),
            "Multiplicative factor to convert the cell-set concentration to "
            "cm⁻³ (default: 1e21 for nm⁻³ fields).")
-      .def("computeElectron",
-           &viennacs::SheetResistance<T, D>::computeElectron,
+      .def("computeElectron", &viennacs::SheetResistance<T, D>::computeElectron,
            "Rsh [Ω/□] using the Masetti-Severi electron mobility model "
            "(n-type, e.g. P-doped Si).")
-      .def("computeHole",
-           &viennacs::SheetResistance<T, D>::computeHole,
+      .def("computeHole", &viennacs::SheetResistance<T, D>::computeHole,
            "Rsh [Ω/□] using the Masetti-Severi hole mobility model "
            "(p-type, e.g. B-doped Si).");
 
   // ── NetDoping ────────────────────────────────────────────────────────────
-  py::class_<viennacs::NetDoping<T, D>>(module, "NetDoping",
+  py::class_<viennacs::NetDoping<T, D>>(
+      module, "NetDoping",
       "Compute net doping (Σ donors − Σ acceptors) and extract the\n"
       "metallurgical junction depth from the domain's cell set.\n\n"
-      "Typical flow after implanting P and B and calling Anneal.applyActivation:\n\n"
+      "Typical flow after implanting P and B and calling "
+      "Anneal.applyActivation:\n\n"
       "  nd = NetDoping()\n"
       "  nd.setCellSet(domain.getCellSet())\n"
       "  nd.addDonorLabel('P_active')\n"
@@ -1311,52 +1300,38 @@ template <int D> void bindApi(py::module &module) {
       "  xj = nd.junctionDepth()         # nm — metallurgical junction depth\n"
       "  print(nd.junctionCount(), 'junction(s)')")
       .def(py::init<>())
-      .def("setCellSet",
-           &viennacs::NetDoping<T, D>::setCellSet,
-           py::arg("cellSet"),
-           "Attach the cell set to analyse.")
-      .def("addDonorLabel",
-           &viennacs::NetDoping<T, D>::addDonorLabel,
+      .def("setCellSet", &viennacs::NetDoping<T, D>::setCellSet,
+           py::arg("cellSet"), "Attach the cell set to analyse.")
+      .def("addDonorLabel", &viennacs::NetDoping<T, D>::addDonorLabel,
            py::arg("label"),
            "Append one donor (n-type) concentration field name.")
-      .def("addAcceptorLabel",
-           &viennacs::NetDoping<T, D>::addAcceptorLabel,
+      .def("addAcceptorLabel", &viennacs::NetDoping<T, D>::addAcceptorLabel,
            py::arg("label"),
            "Append one acceptor (p-type) concentration field name.")
-      .def("setDonorLabels",
-           &viennacs::NetDoping<T, D>::setDonorLabels,
-           py::arg("labels"),
-           "Replace the full donor label list.")
-      .def("setAcceptorLabels",
-           &viennacs::NetDoping<T, D>::setAcceptorLabels,
-           py::arg("labels"),
-           "Replace the full acceptor label list.")
-      .def("setOutputLabel",
-           &viennacs::NetDoping<T, D>::setOutputLabel,
+      .def("setDonorLabels", &viennacs::NetDoping<T, D>::setDonorLabels,
+           py::arg("labels"), "Replace the full donor label list.")
+      .def("setAcceptorLabels", &viennacs::NetDoping<T, D>::setAcceptorLabels,
+           py::arg("labels"), "Replace the full acceptor label list.")
+      .def("setOutputLabel", &viennacs::NetDoping<T, D>::setOutputLabel,
            py::arg("label"),
-           "Name of the output field written by apply() (default: 'net_doping').")
-      .def("setDepthAxis",
-           &viennacs::NetDoping<T, D>::setDepthAxis,
-           py::arg("axis"),
-           "Cell-centre axis index for depth (default: D−1).")
-      .def("setSurfacePosition",
-           &viennacs::NetDoping<T, D>::setSurfacePosition,
+           "Name of the output field written by apply() (default: "
+           "'net_doping').")
+      .def("setDepthAxis", &viennacs::NetDoping<T, D>::setDepthAxis,
+           py::arg("axis"), "Cell-centre axis index for depth (default: D−1).")
+      .def("setSurfacePosition", &viennacs::NetDoping<T, D>::setSurfacePosition,
            py::arg("surfacePosition"),
            "Wafer-surface coordinate along the depth axis. Depth is computed "
            "as surfacePosition minus the cell-centre coordinate.")
       .def("apply", &viennacs::NetDoping<T, D>::apply,
            "Compute net_doping = Σ donors − Σ acceptors and write to the "
            "output field in the cell set.")
-      .def("junctionDepth",
-           &viennacs::NetDoping<T, D>::junctionDepth,
+      .def("junctionDepth", &viennacs::NetDoping<T, D>::junctionDepth,
            "Shallowest depth [nm] where net_doping changes sign. "
            "Returns inf if no junction exists or apply() has not been called.")
-      .def("junctionDepths",
-           &viennacs::NetDoping<T, D>::junctionDepths,
+      .def("junctionDepths", &viennacs::NetDoping<T, D>::junctionDepths,
            "All junction depths [nm], sorted ascending.  "
            "Useful for retrograde profiles with multiple crossings.")
-      .def("junctionCount",
-           &viennacs::NetDoping<T, D>::junctionCount,
+      .def("junctionCount", &viennacs::NetDoping<T, D>::junctionCount,
            "Number of metallurgical junctions in the depth profile.")
       .def("lateralJunctionPosition",
            &viennacs::NetDoping<T, D>::lateralJunctionPosition,
@@ -1364,10 +1339,11 @@ template <int D> void bindApi(py::module &module) {
            "Lateral position [nm] where net_doping changes sign at the given "
            "depth.  Use for vertical (lateral) PN junctions where P and B are "
            "implanted side by side.  Returns inf if no crossing exists.")
-      .def("lateralJunctionPositions",
-           &viennacs::NetDoping<T, D>::lateralJunctionPositions,
-           py::arg("atDepth"),
-           "All lateral junction positions at the given depth [nm], ascending.");
+      .def(
+          "lateralJunctionPositions",
+          &viennacs::NetDoping<T, D>::lateralJunctionPositions,
+          py::arg("atDepth"),
+          "All lateral junction positions at the given depth [nm], ascending.");
 
   // Isotropic Process
   py::class_<IsotropicProcess<T, D>, SmartPointer<IsotropicProcess<T, D>>>(

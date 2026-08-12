@@ -116,7 +116,18 @@ inline void applyAnnealSetup(Anneal<NumericType, D> &anneal,
 
   anneal.setDiffusionMaterials(config.diffusionMaterials);
   anneal.setBlockingMaterials(config.blockingMaterials);
-  if (config.defectCoupling)
+  // Defect coupling is data-driven: enable it only when the model parameters
+  // actually carry defect physics (defect diffusivities, TED, clustering, or a
+  // defect equilibrium). A generic model with intrinsic diffusion + activation
+  // only -- i.e. no defect rows in the model DB -- runs without defect
+  // coupling, regardless of the (default-true) config flag.
+  const auto &p = config.model.parameters;
+  const bool hasDefectPhysics =
+      p.interstitialDiffusivity > NumericType(0) ||
+      p.vacancyDiffusivity > NumericType(0) ||
+      p.tedCoefficient > NumericType(0) || p.enableTedFromScoreDFactor ||
+      p.enableDefectClustering || p.enableDefectEquilibrium;
+  if (config.defectCoupling && hasDefectPhysics)
     anneal.enableDefectCoupling(true);
 }
 

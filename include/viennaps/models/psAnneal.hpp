@@ -14,11 +14,11 @@
 //   model->setBlockingMaterials({Material::Air});
 //   psProcess<T, D>(domain, model, /*duration=*/0.).apply();
 //
-// The process evolves scalar fields (dopant concentration, optional active 
+// The process evolves scalar fields (dopant concentration, optional active
 // concentration, optional I/V defect fields) inside the domain's cell set.
 //
-// Prerequisites: the domain must have a cell set with a dopant concentration field
-// initialised before apply().
+// Prerequisites: the domain must have a cell set with a dopant concentration
+// field initialised before apply().
 
 #include "../materials/psMaterial.hpp"
 #include "../process/psAdvectionCallback.hpp"
@@ -116,7 +116,7 @@ public:
   // Convenience: N durations with N isothermal temperatures, or N+1 ramp
   // endpoint temperatures.
   void setTemperatureSchedule(const std::vector<NumericType> &durations,
-                               const std::vector<NumericType> &temperatures) {
+                              const std::vector<NumericType> &temperatures) {
     callback_->anneal().setTemperatureSchedule(durations, temperatures);
   }
 
@@ -147,11 +147,11 @@ public:
   void setMode(AnnealMode mode) { callback_->anneal().setMode(mode); }
 
   // GaussSeidel-mode iteration options.
-  void setImplicitSolverOptions(int maxIterations, NumericType relativeTolerance,
+  void setImplicitSolverOptions(int maxIterations,
+                                NumericType relativeTolerance,
                                 NumericType relaxation = NumericType(1)) {
     callback_->anneal().setImplicitSolverOptions(maxIterations,
-                                                  relativeTolerance,
-                                                  relaxation);
+                                                 relativeTolerance, relaxation);
   }
 
   // ── Material roles ───────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ public:
   // Dopant segregation into blocking materials (oxide) at interfaces:
   // J = v_seg·C, applied to interface-adjacent cells.
   void setInterfaceSegregation(NumericType velocity,
-                              NumericType width = NumericType(0)) {
+                               NumericType width = NumericType(0)) {
     callback_->anneal().setInterfaceSegregation(velocity, width);
   }
 
@@ -260,25 +260,25 @@ public:
   }
 
   void setDefectLabels(const std::string &interstitialLabel,
-                        const std::string &vacancyLabel) {
+                       const std::string &vacancyLabel) {
     callback_->anneal().setDefectLabels(interstitialLabel, vacancyLabel);
   }
 
   void setDefectSourceWeights(NumericType historyWeight,
-                               NumericType lastImpWeight) {
+                              NumericType lastImpWeight) {
     callback_->anneal().setDefectSourceWeights(historyWeight, lastImpWeight);
   }
 
   void setDefectPartition(NumericType interstitialFraction,
-                           NumericType vacancyFraction) {
+                          NumericType vacancyFraction) {
     callback_->anneal().setDefectPartition(interstitialFraction,
-                                            vacancyFraction);
+                                           vacancyFraction);
   }
 
   void setDefectPartitionFactors(NumericType interstitialFactor,
-                                           NumericType vacancyFactor) {
+                                 NumericType vacancyFactor) {
     callback_->anneal().setDefectPartitionFactors(interstitialFactor,
-                                                            vacancyFactor);
+                                                  vacancyFactor);
   }
 
   void setDefectDiffusivities(NumericType Di, NumericType Dv) {
@@ -286,11 +286,10 @@ public:
   }
 
   void setDefectReactionRates(NumericType kRecombination,
-                               NumericType kInterstitialSink,
-                               NumericType kVacancySink) {
+                              NumericType kInterstitialSink,
+                              NumericType kVacancySink) {
     callback_->anneal().setDefectReactionRates(kRecombination,
-                                                kInterstitialSink,
-                                                kVacancySink);
+                                               kInterstitialSink, kVacancySink);
   }
 
   void enableDefectEquilibrium(bool enable = true) {
@@ -302,9 +301,9 @@ public:
   }
 
   void setDefectEquilibriumArrhenius(NumericType interstitialC0,
-                                      NumericType interstitialEa_eV,
-                                      NumericType vacancyC0,
-                                      NumericType vacancyEa_eV) {
+                                     NumericType interstitialEa_eV,
+                                     NumericType vacancyC0,
+                                     NumericType vacancyEa_eV) {
     callback_->anneal().setDefectEquilibriumArrhenius(
         interstitialC0, interstitialEa_eV, vacancyC0, vacancyEa_eV);
   }
@@ -315,9 +314,15 @@ public:
 
   // TED: dopant diffusivity multiplier driven by (I - V) supersaturation.
   void setDefectEnhancedDiffusion(NumericType tedCoefficient,
-                                   NumericType normalization) {
+                                  NumericType normalization) {
     callback_->anneal().setDefectEnhancedDiffusion(tedCoefficient,
-                                                    normalization);
+                                                   normalization);
+  }
+
+  // Instantaneous effective TED: D_eff = D*(1 + factor*damage/norm) from the
+  // static implant-damage field (no dynamic defect solver; bounded, stable).
+  void setStaticDamageTED(NumericType factor, NumericType normalization) {
+    callback_->anneal().setStaticDamageTED(factor, normalization);
   }
 
   // ── Fermi-level (concentration-dependent) diffusivity enhancement ────────
@@ -338,11 +343,11 @@ public:
     callback_->anneal().setFermiChargedFraction(chargedFraction);
   }
 
-  void setTEDFromDamageFactor(
-      NumericType damageFactor, NumericType coefficientScale = NumericType(0.5),
-      NumericType normalization = NumericType(1e20)) {
-    callback_->anneal().setTEDFromDamageFactor(
-        damageFactor, coefficientScale, normalization);
+  void setTEDFromDamageFactor(NumericType damageFactor,
+                              NumericType coefficientScale = NumericType(0.5),
+                              NumericType normalization = NumericType(1e20)) {
+    callback_->anneal().setTEDFromDamageFactor(damageFactor, coefficientScale,
+                                               normalization);
   }
 
   // ── Defect clustering ────────────────────────────────────────────────────
@@ -356,7 +361,7 @@ public:
   }
 
   void setDefectClusterKinetics(NumericType kfi, NumericType kfc,
-                                  NumericType kr) {
+                                NumericType kr) {
     callback_->anneal().setDefectClusterKinetics(kfi, kfc, kr);
   }
 
@@ -391,9 +396,7 @@ public:
   void setSourceField(const std::vector<NumericType> *source) {
     callback_->anneal().setSourceField(source);
   }
-  void clearSourceField() {
-    callback_->anneal().clearSourceField();
-  }
+  void clearSourceField() { callback_->anneal().clearSourceField(); }
 
   // ── Zero-time activation ─────────────────────────────────────────────────
 

@@ -86,9 +86,12 @@ lookupImplantTable(const std::string &species, const std::string &material,
             implantLookup.rotationDeg, implantLookup.dosePerCm2,
             implantLookup.screenThickness, implantLookup.damageLevel,
             implantLookup.preferredModel);
+  } catch (const viennaps::tables::TableRangeError &error) {
+    throw ModelDbError(outOfRangeModelDataMessage(error.what()));
   } catch (const std::exception &error) {
     throw ModelDbError(missingModelDataMessage(
-        ModelDataKind::Implant, implantLookup.tableFileName, error.what()));
+        ModelDataKind::Implant, implantLookup.tableFileName, error.what(),
+        speciesName, materialName));
   }
 
   DamageRecipe<NumericType> damageLookup;
@@ -112,9 +115,12 @@ lookupImplantTable(const std::string &species, const std::string &material,
             damageLookup.material, damageLookup.energyKeV, damageLookup.tiltDeg,
             damageLookup.rotationDeg, damageLookup.dosePerCm2,
             damageLookup.screenThickness);
+  } catch (const viennaps::tables::TableRangeError &error) {
+    throw ModelDbError(outOfRangeModelDataMessage(error.what()));
   } catch (const std::exception &error) {
     throw ModelDbError(missingModelDataMessage(
-        ModelDataKind::Damage, damageLookup.tableFileName, error.what()));
+        ModelDataKind::Damage, damageLookup.tableFileName, error.what(),
+        speciesName, materialName));
   }
 
   return out;
@@ -267,6 +273,13 @@ lookupAnneal(const std::string &species, const std::string &substrateMaterial,
       } else if (param == "solubility") {
         out.solidSolubilityC0 = cm3Concentration(pref);
         out.solidSolubilityEa_eV = ea;
+      } else if (param == "ted_damage") {
+        // Instantaneous effective TED enhancement factor (static,
+        // damage-driven: D_eff = D*(1 + factor*damage/norm)). Dimensionless.
+        out.tedStaticFactor = pref;
+      } else if (param == "ted_damage_norm") {
+        // Damage normalisation for the effective TED (cm^-3 -> field units).
+        out.tedStaticNorm = cm3Concentration(pref);
       }
     } else if (cat == "defect") {
       if (name == "interstitial") {
@@ -320,8 +333,9 @@ lookupAnneal(const std::string &species, const std::string &substrateMaterial,
   } else {
     throw ModelDbError(missingModelDataMessage(
         ModelDataKind::Anneal, csvPath,
-        "No dopant diffusivity entry was found for `" + dopantName + "` in `" +
-            substrateName + "`."));
+        "The annealing table was found but contains no diffusivity entry for "
+        "this dopant.",
+        dopantName, substrateName));
   }
   return out;
 }
