@@ -20,7 +20,7 @@ public:
       : materialRates_(materialRates) {}
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+  calculateVelocities(SmartPointer<PointData<NumericType>> rates,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
 
@@ -49,16 +49,14 @@ public:
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
-                        const int,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
-                        RNG &) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
+                        const int, PointData<NumericType> &localData,
+                        const PointData<NumericType> *, RNG &) override final {
+    localData.addToScalarData(0, primID, rayWeight);
   }
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType, const Vec3D<NumericType> &,
                     const Vec3D<NumericType> &geomNormal, const unsigned int,
-                    const int, const viennaray::TracingData<NumericType> *,
+                    const int, const PointData<NumericType> *,
                     RNG &rngState) override final {
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);

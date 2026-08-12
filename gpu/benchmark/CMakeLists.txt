@@ -12,6 +12,11 @@ target_link_libraries(CPU_Benchmark PRIVATE ViennaPS)
 add_dependencies(CPU_Benchmark ${VIENNAPS_GPU_DEPENDENCIES})
 add_dependencies(ViennaPS-GPU_Benchmark CPU_Benchmark)
 
+add_executable(CPU_Scaling ${CMAKE_CURRENT_SOURCE_DIR}/CPU_Scaling.cpp)
+target_link_libraries(CPU_Scaling PRIVATE ViennaPS)
+add_dependencies(CPU_Scaling ${VIENNAPS_GPU_DEPENDENCIES})
+add_dependencies(ViennaPS-GPU_Benchmark CPU_Scaling)
+
 add_executable(holeComparison ${CMAKE_CURRENT_SOURCE_DIR}/holeCompare.cpp)
 target_link_libraries(holeComparison PRIVATE ViennaPS)
 add_dependencies(holeComparison ${VIENNAPS_GPU_DEPENDENCIES})

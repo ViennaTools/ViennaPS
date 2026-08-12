@@ -8,12 +8,12 @@ import typing
 import viennals._core
 from viennaps import d2
 import viennaps.d2
-import viennaps.d3
 from viennaps import d3
+import viennaps.d3
 from . import constants
 from . import gpu
 from . import util
-__all__: list[str] = ['AdvectionParameters', 'AnnealMode', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDoseControl', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'NormalizationType', 'PearsonIVParameters', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'Slice', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
+__all__: list[str] = ['AdvectionParameters', 'AnnealMode', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GpuMode', 'GpuPreconditioner', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDoseControl', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'PearsonIVParameters', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'SiliconOrientation', 'SingleParticleALDParams', 'Slice', 'SurfaceDiffusionParameters', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
 
 class AnnealMode(enum.IntEnum):
     """Anneal diffusion solver mode"""
@@ -41,6 +41,20 @@ class PearsonIVParameters:
 def setModelDbRoot(path: str) -> None: ...
 def getModelDbRoot() -> str: ...
 def initModelDbRoot() -> None: ...
+class OxidantType(enum.IntEnum):
+    Dry: int = ...
+    Wet: int = ...
+class SiliconOrientation(enum.IntEnum):
+    Si100: int = ...
+    Si110: int = ...
+    Si111: int = ...
+    PolySi: int = ...
+class GpuMode(enum.IntEnum):
+    Gpu: int = ...
+    Cpu: int = ...
+class GpuPreconditioner(enum.IntEnum):
+    Jacobi: int = ...
+    ILU0: int = ...
 class AdvectionParameters:
     adaptiveTimeStepping: bool
     calculateIntermediateVelocities: bool
@@ -112,6 +126,12 @@ class AtomicLayerProcessParameters:
         ...
     @purgePulseTime.setter
     def purgePulseTime(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def purgeTimeStep(self) -> float:
+        ...
+    @purgeTimeStep.setter
+    def purgeTimeStep(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class BuiltInMaterial(enum.IntEnum):
     """
@@ -1159,6 +1179,61 @@ class MetaDataLevel(enum.IntEnum):
         """
         Convert to a string according to format_spec.
         """
+class NeutralTransportParameters:
+    coverageLabel: str
+    etchFrontMaterial: Material
+    fluxLabel: str
+    useSteadyStateCoverage: bool
+    def __init__(self) -> None:
+        ...
+    @property
+    def coverageTimeStep(self) -> float:
+        ...
+    @coverageTimeStep.setter
+    def coverageTimeStep(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def desorptionRate(self) -> float:
+        ...
+    @desorptionRate.setter
+    def desorptionRate(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def etchFrontSticking(self) -> float:
+        ...
+    @etchFrontSticking.setter
+    def etchFrontSticking(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def incomingFlux(self) -> float:
+        ...
+    @incomingFlux.setter
+    def incomingFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def sourceDistributionPower(self) -> float:
+        ...
+    @sourceDistributionPower.setter
+    def sourceDistributionPower(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def surfaceDiffusionCoefficient(self) -> float:
+        ...
+    @surfaceDiffusionCoefficient.setter
+    def surfaceDiffusionCoefficient(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def surfaceSiteDensity(self) -> float:
+        ...
+    @surfaceSiteDensity.setter
+    def surfaceSiteDensity(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def zeroCoverageSticking(self) -> float:
+        ...
+    @zeroCoverageSticking.setter
+    def zeroCoverageSticking(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
 class NormalizationType(enum.IntEnum):
     MAX: typing.ClassVar[NormalizationType]  # value = <NormalizationType.MAX: 1>
     SOURCE: typing.ClassVar[NormalizationType]  # value = <NormalizationType.SOURCE: 0>
@@ -1527,6 +1602,51 @@ class RenderMode(enum.IntEnum):
         """
         Convert to a string according to format_spec.
         """
+class SingleParticleALDParams:
+    def __init__(self) -> None:
+        ...
+    @property
+    def coverageDiffusionCoefficient(self) -> float:
+        ...
+    @coverageDiffusionCoefficient.setter
+    def coverageDiffusionCoefficient(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def evaporationFlux(self) -> float:
+        ...
+    @evaporationFlux.setter
+    def evaporationFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def gasMeanFreePath(self) -> float:
+        ...
+    @gasMeanFreePath.setter
+    def gasMeanFreePath(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def growthPerCycle(self) -> float:
+        ...
+    @growthPerCycle.setter
+    def growthPerCycle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def incomingFlux(self) -> float:
+        ...
+    @incomingFlux.setter
+    def incomingFlux(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def s0(self) -> float:
+        ...
+    @s0.setter
+    def s0(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def stickingProbability(self) -> float:
+        ...
+    @stickingProbability.setter
+    def stickingProbability(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
 class Slice:
     @typing.overload
     def __init__(self) -> None:
@@ -1558,6 +1678,49 @@ class Slice:
         """
         Set the position along the slice dimension at which to slice.
         """
+class SurfaceDiffusionParameters:
+    normalizeByLocalScale: bool
+    symmetrizeWeights: bool
+    def __init__(self) -> None:
+        ...
+    def toMetaData(self) -> dict[str, list[float]]:
+        """
+        Convert the surface diffusion parameters to a metadata dict.
+        """
+    def toMetaDataString(self) -> str:
+        """
+        Convert the surface diffusion parameters to a metadata string.
+        """
+    @property
+    def kNeighbors(self) -> int:
+        ...
+    @kNeighbors.setter
+    def kNeighbors(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def normalCutoff(self) -> float:
+        ...
+    @normalCutoff.setter
+    def normalCutoff(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def radius(self) -> float:
+        ...
+    @radius.setter
+    def radius(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def sigmaNormal(self) -> float:
+        ...
+    @sigmaNormal.setter
+    def sigmaNormal(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def stabilityFactor(self) -> float:
+        ...
+    @stabilityFactor.setter
+    def stabilityFactor(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
 class Time:
     @staticmethod
     def convertMillisecond() -> float:
@@ -1598,5 +1761,5 @@ def gpuAvailable() -> bool:
     """
 def setNumThreads(arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
     ...
-__version__: str = '4.4.0'
-version: str = '4.4.0'
+__version__: str = '4.6.2'
+version: str = '4.6.2'

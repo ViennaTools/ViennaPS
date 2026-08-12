@@ -20,7 +20,7 @@ public:
       : depositionRate(passedRate), reactionOrder(passedOrder) {}
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+  calculateVelocities(SmartPointer<PointData<NumericType>> rates,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIDs) override {
     // define the surface reaction here
@@ -36,7 +36,7 @@ public:
     return SmartPointer<std::vector<NumericType>>::New(std::move(velocity));
   }
 
-  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> rates,
+  void updateCoverages(SmartPointer<PointData<NumericType>> rates,
                        const std::vector<NumericType> &materialIDs) override {
     // update coverages based on fluxes
     auto particleFlux = rates->getScalarData("particleFlux");
@@ -50,7 +50,7 @@ public:
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
-      coverages = viennals::PointData<NumericType>::New();
+      coverages = PointData<NumericType>::New();
     } else {
       coverages->clear();
     }
@@ -73,7 +73,7 @@ public:
         depositionRateP2(passedRateP2), reactionOrderP2(passedOrderP2) {}
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> rates,
+  calculateVelocities(SmartPointer<PointData<NumericType>> rates,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIDs) override {
     auto particleFluxP1 = rates->getScalarData("particleFluxP1");
@@ -107,9 +107,9 @@ public:
   surfaceReflection(NumericType, const Vec3D<NumericType> &,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &rngState) override final {
-    const auto &cov = globalData->getVectorData(0)[primID];
+    const auto cov = globalData->getScalarData(0)->at(primID);
     NumericType sticking;
     if (cov > 0.) {
       sticking = stickingProbability * std::pow(cov, reactionOrder - 1);
@@ -128,11 +128,9 @@ public:
   }
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
-                        const int,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *,
-                        RNG &) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
+                        const int, PointData<NumericType> &localData,
+                        const PointData<NumericType> *, RNG &) override final {
+    localData.addToScalarData(0, primID, rayWeight);
   }
   NumericType getSourceDistributionPower() const override final { return 1; }
   std::vector<std::string> getLocalDataLabels() const override final {
@@ -156,7 +154,7 @@ public:
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     RNG &Rng) override final {
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, Rng);
@@ -166,10 +164,10 @@ public:
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
+                        PointData<NumericType> &localData,
+                        const PointData<NumericType> *globalData,
                         RNG &Rng) override final {
-    localData.getVectorData(0)[primID] += rayWeight;
+    localData.addToScalarData(0, primID, rayWeight);
   }
   NumericType getSourceDistributionPower() const override final { return 1; }
   std::vector<std::string> getLocalDataLabels() const override final {

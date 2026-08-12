@@ -130,8 +130,7 @@ public:
     surfaceMesh_->maximumExtent = lineMesh.maximumExtent;
 
     if (model_->useMaterialIds()) {
-      auto const &pointMaterialIds =
-          diskMesh->getCellData().getScalarData("MaterialIds");
+      auto const &pointMaterialIds = diskMesh->getMaterialIds();
       std::vector<int> lineMaterialIds(surfaceMesh_->lines.size());
       auto &pointKdTree = context.translationField->getKdTree();
       if (!pointKdTree) {
@@ -156,9 +155,9 @@ public:
     return ProcessResult::SUCCESS;
   }
 
-  ProcessResult calculateFluxes(
-      ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> &fluxes) override {
+  ProcessResult
+  calculateSourceFluxes(ProcessContext<NumericType, D> &context,
+                        SmartPointer<PointData<NumericType>> &fluxes) override {
     this->timer_.start();
 
     std::vector<Vec3D<NumericType>> elementCenters(surfaceMesh_->lines.size());
@@ -243,12 +242,19 @@ public:
     return ProcessResult::SUCCESS;
   }
 
+  ProcessResult
+  calculateSurfaceFluxes(ProcessContext<NumericType, D> &,
+                         SmartPointer<PointData<NumericType>> &) override {
+    VIENNACORE_LOG_WARNING(
+        "Surface flux calculation not implemented for GPULineEngine.");
+    return ProcessResult::NOT_IMPLEMENTED;
+  }
+
 private:
-  static void
-  downloadCoverages(CudaBuffer &d_coverages,
-                    viennals::PointData<NumericType> &elementData,
-                    SmartPointer<viennals::PointData<NumericType>> &coverages,
-                    unsigned int numElements) {
+  static void downloadCoverages(CudaBuffer &d_coverages,
+                                PointData<NumericType> &elementData,
+                                SmartPointer<PointData<NumericType>> &coverages,
+                                unsigned int numElements) {
 
     auto numCov = coverages->getScalarDataSize();
     auto *temp = new float[numElements * numCov];
@@ -268,7 +274,7 @@ private:
   }
 
   void
-  downloadResultsToPointData(viennals::PointData<NumericType> &pointData,
+  downloadResultsToPointData(PointData<NumericType> &pointData,
                              SmartPointer<viennals::Mesh<NumericType>> diskMesh,
                              int smoothingNeighbors, double gridDelta) {
     const auto numRates = rayTracer_.getNumberOfRates();
@@ -276,9 +282,8 @@ private:
     const auto numDisks = diskMesh->nodes.size();
     assert(numRates > 0);
     auto particles = rayTracer_.getParticles();
-    auto const &elementNormals =
-        *surfaceMesh_->getCellData().getVectorData("Normals");
-    auto const &normals = *diskMesh->getCellData().getVectorData("Normals");
+    auto const &elementNormals = *surfaceMesh_->getNormals();
+    auto const &normals = *diskMesh->getNormals();
     const auto numElements = surfaceMesh_->lines.size();
 
     NumericType conversionRadius = gridDelta * (smoothingNeighbors + 1);

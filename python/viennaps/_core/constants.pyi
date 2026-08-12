@@ -3,7 +3,7 @@ Physical and material constants.
 """
 from __future__ import annotations
 import typing
-__all__: list[str] = ['N_A', 'R', 'celsiusToKelvin', 'gasMeanFreePath', 'gasMeanThermalVelocity', 'kB', 'roomTemperature', 'torrToPascal']
+__all__: list[str] = ['N_A', 'R', 'celsiusToKelvin', 'gasMeanFreePath', 'gasMeanThermalVelocity', 'kB', 'molecularEffusionFlux', 'roomTemperature', 'torrToPascal']
 def celsiusToKelvin(arg0: typing.SupportsFloat | typing.SupportsIndex) -> float:
     """
     Convert temperature from Celsius to Kelvin.
@@ -15,6 +15,10 @@ def gasMeanFreePath(arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: typ
 def gasMeanThermalVelocity(arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: typing.SupportsFloat | typing.SupportsIndex) -> float:
     """
     Calculate the mean thermal velocity of a gas molecule.
+    """
+def molecularEffusionFlux(arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: typing.SupportsFloat | typing.SupportsIndex, arg2: typing.SupportsFloat | typing.SupportsIndex) -> float:
+    """
+    Calculate the molecular effusion flux of a gas.
     """
 def torrToPascal(arg0: typing.SupportsFloat | typing.SupportsIndex) -> float:
     """
