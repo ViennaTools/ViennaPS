@@ -7,6 +7,7 @@
 #include <vcTestAsserts.hpp>
 
 #include <cmath>
+#include <cstdio>
 #include <numeric>
 
 namespace ps = viennaps;
@@ -82,7 +83,14 @@ void testDiffusionSpreads() {
   model->setDiffusionMaterials({ps::Material::Air});
   model->setBlockingMaterials({ps::Material::Si});
 
+  std::fprintf(stderr,
+               "[ANNEAL-TEST] testDiffusionSpreads: setup done (%d cells), "
+               "calling apply()\n",
+               static_cast<int>(cs->getNumberOfCells()));
+  std::fflush(stderr);
   ps::Process<T, D>(domain, model, T(0)).apply();
+  std::fprintf(stderr, "[ANNEAL-TEST] testDiffusionSpreads: apply() returned\n");
+  std::fflush(stderr);
 
   T peakAfter = 0.;
   T sumAfter = 0.;
@@ -128,7 +136,13 @@ void testTemperatureSchedule() {
   model->setDiffusionMaterials({ps::Material::Air});
   model->setBlockingMaterials({ps::Material::Si});
 
+  std::fprintf(stderr,
+               "[ANNEAL-TEST] testTemperatureSchedule: calling apply()\n");
+  std::fflush(stderr);
   ps::Process<T, D>(domain, model, T(0)).apply();
+  std::fprintf(stderr,
+               "[ANNEAL-TEST] testTemperatureSchedule: apply() returned\n");
+  std::fflush(stderr);
 
   // All concentrations must remain non-negative
   for (int i = 0; i < cs->getNumberOfCells(); ++i)
@@ -161,7 +175,11 @@ void testSolidActivation() {
   model->setDiffusionMaterials({ps::Material::Air});
   model->setBlockingMaterials({ps::Material::Si});
 
+  std::fprintf(stderr, "[ANNEAL-TEST] testSolidActivation: calling apply()\n");
+  std::fflush(stderr);
   ps::Process<T, D>(domain, model, T(0)).apply();
+  std::fprintf(stderr, "[ANNEAL-TEST] testSolidActivation: apply() returned\n");
+  std::fflush(stderr);
 
   auto active = cs->getScalarData("active_concentration");
   VC_TEST_ASSERT(active != nullptr);
@@ -180,7 +198,22 @@ void testSolidActivation() {
 }
 
 int main() {
+  // DEBUG(anneal-trace): localize which sub-test / phase stalls on Windows.
+  std::fprintf(stderr, "[ANNEAL-TEST] >>> testDiffusionSpreads\n");
+  std::fflush(stderr);
   testDiffusionSpreads();
+  std::fprintf(stderr, "[ANNEAL-TEST] <<< testDiffusionSpreads DONE\n");
+  std::fflush(stderr);
+  std::fprintf(stderr, "[ANNEAL-TEST] >>> testTemperatureSchedule\n");
+  std::fflush(stderr);
   testTemperatureSchedule();
+  std::fprintf(stderr, "[ANNEAL-TEST] <<< testTemperatureSchedule DONE\n");
+  std::fflush(stderr);
+  std::fprintf(stderr, "[ANNEAL-TEST] >>> testSolidActivation\n");
+  std::fflush(stderr);
   testSolidActivation();
+  std::fprintf(stderr, "[ANNEAL-TEST] <<< testSolidActivation DONE\n");
+  std::fflush(stderr);
+  std::fprintf(stderr, "[ANNEAL-TEST] all tests passed\n");
+  std::fflush(stderr);
 }
