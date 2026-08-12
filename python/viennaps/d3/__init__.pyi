@@ -671,7 +671,7 @@ class HBrO2Etching(viennaps.d3.ProcessModel):
     def setParameters(self: viennaps.d3.HBrO2Etching, arg0: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
 class ImplantDamageHobler(viennaps.d3.ImplantProfileModel):
-    def __init__(self: viennaps.d3.ImplantDamageHobler, projectedRange: typing.SupportsFloat, verticalSigma: typing.SupportsFloat, lambda: typing.SupportsFloat, defectsPerIon: typing.SupportsFloat, lateralSigma: typing.SupportsFloat, lateralDeltaSigma: typing.SupportsFloat = 0.0) -> None:
+    def __init__(self: viennaps.d3.ImplantDamageHobler, projectedRange: typing.SupportsFloat, verticalSigma: typing.SupportsFloat, lambdaValue: typing.SupportsFloat, defectsPerIon: typing.SupportsFloat, lateralSigma: typing.SupportsFloat, lateralDeltaSigma: typing.SupportsFloat = 0.0) -> None:
         """
         Hobler damage depth profile with linear-depth-scale lateral spread.
         """

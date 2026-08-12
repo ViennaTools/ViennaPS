@@ -1018,7 +1018,7 @@ template <int D> void bindApi(py::module &module) {
   py::class_<ImplantDamageHobler<T, D>, SmartPointer<ImplantDamageHobler<T, D>>,
              ImplantProfileModel<T, D>>(module, "ImplantDamageHobler")
       .def(py::init<T, T, T, T, T, T>(), py::arg("projectedRange"),
-           py::arg("verticalSigma"), py::arg("lambda"),
+           py::arg("verticalSigma"), py::arg("lambdaValue"),
            py::arg("defectsPerIon"), py::arg("lateralSigma"),
            py::arg("lateralDeltaSigma") = T(0),
            "Hobler damage depth profile with linear-depth-scale lateral "
