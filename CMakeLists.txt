@@ -208,8 +208,8 @@ else()
   CPMAddPackage(
     NAME ViennaCS
     GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
-    # ViennaCS v2.1.0 release (ion implantation + annealing process models).
-    GIT_TAG v2.1.0
+    # ViennaCS v2.1.1 release (ion implantation + annealing process models).
+    GIT_TAG v2.1.1
     EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 endif()
 
