@@ -38,28 +38,13 @@ template <typename NumericType>
 using PearsonIVParameters =
     viennaps::constants::PearsonIVParameters<NumericType>;
 
-// Lateral straggle model selector and its parameter bundle
-using LateralStraggleModel = viennaps::LateralStraggleModel;
-template <typename NumericType>
-using LateralStraggleParameters =
-    viennaps::LateralStraggleParameters<NumericType>;
-
-// Single Pearson IV dopant depth profile + Gaussian lateral profile
-template <typename NumericType, int D>
-using ImplantPearsonIV = viennaps::ImplantPearsonIV<NumericType, D>;
-
-// Pearson IV + exponential channeling tail
-template <typename NumericType, int D>
-using ImplantPearsonIVChanneling =
-    viennaps::ImplantPearsonIVChanneling<NumericType, D>;
-
-// Weighted sum of two Pearson IV components (amorphous head + channeling tail)
-template <typename NumericType, int D>
-using ImplantDualPearsonIV = viennaps::ImplantDualPearsonIV<NumericType, D>;
-
-// Hobler-style damage depth profile (Gaussian + exponential bulk decay)
-template <typename NumericType, int D>
-using ImplantDamageHobler = viennaps::ImplantDamageHobler<NumericType, D>;
+// The straggle, Pearson IV, and damage models themselves are defined directly
+// in namespace viennaps by the headers included above and are used unqualified
+// from here:
+//   LateralStraggleModel, LateralStraggleParameters,
+//   ImplantPearsonIV, ImplantPearsonIVChanneling,
+//   ImplantDualPearsonIV                              (psImplantPearson.hpp)
+//   ImplantDamageHobler                              (psImplantDamage.hpp)
 
 // Table-driven model types (data-file backed lookup + interpolation)
 template <typename NumericType>
