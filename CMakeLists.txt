@@ -193,7 +193,10 @@ unset(_VIENNAPS_PREVIOUS_CMAKE_SKIP_INSTALL_RULES)
 
 set(VIENNAPS_VIENNACS_SOURCE
     ""
-    CACHE PATH "Local ViennaCS source directory override (use a development branch instead of the published release)")
+    CACHE
+      PATH
+      "Local ViennaCS source directory override (use a development branch instead of the published release)"
+)
 
 if(VIENNAPS_VIENNACS_SOURCE)
   message(STATUS "[ViennaPS] Using local ViennaCS from: ${VIENNAPS_VIENNACS_SOURCE}")
