@@ -23,5 +23,4 @@ output/
 *.ptx
 *.optixir
 .cache/
-modeldb/
 modeldb_backup_local/
