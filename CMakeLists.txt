@@ -208,9 +208,8 @@ else()
   CPMAddPackage(
     NAME ViennaCS
     GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
-    # Temporarily tracking ViennaCS main while the Windows anneal hang is
-    # diagnosed and fixed; re-pin to a tagged release once resolved.
-    GIT_TAG main
+    # ViennaCS v2.1.2 release (ion implantation + annealing process models).
+    GIT_TAG v2.1.2
     EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 endif()
 
