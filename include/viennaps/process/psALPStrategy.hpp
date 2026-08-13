@@ -5,6 +5,7 @@
 #include "psCoverageManager.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessStrategy.hpp"
+#include "psSurfaceDiffusion.hpp"
 
 namespace viennaps {
 
@@ -15,6 +16,7 @@ class ALPStrategy final : public ProcessStrategy<NumericType, D> {
   AdvectionHandler<NumericType, D> advectionHandler_;
   CoverageManager<NumericType, D> coverageManager_;
   std::unique_ptr<FluxEngine<NumericType, D>> fluxEngine_;
+  SurfaceDiffusionSolver<NumericType> surfaceDiffusionSolver_;
 
   viennals::ToDiskMesh<NumericType, D> meshGenerator_;
   SmartPointer<TranslatorType> translator_ = nullptr;
@@ -121,6 +123,11 @@ private:
     PROCESS_CHECK(fluxEngine_->checkInput(context));
     PROCESS_CHECK(fluxEngine_->initialize(context));
 
+    // Initialize surface diffusion solver
+    if (context.flags.hasSurfaceDiffusion) {
+      surfaceDiffusionSolver_.setActive(true);
+    }
+
     if (Logger::hasDebug()) {
       // debug output
       std::stringstream ss;
@@ -132,6 +139,10 @@ private:
          << context.advectionParams.toMetaDataString() << "\n"
          << "Ray Tracing Parameters: "
          << context.rayTracingParams.toMetaDataString() << "\n";
+      if (context.flags.hasSurfaceDiffusion) {
+        ss << "Surface Diffusion Parameters: "
+           << context.surfaceDiffusionParams.toMetaDataString() << "\n";
+      }
       Logger::getInstance().addDebug(ss.str()).print();
     }
 
@@ -145,6 +156,7 @@ private:
     const auto numCycles = context.atomicLayerParams.numCycles;
     const auto pulseTime = context.atomicLayerParams.pulseTime;
     const auto purgePulseTime = context.atomicLayerParams.purgePulseTime;
+    const auto surfaceModel = context.model->getSurfaceModel();
 
     for (int cycle = 0; cycle < numCycles; ++cycle) {
       VIENNACORE_LOG_INFO("Cycle: " + std::to_string(cycle + 1) + "/" +
@@ -160,6 +172,16 @@ private:
         return ProcessResult::INVALID_INPUT;
       }
 
+      if (surfaceDiffusionSolver_.isActive()) {
+        // setup surface diffusion stencil based on current surface geometry
+        PointCloud<NumericType> cloud;
+        cloud.positions = context.diskMesh->getNodes();
+        cloud.normals = *context.diskMesh->getNormals();
+
+        surfaceDiffusionSolver_.setStencil(SurfaceDiffusionStencil<NumericType>(
+            std::move(cloud), context.surfaceDiffusionParams));
+      }
+
       double time = 0.;
       unsigned pulseIteration = 0;
       const double coverageTimeStep =
@@ -173,16 +195,27 @@ private:
 
         // Clamp last step to land exactly on pulseTime
         double dt = std::min(coverageTimeStep, pulseTime - time);
-        context.model->getSurfaceModel()->setTimeStep(dt);
+        surfaceModel->setTimeStep(dt);
 
         // Calculate fluxes
-        auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-        PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
+        auto fluxes = PointData<NumericType>::New();
+        PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
+
+        // Calculate surface diffusion of fluxes
+        if (surfaceDiffusionSolver_.isActive()) {
+          PROCESS_CHECK(calculateSurfaceDiffusion(dt, context, fluxes));
+        }
 
         // Update coverages
         updateCoverages(context, fluxes);
 
-        outputIntermediateResults(context, fluxes, pulseIteration);
+        // Calculate surface diffusion of coverages
+        if (surfaceDiffusionSolver_.isActive()) {
+          PROCESS_CHECK(calculateSurfaceDiffusion(
+              dt, context, surfaceModel->getCoverages()));
+        }
+
+        outputIntermediatePulseResults(context, fluxes, pulseIteration);
 
         time += dt;
         pulseIteration++;
@@ -196,30 +229,66 @@ private:
       }
 
       if (purgePulseTime > 0.) {
-        VIENNACORE_LOG_WARNING(
-            "Purge pulses are not implemented yet. Skipping purge step.");
-        /// TODO: Implement purge step
+        double time = 0.;
+        unsigned purgeIteration = 0;
+        const auto purgeTimeStep = context.atomicLayerParams.purgeTimeStep;
+
+        while (time < purgePulseTime - purgeTimeStep * 1e-4) {
+#ifdef VIENNATOOLS_PYTHON_BUILD
+          // Check for user interruption
+          if (PyErr_CheckSignals() != 0)
+            return ProcessResult::USER_INTERRUPTED;
+#endif
+          auto dt = std::min(purgeTimeStep, purgePulseTime - time);
+          surfaceModel->setTimeStep(dt);
+
+          auto fluxes = PointData<NumericType>::New();
+          auto result = fluxEngine_->calculateSurfaceFluxes(context, fluxes);
+
+          if (result == ProcessResult::SUCCESS) {
+            outputIntermediateResults(context, fluxes,
+                                      "_purge_" + std::to_string(cycle) + "_" +
+                                          std::to_string(purgeIteration));
+          }
+
+          surfaceModel->updateCoveragesFromDesorption(
+              fluxes, std::get<2>(context.getDiskMeshData()));
+
+          // Calculate surface diffusion of coverages
+          if (surfaceDiffusionSolver_.isActive()) {
+            PROCESS_CHECK(calculateSurfaceDiffusion(
+                dt, context, surfaceModel->getCoverages()));
+          }
+
+          time += dt;
+          purgeIteration++;
+
+          if (Logger::hasInfo()) {
+            std::stringstream stream;
+            stream << std::fixed << std::setprecision(4)
+                   << "Purge pulse time: " << time << " / " << purgePulseTime
+                   << " " << units::Time::toShortString();
+            Logger::getInstance().addInfo(stream.str()).print();
+          }
+        }
       }
 
       // Calculate velocities in model
-      auto fluxes = SmartPointer<viennals::PointData<NumericType>>::New();
-      PROCESS_CHECK(fluxEngine_->calculateFluxes(context, fluxes));
+      auto fluxes = PointData<NumericType>::New();
+      PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
       auto velocities = calculateVelocities(context, fluxes);
-      context.model->getVelocityField()->prepare(context.domain, velocities,
-                                                 0.);
+      context.model->getVelocityField()->prepare(
+          context.domain, velocities, static_cast<NumericType>(cycle));
 
       // We don't move the coverages during the advection step, because they are
       // re-initialized each cycle
 
       // print intermediate output
       if (Logger::hasIntermediate()) {
-        const auto name = context.getProcessName();
-        context.diskMesh->getCellData().insertNextScalarData(*velocities,
-                                                             "velocities");
-        viennals::VTKWriter<NumericType>(
-            context.diskMesh,
-            name + "_" + std::to_string(context.currentIteration) + ".vtp")
-            .apply();
+        context.diskMesh->getCellData().insertReplaceScalarData(*velocities,
+                                                                "velocities");
+        outputIntermediateResults(context, nullptr,
+                                  "_" + std::to_string(cycle));
       }
 
       // Perform advection, updates processTime, reduces level set to width 1
@@ -246,49 +315,57 @@ private:
     return ProcessResult::SUCCESS;
   }
 
-  void outputIntermediateResults(
-      ProcessContext<NumericType, D> &context,
-      SmartPointer<viennals::PointData<NumericType>> const &fluxes,
-      const unsigned pulseIteration) {
+  static void
+  outputIntermediateResults(ProcessContext<NumericType, D> &context,
+                            SmartPointer<PointData<NumericType>> const data,
+                            std::string const &suffix = "") {
     if (Logger::hasIntermediate()) {
       auto const name = context.getProcessName();
       auto surfaceModel = context.model->getSurfaceModel();
-      mergeScalarData(context.diskMesh->getCellData(),
-                      surfaceModel->getCoverages());
-      mergeScalarData(context.diskMesh->getCellData(), fluxes);
+      auto &cellData = context.diskMesh->getCellData();
+
+      cellData.appendReplaceData(*surfaceModel->getCoverages());
+      if (data)
+        cellData.appendReplaceData(*data);
       if (auto surfaceData = surfaceModel->getSurfaceData())
-        mergeScalarData(context.diskMesh->getCellData(), surfaceData);
+        cellData.appendReplaceData(*surfaceData);
       viennals::VTKWriter<NumericType>(
-          context.diskMesh, context.intermediateOutputPath + name + "_pulse_" +
-                                std::to_string(context.currentIteration) + "_" +
-                                std::to_string(pulseIteration) + ".vtp")
+          context.diskMesh, context.intermediateOutputPath + name + suffix)
           .apply();
+    }
+  }
+
+  static void outputIntermediatePulseResults(
+      ProcessContext<NumericType, D> &context,
+      SmartPointer<PointData<NumericType>> const &data,
+      const unsigned pulseIteration) {
+    if (Logger::hasIntermediate()) {
+      std::string suffix = "_pulse_" +
+                           std::to_string(context.currentIteration) + "_" +
+                           std::to_string(pulseIteration) + ".vtp";
+      outputIntermediateResults(context, data, suffix);
     }
   }
 
   SmartPointer<std::vector<NumericType>>
   calculateVelocities(const ProcessContext<NumericType, D> &context,
-                      SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+                      SmartPointer<PointData<NumericType>> &fluxes) {
     auto const &points = context.diskMesh->getNodes();
     assert(points.size() > 0);
-    auto const &materialIds =
-        *context.diskMesh->getCellData().getScalarData("MaterialIds");
+    auto const &materialIds = *context.diskMesh->getMaterialIds();
     return context.model->getSurfaceModel()->calculateVelocities(fluxes, points,
                                                                  materialIds);
   }
 
   void updateCoverages(ProcessContext<NumericType, D> &context,
-                       SmartPointer<viennals::PointData<NumericType>> &fluxes) {
+                       SmartPointer<PointData<NumericType>> &fluxes) {
     auto surfaceModel = context.model->getSurfaceModel();
     assert(surfaceModel != nullptr);
     assert(surfaceModel->getCoverages() != nullptr);
 
     assert(context.diskMesh != nullptr);
-    assert(context.diskMesh->getCellData().getScalarData("MaterialIds") !=
-           nullptr);
-    auto const &materialIds =
-        *context.diskMesh->getCellData().getScalarData("MaterialIds");
-
+    const auto &[nodes, normals, materialIds] = context.getDiskMeshData();
+    surfaceModel->setSurfaceCoordinates(nodes);
     surfaceModel->updateCoverages(fluxes, materialIds);
   }
 
@@ -303,14 +380,64 @@ private:
     }
   }
 
-  static void
-  mergeScalarData(viennals::PointData<NumericType> &scalarData,
-                  SmartPointer<viennals::PointData<NumericType>> dataToInsert) {
-    int numScalarData = dataToInsert->getScalarDataSize();
-    for (int i = 0; i < numScalarData; i++) {
-      scalarData.insertReplaceScalarData(*dataToInsert->getScalarData(i),
-                                         dataToInsert->getScalarDataLabel(i));
+  ProcessResult
+  calculateSurfaceDiffusion(NumericType timeStep,
+                            const ProcessContext<NumericType, D> &context,
+                            SmartPointer<PointData<NumericType>> targets) {
+    if (timeStep <= 0.)
+      return ProcessResult::SUCCESS;
+
+    auto diffusionCoefficientsOpt =
+        context.model->getSurfaceModel()->getDiffusionCoefficients();
+    assert(diffusionCoefficientsOpt.has_value() &&
+           !diffusionCoefficientsOpt.value().empty() &&
+           "Surface diffusion solver called without diffusion coefficients.");
+    const auto &diffusionCoefficients = diffusionCoefficientsOpt.value();
+
+    bool hasValidTarget = false;
+    for (const auto &[name, coefficient] : diffusionCoefficients) {
+      if (auto target = targets->getScalarData(name, true); target != nullptr) {
+        hasValidTarget = true;
+        break;
+      }
     }
+    if (!hasValidTarget)
+      return ProcessResult::SUCCESS;
+
+    assert(surfaceDiffusionSolver_.isActive() &&
+           "Surface diffusion solver must be active to calculate surface "
+           "diffusion.");
+    for (const auto &[name, coefficient] : diffusionCoefficients) {
+      if (coefficient <= 0.)
+        continue;
+
+      if (auto target = targets->getScalarData(name, true); target != nullptr) {
+        const double dt =
+            std::min(context.surfaceDiffusionParams.stabilityFactor *
+                         std::pow(context.domain->getGridDelta(), 2.0) /
+                         (4.0 * coefficient),
+                     static_cast<double>(timeStep));
+        VIENNACORE_LOG_DEBUG("Applying surface diffusion for " + name +
+                             " with coefficient " +
+                             std::to_string(coefficient) + " and time step " +
+                             std::to_string(dt));
+
+        auto current = *target;
+        double diffusionTime = 0.0;
+        while (diffusionTime < timeStep) {
+#ifdef VIENNATOOLS_PYTHON_BUILD
+          // Check for user interruption
+          if (PyErr_CheckSignals() != 0)
+            return ProcessResult::USER_INTERRUPTED;
+#endif
+          current =
+              surfaceDiffusionSolver_.stepExplicit(current, dt, coefficient);
+          diffusionTime += dt;
+        }
+        targets->insertReplaceScalarData(std::move(current), name);
+      }
+    }
+    return ProcessResult::SUCCESS;
   }
 
   void logProcessingTimes(const ProcessContext<NumericType, D> &context,

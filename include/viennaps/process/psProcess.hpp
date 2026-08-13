@@ -10,6 +10,7 @@
 #include "psCallbackOnlyStrategy.hpp"
 #include "psFluxProcessStrategy.hpp"
 #include "psGeometricProcessStrategy.hpp"
+#include "psOxidationStrategy.hpp"
 
 // Flux engines
 #include "psCPUDiskEngine.hpp"
@@ -83,6 +84,10 @@ public:
     context_.atomicLayerParams = p;
   }
 
+  void setParameters(const SurfaceDiffusionParameters &p) {
+    context_.surfaceDiffusionParams = p;
+  }
+
   void setFluxEngineType(FluxEngineType type) { fluxEngineType_ = type; }
 
   void setIntermediateOutputPath(const std::string &path) {
@@ -138,12 +143,20 @@ public:
     return context_.diskMesh;
   }
 
+  // Returns the per-triangle flux mesh from the last calculateFlux() call.
+  // Only populated when using a triangle flux engine; null otherwise.
+  SmartPointer<viennals::Mesh<float>> getTriangleMesh() const {
+    return context_.triangleMesh;
+  }
+
 private:
   void initializeStrategies() {
     strategies_.clear();
     // Add strategies in priority order
     strategies_.push_back(
         std::make_unique<GeometricProcessStrategy<NumericType, D>>());
+    strategies_.push_back(
+        std::make_unique<OxidationStrategy<NumericType, D>>());
     strategies_.push_back(
         std::make_unique<CallbackOnlyStrategy<NumericType, D>>());
     strategies_.push_back(

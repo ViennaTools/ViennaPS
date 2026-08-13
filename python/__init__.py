@@ -17,11 +17,11 @@ def _windows_dll_path():
     ]
 
     for path in additional_paths:
-        if not os.path.exists(path):
-            continue
-
-        os.add_dll_directory(path)
-        os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
+        if os.path.isdir(path):
+            os.add_dll_directory(path)
+            os.environ["PATH"] = path + os.pathsep + os.environ["PATH"]
+        else:
+            print(f"Warning: DLL path {path} does not exist.")
 
 
 def _module_ptx_path():
@@ -53,6 +53,13 @@ d2 = _C.d2
 d3 = _C.d3
 _sys.modules[__name__ + ".d2"] = d2
 _sys.modules[__name__ + ".d3"] = d3
+
+_SHARED_OXIDATION_TYPES = ("OxidantType", "SiliconOrientation", "GpuMode", "GpuPreconditioner")
+for _name in _SHARED_OXIDATION_TYPES:
+    if hasattr(_C, _name):
+        setattr(d2, _name, getattr(_C, _name))
+        setattr(d3, _name, getattr(_C, _name))
+
 PROXY_DIM = 2  # default dimension is 2D
 
 

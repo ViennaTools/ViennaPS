@@ -24,7 +24,7 @@ public:
   void initializeCoverages(unsigned numGeometryPoints) override {
     initCoveragesCalled = true;
     if (this->coverages == nullptr) {
-      this->coverages = viennals::PointData<NumericType>::New();
+      this->coverages = PointData<NumericType>::New();
     } else {
       this->coverages->clear();
     }
@@ -35,7 +35,7 @@ public:
   void initializeSurfaceData(unsigned numGeometryPoints) override {
     initSurfaceDataCalled = true;
     if (this->surfaceData == nullptr) {
-      this->surfaceData = viennals::PointData<NumericType>::New();
+      this->surfaceData = PointData<NumericType>::New();
     } else {
       this->surfaceData->clear();
     }
@@ -44,7 +44,7 @@ public:
   }
 
   SmartPointer<std::vector<NumericType>>
-  calculateVelocities(SmartPointer<viennals::PointData<NumericType>> fluxes,
+  calculateVelocities(SmartPointer<PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
     calculateVelocitiesCalled = true;
@@ -53,7 +53,7 @@ public:
     return velocity;
   }
 
-  void updateCoverages(SmartPointer<viennals::PointData<NumericType>> fluxes,
+  void updateCoverages(SmartPointer<PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
     updateCoveragesCalled = true;
     // Update test coverage based on flux
@@ -87,18 +87,18 @@ public:
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
                         const unsigned int primID, const int materialId,
-                        viennaray::TracingData<NumericType> &localData,
-                        const viennaray::TracingData<NumericType> *globalData,
+                        PointData<NumericType> &localData,
+                        const PointData<NumericType> *globalData,
                         viennaray::RNG &rng) override final {
     // Simple collision model - add weight to flux
-    localData.getVectorData(0)[primID] += rayWeight;
+    localData.addToScalarData(0, primID, rayWeight);
   }
 
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                     const Vec3D<NumericType> &geomNormal,
                     const unsigned int primID, const int materialId,
-                    const viennaray::TracingData<NumericType> *globalData,
+                    const PointData<NumericType> *globalData,
                     viennaray::RNG &rng) override final {
     // Perfect sticking
     return std::pair<NumericType, Vec3D<NumericType>>{
@@ -275,8 +275,8 @@ template <typename NumericType, int D> void test_calculateFluxes() {
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Test flux calculation
-  auto fluxes = viennals::PointData<NumericType>::New();
-  result = engine.calculateFluxes(context, fluxes);
+  auto fluxes = PointData<NumericType>::New();
+  result = engine.calculateSourceFluxes(context, fluxes);
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
   VC_TEST_ASSERT(fluxes != nullptr);
 
@@ -324,8 +324,8 @@ void test_calculateFluxesWithCoverages() {
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Test flux calculation with coverages
-  auto fluxes = viennals::PointData<NumericType>::New();
-  result = engine.calculateFluxes(context, fluxes);
+  auto fluxes = PointData<NumericType>::New();
+  result = engine.calculateSourceFluxes(context, fluxes);
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
   VC_TEST_ASSERT(fluxes != nullptr);
 }
@@ -359,8 +359,8 @@ template <typename NumericType, int D> void test_fluxSmoothing() {
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Test flux calculation with smoothing
-  auto fluxes = viennals::PointData<NumericType>::New();
-  result = engine.calculateFluxes(context, fluxes);
+  auto fluxes = PointData<NumericType>::New();
+  result = engine.calculateSourceFluxes(context, fluxes);
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
   VC_TEST_ASSERT(fluxes != nullptr);
 }
@@ -398,8 +398,8 @@ template <typename NumericType, int D> void test_multipleParticleTypes() {
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
 
   // Test flux calculation with multiple particles
-  auto fluxes = viennals::PointData<NumericType>::New();
-  result = engine.calculateFluxes(context, fluxes);
+  auto fluxes = PointData<NumericType>::New();
+  result = engine.calculateSourceFluxes(context, fluxes);
   VC_TEST_ASSERT(result == ProcessResult::SUCCESS);
   VC_TEST_ASSERT(fluxes != nullptr);
 

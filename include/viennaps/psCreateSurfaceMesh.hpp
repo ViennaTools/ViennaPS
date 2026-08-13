@@ -17,7 +17,7 @@ using namespace viennacore;
 inline viennaray::TriangleMesh
 CreateTriangleMesh(const float gridDelta,
                    const SmartPointer<viennals::Mesh<float>> &mesh) {
-  assert(mesh->getCellData().getVectorData("Normals") != nullptr &&
+  assert(mesh->getNormals() != nullptr &&
          "Mesh normals not found in cell data under label 'Normals'.");
   viennaray::TriangleMesh triangleMesh;
 
@@ -26,7 +26,7 @@ CreateTriangleMesh(const float gridDelta,
   triangleMesh.nodes = mesh->nodes;
   triangleMesh.minimumExtent = mesh->minimumExtent;
   triangleMesh.maximumExtent = mesh->maximumExtent;
-  triangleMesh.normals = *mesh->getCellData().getVectorData("Normals");
+  triangleMesh.normals = *mesh->getNormals();
 
   return triangleMesh;
 }
@@ -39,7 +39,7 @@ inline void CopyTriangleMesh(const float gridDelta,
   triangleMesh.nodes = mesh->nodes;
   triangleMesh.minimumExtent = mesh->minimumExtent;
   triangleMesh.maximumExtent = mesh->maximumExtent;
-  triangleMesh.normals = *mesh->getCellData().getVectorData("Normals");
+  triangleMesh.normals = *mesh->getNormals();
 }
 
 template <class LsNT, class MeshNT, int D> class CreateSurfaceMesh {
@@ -288,6 +288,8 @@ public:
     mesh->triangles.shrink_to_fit();
 
     if (buildKdTreeFlag) {
+      assert(kdTree != nullptr);
+      assert(triangleCenters.size() == mesh->triangles.size());
       kdTree->setPoints(triangleCenters);
       kdTree->build();
     }
