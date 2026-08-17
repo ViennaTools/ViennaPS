@@ -195,6 +195,7 @@ class CF4O2Parameters:
     Si: CF4O2ParametersSi
     SiGe: CF4O2ParametersSiGe
     fluxIncludeSticking: bool
+    storeAbsorbedFlux: bool
     gamma_C: MaterialValueMap
     gamma_C_oxidized: MaterialValueMap
     gamma_F: MaterialValueMap
@@ -358,6 +359,12 @@ class CF4O2ParametersSi:
         ...
     @k_sigma.setter
     def k_sigma(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def k_sigma_passivated(self) -> float:
+        ...
+    @k_sigma_passivated.setter
+    def k_sigma_passivated(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def rho(self) -> float:

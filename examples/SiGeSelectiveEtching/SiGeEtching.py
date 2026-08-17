@@ -40,27 +40,27 @@ modelParams.Passivation.A_O_ie = params["A_O"]
 modelParams.Passivation.A_C_ie = params["A_C"]
 
 # Use Material enum
-modelParams.gamma_F.set(ps.Material.Mask, 0.0)
+modelParams.gamma_F.set(ps.Material.SiO2, 0.0)
 modelParams.gamma_F.set(ps.Material.Si, 0.1)
 modelParams.gamma_F.set(ps.Material.SiGe, 0.1)
 
-modelParams.gamma_F_oxidized.set(ps.Material.Mask, 0.0)
+modelParams.gamma_F_oxidized.set(ps.Material.SiO2, 0.0)
 modelParams.gamma_F_oxidized.set(ps.Material.Si, 0.1)
 modelParams.gamma_F_oxidized.set(ps.Material.SiGe, 0.1)
 
-modelParams.gamma_O.set(ps.Material.Mask, 0.0)
+modelParams.gamma_O.set(ps.Material.SiO2, 0.0)
 modelParams.gamma_O.set(ps.Material.Si, 0.7)
 modelParams.gamma_O.set(ps.Material.SiGe, 0.7)
 
-modelParams.gamma_O_passivated.set(ps.Material.Mask, 0.0)
+modelParams.gamma_O_passivated.set(ps.Material.SiO2, 0.0)
 modelParams.gamma_O_passivated.set(ps.Material.Si, 0.7)
 modelParams.gamma_O_passivated.set(ps.Material.SiGe, 0.7)
 
-modelParams.gamma_C.set(ps.Material.Mask, 0.0)
+modelParams.gamma_C.set(ps.Material.SiO2, 0.0)
 modelParams.gamma_C.set(ps.Material.Si, 0.7)
 modelParams.gamma_C.set(ps.Material.SiGe, 0.7)
 
-modelParams.gamma_C_oxidized.set(ps.Material.Mask, 0.0)
+modelParams.gamma_C_oxidized.set(ps.Material.SiO2, 0.0)
 modelParams.gamma_C_oxidized.set(ps.Material.Si, 0.7)
 modelParams.gamma_C_oxidized.set(ps.Material.SiGe, 0.7)
 

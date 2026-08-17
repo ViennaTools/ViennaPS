@@ -376,6 +376,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("x", &CF4O2Parameters<T>::SiGeType::x)
       .def_readwrite("rho", &CF4O2Parameters<T>::SiGeType::rho)
       .def_readwrite("k_sigma", &CF4O2Parameters<T>::SiGeType::k_sigma)
+      .def_readwrite("k_sigma_passivated",
+                     &CF4O2Parameters<T>::SiGeType::k_sigma_passivated)
       .def_readwrite("beta_sigma", &CF4O2Parameters<T>::SiGeType::beta_sigma)
       .def_readwrite("Eth_sp", &CF4O2Parameters<T>::SiGeType::Eth_sp)
       .def_readwrite("A_sp", &CF4O2Parameters<T>::SiGeType::A_sp)
@@ -407,6 +409,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def_readwrite("oxygenFlux", &CF4O2Parameters<T>::oxygenFlux)
       .def_readwrite("polymerFlux", &CF4O2Parameters<T>::polymerFlux)
       .def_readwrite("etchStopDepth", &CF4O2Parameters<T>::etchStopDepth)
+      .def_readwrite("storeAbsorbedFlux",
+                     &CF4O2Parameters<T>::storeAbsorbedFlux)
       .def_readwrite("fluxIncludeSticking",
                      &CF4O2Parameters<T>::fluxIncludeSticking)
       .def_readwrite("gamma_F", &CF4O2Parameters<T>::gamma_F)

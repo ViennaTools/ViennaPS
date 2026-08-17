@@ -1,5 +1,6 @@
 // #pragma once
 
+#include "CF4O2Etching.cuh"
 #include "FaradayCage.cuh"
 #include "IonBeamEtching.cuh"
 #include "MultiParticle.cuh"
@@ -116,6 +117,64 @@ extern "C" __device__ void
 __direct_callable__plasmaIonInit(const void *,
                                  viennaray::gpu::PerRayData *prd) {
   plasmaIonInit(prd);
+}
+
+//
+// --- CF4O2 pipeline
+//
+
+extern "C" __device__ void
+__direct_callable__CF4O2EtchantCollision(const void *sbtData,
+                                         viennaray::gpu::PerRayData *prd) {
+  CF4O2EtchantCollision(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__CF4O2EtchantReflection(const void *sbtData,
+                                          viennaray::gpu::PerRayData *prd) {
+  CF4O2EtchantReflection(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__CF4O2OxygenCollision(const void *sbtData,
+                                        viennaray::gpu::PerRayData *prd) {
+  CF4O2OxygenCollision(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__CF4O2OxygenReflection(const void *sbtData,
+                                         viennaray::gpu::PerRayData *prd) {
+  CF4O2OxygenReflection(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__CF4O2PolymerCollision(const void *sbtData,
+                                         viennaray::gpu::PerRayData *prd) {
+  CF4O2PolymerCollision(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__CF4O2PolymerReflection(const void *sbtData,
+                                          viennaray::gpu::PerRayData *prd) {
+  CF4O2PolymerReflection(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__CF4O2IonCollision(const void *sbtData,
+                                     viennaray::gpu::PerRayData *prd) {
+  CF4O2IonCollision(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__CF4O2IonReflection(const void *sbtData,
+                                      viennaray::gpu::PerRayData *prd) {
+  CF4O2IonReflection(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__CF4O2IonInit(const void *,
+                                viennaray::gpu::PerRayData *prd) {
+  CF4O2IonInit(prd);
 }
 
 //

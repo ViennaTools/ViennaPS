@@ -15,6 +15,27 @@ using namespace viennacore;
 
 namespace impl {
 
+template <typename NumericType>
+inline bool accumulateAbsorbedFlux(const CF4O2Parameters<NumericType> &params) {
+  return params.storeAbsorbedFlux || params.fluxIncludeSticking;
+}
+
+template <typename NumericType>
+inline NumericType clampCoverage(const NumericType value) {
+  return std::max(static_cast<NumericType>(0.),
+                  std::min(static_cast<NumericType>(1.), value));
+}
+
+template <typename NumericType>
+inline NumericType effectiveSiGeKSigma(
+    const CF4O2Parameters<NumericType> &params,
+    const NumericType passivationCoverage) {
+  const auto clampedPassivation = clampCoverage(passivationCoverage);
+  return (static_cast<NumericType>(1.) - clampedPassivation) *
+             params.SiGe.k_sigma +
+         clampedPassivation * params.SiGe.k_sigma_passivated;
+}
+
 template <typename NumericType, int D>
 class CF4O2SurfaceModel : public SurfaceModel<NumericType> {
 public:
@@ -33,6 +54,8 @@ public:
     }
     std::vector<NumericType> cov(numGeometryPoints, 0.);
     coverages->insertNextScalarData(cov, "eCoverage");
+    // Historical name kept for compatibility with existing outputs/scripts.
+    // This state stores the effective oxygen-containing passivation coverage.
     coverages->insertNextScalarData(cov, "oCoverage");
     coverages->insertNextScalarData(cov, "cCoverage");
   }
@@ -60,9 +83,16 @@ public:
     const auto numPoints = rates->getScalarData(0)->size();
     std::vector<NumericType> etchRate(numPoints, 0.);
 
-    const auto ionEnhancedFlux = rates->getScalarData("ionEnhancedFlux");
-    const auto ionSputterFlux = rates->getScalarData("ionSputterFlux");
-    const auto etchantFlux = rates->getScalarData("etchantFlux");
+    std::vector<NumericType> zeroFlux(numPoints, 0.);
+    std::vector<NumericType> *ionEnhancedFlux = nullptr;
+    std::vector<NumericType> *ionSputterFlux = nullptr;
+    if (params.ionFlux > 0.) {
+      ionEnhancedFlux = rates->getScalarData("ionEnhancedFlux");
+      ionSputterFlux = rates->getScalarData("ionSputterFlux");
+    } else {
+      ionEnhancedFlux = &zeroFlux;
+      ionSputterFlux = &zeroFlux;
+    }
 
     const auto eCoverage = coverages->getScalarData("eCoverage");
     const auto oCoverage = coverages->getScalarData("oCoverage");
@@ -100,11 +130,7 @@ public:
 
       if (MaterialMap::isMaterial(materialIds[i], Material::SiGe)) {
         const auto k_sigma =
-            oCoverage->at(i) > 0.5 * eCoverage->at(i)
-                ? params.SiGe.k_sigma_SiGe(1.)
-                : (eCoverage->at(i) - oCoverage->at(i)) * params.SiGe.k_sigma +
-                      oCoverage->at(i) * params.SiGe.k_sigma_SiGe(1.);
-
+            effectiveSiGeKSigma(params, oCoverage->at(i));
         const auto chemicalRate = k_sigma * eCoverage->at(i) / 4.;
 
         etchRate[i] = -(1 / params.SiGe.rho) *
@@ -127,11 +153,18 @@ public:
           ieRate->at(i) = ionEnhancedRate;
           chRate->at(i) = chemicalRate;
         }
-      } else { // Mask
-               // if (MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
+      } else if (MaterialMap::isMaterial(materialIds[i], Material::SiO2) ||
+                 MaterialMap::isMaterial(materialIds[i], Material::Mask)) {
         etchRate[i] = -(1 / params.Mask.rho) * sputterRate * unitConversion;
         if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
+          ieRate->at(i) = 0.;
+          chRate->at(i) = 0.;
+        }
+      } else {
+        etchRate[i] = 0.;
+        if (Logger::hasIntermediate()) {
+          spRate->at(i) = 0.;
           ieRate->at(i) = 0.;
           chRate->at(i) = 0.;
         }
@@ -151,24 +184,48 @@ public:
     // update coverages based on fluxes
     const auto numPoints = rates->getScalarData(0)->size();
 
-    const auto etchantFlux = rates->getScalarData("etchantFlux");
-    std::vector<NumericType> oxygenFlux(numPoints, 0.);
-    std::vector<NumericType> polymerFlux(numPoints, 0.);
-    if (params.oxygenFlux > 0)
-      oxygenFlux = *rates->getScalarData("oxygenFlux");
-    if (params.polymerFlux > 0)
-      polymerFlux = *rates->getScalarData("polymerFlux");
+    std::vector<NumericType> zeroFlux(numPoints, 0.);
+    std::vector<NumericType> *etchantFlux = nullptr;
+    std::vector<NumericType> *oxygenFlux = nullptr;
+    std::vector<NumericType> *polymerFlux = nullptr;
+    std::vector<NumericType> *ionEnhancedFlux = nullptr;
+    std::vector<NumericType> *ionEnhancedOxidationFlux = nullptr;
+    std::vector<NumericType> *ionEnhancedPassivationFlux = nullptr;
 
-    const auto ionEnhancedFlux = rates->getScalarData("ionEnhancedFlux");
-    const auto ionEnhancedOxidationFlux =
-        rates->getScalarData("ionEnhancedOxidationFlux");
-    const auto ionEnhancedPassivationFlux =
-        rates->getScalarData("ionEnhancedPassivationFlux");
+    if (params.etchantFlux > 0.) {
+      etchantFlux = rates->getScalarData("etchantFlux");
+    } else {
+      etchantFlux = &zeroFlux;
+    }
+
+    if (params.oxygenFlux > 0.) {
+      oxygenFlux = rates->getScalarData("oxygenFlux");
+    } else {
+      oxygenFlux = &zeroFlux;
+    }
+
+    if (params.polymerFlux > 0.) {
+      polymerFlux = rates->getScalarData("polymerFlux");
+    } else {
+      polymerFlux = &zeroFlux;
+    }
+
+    if (params.ionFlux > 0.) {
+      ionEnhancedFlux = rates->getScalarData("ionEnhancedFlux");
+      ionEnhancedOxidationFlux =
+          rates->getScalarData("ionEnhancedOxidationFlux");
+      ionEnhancedPassivationFlux =
+          rates->getScalarData("ionEnhancedPassivationFlux");
+    } else {
+      ionEnhancedFlux = &zeroFlux;
+      ionEnhancedOxidationFlux = &zeroFlux;
+      ionEnhancedPassivationFlux = &zeroFlux;
+    }
 
     // etchant fluorine coverage
     auto eCoverage = coverages->getScalarData("eCoverage");
     eCoverage->resize(numPoints);
-    // oxygen coverage
+    // effective oxygen-containing passivation coverage
     auto oCoverage = coverages->getScalarData("oCoverage");
     oCoverage->resize(numPoints);
     // polymer coverage
@@ -178,8 +235,8 @@ public:
 #pragma omp parallel for
     for (size_t i = 0; i < numPoints; ++i) {
       auto Gb_e = etchantFlux->at(i) * params.etchantFlux;
-      auto Gb_o = oxygenFlux.at(i) * params.oxygenFlux;
-      auto Gb_c = polymerFlux.at(i) * params.polymerFlux;
+      auto Gb_o = oxygenFlux->at(i) * params.oxygenFlux;
+      auto Gb_c = polymerFlux->at(i) * params.polymerFlux;
       auto GY_ie = ionEnhancedFlux->at(i) * params.ionFlux;
       auto GY_o = ionEnhancedOxidationFlux->at(i) * params.ionFlux;
       auto GY_c = ionEnhancedPassivationFlux->at(i) * params.ionFlux;
@@ -200,21 +257,21 @@ public:
         d += params.Si.beta_sigma;
         e += params.Si.k_sigma;
       }
-      eCoverage->at(i) = std::max(
-          0., std::min(1., std::abs(Gb_e) < 1e-6
-                               ? 0.
-                               : (b * d * f) / (e * f * (a + d) + b * d * f +
-                                                c * d * e)));
-      oCoverage->at(i) = std::max(
-          0., std::min(1., std::abs(Gb_o) < 1e-6
-                               ? 0.
-                               : (a * e * f) / (e * f * (a + d) + b * d * f +
-                                                c * d * e)));
-      cCoverage->at(i) = std::max(
-          0., std::min(1., std::abs(Gb_c) < 1e-6
-                               ? 0.
-                               : (c * d * e) / (e * f * (a + d) + b * d * f +
-                                                c * d * e)));
+      eCoverage->at(i) = clampCoverage(std::abs(Gb_e) < 1e-6
+                                           ? 0.
+                                           : (b * d * f) /
+                                                 (e * f * (a + d) + b * d * f +
+                                                  c * d * e));
+      oCoverage->at(i) = clampCoverage(std::abs(Gb_o) < 1e-6
+                                           ? 0.
+                                           : (a * e * f) /
+                                                 (e * f * (a + d) + b * d * f +
+                                                  c * d * e));
+      cCoverage->at(i) = clampCoverage(std::abs(Gb_c) < 1e-6
+                                           ? 0.
+                                           : (c * d * e) /
+                                                 (e * f * (a + d) + b * d * f +
+                                                  c * d * e));
     }
   }
 };
@@ -229,7 +286,8 @@ public:
                                 (M_PI_2 / params.Ions.inflectAngle - 1.))),
         sqrt_E_th_ie_O(std::sqrt(params.Passivation.Eth_O_ie)),
         sqrt_E_th_ie_C(std::sqrt(params.Passivation.Eth_C_ie)),
-        sqrt_E_th_ie_Si(std::sqrt(params.Si.Eth_ie)) {}
+        sqrt_E_th_ie_Si(std::sqrt(params.Si.Eth_ie)),
+        sqrt_E_th_ie_SiGe(std::sqrt(params.SiGe.Eth_ie)) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
@@ -247,6 +305,14 @@ public:
 
     NumericType A_sp = params.Si.A_sp;
     NumericType Eth_sp = params.Si.Eth_sp;
+    NumericType A_ie = params.Si.A_ie;
+    NumericType sqrt_E_th_ie = sqrt_E_th_ie_Si;
+    if (MaterialMap::isMaterial(materialId, Material::SiGe)) {
+      A_sp = params.SiGe.A_sp;
+      Eth_sp = params.SiGe.Eth_sp;
+      A_ie = params.SiGe.A_ie;
+      sqrt_E_th_ie = sqrt_E_th_ie_SiGe;
+    }
     if (MaterialMap::isMaterial(materialId, Material::Mask)) {
       A_sp = params.Mask.A_sp;
       Eth_sp = params.Mask.Eth_sp;
@@ -262,7 +328,7 @@ public:
     NumericType Y_sp =
         A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_sp_theta;
     NumericType Y_Si =
-        params.Si.A_ie * std::max(sqrtE - sqrt_E_th_ie_Si, 0.) * f_ie_theta;
+        A_ie * std::max(sqrtE - sqrt_E_th_ie, 0.) * f_ie_theta;
     NumericType Y_O = params.Passivation.A_O_ie *
                       std::max(sqrtE - sqrt_E_th_ie_O, 0.) * f_ie_theta;
     NumericType Y_C = params.Passivation.A_C_ie *
@@ -313,8 +379,15 @@ public:
     //                     NumericType(1.));
     // }
 
+    NumericType reflectionThreshold = params.Si.Eth_ie;
+    if (MaterialMap::isMaterial(materialId, Material::SiGe)) {
+      reflectionThreshold = params.SiGe.Eth_ie;
+    } else if (MaterialMap::isMaterial(materialId, Material::Mask)) {
+      reflectionThreshold = params.Mask.Eth_sp;
+    }
+
     // Set the flag to stop tracing if the energy is below the threshold
-    if (NewEnergy > params.Si.Eth_ie) {
+    if (NewEnergy > reflectionThreshold) {
       E = NewEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
           rayDir, geomNormal, Rng,
@@ -343,6 +416,7 @@ private:
   const NumericType sqrt_E_th_ie_O;
   const NumericType sqrt_E_th_ie_C;
   const NumericType sqrt_E_th_ie_Si;
+  const NumericType sqrt_E_th_ie_SiGe;
 
   NumericType E = 0.;
 };
@@ -363,10 +437,10 @@ public:
                         const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override {
     NumericType S_eff = 1.;
-    if (params.fluxIncludeSticking) {
+    if (accumulateAbsorbedFlux(params)) {
       // F surface coverage
       const auto &phi_F = globalData->getVectorData(0)[primID];
-      // O surface coverage
+      // effective oxygen-containing passivation coverage
       const auto &phi_O = globalData->getVectorData(1)[primID];
       // F surface coverage on oxidized SiGe
       const auto &phi_C = globalData->getVectorData(2)[primID];
@@ -389,7 +463,7 @@ public:
 
     // F surface coverage
     const auto &phi_F = globalData->getVectorData(0)[primID];
-    // O surface coverage
+    // effective oxygen-containing passivation coverage
     const auto &phi_O = globalData->getVectorData(1)[primID];
     // F surface coverage on oxidized SiGe
     const auto &phi_C = globalData->getVectorData(2)[primID];
@@ -427,7 +501,7 @@ public:
                         const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override {
     NumericType S_eff = 1.;
-    if (params.fluxIncludeSticking) {
+    if (accumulateAbsorbedFlux(params)) {
       const auto &phi_F = globalData->getVectorData(0)[primID];
       const auto &phi_O = globalData->getVectorData(1)[primID];
       const auto &phi_C = globalData->getVectorData(2)[primID];
@@ -484,7 +558,7 @@ public:
                         const viennaray::TracingData<NumericType> *globalData,
                         RNG &) override {
     NumericType S_eff = 1.;
-    if (params.fluxIncludeSticking) {
+    if (accumulateAbsorbedFlux(params)) {
       const auto &phi_F = globalData->getVectorData(0)[primID];
       const auto &phi_O = globalData->getVectorData(1)[primID];
       const auto &phi_C = globalData->getVectorData(2)[primID];
@@ -526,6 +600,124 @@ public:
 };
 } // namespace impl
 
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
+template <typename NumericType, int D>
+class CF4O2Etching final : public ProcessModelGPU<NumericType, D> {
+public:
+  explicit CF4O2Etching(const CF4O2Parameters<NumericType> &pParams)
+      : params(pParams), deviceParams(pParams) {
+    initializeModel();
+  }
+
+  ~CF4O2Etching() override { this->processData.free(); }
+
+private:
+  void initializeModel() {
+    this->setProcessName("CF4O2Etching");
+    this->getParticleTypes().clear();
+
+    std::unordered_map<std::string, unsigned> pMap;
+    std::vector<viennaray::gpu::CallableConfig> cMap;
+    unsigned particleIdx = 0;
+
+    if (params.ionFlux > 0) {
+      viennaray::gpu::Particle<NumericType> ion;
+      ion.name = "Ion";
+      ion.dataLabels = {"ionSputterFlux", "ionEnhancedFlux",
+                        "ionEnhancedOxidationFlux",
+                        "ionEnhancedPassivationFlux"};
+      ion.sticking = 0.f;
+      ion.cosineExponent = params.Ions.exponent;
+      this->insertNextParticleType(ion);
+      pMap["Ion"] = particleIdx;
+      cMap.push_back({particleIdx, viennaray::gpu::CallableSlot::COLLISION,
+                      "__direct_callable__CF4O2IonCollision"});
+      cMap.push_back({particleIdx, viennaray::gpu::CallableSlot::REFLECTION,
+                      "__direct_callable__CF4O2IonReflection"});
+      cMap.push_back({particleIdx, viennaray::gpu::CallableSlot::INIT,
+                      "__direct_callable__CF4O2IonInit"});
+      ++particleIdx;
+    }
+
+    if (params.etchantFlux > 0) {
+      viennaray::gpu::Particle<NumericType> etchant;
+      etchant.name = "Etchant";
+      etchant.dataLabels = {"etchantFlux"};
+      etchant.cosineExponent = 1.f;
+      this->insertNextParticleType(etchant);
+      pMap["Etchant"] = particleIdx;
+      cMap.push_back({particleIdx, viennaray::gpu::CallableSlot::COLLISION,
+                      "__direct_callable__CF4O2EtchantCollision"});
+      cMap.push_back({particleIdx, viennaray::gpu::CallableSlot::REFLECTION,
+                      "__direct_callable__CF4O2EtchantReflection"});
+      ++particleIdx;
+    }
+
+    if (params.oxygenFlux > 0) {
+      viennaray::gpu::Particle<NumericType> oxygen;
+      oxygen.name = "Oxygen";
+      oxygen.dataLabels = {"oxygenFlux"};
+      oxygen.cosineExponent = 1.f;
+      this->insertNextParticleType(oxygen);
+      pMap["Oxygen"] = particleIdx;
+      cMap.push_back({particleIdx, viennaray::gpu::CallableSlot::COLLISION,
+                      "__direct_callable__CF4O2OxygenCollision"});
+      cMap.push_back({particleIdx, viennaray::gpu::CallableSlot::REFLECTION,
+                      "__direct_callable__CF4O2OxygenReflection"});
+      ++particleIdx;
+    }
+
+    if (params.polymerFlux > 0) {
+      viennaray::gpu::Particle<NumericType> polymer;
+      polymer.name = "Polymer";
+      polymer.dataLabels = {"polymerFlux"};
+      polymer.cosineExponent = 1.f;
+      this->insertNextParticleType(polymer);
+      pMap["Polymer"] = particleIdx;
+      cMap.push_back({particleIdx, viennaray::gpu::CallableSlot::COLLISION,
+                      "__direct_callable__CF4O2PolymerCollision"});
+      cMap.push_back({particleIdx, viennaray::gpu::CallableSlot::REFLECTION,
+                      "__direct_callable__CF4O2PolymerReflection"});
+    }
+
+    auto surfModel =
+        SmartPointer<impl::CF4O2SurfaceModel<NumericType, D>>::New(params);
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setParticleCallableMap(pMap, cMap);
+    this->setUseMaterialIds(true);
+
+    precomputeSqrtEnergies();
+    this->processData.alloc(sizeof(CF4O2ParametersGPU));
+    this->processData.upload(&deviceParams, 1);
+    this->hasGPU = true;
+
+    this->processMetaData = params.toProcessMetaData();
+    this->processMetaData["Units"] = std::vector<double>{
+        static_cast<double>(units::Length::getInstance().getUnit()),
+        static_cast<double>(units::Time::getInstance().getUnit())};
+  }
+
+  void precomputeSqrtEnergies() {
+    deviceParams.Mask.Eth_sp = std::sqrt(deviceParams.Mask.Eth_sp);
+    deviceParams.SiGe.Eth_sp = std::sqrt(deviceParams.SiGe.Eth_sp);
+    deviceParams.SiGe.Eth_ie = std::sqrt(deviceParams.SiGe.Eth_ie);
+    deviceParams.Si.Eth_sp = std::sqrt(deviceParams.Si.Eth_sp);
+    deviceParams.Si.Eth_ie = std::sqrt(deviceParams.Si.Eth_ie);
+    deviceParams.Passivation.Eth_O_ie =
+        std::sqrt(deviceParams.Passivation.Eth_O_ie);
+    deviceParams.Passivation.Eth_C_ie =
+        std::sqrt(deviceParams.Passivation.Eth_C_ie);
+  }
+
+  CF4O2Parameters<NumericType> params;
+  CF4O2ParametersGPU deviceParams;
+};
+} // namespace gpu
+#endif
+
 template <typename NumericType, int D>
 class CF4O2Etching final : public ProcessModelCPU<NumericType, D> {
 public:
@@ -562,6 +754,14 @@ public:
     initializeModel();
   }
 
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
+    auto model = SmartPointer<gpu::CF4O2Etching<NumericType, D>>::New(params);
+    model->setProcessName(this->getProcessName().value());
+    return model;
+  }
+#endif
+
   CF4O2Parameters<NumericType> &getParameters() { return params; }
 
 private:
@@ -589,8 +789,10 @@ private:
     this->setVelocityField(velField);
     this->setProcessName("CF4O2Etching");
     this->particles.clear();
-    this->insertNextParticleType(ion);
-    this->insertNextParticleType(etchant);
+    if (params.ionFlux > 0)
+      this->insertNextParticleType(ion);
+    if (params.etchantFlux > 0)
+      this->insertNextParticleType(etchant);
     if (params.oxygenFlux > 0)
       this->insertNextParticleType(oxygen);
     if (params.polymerFlux > 0)
