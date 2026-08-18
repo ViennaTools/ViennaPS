@@ -25,25 +25,24 @@ public:
 
   static void setUnit(const int passedUnit) { unit_ = passedUnit; }
 
-  static void setUnit(const std::string &unit) {
-    if (unit == "meter" || unit == "m") {
-      unit_ = METER;
-    } else if (unit == "centimeter" || unit == "cm") {
-      unit_ = CENTIMETER;
-    } else if (unit == "millimeter" || unit == "mm") {
-      unit_ = MILLIMETER;
-    } else if (unit == "micrometer" || unit == "um") {
-      unit_ = MICROMETER;
-    } else if (unit == "nanometer" || unit == "nm") {
-      unit_ = NANOMETER;
-    } else if (unit == "angstrom" || unit == "A") {
-      unit_ = ANGSTROM;
-    } else {
-      throw std::invalid_argument(
-          "The value must be one of the following: meter, centimeter, "
-          "millimeter, micrometer, nanometer, angstrom");
-    }
+  static int parseUnit(const std::string &unit) {
+    if (unit == "meter" || unit == "m")
+      return METER;
+    if (unit == "centimeter" || unit == "cm")
+      return CENTIMETER;
+    if (unit == "millimeter" || unit == "mm")
+      return MILLIMETER;
+    if (unit == "micrometer" || unit == "um")
+      return MICROMETER;
+    if (unit == "nanometer" || unit == "nm")
+      return NANOMETER;
+    if (unit == "angstrom" || unit == "A")
+      return ANGSTROM;
+    throw std::invalid_argument(
+        "The value must be one of the following: m, cm, mm, um, nm, A");
   }
+
+  static void setUnit(const std::string &unit) { unit_ = parseUnit(unit); }
 
   static int getUnit() { return unit_; }
 
@@ -249,6 +248,27 @@ public:
 };
 
 inline int Length::unit_ = Length::UNDEFINED;
+
+[[nodiscard]] inline double
+lengthUnitToCentimeterScale(const std::string &unit) {
+  switch (Length::parseUnit(unit)) {
+  case Length::METER:
+    return 1e2;
+  case Length::CENTIMETER:
+    return 1.;
+  case Length::MILLIMETER:
+    return 1e-1;
+  case Length::MICROMETER:
+    return 1e-4;
+  case Length::NANOMETER:
+    return 1e-7;
+  case Length::ANGSTROM:
+    return 1e-8;
+  default:
+    VIENNACORE_LOG_ERROR("Invalid length unit.");
+  }
+  return 0.;
+}
 
 class Time {
   static int unit_;

@@ -360,11 +360,13 @@ public:
   // Generate the Cell-Set from the Level-Sets in the domain. The Cell-Set can
   // be used to store and track volume data.
   void generateCellSet(const NumericType position, const Material coverMaterial,
-                       const bool isAboveSurface = false) {
+                       const bool isAboveSurface = false,
+                       const bool withEmbeddedBoundaries = false) {
     if (!cellSet_)
       cellSet_ = csDomainType::New();
     cellSet_->setCellSetPosition(isAboveSurface);
     cellSet_->setCoverMaterial(static_cast<int>(coverMaterial));
+    cellSet_->enableEmbeddedBoundaries(withEmbeddedBoundaries);
     cellSet_->fromLevelSets(
         levelSets_, materialMap_ ? materialMap_->getMaterialMap() : nullptr,
         position);

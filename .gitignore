@@ -24,7 +24,7 @@ output/
 *.ptx
 *.optixir
 .cache/
-modeldb/
+modeldb_backup_local/
 _viennals/
 graphify*
 AGENTS.md
