@@ -6,7 +6,8 @@
 #include "raygLaunchParams.hpp"
 #include "raygReflection.hpp"
 
-#include "models/psPipelineParameters.hpp"
+#include "models/psIonBeamParameters.hpp"
+#include "models/psIonModelUtil.hpp"
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
@@ -39,8 +40,8 @@ multiNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 
 __forceinline__ __device__ void
 multiIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
   for (int i = 0; i < prd->ISCount; ++i) {
 
     float flux = prd->rayWeight;
@@ -65,8 +66,8 @@ multiIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 
 __forceinline__ __device__ void
 multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
   auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
   auto cosTheta = __saturatef(-viennacore::DotProduct(prd->dir, geomNormal));
   float incomingAngle = acosf(cosTheta);
@@ -83,8 +84,8 @@ multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   }
 
   if (params->meanEnergy > 0.f) {
-    viennaps::gpu::impl::updateEnergy(prd, params->inflectAngle, params->n_l,
-                                      incomingAngle);
+    viennaps::impl::updateEnergy(prd, params->inflectAngle, params->n_l,
+                                 incomingAngle);
   }
 
   prd->rayWeight -= prd->rayWeight * sticking;
@@ -93,10 +94,10 @@ multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 }
 
 __forceinline__ __device__ void multiIonInit(viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
   if (params->meanEnergy > 0.f) {
-    viennaps::gpu::impl::initNormalDistEnergy(prd, params->meanEnergy,
-                                              params->sigmaEnergy);
+    viennaps::impl::initNormalDistEnergy(prd, params->meanEnergy,
+                                         params->sigmaEnergy);
   }
 }

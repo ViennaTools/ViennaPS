@@ -107,13 +107,14 @@ public:
 
       const auto rateFactor =
           params_.rateFactors.get(Material::fromLegacyId(materialIds[i]));
-      const auto sputterRate = ionSputterFlux[i] * params_.ionFlux;
-      const auto ionEnhancedRate =
+      auto sputterRate = ionSputterFlux[i] * params_.ionFlux;
+      auto ionEnhancedRate =
           eCoverage->at(i) * ionEnhancedFlux[i] * params_.ionFlux;
       const auto chemicalRate =
           params_.Substrate.k_sigma * eCoverage->at(i) / 4.;
 
       if (MaterialMap::isHardmask(materialIds[i])) {
+        sputterRate *= params_.Mask.A_sp;
         etchRate[i] = -(1 / params_.Mask.rho) * sputterRate * unitConversion;
         if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
@@ -121,6 +122,7 @@ public:
           chRate->at(i) = 0.;
         }
       } else if (MaterialMap::isMaterial(materialIds[i], Material::Polymer)) {
+        sputterRate *= params_.Polymer.A_sp;
         etchRate[i] = -(1 / params_.Polymer.rho) * sputterRate * unitConversion;
         if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
@@ -128,6 +130,8 @@ public:
           chRate->at(i) = 0.;
         }
       } else {
+        sputterRate *= params_.Substrate.A_sp;
+        ionEnhancedRate *= params_.Substrate.A_ie;
         etchRate[i] = -(1 / params_.Substrate.rho) *
                       (chemicalRate + sputterRate + ionEnhancedRate) *
                       unitConversion;
@@ -198,8 +202,10 @@ public:
     for (size_t i = 0; i < numPoints; ++i) {
       auto Gb_E = etchantFlux->at(i) * params_.etchantFlux;
       auto Gb_P = passivationFlux->at(i) * params_.passivationFlux;
-      auto GY_ie = ionEnhancedFlux->at(i) * params_.ionFlux;
-      auto GY_p = ionEnhancedPassivationFlux->at(i) * params_.ionFlux;
+      auto GY_ie =
+          ionEnhancedFlux->at(i) * params_.ionFlux * params_.Substrate.A_ie;
+      auto GY_p = ionEnhancedPassivationFlux->at(i) * params_.ionFlux *
+                  params_.Passivation.A_ie;
 
       if (Gb_P < 1e-6) {
         // No passivation case - avoid division by zero

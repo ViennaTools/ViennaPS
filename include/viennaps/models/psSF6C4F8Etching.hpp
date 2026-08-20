@@ -21,7 +21,8 @@ template <typename NumericType, int D>
 class SF6C4F8Etching final
     : public viennaps::impl::PlasmaModelGPU<NumericType, D> {
 public:
-  explicit SF6C4F8Etching(const PlasmaEtchingParameters<NumericType> &pParams)
+  explicit SF6C4F8Etching(
+      const viennaps::PlasmaEtchingParameters<NumericType> &pParams)
       : params(pParams), deviceParams(pParams) {
     initializeModel();
   }
@@ -80,33 +81,23 @@ private:
     this->setParticleCallableMap(pMap, cMap);
 
     this->setUseMaterialIds(true);
-    precomputeSqrtEnergies();
-    this->processData.alloc(sizeof(PlasmaEtchingParametersGPU));
+    this->processData.alloc(sizeof(viennaps::gpu::PlasmaEtchingParameters));
     this->processData.upload(&deviceParams, 1);
     this->hasGPU = true;
 
     this->processMetaData = params.toProcessMetaData();
   }
 
-  void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {
+  void
+  setParameters(const viennaps::PlasmaEtchingParameters<NumericType> &pParams) {
     params = pParams;
-    deviceParams = PlasmaEtchingParametersGPU(pParams);
-    precomputeSqrtEnergies();
+    deviceParams = viennaps::gpu::PlasmaEtchingParameters(pParams);
     this->processData.upload(&deviceParams, 1);
   }
 
 private:
-  PlasmaEtchingParameters<NumericType> params;
-  PlasmaEtchingParametersGPU deviceParams;
-
-  void precomputeSqrtEnergies() {
-    deviceParams.Substrate.Eth_ie = std::sqrt(deviceParams.Substrate.Eth_ie);
-    deviceParams.Passivation.Eth_ie =
-        std::sqrt(deviceParams.Passivation.Eth_ie);
-    deviceParams.Substrate.Eth_sp = std::sqrt(deviceParams.Substrate.Eth_sp);
-    deviceParams.Mask.Eth_sp = std::sqrt(deviceParams.Mask.Eth_sp);
-    deviceParams.Polymer.Eth_sp = std::sqrt(deviceParams.Polymer.Eth_sp);
-  }
+  viennaps::PlasmaEtchingParameters<NumericType> params;
+  viennaps::gpu::PlasmaEtchingParameters deviceParams;
 };
 } // namespace gpu
 #endif

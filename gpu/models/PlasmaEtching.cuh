@@ -7,7 +7,7 @@
 #include "raygReflection.hpp"
 
 #include "materials/psMaterialMap.hpp"
-#include "models/psPipelineParameters.hpp"
+#include "models/psIonModelUtil.hpp"
 #include "models/psPlasmaEtchingParameters.hpp"
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
@@ -64,40 +64,34 @@ plasmaNeutralReflectionNoPassivation(const void *sbtData,
 __forceinline__ __device__ void
 plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   using namespace viennaps;
-  PlasmaEtchingParametersGPU *params =
-      reinterpret_cast<PlasmaEtchingParametersGPU *>(launchParams.customData);
+  gpu::PlasmaEtchingParameters *params =
+      reinterpret_cast<gpu::PlasmaEtchingParameters *>(launchParams.customData);
   for (int i = 0; i < prd->ISCount; ++i) {
     int id = launchParams.materialIds[prd->primIDs[i]]; // consecutive ID
     int material = launchParams.materialMap[id];        // mapped to enum
     auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
     auto cosTheta = __saturatef(
         -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
-    float angle = acosf(cosTheta);
 
-    float A_sp = params->Substrate.A_sp;
-    float B_sp = params->Substrate.B_sp;
-    float Eth_sp = params->Substrate.Eth_sp;
+    float B_sp = params->Substrate_B_sp;
+    float Eth_sp = params->Substrate_Eth_sp;
     if (static_cast<BuiltInMaterial>(material) == BuiltInMaterial::Mask) {
-      A_sp = params->Mask.A_sp;
-      B_sp = params->Mask.B_sp;
-      Eth_sp = params->Mask.Eth_sp;
+      B_sp = params->Mask_B_sp;
+      Eth_sp = params->Mask_Eth_sp;
     } else if (static_cast<BuiltInMaterial>(material) ==
                BuiltInMaterial::Polymer) {
-      A_sp = params->Polymer.A_sp;
-      B_sp = params->Polymer.B_sp;
-      Eth_sp = params->Polymer.Eth_sp;
+      B_sp = params->Polymer_B_sp;
+      Eth_sp = params->Polymer_Eth_sp;
     }
 
     float f_sp_theta;
     if (static_cast<BuiltInMaterial>(material) == BuiltInMaterial::Polymer &&
-        params->Polymer.usePolyCosThetaYield) {
+        abs(params->Polymer_aSum) > 1e6f) {
       const float c = cosTheta;
-      const float sum = params->Polymer.a1 + params->Polymer.a2 +
-                        params->Polymer.a3 + params->Polymer.a4;
-      f_sp_theta = (params->Polymer.a1 * c + params->Polymer.a2 * c * c +
-                    params->Polymer.a3 * c * c * c +
-                    params->Polymer.a4 * c * c * c * c) /
-                   sum;
+      f_sp_theta = (params->Polymer_a1 * c + params->Polymer_a2 * c * c +
+                    params->Polymer_a3 * c * c * c +
+                    params->Polymer_a4 * c * c * c * c) /
+                   params->Polymer_aSum;
       f_sp_theta = max(f_sp_theta, 0.f);
     } else {
       f_sp_theta =
@@ -105,15 +99,15 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     }
 
     float f_ie_theta = 1.f;
-    if (cosTheta < 0.5f)
+    if (cosTheta < 0.5f) {
+      float angle = acosf(cosTheta);
       f_ie_theta = max(3.f - 6.f * angle / M_PIf, 0.f);
+    }
 
     float sqrtE = sqrtf(prd->energy);
-    float Y_sp = A_sp * max(sqrtE - Eth_sp, 0.f) * f_sp_theta;
-    float Y_Si = params->Substrate.A_ie *
-                 max(sqrtE - params->Substrate.Eth_ie, 0.f) * f_ie_theta;
-    float Y_P = params->Passivation.A_ie *
-                max(sqrtE - params->Passivation.Eth_ie, 0.f) * f_ie_theta;
+    float Y_sp = max(sqrtE - Eth_sp, 0.f) * f_sp_theta;
+    float Y_Si = max(sqrtE - params->Substrate_Eth_ie, 0.f) * f_ie_theta;
+    float Y_P = max(sqrtE - params->Passivation_Eth_ie, 0.f) * f_ie_theta;
 
     atomicAdd(&launchParams
                    .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
@@ -132,8 +126,8 @@ plasmaIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 
 __forceinline__ __device__ void
 plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  viennaps::PlasmaEtchingParametersGPU *params =
-      reinterpret_cast<viennaps::PlasmaEtchingParametersGPU *>(
+  viennaps::gpu::PlasmaEtchingParameters *params =
+      reinterpret_cast<viennaps::gpu::PlasmaEtchingParameters *>(
           launchParams.customData);
   auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
   auto cosTheta = __saturatef(
@@ -141,10 +135,10 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   float angle = acosf(cosTheta);
 
   float sticking = 1.f;
-  if (angle > params->Ions.thetaRMin) {
+  if (angle > params->Ions_thetaRMin) {
     sticking =
-        1.f - __saturatef((angle - params->Ions.thetaRMin) /
-                          (params->Ions.thetaRMax - params->Ions.thetaRMin));
+        1.f - __saturatef((angle - params->Ions_thetaRMin) /
+                          (params->Ions_thetaRMax - params->Ions_thetaRMin));
   }
 
   if (sticking >= 1.f) {
@@ -152,23 +146,23 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     return;
   }
 
-  viennaps::gpu::impl::updateEnergy(prd, params->Ions.inflectAngle,
-                                    params->Ions.n_l, angle);
+  viennaps::impl::updateEnergy(prd, params->Ions_inflectAngle, params->Ions_n_l,
+                               angle);
 
-  float minEnergy = min(params->Substrate.Eth_ie, params->Substrate.Eth_sp);
+  float minEnergy = min(params->Substrate_Eth_ie, params->Substrate_Eth_sp);
   if (prd->energy > minEnergy) {
     prd->rayWeight -= prd->rayWeight * sticking;
     viennaray::gpu::conedCosineReflection(
-        prd, geomNormal, M_PI_2f - min(angle, params->Ions.minAngle));
+        prd, geomNormal, M_PI_2f - min(angle, params->Ions_minAngle));
   } else {
     prd->rayWeight = 0.f; // terminate particle
   }
 }
 
 __forceinline__ __device__ void plasmaIonInit(viennaray::gpu::PerRayData *prd) {
-  viennaps::PlasmaEtchingParametersGPU *params =
-      reinterpret_cast<viennaps::PlasmaEtchingParametersGPU *>(
+  viennaps::gpu::PlasmaEtchingParameters *params =
+      reinterpret_cast<viennaps::gpu::PlasmaEtchingParameters *>(
           launchParams.customData);
-  viennaps::gpu::impl::initNormalDistEnergy(prd, params->Ions.meanEnergy,
-                                            params->Ions.sigmaEnergy);
+  viennaps::impl::initNormalDistEnergy(prd, params->Ions_meanEnergy,
+                                       params->Ions_sigmaEnergy);
 }

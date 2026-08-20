@@ -1,122 +1,120 @@
 #pragma once
 
 #ifdef VIENNACORE_COMPILE_GPU
+#include "../materials/psMaterial.hpp"
+
+#include <vcLogger.hpp>
 #include <vcRNG.hpp>
 
-namespace viennaps::gpu::impl {
-struct IonParams {
-  // Angle
-  float tiltAngle = 0.f; // in rad
-  bool rotating = false;
+#include <cassert>
+#include <cstdint>
+#include <limits>
+#include <type_traits>
 
-  // Sticking
-  float thetaRMin = 0.f;
-  float thetaRMax = 0.f;
+namespace viennaps::gpu {
 
-  // Energy
-  float meanEnergy = 0.f;
-  float sigmaEnergy = 0.f;
-  float thresholdEnergy = 0.f; // sqrt(E_threshold)
+struct FluorocarbonParameters {
+  static constexpr std::uint32_t maxMaterials = 5;
 
-  // Redeposition
-  float redepositionRate = 0.f;
-  float redepositionThreshold = 0.1f;
+  struct MaterialParameters {
+    // sticking
+    float beta_p = 0.26f;
+    float beta_e = 0.9f;
 
-  // Reflection Angular Distribution
-  float minAngle = 0.f;     // in rad
-  float inflectAngle = 0.f; // in rad
-  float n_l = 10.f;
+    // sputtering coefficients
+    float Eth_sp = 18.f; // eV
+    float Eth_ie = 4.f;  // eV
+    float A_sp = 0.0139f;
+    float B_sp = 9.3f;
+    float A_ie = 0.0361f;
 
-  // Sputter Yield
-  float B_sp = 0.f;
+    MaterialParameters() = default;
 
-  // Cos4 Yield
-  float a1 = 0.f;
-  float a2 = 0.f;
-  float a3 = 0.f;
-  float a4 = 0.f;
-  float aSum = 0.f;
+    template <typename Parameters>
+    explicit MaterialParameters(const Parameters &parameters)
+        : beta_p(static_cast<float>(parameters.beta_p)),
+          beta_e(static_cast<float>(parameters.beta_e)),
+          Eth_sp(static_cast<float>(parameters.Eth_sp)),
+          Eth_ie(static_cast<float>(parameters.Eth_ie)),
+          A_sp(static_cast<float>(parameters.A_sp)),
+          B_sp(static_cast<float>(parameters.B_sp)),
+          A_ie(static_cast<float>(parameters.A_ie)) {}
+  };
+
+  MaterialParameters materials[maxMaterials]{};
+  std::uint32_t numMaterials = 0;
+
+  struct IonType {
+    float meanEnergy = 100.f; // eV
+    float sigmaEnergy = 10.f; // eV
+    float exponent = 500.f;
+
+    float inflectAngle = 1.55334303f;
+    float n_l = 10.f;
+    float minAngle = 1.3962634f;
+  } Ions;
+
+  FluorocarbonParameters() = default;
+
+  template <typename Parameters>
+  explicit FluorocarbonParameters(const Parameters &parameters) {
+    set(parameters);
+  }
+
+  template <typename Parameters> void set(const Parameters &parameters) {
+    Ions.meanEnergy = static_cast<float>(parameters.Ions.meanEnergy);
+    Ions.sigmaEnergy = static_cast<float>(parameters.Ions.sigmaEnergy);
+    Ions.exponent = static_cast<float>(parameters.Ions.exponent);
+    Ions.inflectAngle = static_cast<float>(parameters.Ions.inflectAngle);
+    Ions.n_l = static_cast<float>(parameters.Ions.n_l);
+    Ions.minAngle = static_cast<float>(parameters.Ions.minAngle);
+
+    numMaterials = 0;
+    for (const auto &material : parameters.materials) {
+      addMaterial(MaterialParameters(material));
+    }
+  }
+
+  __both__ bool addMaterial(const MaterialParameters &material) {
+    if (numMaterials >= maxMaterials) {
+#ifdef __CUDA_ARCH__
+      assert(false && "Too many fluorocarbon materials for GPU parameters.");
+#else
+      VIENNACORE_LOG_ERROR(
+          "Fluorocarbon GPU parameters support at most 5 materials.");
+#endif
+      return false;
+    }
+
+    materials[numMaterials++] = material;
+    return true;
+  }
+
+  //   __both__ MaterialParameters
+  //   getMaterialParameters(const Material material) const {
+  //     for (std::uint32_t i = 0; i < numMaterials; ++i) {
+  //       if (materials[i].id == material)
+  //         return materials[i];
+  //     }
+
+  // #ifdef __CUDA_ARCH__
+  //     assert(false && "Material not found in fluorocarbon GPU parameters.");
+  // #else
+  //     VIENNACORE_LOG_ERROR("Material not found in fluorocarbon GPU
+  //     parameters.");
+  // #endif
+  //     return MaterialParameters{};
+  //   }
+
+  //   __both__ MaterialParameters
+  //   getMaterialParameters(const int materialId) const {
+  //     return getMaterialParameters(Material::fromLegacyId(materialId));
+  //   }
 };
 
-#ifdef __CUDACC__
+static_assert(
+    std::is_trivially_copyable_v<FluorocarbonParameters::MaterialParameters>);
+static_assert(std::is_trivially_copyable_v<FluorocarbonParameters>);
 
-__forceinline__ __device__ float norm_inv_from_cdf(float p) {
-  // p in (0,1). Maps to N(0,1)
-  // Φ^{-1}(p) = -√2 * erfcinv(2p)
-  return __saturatef(-1.4142135623730951f * erfcinvf(2.0f * p));
-}
-
-__forceinline__ __device__ float phi_from_x(float x) {
-  // Φ(x) = 0.5 * erfc(-x/√2)
-  return 0.5f * erfcf(-x * 0.7071067811865475f);
-}
-
-__forceinline__ __device__ void updateEnergy(viennaray::gpu::PerRayData *prd,
-                                             const float inflectAngle,
-                                             const float n_l,
-                                             const float incAngle /*rad*/) {
-  float Eref_peak; // between 0 and 1
-  const float A = 1.f / (1.f + n_l * (M_PI_2f / inflectAngle - 1.f));
-  if (incAngle >= inflectAngle) {
-    Eref_peak =
-        1.f - (1.f - A) * (M_PI_2f - incAngle) / (M_PI_2f - inflectAngle);
-  } else {
-    Eref_peak = A * powf(incAngle / inflectAngle, n_l);
-  }
-
-  const float sigma = 0.1f;
-
-  float newEnergy;
-  do {
-    const float u = viennacore::getNormalDistRand(&prd->RNGstate);
-    newEnergy = prd->energy * (Eref_peak + sigma * u);
-  } while (newEnergy < 0.f || newEnergy > prd->energy);
-  prd->energy = newEnergy;
-
-  // const float a = (0.f - Eref_peak) / sigma;
-  // const float b = (1.f - Eref_peak) / sigma;
-
-  // const float Fa = phi_from_x(a);
-  // const float Fb = phi_from_x(b);
-  // const float width = Fb - Fa;
-
-  // // Guard extreme tails to avoid Fb==Fa
-  // if (width <= 1e-7f) {
-  //   // pick midpoint in CDF space
-  //   const float pmid = Fa + 0.5f * width;
-  //   prd->energy *= Eref_peak + sigma * norm_inv_from_cdf(pmid);
-  // } else {
-  //   const float u = curand_uniform(&prd->RNGstate); // (0,1)
-  //   const float p = fmaf(width, u, Fa);             // Fa + u*(Fb-Fa)
-  //   const float z = norm_inv_from_cdf(p);           // z in (a,b)
-  //   prd->energy *= Eref_peak + sigma * z;           // ∈ (0,1)
-  // }
-}
-
-__forceinline__ __device__ void
-initNormalDistEnergy(viennaray::gpu::PerRayData *prd, const float mean,
-                     const float sigma) {
-  float energy;
-  if (sigma <= 0.f) {
-    energy = mean;
-  } else {
-    do {
-      energy = mean + sigma * viennacore::getNormalDistRand(&prd->RNGstate);
-    } while (energy < 0.f);
-  }
-  prd->energy = energy;
-
-  // const float a = (threshold - mean) / sigma;
-  // // Phi(a)
-  // const float Phi_a = phi_from_x(a);
-
-  // // If threshold <= mean, the truncation is weak.
-  // const float u = curand_uniform(&prd->RNGstate); // (0,1)
-  // const float up = fmaf(1.0f - Phi_a, u, Phi_a);  // Phi(a) + u*(1-Phi(a))
-  // const float z = norm_inv_from_cdf(up);          // z >= a by construction
-  // prd->energy = mean + sigma * z;
-}
-#endif
-
-} // namespace viennaps::gpu::impl
+} // namespace viennaps::gpu
 #endif
