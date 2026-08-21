@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "../materials/psMaterialValueMap.hpp"
+#include "../process/psProcessModel.hpp"
 #include "../process/psSurfaceModel.hpp"
 #include "../psUnits.hpp"
 
@@ -108,10 +109,6 @@ public:
       const auto rateFactor =
           params_.rateFactors.get(Material::fromLegacyId(materialIds[i]));
       auto sputterRate = ionSputterFlux[i] * params_.ionFlux;
-      auto ionEnhancedRate =
-          eCoverage->at(i) * ionEnhancedFlux[i] * params_.ionFlux;
-      const auto chemicalRate =
-          params_.Substrate.k_sigma * eCoverage->at(i) / 4.;
 
       if (MaterialMap::isHardmask(materialIds[i])) {
         sputterRate *= params_.Mask.A_sp;
@@ -130,11 +127,17 @@ public:
           chRate->at(i) = 0.;
         }
       } else {
+
         sputterRate *= params_.Substrate.A_sp;
-        ionEnhancedRate *= params_.Substrate.A_ie;
+        const auto ionEnhancedRate = eCoverage->at(i) * ionEnhancedFlux[i] *
+                                     params_.ionFlux * params_.Substrate.A_ie;
+        const auto chemicalRate =
+            params_.Substrate.k_sigma * eCoverage->at(i) / 4.;
+
         etchRate[i] = -(1 / params_.Substrate.rho) *
                       (chemicalRate + sputterRate + ionEnhancedRate) *
                       unitConversion;
+
         if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = ionEnhancedRate;
@@ -450,14 +453,13 @@ auto castSurfaceModelToPlasmaEtching(
 }
 
 template <typename NumericType, int D>
-double getSubstratePosition(
-    SmartPointer<Domain<NumericType, D>> domain,
-    SmartPointer<PlasmaEtchingSurfaceModel<NumericType, D>> surfModel) {
+double
+getSubstratePosition(SmartPointer<Domain<NumericType, D>> domain,
+                     MaterialValueMap<NumericType> const &materialRates) {
 
   auto surface = domain->getDiskMesh();
   const auto &nodes = surface->getNodes();
   const auto materialIds = surface->getMaterialIds();
-  const auto &materialRates = surfModel->params_.rateFactors;
 
   double position = std::numeric_limits<double>::max();
 #pragma omp parallel for reduction(min : position)
@@ -473,8 +475,8 @@ double getSubstratePosition(
   }
 
   if (position == std::numeric_limits<double>::max()) {
-    VIENNACORE_LOG_WARNING(
-        "No substrate material found in the domain. Returning 0 as position.");
+    VIENNACORE_LOG_WARNING("No substrate material found in the domain. Cannot "
+                           "provide depth info.");
     position = 0.;
   }
 
@@ -498,7 +500,8 @@ public:
 
     if (Logger::hasInfo()) {
       surfModel->resetTotalRates();
-      initialPosition = getSubstratePosition<NumericType, D>(domain, surfModel);
+      initialPosition = getSubstratePosition<NumericType, D>(
+          domain, surfModel->params_.rateFactors);
       VIENNACORE_LOG_DEBUG(
           "Initial substrate position: " + std::to_string(initialPosition) +
           " " + units::Length::toString());
@@ -514,8 +517,8 @@ public:
 
     if (Logger::hasInfo()) {
       surfModel->logTotalRates();
-      double finalPosition =
-          getSubstratePosition<NumericType, D>(domain, surfModel);
+      double finalPosition = getSubstratePosition<NumericType, D>(
+          domain, surfModel->params_.rateFactors);
       VIENNACORE_LOG_DEBUG(
           "Final substrate position: " + std::to_string(finalPosition) + " " +
           units::Length::toString());
