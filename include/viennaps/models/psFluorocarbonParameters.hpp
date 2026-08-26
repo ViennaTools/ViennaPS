@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../materials/psMaterial.hpp"
+#include "../materials/psMaterialMap.hpp"
 
 #include <vcLogger.hpp>
 #include <vcRNG.hpp>
@@ -110,13 +110,15 @@ template <typename NumericType> struct FluorocarbonParameters {
   }
 };
 
-#ifdef VIENNACORE_COMPILE_GPU
+// #ifdef VIENNACORE_COMPILE_GPU
 namespace gpu {
 
 struct FluorocarbonParameters {
-  static constexpr std::uint32_t maxMaterials = 5;
+  static constexpr std::uint32_t maxMaterials = 10;
 
   struct MaterialParameters {
+    int id = static_cast<int>(Material::Undefined);
+
     // sticking
     float beta_p = 0.26f;
     float beta_e = 0.9f;
@@ -124,21 +126,18 @@ struct FluorocarbonParameters {
     // sputtering coefficients
     float Eth_sp = 18.f; // eV
     float Eth_ie = 4.f;  // eV
-    float A_sp = 0.0139f;
     float B_sp = 9.3f;
-    float A_ie = 0.0361f;
 
     MaterialParameters() = default;
 
     template <typename Parameters>
     explicit MaterialParameters(const Parameters &parameters)
-        : beta_p(static_cast<float>(parameters.beta_p)),
+        : id(static_cast<int>(parameters.id)),
+          beta_p(static_cast<float>(parameters.beta_p)),
           beta_e(static_cast<float>(parameters.beta_e)),
           Eth_sp(static_cast<float>(parameters.Eth_sp)),
           Eth_ie(static_cast<float>(parameters.Eth_ie)),
-          A_sp(static_cast<float>(parameters.A_sp)),
-          B_sp(static_cast<float>(parameters.B_sp)),
-          A_ie(static_cast<float>(parameters.A_ie)) {}
+          B_sp(static_cast<float>(parameters.B_sp)) {}
   };
 
   MaterialParameters materials[maxMaterials]{};
@@ -156,6 +155,7 @@ struct FluorocarbonParameters {
 
   FluorocarbonParameters() = default;
 
+#ifndef __CUDACC__
   template <typename Parameters>
   explicit FluorocarbonParameters(const Parameters &parameters) {
     set(parameters);
@@ -169,53 +169,33 @@ struct FluorocarbonParameters {
     Ions.n_l = static_cast<float>(parameters.Ions.n_l);
     Ions.minAngle = static_cast<float>(parameters.Ions.minAngle);
 
+    auto materials = parameters.materials;
+    std::sort(materials.begin(), materials.end(),
+              [](const auto &a, const auto &b) { return a.id < b.id; });
+
     numMaterials = 0;
-    for (const auto &material : parameters.materials) {
+    for (const auto &material : materials) {
       addMaterial(MaterialParameters(material));
     }
   }
 
-  __both__ bool addMaterial(const MaterialParameters &material) {
+  bool addMaterial(const MaterialParameters &material) {
     if (numMaterials >= maxMaterials) {
-#ifdef __CUDA_ARCH__
-      assert(false && "Too many fluorocarbon materials for GPU parameters.");
-#else
       VIENNACORE_LOG_ERROR(
-          "Fluorocarbon GPU parameters support at most 5 materials.");
-#endif
+          "Fluorocarbon GPU parameters support at most 10 materials.");
       return false;
     }
 
     materials[numMaterials++] = material;
     return true;
   }
-
-  //   __both__ MaterialParameters
-  //   getMaterialParameters(const Material material) const {
-  //     for (std::uint32_t i = 0; i < numMaterials; ++i) {
-  //       if (materials[i].id == material)
-  //         return materials[i];
-  //     }
-
-  // #ifdef __CUDA_ARCH__
-  //     assert(false && "Material not found in fluorocarbon GPU parameters.");
-  // #else
-  //     VIENNACORE_LOG_ERROR("Material not found in fluorocarbon GPU
-  //     parameters.");
-  // #endif
-  //     return MaterialParameters{};
-  //   }
-
-  //   __both__ MaterialParameters
-  //   getMaterialParameters(const int materialId) const {
-  //     return getMaterialParameters(Material::fromLegacyId(materialId));
-  //   }
+#endif
 };
 
 static_assert(
     std::is_trivially_copyable_v<FluorocarbonParameters::MaterialParameters>);
 static_assert(std::is_trivially_copyable_v<FluorocarbonParameters>);
 } // namespace gpu
+// #endif
 
 } // namespace viennaps
-#endif
