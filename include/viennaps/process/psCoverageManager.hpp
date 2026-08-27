@@ -23,7 +23,8 @@ public:
     assert(context.diskMesh != nullptr);
     assert(context.diskMesh->getNodes().size() > 0);
 
-    surfaceModel->initializeCoverages(context.diskMesh->getNodes().size());
+    surfaceModel->initializeCoverages(context.diskMesh->getNodes().size(),
+                                      context.diskMesh->getNodes());
 
     return surfaceModel->getCoverages() != nullptr;
   }

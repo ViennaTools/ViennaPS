@@ -11,12 +11,15 @@
 #include "../psUnits.hpp"
 
 #include "../materials/psMaterialMap.hpp"
+#include <vcKDTree.hpp>
 #include "../materials/psMaterialValueMap.hpp"
 
 #include <cmath>
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <algorithm>
+#include <limits>
 #include <vector>
 
 namespace viennaps {
@@ -270,6 +273,20 @@ template <typename NumericType> struct ChemicalMechanism {
             {prefactor, Ea, beta});
     reactions.push_back(r);
     return static_cast<int>(reactions.size()) - 1;
+  }
+
+  // The incident flux of one gas species, by name. An atomic layer process
+  // gates its steps this way: during the dose the radicals are not flowing,
+  // during the plasma the precursor is not, and during a purge nothing is.
+  // Returns false when the mechanism has no such species, so a driver that
+  // misspells one is told rather than silently gating nothing.
+  bool setSourceFlux(const std::string &label, NumericType flux) {
+    for (auto &g : gas)
+      if (g.label == label) {
+        g.sourceFlux = flux;
+        return true;
+      }
+    return false;
   }
 
   void addGasFactor(int reactionIndex, int gasIndex, int exponent) {
@@ -570,6 +587,139 @@ template <typename NumericType> struct ChemicalMechanism {
     }
   }
 
+  // One monolayer, as a flux-second. Fluxes are in 1e15 /cm2/s, so a rate r
+  // moves the coverage by r/(S0/1e15) per second. A mechanism that declares no
+  // site density falls back to 1e15 /cm2, which is the density the rest of the
+  // unit convention already assumes: r = k*theta is only in the same units as
+  // a flux if one monolayer is 1e15 /cm2.
+  NumericType coverageScale() const {
+    return siteDensity > 0. ? NumericType(1e15) / siteDensity : NumericType(1.);
+  }
+
+  // Transient coverage step, for an atomic layer process.
+  //
+  // The residual that solveCoverages drives to zero IS the time derivative, up
+  // to the site density:
+  //
+  //     S0 dtheta_i/dt = sum_j nu_ij r_j(theta, Gamma)
+  //
+  // An ALD half-cycle has no steady state to solve for. It saturates, and
+  // "it saturates" is a statement about dtheta/dt, not about dtheta/dt = 0: a
+  // dose under a constant flux would deposit without end. So a cyclic process
+  // integrates this instead of solving the balance, and the same mechanism,
+  // the same rate laws and the same nu serve both paths.
+  //
+  // EXPONENTIAL EULER, not plain Euler. An ALD mechanism carries fast
+  // intermediates that sit near zero -- here the iodine-bearing fragment the
+  // dose puts down and the plasma strips within microseconds -- so the system
+  // is stiff. Plain Euler oscillates such a species around zero and the clamp
+  // at zero then injects coverage once per step, which makes the answer drift
+  // FURTHER as the step is refined rather than converging. Splitting each
+  // species into production and linear loss,
+  //
+  //     dtheta_i/dt = P_i - L_i theta_i,   theta_i(t+h) = P/L + (theta_i - P/L) e^{-L h}
+  //
+  // is exact where the loss is first order, unconditionally positive, and
+  // converges cleanly at first order. L_i is formed as r_j/theta_i, which is
+  // finite for a mass-action loss because r_j carries theta_i as a factor.
+  //
+  // `maxChange` is the accuracy knob: the net change allowed in one sub-step,
+  // with the sub-step count scaling as its inverse. On the SiN PE-ALD
+  // mechanism the error in the dose is about 5% at 1e-3 and about 1% at 2e-4.
+  // `dt` is honoured exactly.
+  // `grown`, when given, accumulates the thickness the solid-forming steps
+  // deposit over dt, integrated on the SAME sub-steps as the coverages. It has
+  // to be: the rate follows a coverage that can fall by orders of magnitude
+  // within one pulse -- nitridation consumes what the dose put down in a
+  // fraction of a second -- so sampling it once per caller step and
+  // multiplying by dt overestimates the integral badly, and by a factor that
+  // depends on how finely the caller happens to have divided the pulse.
+  void stepCoverages(const std::vector<NumericType> &gamma,
+                     const std::vector<NumericType> &k,
+                     std::vector<NumericType> &theta, NumericType dt,
+                     NumericType maxChange = 1e-3,
+                     int maxSubSteps = 1000000,
+                     NumericType *grown = nullptr,
+                     Material material = Material(
+                         BuiltInMaterial::Undefined)) const {
+    const size_t n = coverageNames.size();
+    if (n == 0 || dt <= 0.)
+      return;
+
+    const NumericType scale = coverageScale();
+    // the smallest coverage a loss rate is divided by: r_j carries theta_i as
+    // a factor, so the quotient is finite, and this only guards the division
+    constexpr NumericType floor = std::numeric_limits<NumericType>::min();
+    std::vector<NumericType> P(n), L(n);
+
+    NumericType elapsed = 0.;
+    for (int sub = 0; sub < maxSubSteps && elapsed < dt; ++sub) {
+      const std::vector<NumericType> free = freeFractions(theta);
+
+      std::fill(P.begin(), P.end(), NumericType(0.));
+      std::fill(L.begin(), L.end(), NumericType(0.));
+      for (size_t j = 0; j < reactions.size(); ++j) {
+        const auto &r = reactions[j];
+        const NumericType rj = rate(r, k[j], gamma, theta, free) * scale;
+        if (rj == 0.)
+          continue;
+        for (size_t i = 0; i < n; ++i) {
+          if (r.nu[i] > 0.)
+            P[i] += r.nu[i] * rj;
+          else if (r.nu[i] < 0.)
+            L[i] += -r.nu[i] * rj / std::max(theta[i], floor);
+        }
+      }
+
+      // the sub-step follows the NET rate. Limiting on the loss rate alone
+      // would refuse to take a step wherever a fast intermediate sits at its
+      // quasi-steady value, which is exactly where the exponential form is
+      // already exact and a long step is safe.
+      NumericType fastest = 0.;
+      for (size_t i = 0; i < n; ++i)
+        fastest = std::max(fastest, std::abs(P[i] - L[i] * theta[i]));
+
+      NumericType h = dt - elapsed;
+      if (fastest > 0.)
+        h = std::min(h, maxChange / fastest);
+
+      if (grown)
+        *grown += growthRate(gamma, k, theta, material) * h;
+
+      for (size_t i = 0; i < n; ++i) {
+        NumericType next;
+        if (L[i] * h > 1e-8) {
+          const NumericType steady = P[i] / L[i];
+          next = steady + (theta[i] - steady) * std::exp(-L[i] * h);
+        } else {
+          next = theta[i] + h * (P[i] - L[i] * theta[i]);
+        }
+        theta[i] = std::min(NumericType(1.), std::max(NumericType(0.), next));
+      }
+      clampToSimplex(theta);
+      elapsed += h;
+    }
+  }
+
+  // Hold each site type's occupancy at or below one. Euler can overshoot the
+  // simplex where the steady-state solve was damped away from it, so the
+  // coverages of an over-filled type are scaled back in proportion rather than
+  // clipped one by one, which would silently favour whichever came first.
+  void clampToSimplex(std::vector<NumericType> &theta) const {
+    const size_t n = theta.size();
+    for (int t = 0; t < numSiteTypes; ++t) {
+      NumericType sum = 0.;
+      for (size_t i = 0; i < n; ++i)
+        if (coverageSite[i] == t)
+          sum += theta[i];
+      if (sum > 1.) {
+        for (size_t i = 0; i < n; ++i)
+          if (coverageSite[i] == t)
+            theta[i] /= sum;
+      }
+    }
+  }
+
   // The surface velocity: every solid-forming step contributes its atom count
   // divided by the density of ITS OWN solid, so a mechanism depositing a
   // polymer while etching a substrate adds the two motions correctly.
@@ -716,6 +866,53 @@ public:
   explicit ChemicalSurfaceModel(const ChemicalMechanism<NumericType> &m)
       : mech(m) {}
 
+  // Zero means solve the steady state; positive means integrate for this long.
+  // The strategy sets it once per sub-step of a pulse.
+  void setTimeStep(NumericType dt) override { timeStep_ = dt; }
+
+  // An atomic layer process carries the coverages of one step into the next:
+  // what the dose leaves on the surface is what the plasma acts on. The
+  // strategy re-initialises coverages once per cycle, so without this the
+  // surface would be wiped between steps and every step would start bare.
+  void setPreserveCoverages(bool preserve) {
+    preserveCoverages_ = preserve;
+    atomicLayer_ = preserve;
+  }
+
+  // The transient integrator's accuracy: the largest coverage change one
+  // internal sub-step may take. First order, so halving it roughly halves
+  // the integration error; the sub-step count scales with its inverse. On
+  // the SiN PE-ALD mechanism 1e-3 integrates a dose to about 5%, 2e-4 to
+  // about 1%.
+  void setMaxCoverageChange(NumericType maxChange) {
+    maxCoverageChange_ = maxChange;
+  }
+
+  // An atomic layer process re-initialises coverages once per cycle, after
+  // the advection has moved the surface and the disk mesh has been rebuilt.
+  // The termination the previous cycle left is physical state, so it is
+  // carried onto the new mesh by interpolation: a KD-tree over the previous
+  // points, and an inverse-distance average of the k nearest for every new
+  // point. Point INDICES carry no meaning across a re-mesh -- an insertion
+  // anywhere shifts every index after it, and an equal point count is
+  // coincidence -- so the transfer is geometric, and runs whenever previous
+  // coverages exist. A convex combination of valid coverages stays on the
+  // physical simplex, so the result needs no clamping.
+  void initializeCoverages(
+      unsigned numGeometryPoints,
+      const std::vector<Vec3D<NumericType>> &coordinates) override {
+    if (mech.coverageNames.empty())
+      return;
+    if (preserveCoverages_ && coverages != nullptr &&
+        !coveragePoints_.empty() && holdsAll(coveragePoints_.size())) {
+      transferCoverages(coordinates);
+    } else {
+      initializeZero(numGeometryPoints);
+    }
+    coveragePoints_ = coordinates;
+    grown_.assign(numGeometryPoints, 0.);
+  }
+
   void initializeCoverages(unsigned numGeometryPoints) override {
     // A mechanism without surface intermediates (pure sputtering, say) has no
     // coverage loop to run. Leaving the container null tells the strategy so;
@@ -723,6 +920,12 @@ public:
     // engine would then try to allocate a zero-byte coverage buffer.
     if (mech.coverageNames.empty())
       return;
+    initializeZero(numGeometryPoints);
+    coveragePoints_.clear();
+    grown_.assign(numGeometryPoints, 0.);
+  }
+
+  void initializeZero(unsigned numGeometryPoints) {
     if (coverages == nullptr)
       coverages = PointData<NumericType>::New();
     else
@@ -730,6 +933,56 @@ public:
     std::vector<NumericType> zero(numGeometryPoints, 0.);
     for (const auto &name : mech.coverageNames)
       coverages->insertNextScalarData(zero, name);
+  }
+
+  // Interpolate every coverage from the previous mesh onto the new one.
+  void transferCoverages(const std::vector<Vec3D<NumericType>> &newPoints) {
+    const size_t nCov = mech.coverageNames.size();
+    const size_t nNew = newPoints.size();
+    constexpr int kNeighbors = 3;
+
+    KDTree<NumericType, Vec3D<NumericType>> tree;
+    tree.setPoints(coveragePoints_);
+    tree.build();
+
+    std::vector<const std::vector<NumericType> *> oldCov(nCov);
+    std::vector<std::vector<NumericType>> newCov(
+        nCov, std::vector<NumericType>(nNew, 0.));
+    for (size_t i = 0; i < nCov; ++i)
+      oldCov[i] = coverages->getScalarData(mech.coverageNames[i]);
+
+#pragma omp parallel for
+    for (size_t p = 0; p < nNew; ++p) {
+      const auto found = tree.findKNearest(newPoints[p], kNeighbors);
+      if (!found || found->empty())
+        continue;
+      NumericType weightSum = 0.;
+      for (const auto &[idx, dist] : *found) {
+        // an exact hit dominates; the epsilon keeps the weight finite there
+        const NumericType w = NumericType(1.) / (dist + NumericType(1e-12));
+        weightSum += w;
+        for (size_t i = 0; i < nCov; ++i)
+          newCov[i][p] += w * oldCov[i]->at(idx);
+      }
+      for (size_t i = 0; i < nCov; ++i)
+        newCov[i][p] /= weightSum;
+    }
+
+    coverages->clear();
+    for (size_t i = 0; i < nCov; ++i)
+      coverages->insertNextScalarData(std::move(newCov[i]),
+                                      mech.coverageNames[i]);
+  }
+
+  // True when the coverage container already carries every coverage of this
+  // mechanism, at this point count.
+  bool holdsAll(unsigned numGeometryPoints) const {
+    for (const auto &name : mech.coverageNames) {
+      const auto *data = coverages->getScalarData(name);
+      if (!data || data->size() != numGeometryPoints)
+        return false;
+    }
+    return true;
   }
 
   void initializeSurfaceData(unsigned numGeometryPoints) override {
@@ -776,8 +1029,65 @@ public:
           theta[i] = cov[i]->at(p);
         // a chemistry that differs between materials uses the constants of the
         // material under this point
-        mech.solveCoverages(gamma, ratesAt(kByMaterial, k, materialIds[p]),
-                            theta);
+        const auto &kHere = ratesAt(kByMaterial, k, materialIds[p]);
+        if (timeStep_ > 0.) {
+          // An atomic layer process advects ONCE per cycle, by what the cycle
+          // deposited. That is the integral of the rate over the steps, not
+          // the rate at the end of them -- by the end of a cycle the last
+          // purge is running and nothing is flowing, so the instantaneous
+          // rate is zero however much the cycle grew.
+          NumericType deposited = 0.;
+          mech.stepCoverages(gamma, kHere, theta, timeStep_,
+                             maxCoverageChange_, 1000000, &deposited,
+                             MaterialMap::mapToMaterial(materialIds[p]));
+          accumulate(p, deposited * unitConversion());
+        } else {
+          mech.solveCoverages(gamma, kHere, theta);
+        }
+        for (size_t i = 0; i < nCov; ++i)
+          cov[i]->at(p) = theta[i];
+      }
+    }
+  }
+
+  // A purge is this same mechanism with nothing flowing: the thermal steps
+  // keep running -- HI leaving, H2 recombining off the surface -- while every
+  // source flux is zero. The desorption fluxes the strategy hands in describe
+  // re-adsorption of what just left, which this model does not yet resolve;
+  // ignoring them makes the purge purely thermal, which is the conservative
+  // reading and the one the reaction file already expresses.
+  void updateCoveragesFromDesorption(
+      SmartPointer<PointData<NumericType>>,
+      const std::vector<NumericType> &materialIds) override {
+    if (timeStep_ <= 0. || mech.coverageNames.empty() || coverages == nullptr)
+      return;
+
+    const auto numPoints = materialIds.size();
+    const auto k = mech.rateConstants();
+    const auto kByMaterial = ratesByMaterial(mech, materialIds);
+    const size_t nCov = mech.coverageNames.size();
+
+    std::vector<std::vector<NumericType> *> cov(nCov, nullptr);
+    for (size_t i = 0; i < nCov; ++i) {
+      cov[i] = coverages->getScalarData(mech.coverageNames[i]);
+      cov[i]->resize(numPoints);
+    }
+
+    const std::vector<NumericType> noFlux(mech.gas.size(), 0.);
+
+#pragma omp parallel
+    {
+      std::vector<NumericType> theta(nCov, 0.);
+#pragma omp for
+      for (size_t p = 0; p < numPoints; ++p) {
+        for (size_t i = 0; i < nCov; ++i)
+          theta[i] = cov[i]->at(p);
+        const auto &kHere = ratesAt(kByMaterial, k, materialIds[p]);
+        NumericType deposited = 0.;
+        mech.stepCoverages(noFlux, kHere, theta, timeStep_,
+                           maxCoverageChange_, 1000000, &deposited,
+                           MaterialMap::mapToMaterial(materialIds[p]));
+        accumulate(p, deposited * unitConversion());
         for (size_t i = 0; i < nCov; ++i)
           cov[i]->at(p) = theta[i];
       }
@@ -808,11 +1118,40 @@ public:
     return byMaterial.at(static_cast<int>(materialId));
   }
 
+  // nm/s as the mechanism reports it, in the process's own units.
+  static double unitConversion() {
+    return units::Time::convertSecond() / units::Length::convertNanometer();
+  }
+
+  // Thickness deposited at one point since the last time this was read.
+  void accumulate(size_t point, NumericType amount) {
+    if (grown_.size() > point)
+      grown_[point] += amount;
+  }
+
   SmartPointer<std::vector<NumericType>>
   calculateVelocities(SmartPointer<PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,
                       const std::vector<NumericType> &materialIds) override {
     const auto numPoints = materialIds.size();
+
+    // In a cyclic process this is asked once per cycle, immediately before the
+    // advection, and the strategy advects for one time unit -- so what it
+    // wants is the thickness this cycle deposited, not a rate. Hand it over
+    // and start the next cycle from zero.
+    if (atomicLayer_) {
+      grown_.resize(numPoints, 0.);
+      auto perCycle = SmartPointer<std::vector<NumericType>>::New(grown_);
+      // The fastest-growing point is the open field, where nothing shadows
+      // the flux, so this running total is the blanket growth per cycle --
+      // the quantity a saturation curve is measured as, and the one to check
+      // a mechanism against before trusting what it does inside a feature.
+      if (!grown_.empty())
+        fieldGrowth_ += *std::max_element(grown_.begin(), grown_.end());
+      ++cyclesRun_;
+      std::fill(grown_.begin(), grown_.end(), NumericType(0.));
+      return perCycle;
+    }
     std::vector<NumericType> velocity(numPoints, 0.);
     const auto k = mech.rateConstants();
     // one set of constants per material present, computed once
@@ -872,6 +1211,24 @@ public:
       return std::nullopt;
     return d;
   }
+
+private:
+  NumericType timeStep_ = 0.;       // 0 = steady state, > 0 = integrate
+  NumericType maxCoverageChange_ = 1e-3; // sub-step accuracy of stepCoverages
+  bool preserveCoverages_ = false;  // carry coverages across process steps
+  bool atomicLayer_ = false;        // advect once per cycle, by what it grew
+  std::vector<NumericType> grown_;  // thickness deposited this cycle, per point
+  NumericType fieldGrowth_ = 0.;    // total on the open field, over all cycles
+  unsigned cyclesRun_ = 0;
+  std::vector<Vec3D<NumericType>> coveragePoints_; // mesh the coverages live on
+
+public:
+  // Blanket film grown so far, and over how many cycles: their ratio is the
+  // growth per cycle a flat-surface measurement would report.
+  NumericType getFieldGrowth() const { return fieldGrowth_; }
+  unsigned getCyclesRun() const { return cyclesRun_; }
+
+private:
 };
 
 // Neutral gas species. Records the raw incident flux; its re-emission uses the
@@ -1113,12 +1470,118 @@ namespace gpu {
 /// chemistry is shared bit for bit with the CPU model.
 template <typename NumericType, int D>
 class SurfaceChemistry : public ProcessModelGPU<NumericType, D> {
-  ::viennaps::ChemicalMechanism<NumericType> mech_;
+  ::viennaps::ChemicalMechanism<NumericType> mech_; // the current phase
+  std::vector<std::pair<std::string, ::viennaps::ChemicalMechanism<NumericType>>>
+      phaseMechanisms_;
+  NumericType maxCoverageChange_ = 1e-3;
   SurfaceChemistryParamsGPU deviceParams_;
+  SmartPointer<impl::ChemicalSurfaceModel<NumericType, D>> surfModel_ = nullptr;
 
 public:
+  SurfaceChemistry() = default;
+
   explicit SurfaceChemistry(const ::viennaps::ChemicalMechanism<NumericType> &m)
       : mech_(m) {
+    initializeModel();
+  }
+
+  // The chemistry of one step of an atomic layer cycle. As on the CPU, the
+  // steps of one cycle must describe the same surface, since the coverages of
+  // one are the initial condition of the next.
+  void addMechanism(const std::string &name,
+                    const ::viennaps::ChemicalMechanism<NumericType> &m) {
+    if (!phaseMechanisms_.empty() &&
+        m.coverageNames != phaseMechanisms_.front().second.coverageNames) {
+      VIENNACORE_LOG_ERROR(
+          "Mechanism '" + name + "' declares different coverages than '" +
+          phaseMechanisms_.front().first +
+          "'. The steps of one cycle must describe the same surface.");
+      return;
+    }
+    phaseMechanisms_.emplace_back(name, m);
+    if (phaseMechanisms_.size() == 1)
+      mech_ = m;
+    initializeModel();
+  }
+
+  // Select the chemistry and the flowing species for one step. Only the host
+  // side moves: the coverage solve reads mech_, and the device already holds
+  // every particle of every step with its own sticking, so nothing is
+  // re-uploaded and no shader is rebuilt between steps of a cycle.
+  void setActivePhase(const std::string &phaseName,
+                      const std::vector<std::string> &activeSpecies,
+                      const std::string &mechanismName) override {
+    if (!mechanismName.empty()) {
+      const auto it = std::find_if(
+          phaseMechanisms_.begin(), phaseMechanisms_.end(),
+          [&](const auto &entry) { return entry.first == mechanismName; });
+      if (it == phaseMechanisms_.end()) {
+        VIENNACORE_LOG_ERROR("Phase '" + phaseName + "' names mechanism '" +
+                             mechanismName + "', which was not registered.");
+        return;
+      }
+      mech_ = it->second;
+    }
+    const bool all = activeSpecies.size() == 1 && activeSpecies.front() == "*";
+    for (auto &g : mech_.gas) {
+      if (g.label.empty())
+        continue;
+      const bool flowing =
+          all || std::find(activeSpecies.begin(), activeSpecies.end(),
+                           g.label) != activeSpecies.end();
+      g.sourceFlux = flowing ? sourceFluxOf(g.label) : NumericType(0.);
+    }
+  }
+
+  void setAtomicLayerProcess(bool enable = true) {
+    this->isALP = enable;
+    if (surfModel_)
+      surfModel_->setPreserveCoverages(enable);
+  }
+
+  // Accuracy of the transient coverage integration; see
+  // ChemicalSurfaceModel::setMaxCoverageChange.
+  void setMaxCoverageChange(NumericType maxChange) {
+    if (surfModel_)
+      surfModel_->setMaxCoverageChange(maxChange);
+    maxCoverageChange_ = maxChange;
+  }
+
+  ::viennaps::ChemicalMechanism<NumericType> &getMechanism() { return mech_; }
+
+  NumericType growthPerCycle() const {
+    if (!surfModel_ || surfModel_->getCyclesRun() == 0)
+      return 0.;
+    return surfModel_->getFieldGrowth() / surfModel_->getCyclesRun();
+  }
+
+private:
+  NumericType sourceFluxOf(const std::string &label) const {
+    for (const auto &entry : phaseMechanisms_)
+      for (const auto &g : entry.second.gas)
+        if (g.label == label)
+          return g.sourceFlux;
+    return NumericType(0.);
+  }
+
+  std::vector<const ::viennaps::ChemicalMechanism<NumericType> *>
+  mechanismsToTrace() const {
+    std::vector<const ::viennaps::ChemicalMechanism<NumericType> *> out;
+    if (phaseMechanisms_.empty()) {
+      out.push_back(&mech_);
+    } else {
+      for (const auto &entry : phaseMechanisms_)
+        out.push_back(&entry.second);
+    }
+    return out;
+  }
+
+  void initializeModel() {
+    // addMechanism rebuilds the device setup, so the particles of the previous
+    // build must go; the base keeps the vector private but hands out a
+    // reference to it.
+    this->getParticleTypes().clear();
+    deviceParams_ = SurfaceChemistryParamsGPU{};
     const int nCov = static_cast<int>(mech_.coverageNames.size());
     deviceParams_.numCoverages = nCov;
     if (nCov > SurfaceChemistryParamsGPU::maxCoverages)
@@ -1130,36 +1593,46 @@ public:
     std::unordered_map<std::string, unsigned> pMap;
     std::vector<viennaray::gpu::CallableConfig> cMap;
 
+    // One particle per traced species over EVERY registered mechanism. The
+    // shader is built once and cannot change as the cycle moves from step to
+    // step, so the device holds all of them; a species that is not flowing in
+    // the current step is silenced by its source flux on the host instead.
     unsigned p = 0;
-    for (size_t g = 0; g < mech_.gas.size(); ++g) {
-      if (!mech_.gas[g].traced || mech_.gas[g].isIonChannel)
+    std::vector<std::string> seen;
+    for (const auto *source : mechanismsToTrace())
+    for (size_t g = 0; g < source->gas.size(); ++g) {
+      if (!source->gas[g].traced || source->gas[g].isIonChannel)
         continue; // an ion channel is written by the ion, not by a neutral
+      if (std::find(seen.begin(), seen.end(), source->gas[g].label) !=
+          seen.end())
+        continue;
+      seen.push_back(source->gas[g].label);
       if (p >= static_cast<unsigned>(SurfaceChemistryParamsGPU::maxParticles)) {
         VIENNACORE_LOG_ERROR("SurfaceChemistry GPU: too many traced species.");
         break;
       }
 
       viennaray::gpu::Particle<NumericType> particle{
-          .name = mech_.gas[g].label,
-          .sticking = static_cast<NumericType>(mech_.stickingOf(int(g)))};
-      particle.dataLabels.push_back(mech_.gas[g].label);
+          .name = source->gas[g].label,
+          .sticking = static_cast<NumericType>(source->stickingOf(int(g)))};
+      particle.dataLabels.push_back(source->gas[g].label);
 
       deviceParams_.freeSiteExponent[p] =
-          mech_.gas[g].stickingFreeSiteExponent;
-      deviceParams_.stickingSite[p] = mech_.gas[g].stickingSite;
+          source->gas[g].stickingFreeSiteExponent;
+      deviceParams_.stickingSite[p] = source->gas[g].stickingSite;
 
       // per-material sticking, evaluated once here so the shader only looks up
-      const auto &d = mech_.gas[g].stickingConstant.getDefault();
+      const auto &d = source->gas[g].stickingConstant.getDefault();
       deviceParams_.defaultSticking[p] =
-          static_cast<float>(mech_.arrhenius(d.prefactor, d.Ea, d.beta));
+          static_cast<float>(source->arrhenius(d.prefactor, d.Ea, d.beta));
       int nOverride = 0;
 #define PS_GPU_STICKING(id, sym, cat, dens, cond, color)                       \
-  if (mech_.gas[g].stickingConstant.has(BuiltInMaterial::sym)) {               \
+  if (source->gas[g].stickingConstant.has(BuiltInMaterial::sym)) {             \
     if (nOverride < SurfaceChemistryParamsGPU::maxMaterials) {               \
       deviceParams_.overrideMaterial[p][nOverride] =                           \
           Material(BuiltInMaterial::sym).legacyId();                           \
       deviceParams_.overrideSticking[p][nOverride] = static_cast<float>(       \
-          mech_.stickingOf(int(g), Material(BuiltInMaterial::sym)));           \
+          source->stickingOf(int(g), Material(BuiltInMaterial::sym)));         \
       ++nOverride;                                                             \
     } else {                                                                   \
       VIENNACORE_LOG_ERROR(                                                    \
@@ -1170,7 +1643,7 @@ public:
 #undef PS_GPU_STICKING
       deviceParams_.numOverrides[p] = nOverride;
 
-      pMap[mech_.gas[g].label] = p;
+      pMap[source->gas[g].label] = p;
       cMap.push_back({p, viennaray::gpu::CallableSlot::COLLISION,
                       "__direct_callable__chemicalNeutralCollision"});
       cMap.push_back({p, viennaray::gpu::CallableSlot::REFLECTION,
@@ -1180,10 +1653,18 @@ public:
       ++p;
     }
 
-    // one ion, writing a yield-weighted flux into a channel per ion reaction,
-    // exactly as impl::ChemicalIon does on the CPU
-    if (mech_.ionSource.present && !mech_.ionYields.empty()) {
-      const auto &src = mech_.ionSource;
+    // One ion, writing a yield-weighted flux into a channel per ion reaction,
+    // exactly as impl::ChemicalIon does on the CPU. It comes from whichever
+    // step of the cycle declares one: a plasma ALD process has ions in the
+    // plasma step and none in the dose.
+    const ::viennaps::ChemicalMechanism<NumericType> *ionMech = nullptr;
+    for (const auto *source : mechanismsToTrace())
+      if (source->ionSource.present && !source->ionYields.empty()) {
+        ionMech = source;
+        break;
+      }
+    if (ionMech) {
+      const auto &src = ionMech->ionSource;
       constexpr NumericType toRad = M_PI / 180.;
 
       deviceParams_.meanEnergy = static_cast<float>(src.meanEnergy);
@@ -1201,7 +1682,7 @@ public:
 
       NumericType minEth = std::numeric_limits<NumericType>::max();
       int nYield = 0;
-      for (const auto &y : mech_.ionYields) {
+      for (const auto &y : ionMech->ionYields) {
         if (nYield >= SurfaceChemistryParamsGPU::maxYields) {
           VIENNACORE_LOG_ERROR("SurfaceChemistry GPU: too many ion yields.");
           break;
@@ -1258,11 +1739,16 @@ public:
     this->processData.alloc(sizeof(SurfaceChemistryParamsGPU));
     this->processData.upload(&deviceParams_, 1);
 
-    auto surfModel =
+    surfModel_ =
         SmartPointer<impl::ChemicalSurfaceModel<NumericType, D>>::New(mech_);
+    // addMechanism rebuilds this, so an atomic layer process requested before
+    // the last mechanism was added stays requested, and the integrator keeps
+    // its accuracy setting.
+    surfModel_->setPreserveCoverages(this->isALP);
+    surfModel_->setMaxCoverageChange(maxCoverageChange_);
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
 
-    this->setSurfaceModel(surfModel);
+    this->setSurfaceModel(surfModel_);
     this->setVelocityField(velField);
     this->setProcessName("SurfaceChemistry");
     this->hasGPU = true;
@@ -1286,57 +1772,204 @@ public:
 
   void setMechanism(const ChemicalMechanism<NumericType> &m) {
     mech = m;
+    phaseMechanisms_.clear();
     initializeModel();
+  }
+
+  // Register the chemistry that governs one step of an atomic layer cycle. A
+  // PE-ALD cycle is written as two reaction files, one per half-cycle, and the
+  // coverages of one step are the initial condition of the next -- so the two
+  // must describe the same surface. That is checked here rather than left to
+  // go wrong quietly: an index mismatch between the two coverage lists would
+  // silently carry the wrong species across.
+  void addMechanism(const std::string &name,
+                    const ChemicalMechanism<NumericType> &m) {
+    if (!phaseMechanisms_.empty()) {
+      const auto &first = phaseMechanisms_.front().second;
+      if (m.coverageNames != first.coverageNames) {
+        VIENNACORE_LOG_ERROR(
+            "Mechanism '" + name + "' declares different coverages than '" +
+            phaseMechanisms_.front().first +
+            "'. The steps of one cycle must describe the same surface.");
+        return;
+      }
+    }
+    phaseMechanisms_.emplace_back(name, m);
+    if (phaseMechanisms_.size() == 1)
+      mech = m;
+    initializeModel();
+  }
+
+  // Select the chemistry and the flowing species for one step of the cycle.
+  // Everything not flowing has its source flux set to zero, so its rate law
+  // contributes nothing while the reaction stays in the mechanism -- which is
+  // what a purge is, and what the other half-cycle's reactants are during a
+  // dose.
+  void setActivePhase(const std::string &phaseName,
+                      const std::vector<std::string> &activeSpecies,
+                      const std::string &mechanismName) override {
+    if (!mechanismName.empty()) {
+      const auto it = std::find_if(
+          phaseMechanisms_.begin(), phaseMechanisms_.end(),
+          [&](const auto &entry) { return entry.first == mechanismName; });
+      if (it == phaseMechanisms_.end()) {
+        VIENNACORE_LOG_ERROR("Phase '" + phaseName + "' names mechanism '" +
+                             mechanismName + "', which was not registered.");
+        return;
+      }
+      mech = it->second;
+    }
+
+    // "*" is a pulse that flows everything, which is what a process with one
+    // reactant means by a pulse.
+    const bool all = activeSpecies.size() == 1 && activeSpecies.front() == "*";
+    for (auto &g : mech.gas) {
+      if (g.label.empty())
+        continue; // not traced, so it carries no source flux
+      const bool flowing =
+          all || std::find(activeSpecies.begin(), activeSpecies.end(),
+                           g.label) != activeSpecies.end();
+      g.sourceFlux = flowing ? sourceFluxOf(g.label) : NumericType(0.);
+    }
   }
 
   ChemicalMechanism<NumericType> &getMechanism() { return mech; }
 
+  // Growth per cycle on the open field, in the length unit of the process.
+  // When the process ran on the device, the model that actually ran is the
+  // converted one this class handed out, so the question is passed to it.
+  NumericType growthPerCycle() const {
+#ifdef VIENNACORE_COMPILE_GPU
+    if (gpuModel_ && gpuModel_->growthPerCycle() > 0.)
+      return gpuModel_->growthPerCycle();
+#endif
+    if (!surfModel_ || surfModel_->getCyclesRun() == 0)
+      return 0.;
+    return surfModel_->getFieldGrowth() / surfModel_->getCyclesRun();
+  }
+
+  // Run this mechanism as one step of an atomic layer process: coverages are
+  // integrated in time rather than solved at steady state, and they survive
+  // from one step of the cycle into the next. An ALD chemistry has no steady
+  // state to solve for -- see ChemicalMechanism::stepCoverages -- so a cyclic
+  // process must take this path.
+  void setAtomicLayerProcess(bool enable = true) {
+    this->isALP = enable;
+    if (surfModel_)
+      surfModel_->setPreserveCoverages(enable);
+  }
+
+  // The incident flux of one gas species, for gating a step of the cycle.
+  void setSourceFlux(const std::string &label, NumericType flux) {
+    if (!mech.setSourceFlux(label, flux))
+      VIENNACORE_LOG_WARNING("No gas species '" + label +
+                             "' in mechanism '" + mech.name + "'.");
+  }
+
+  // Accuracy of the transient coverage integration; see
+  // ChemicalSurfaceModel::setMaxCoverageChange.
+  void setMaxCoverageChange(NumericType maxChange) {
+    if (surfModel_)
+      surfModel_->setMaxCoverageChange(maxChange);
+    maxCoverageChange_ = maxChange;
+  }
+
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
-    auto model = SmartPointer<gpu::SurfaceChemistry<NumericType, D>>::New(mech);
+    auto &model = gpuModel_;
+    if (phaseMechanisms_.empty()) {
+      model = SmartPointer<gpu::SurfaceChemistry<NumericType, D>>::New(mech);
+    } else {
+      // A cyclic process carries all of its steps across, not just the one
+      // that happens to be active, or the device would hold the particles of
+      // a single half-cycle.
+      model = SmartPointer<gpu::SurfaceChemistry<NumericType, D>>::New();
+      model->setAtomicLayerProcess(this->isALP);
+      model->setMaxCoverageChange(maxCoverageChange_);
+      for (const auto &entry : phaseMechanisms_)
+        model->addMechanism(entry.first, entry.second);
+    }
     model->setProcessName(this->getProcessName().value());
     return model;
   }
 #endif
 
 private:
+  // Every mechanism whose species must be traced: the registered phases if a
+  // cycle was built, otherwise the single mechanism this model was given.
+  std::vector<const ChemicalMechanism<NumericType> *> mechanismsToTrace() const {
+    std::vector<const ChemicalMechanism<NumericType> *> out;
+    if (phaseMechanisms_.empty()) {
+      out.push_back(&mech);
+    } else {
+      for (const auto &entry : phaseMechanisms_)
+        out.push_back(&entry.second);
+    }
+    return out;
+  }
+
   void initializeModel() {
     if (units::Length::getUnit() == units::Length::UNDEFINED ||
         units::Time::getUnit() == units::Time::UNDEFINED) {
       VIENNACORE_LOG_ERROR("Units have not been set.");
     }
 
-    auto surfModel =
+    surfModel_ =
         SmartPointer<impl::ChemicalSurfaceModel<NumericType, D>>::New(mech);
+    // setMechanism rebuilds the surface model, so an atomic layer process that
+    // was requested before the mechanism was replaced stays requested, and the
+    // integrator keeps its accuracy setting.
+    surfModel_->setPreserveCoverages(this->isALP);
+    surfModel_->setMaxCoverageChange(maxCoverageChange_);
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
 
-    this->setSurfaceModel(surfModel);
+    this->setSurfaceModel(surfModel_);
     this->setVelocityField(velField);
     this->setProcessName("SurfaceChemistry");
     this->hasGPU = true;
     this->particles.clear();
 
-    const int nCov = static_cast<int>(mech.coverageNames.size());
-    for (size_t g = 0; g < mech.gas.size(); ++g) {
-      if (!mech.gas[g].traced || mech.gas[g].isIonChannel)
-        continue; // an ion channel is written by the ion, not by a neutral
-      // the coverages the particle's re-emission sees are those on the site
-      // type its adsorption consumes free sites of
-      std::vector<int> siteCov;
-      for (int i = 0; i < nCov; ++i)
-        if (mech.coverageSite[i] == mech.gas[g].stickingSite)
-          siteCov.push_back(i);
-      auto particle = std::make_unique<impl::ChemicalParticle<NumericType, D>>(
-          mech.gas[g].label, mech.stickingTable(int(g)),
-          mech.gas[g].stickingFreeSiteExponent, std::move(siteCov));
-      this->insertNextParticleType(particle);
+    // One particle per traced species, over EVERY registered mechanism, not
+    // just the active one. The particle set is fixed when the flux engine is
+    // initialised, so it cannot change as the cycle moves from one step to the
+    // next; a species that is not flowing is silenced by its source flux
+    // instead. Each keeps the sticking of the file it came from.
+    std::vector<std::string> seen;
+    for (const auto &source : mechanismsToTrace()) {
+      const int nCov = static_cast<int>(source->coverageNames.size());
+      for (size_t g = 0; g < source->gas.size(); ++g) {
+        const auto &gas = source->gas[g];
+        if (!gas.traced || gas.isIonChannel)
+          continue; // an ion channel is written by the ion, not by a neutral
+        if (std::find(seen.begin(), seen.end(), gas.label) != seen.end())
+          continue;
+        seen.push_back(gas.label);
+        // the coverages the particle's re-emission sees are those on the site
+        // type its adsorption consumes free sites of
+        std::vector<int> siteCov;
+        for (int i = 0; i < nCov; ++i)
+          if (source->coverageSite[i] == gas.stickingSite)
+            siteCov.push_back(i);
+        auto particle =
+            std::make_unique<impl::ChemicalParticle<NumericType, D>>(
+                gas.label, source->stickingTable(int(g)),
+                gas.stickingFreeSiteExponent, std::move(siteCov));
+        this->insertNextParticleType(particle);
+      }
     }
 
-    // one ion, writing a yield-weighted flux into a channel per ion reaction
-    if (mech.ionSource.present && !mech.ionYields.empty()) {
-      auto ion = std::make_unique<impl::ChemicalIon<NumericType, D>>(
-          mech.ionSource, mech.ionYields);
-      this->insertNextParticleType(ion);
+    // One ion, writing a yield-weighted flux into a channel per ion reaction.
+    // It comes from whichever step of the cycle declares one -- a plasma ALD
+    // process has ions in the plasma step and none in the dose, and the ion
+    // channels of the plasma chemistry would otherwise look for a flux no
+    // particle ever wrote.
+    for (const auto &source : mechanismsToTrace()) {
+      if (source->ionSource.present && !source->ionYields.empty()) {
+        auto ion = std::make_unique<impl::ChemicalIon<NumericType, D>>(
+            source->ionSource, source->ionYields);
+        this->insertNextParticleType(ion);
+        break;
+      }
     }
 
     this->processMetaData = mech.toProcessMetaData();
@@ -1345,7 +1978,23 @@ private:
         static_cast<double>(units::Time::getInstance().getUnit())};
   }
 
-  ChemicalMechanism<NumericType> mech;
+  // The flux a species carries in the file it came from, before any gating.
+  NumericType sourceFluxOf(const std::string &label) const {
+    for (const auto &entry : phaseMechanisms_)
+      for (const auto &g : entry.second.gas)
+        if (g.label == label)
+          return g.sourceFlux;
+    return NumericType(0.);
+  }
+
+  ChemicalMechanism<NumericType> mech; // the chemistry of the current phase
+  std::vector<std::pair<std::string, ChemicalMechanism<NumericType>>>
+      phaseMechanisms_;
+  NumericType maxCoverageChange_ = 1e-3;
+  SmartPointer<impl::ChemicalSurfaceModel<NumericType, D>> surfModel_ = nullptr;
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<gpu::SurfaceChemistry<NumericType, D>> gpuModel_ = nullptr;
+#endif
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(SurfaceChemistry)

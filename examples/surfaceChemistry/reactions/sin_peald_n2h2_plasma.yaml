@@ -1,0 +1,171 @@
+name: sin_peald_n2h2_plasma
+temperature: 573.15       # K  (300 C, the paper's standard condition)
+energyUnit: eV
+
+# PE-ALD of SiNx from diiodosilane (DIS, SiH2I2) and an N2-H2 remote ICP
+# plasma. STEP 2 OF 2: the plasma exposure and the purge that follows it. The
+# dose step is sin_peald_dis_dose.yaml. Both files declare the identical
+# surface block below; the coverages leaving one step are the initial
+# condition of the next.
+#
+# This step: H radicals strip the iodine the dose left (B1, B1b), N and NH
+# radicals join the adsorbed silicon to the Si-N network -- the film grows
+# here (B2, B3, B2b) -- and the amine termination for the next dose is
+# restored (B4, B4a, B5).
+#
+# Role of H2 (paper, Fig. 3c: about 3x the pure-N2 GPC): H radicals provide
+# the fast halogen-abstraction channels B1/B1b and the re-amination B5. Under
+# pure N2, growth proceeds through the bare-site route A0/B2b, rate-limited
+# by ion clearing of site-blocking iodine (C3). H radicals also feed the loss
+# channel B8, which bounds the gain at high H2 fractions.
+#
+# STICKING AND REACTION ORDER. The compiler assigns a traced species the
+# sticking of the LAST adsorption step that consumes it, and the ray tracer
+# re-emits with that number. The recombination steps B7 (for N) and B8 (for
+# H) are therefore written last: their s0 values are gamma_N and gamma_H, the
+# surface loss probabilities that set how deep each radical penetrates a
+# high-aspect-ratio feature. The reaction order in this file is part of the
+# transport model.
+#
+# Purge: this same mechanism with every source flux at zero; the thermal step
+# B6 continues through the purge.
+
+species:
+  # Ground-state N and H atoms dominate the radical flux from a remote N2-H2
+  # ICP; NH is a minor, chemically distinct contributor. The fluxes are the
+  # order of magnitude expected at the substrate of a 300 W remote ICP and
+  # are the first quantities to calibrate against the paper's saturation
+  # curves.
+  N:      {phase: gas, flux: 2.0e0}          # 1e15 /cm2 /s
+  H:      {phase: gas, flux: 5.0e0}
+  NH:     {phase: gas, flux: 5.0e-1}
+  N2_ion: {phase: ion, flux: 2.0e-2,
+           meanEnergy: 25.0, sigmaEnergy: 10.0, exponent: 100.0}
+
+  HI:     {phase: gas, reemit_only: true}
+  H2:     {phase: gas, reemit_only: true}
+  N2:     {phase: gas, reemit_only: true}
+  NH2:    {phase: gas, reemit_only: true}    # amine desorbed by an ion
+  SiN_s:  {phase: gas, reemit_only: true, atoms: {Si: 1, N: 1}}   # sputtered
+  I_s:    {phase: gas, reemit_only: true, atoms: {I: 1}}          # ion-desorbed iodine
+
+  # --- the surface, IDENTICAL in both step files -------------------------
+  # Both step files declare this block verbatim: ViennaChem derives the
+  # coverage list from it, and the coverages of one step are the initial
+  # condition of the next. Edits go into both copies; the driver compares the
+  # two coverage lists and refuses a mismatched pair.
+  #
+  # A site is one surface nitrogen, and the species name states its
+  # termination: two hydrogens, one hydrogen, or a silyl bonded to the
+  # nitrogen. Because each of these species carries its nitrogen, reactions
+  # among them conserve sites one to one, and the amine reaction of the dose
+  # step balances with zero free sites: the amine itself is the reactive
+  # site.
+  #
+  # S0 = 4e14 /cm2: the density of reactive amine sites on amorphous SiNx,
+  # below the formula-unit density n^(2/3) = 5.7e14 /cm2 because a fraction
+  # of the surface nitrogens carries a reactive NHx. S0 scales the coverage
+  # ODE; the surface velocity follows from the radical fluxes and rho.
+  NH2*:     {phase: surface, S0: 4.0e14}   # amine: the site DIS reacts with
+  NH*:      {phase: surface}               # imide: after one HI elimination
+  NHSiH2I*: {phase: surface}               # a nitrogen carrying an iodosilyl
+  NHSiH2*:  {phase: surface}               # the same, iodine stripped
+
+  # SiH2I2* and I* occupy bare sites: adsorption into them consumes a free
+  # site, and the free-site terms follow from the equations by site inference.
+  SiH2I2*:  {phase: surface}               # DIS molecularly adsorbed on a bare site
+  I*:       {phase: surface}               # iodine blocking a site
+
+  # rho is the Si-atom density of the film, since the solid unit written
+  # below carries one Si: 3.17 g/cm3 with N/Si = 1.27 gives 4.16e22 Si/cm3.
+  SiN:      {phase: solid, rho: 4.16}      # 1e22 /cm3
+
+siteTypes:
+  - {name: default, density: 4.0e14}         # /cm2
+
+surface:
+  # [B1] iodine abstraction by an H radical (Eley-Rideal): the channel that
+  #      keeps the film's iodine content below the XPS detection limit.
+  - {eq: "H + NHSiH2I* -> NHSiH2* + HI", type: adsorption, s0: 0.15, Ea: 0.0}
+
+  # [B2] nitridation by an N radical: the growth step. The silicon joins the
+  #      network and the site returns to an imide. Calibration anchor: the
+  #      plasma half-cycle saturates softly over 15-30 s, an effective
+  #      probability of order S0/(Gamma t) ~ 4e14/(2e15 * 20) ~ 1e-2 across
+  #      the nitridation channels.
+  - {eq: "N + NHSiH2* -> SiN + NH* + H2", type: adsorption, s0: 0.15, Ea: 0.0}
+
+  # [B3] nitridation by an NH radical: the same growth step, leaving an amine
+  - {eq: "NH + NHSiH2* -> SiN + NH2* + H2", type: adsorption, s0: 0.40, Ea: 0.0}
+
+  # [B2b] nitridation of the molecularly adsorbed fragment from the bare-site
+  #       channel A0. The fragment's own hydrogen carries away one iodine as
+  #       HI; the second iodine remains on the surface and blocks the site as
+  #       I*. H radicals clear it through B1b; under pure N2 the ions clear
+  #       it through C3, which makes C3 the pure-N2 rate limiter.
+  - {eq: "N + SiH2I2* -> SiN + HI + I* + H", type: adsorption, s0: 0.15, Ea: 0.0}
+
+  # [B1b] iodine abstraction by an H radical: the fast clearing channel for
+  #       site-blocking iodine
+  - {eq: "H + I* -> HI", type: adsorption, s0: 0.15, Ea: 0.0}
+
+  # [B6b] N recombination on an imide, leaving a bare site: sustains the
+  #       bare-site population under pure N2
+  - {eq: "N + NH* -> N2 + H", type: adsorption, s0: 0.02, Ea: 0.0}
+
+  # [B4a] an N radical lands on a vacancy and abstracts a hydrogen from a
+  #       neighbouring amine (H spillover), making two imides. This closes
+  #       the vacancy balance under an H-containing plasma: vacancies are
+  #       refilled in proportion to the amine coverage, so the bare-site
+  #       channel runs at full strength only under pure N2, where the amines
+  #       are depleted.
+  - {eq: "N + NH2* -> 2NH*", type: adsorption, s0: 0.30, Ea: 0.0}
+
+  # [B4] an NH radical fills a nitrogen vacancy
+  - {eq: "NH -> NH*", type: adsorption, s0: 0.20, Ea: 0.0}
+
+  # [B5] re-amination: an H radical converts an imide to an amine. Together
+  #      with B2's imide product this regenerates the sites the dose
+  #      consumes; the amine coverage entering the dose sets the GPC.
+  - {eq: "H + NH* -> NH2*", type: adsorption, s0: 0.05, Ea: 0.0}
+
+  # [B6] thermal recombinative desorption of two imides, leaving vacancies.
+  #      Slow at 300 C; as the single thermal step of this file it is the
+  #      purge chemistry.
+  - {eq: "2NH* -> N2 + H2", type: desorption, k0: 1.0e13, Ea: 2.50}
+
+  # [B7] N radical loss: the radical takes a surface nitrogen with it as N2
+  #      and leaves a vacancy. Written as the last N-consuming adsorption, so
+  #      s0 is gamma_N, the recombination probability that sets the plasma
+  #      step's penetration depth in a trench.
+  - {eq: "N + NH2* -> N2 + H2", type: adsorption, s0: 0.02, Ea: 0.0}
+
+  # [B8] H radical loss by abstraction of an amine hydrogen. Written as the
+  #      last H-consuming adsorption, so s0 is gamma_H.
+  #
+  #      B5 and B8 are the same radical adding to and stripping from the same
+  #      nitrogen; their ratio fixes the amine fraction entering the dose,
+  #      and with it the GPC. Abstraction of a bound N-H carries a barrier
+  #      that capping a dangling bond lacks, so B8 is the slower channel, and
+  #      0.01 lies in the range reported for H recombination on nitride
+  #      surfaces.
+  - {eq: "H + NH2* -> NH* + H2", type: adsorption, s0: 0.01, Ea: 0.0}
+
+  # ===== substrate biasing ==============================================
+  # The paper's bias series: GPC flat to 10 W, then falling, with N/Si
+  # dropping from 1.27 to 1.06 and the film taking up oxygen. The authors
+  # attribute this to removal of reactive sites and surface damage. Both are
+  # ion channels: C1 removes the amines the dose needs, C2 sputters the film.
+  # The Eth values are placeholders; meanEnergy above stands in for the bias
+  # voltage and is the quantity to sweep against the bias series.
+
+  # [C1] ion-induced desorption of a reactive amine site
+  - {eq: "N2_ion + NH2* -> NH2", type: ion_enhanced, yield: {A: 0.30, Eth: 10.0}}
+
+  # [C2] sputtering of the deposited film
+  - {eq: "N2_ion + SiN -> SiN_s", type: sputtering, yield: {A: 0.02, Eth: 25.0}}
+
+  # [C3] ion-induced desorption of site-blocking iodine. At the ~25 eV of an
+  #      unbiased ICP this is the pure-N2 rate limiter; under bias it
+  #      accelerates.
+  - {eq: "N2_ion + I* -> I_s", type: ion_enhanced, yield: {A: 0.05, Eth: 5.0}}

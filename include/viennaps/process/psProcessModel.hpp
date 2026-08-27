@@ -58,6 +58,16 @@ public:
   auto getProcessName() const { return processName; }
   auto getProcessMetaData() const { return processMetaData; }
   auto isALPModel() const { return isALP; }
+
+  // Called by the atomic layer strategy at the start of each step of a cycle.
+  // A model that resolves the chemistry per step uses this to select which
+  // mechanism governs the step and which species are flowing; one that lumps
+  // the cycle into a single growth-per-cycle ignores it. `activeSpecies`
+  // holding the single entry "*" means everything the model has is flowing,
+  // and empty means nothing is -- a purge.
+  virtual void setActivePhase(const std::string &phaseName,
+                              const std::vector<std::string> &activeSpecies,
+                              const std::string &mechanism) {}
   auto hasGPUModel() const { return hasGPU; }
 
   void setProcessName(const std::string &name) { processName = name; }

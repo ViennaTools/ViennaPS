@@ -1,0 +1,701 @@
+{
+  "schemaVersion": 1,
+  "name": "sin_peald_n2h2_plasma",
+  "siteTypes": [
+    {
+      "name": "default",
+      "density": 400000000000000.0
+    }
+  ],
+  "coverages": [
+    {
+      "name": "NH2*",
+      "site": 0
+    },
+    {
+      "name": "NH*",
+      "site": 0
+    },
+    {
+      "name": "NHSiH2I*",
+      "site": 0
+    },
+    {
+      "name": "NHSiH2*",
+      "site": 0
+    },
+    {
+      "name": "SiH2I2*",
+      "site": 0
+    },
+    {
+      "name": "I*",
+      "site": 0
+    }
+  ],
+  "gas": [
+    {
+      "name": "N",
+      "traced": true,
+      "label": "N_flux",
+      "flux": 2.0,
+      "sticking": {
+        "reaction": "R11",
+        "s0": 0.02,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 0
+      }
+    },
+    {
+      "name": "H",
+      "traced": true,
+      "label": "H_flux",
+      "flux": 5.0,
+      "sticking": {
+        "reaction": "R12",
+        "s0": 0.01,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 0
+      }
+    },
+    {
+      "name": "NH",
+      "traced": true,
+      "label": "NH_flux",
+      "flux": 0.5,
+      "sticking": {
+        "reaction": "R8",
+        "s0": 0.2,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 1
+      }
+    },
+    {
+      "name": "HI",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    },
+    {
+      "name": "H2",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    },
+    {
+      "name": "N2",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    },
+    {
+      "name": "NH2",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    },
+    {
+      "name": "SiN_s",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    },
+    {
+      "name": "I_s",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    }
+  ],
+  "solids": [
+    {
+      "name": "SiN",
+      "rho": 4.16,
+      "rhoMaterials": {}
+    }
+  ],
+  "solid": {
+    "name": "SiN",
+    "rho": 4.16,
+    "rhoMaterials": {}
+  },
+  "ionSource": {
+    "name": "N2_ion",
+    "flux": 0.02,
+    "meanEnergy": 25.0,
+    "sigmaEnergy": 10.0,
+    "exponent": 100.0,
+    "inflectAngle": 89.0,
+    "n_l": 10.0,
+    "minAngle": 80.0,
+    "thetaRMin": 70.0,
+    "thetaRMax": 90.0
+  },
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "H + NHSiH2I* -> NHSiH2* + HI",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.15,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 2,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        -1.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R2",
+      "eq": "N + NHSiH2* -> SiN + NH* + H2",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.15,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 3,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        1.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        1.0
+      ]
+    },
+    {
+      "id": "R3",
+      "eq": "NH + NHSiH2* -> SiN + NH2* + H2",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.4,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 2,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 3,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        1.0
+      ]
+    },
+    {
+      "id": "R4",
+      "eq": "N + SiH2I2* -> SiN + HI + I* + H",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.15,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 4,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        1.0
+      ],
+      "solidAtoms": [
+        1.0
+      ]
+    },
+    {
+      "id": "R5",
+      "eq": "H + I* -> HI + *",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.15,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 5,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R6",
+      "eq": "N + NH* -> N2 + H + *",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.02,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R7",
+      "eq": "N + NH2* + * -> 2NH*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.3,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        1
+      ],
+      "nu": [
+        -1.0,
+        2.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R8",
+      "eq": "NH + * -> NH*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.2,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 2,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        1
+      ],
+      "nu": [
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R9",
+      "eq": "H + NH* -> NH2*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.05,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        1.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R10",
+      "eq": "2NH* -> N2 + H2 + 2*",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 10000000000000.0,
+        "Ea": 2.5,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 1,
+          "exp": 2
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        -2.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R11",
+      "eq": "N + NH2* -> N2 + H2 + *",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.02,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R12",
+      "eq": "H + NH2* -> NH* + H2",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.01,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R13",
+      "eq": "N2_ion + NH2* -> NH2 + *",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "ionYield": {
+        "ion": "N2_ion",
+        "label": "R13_yieldFlux",
+        "flux": 0.02,
+        "meanEnergy": 25.0,
+        "A": 0.3,
+        "Eth": 10.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {}
+      }
+    },
+    {
+      "id": "R14",
+      "eq": "N2_ion + SiN -> SiN_s",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        -1.0
+      ],
+      "ionYield": {
+        "ion": "N2_ion",
+        "label": "R14_yieldFlux",
+        "flux": 0.02,
+        "meanEnergy": 25.0,
+        "A": 0.02,
+        "Eth": 25.0,
+        "B": 0.0,
+        "enhanced": false,
+        "materials": {}
+      }
+    },
+    {
+      "id": "R15",
+      "eq": "N2_ion + I* -> I_s + *",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 5,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "ionYield": {
+        "ion": "N2_ion",
+        "label": "R15_yieldFlux",
+        "flux": 0.02,
+        "meanEnergy": 25.0,
+        "A": 0.05,
+        "Eth": 5.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {}
+      }
+    }
+  ],
+  "constants": {
+    "temperature": 573.15
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

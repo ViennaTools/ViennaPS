@@ -154,8 +154,7 @@ private:
     processTimer.start();
 
     const auto numCycles = context.atomicLayerParams.numCycles;
-    const auto pulseTime = context.atomicLayerParams.pulseTime;
-    const auto purgePulseTime = context.atomicLayerParams.purgePulseTime;
+    const auto phases = context.atomicLayerParams.cycle();
     const auto surfaceModel = context.model->getSurfaceModel();
 
     for (int cycle = 0; cycle < numCycles; ++cycle) {
@@ -182,77 +181,59 @@ private:
             std::move(cloud), context.surfaceDiffusionParams));
       }
 
-      double time = 0.;
-      unsigned pulseIteration = 0;
-      const double coverageTimeStep =
-          context.atomicLayerParams.coverageTimeStep;
-      while (time < pulseTime - coverageTimeStep * 1e-4) {
-#ifdef VIENNATOOLS_PYTHON_BUILD
-        // Check for user interruption
-        if (PyErr_CheckSignals() != 0)
-          return ProcessResult::USER_INTERRUPTED;
-#endif
+      // Walk the steps of one cycle in order. A single-reactant process has
+      // two of them, a pulse and a purge, which is what an empty phase list
+      // is taken to mean; a plasma ALD cycle has four, and the species
+      // flowing and the chemistry governing them differ from step to step.
+      for (const auto &phase : phases) {
+        context.model->setActivePhase(phase.name, phase.activeSpecies,
+                                      phase.mechanism);
 
-        // Clamp last step to land exactly on pulseTime
-        double dt = std::min(coverageTimeStep, pulseTime - time);
-        surfaceModel->setTimeStep(dt);
-
-        // Calculate fluxes
-        auto fluxes = PointData<NumericType>::New();
-        PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
-
-        // Calculate surface diffusion of fluxes
-        if (surfaceDiffusionSolver_.isActive()) {
-          PROCESS_CHECK(calculateSurfaceDiffusion(dt, context, fluxes));
-        }
-
-        // Update coverages
-        updateCoverages(context, fluxes);
-
-        // Calculate surface diffusion of coverages
-        if (surfaceDiffusionSolver_.isActive()) {
-          PROCESS_CHECK(calculateSurfaceDiffusion(
-              dt, context, surfaceModel->getCoverages()));
-        }
-
-        outputIntermediatePulseResults(context, fluxes, pulseIteration);
-
-        time += dt;
-        pulseIteration++;
-
-        if (Logger::hasInfo()) {
-          std::stringstream stream;
-          stream << std::fixed << std::setprecision(4) << "Pulse time: " << time
-                 << " / " << pulseTime << " " << units::Time::toShortString();
-          Logger::getInstance().addInfo(stream.str()).print();
-        }
-      }
-
-      if (purgePulseTime > 0.) {
         double time = 0.;
-        unsigned purgeIteration = 0;
-        const auto purgeTimeStep = context.atomicLayerParams.purgeTimeStep;
+        unsigned iteration = 0;
+        const double phaseTimeStep =
+            phase.timeStep > 0. ? phase.timeStep : phase.duration;
 
-        while (time < purgePulseTime - purgeTimeStep * 1e-4) {
+        while (time < phase.duration - phaseTimeStep * 1e-4) {
 #ifdef VIENNATOOLS_PYTHON_BUILD
           // Check for user interruption
           if (PyErr_CheckSignals() != 0)
             return ProcessResult::USER_INTERRUPTED;
 #endif
-          auto dt = std::min(purgeTimeStep, purgePulseTime - time);
+
+          // Clamp last step to land exactly on the phase duration
+          double dt = std::min(phaseTimeStep, phase.duration - time);
           surfaceModel->setTimeStep(dt);
 
           auto fluxes = PointData<NumericType>::New();
-          auto result = fluxEngine_->calculateSurfaceFluxes(context, fluxes);
 
-          if (result == ProcessResult::SUCCESS) {
-            outputIntermediateResults(context, fluxes,
-                                      "_purge_" + std::to_string(cycle) + "_" +
-                                          std::to_string(purgeIteration));
+          if (phase.isPurge()) {
+            // Nothing is flowing, so there is no source to trace. A model that
+            // resolves what desorbs from the surface has that re-traced as its
+            // own source; one whose purge is purely thermal does not, and
+            // tracing it would be a ray cast with nothing to carry.
+            if (context.flags.hasSurfaceDesorption) {
+              auto result = fluxEngine_->calculateSurfaceFluxes(context, fluxes);
+              if (result == ProcessResult::SUCCESS) {
+                outputIntermediateResults(context, fluxes,
+                                          "_" + phase.name + "_" +
+                                              std::to_string(cycle) + "_" +
+                                              std::to_string(iteration));
+              }
+            }
+            surfaceModel->updateCoveragesFromDesorption(
+                fluxes, std::get<2>(context.getDiskMeshData()));
+          } else {
+            PROCESS_CHECK(fluxEngine_->calculateSourceFluxes(context, fluxes));
+
+            // Calculate surface diffusion of fluxes
+            if (surfaceDiffusionSolver_.isActive()) {
+              PROCESS_CHECK(calculateSurfaceDiffusion(dt, context, fluxes));
+            }
+
+            updateCoverages(context, fluxes);
+            outputIntermediatePulseResults(context, fluxes, iteration);
           }
-
-          surfaceModel->updateCoveragesFromDesorption(
-              fluxes, std::get<2>(context.getDiskMeshData()));
 
           // Calculate surface diffusion of coverages
           if (surfaceDiffusionSolver_.isActive()) {
@@ -261,13 +242,13 @@ private:
           }
 
           time += dt;
-          purgeIteration++;
+          iteration++;
 
           if (Logger::hasInfo()) {
             std::stringstream stream;
-            stream << std::fixed << std::setprecision(4)
-                   << "Purge pulse time: " << time << " / " << purgePulseTime
-                   << " " << units::Time::toShortString();
+            stream << std::fixed << std::setprecision(4) << phase.name
+                   << " time: " << time << " / " << phase.duration << " "
+                   << units::Time::toShortString();
             Logger::getInstance().addInfo(stream.str()).print();
           }
         }

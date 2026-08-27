@@ -4,6 +4,7 @@
 
 #include <vcPointData.hpp>
 #include <vcSmartPointer.hpp>
+#include <vcVectorType.hpp>
 
 #include <vector>
 
@@ -19,6 +20,16 @@ protected:
 
 public:
   virtual ~SurfaceModel() = default;
+
+  // The coordinate-taking form exists for models that carry coverages across
+  // a re-meshing: the surface points of one cycle are the interpolation
+  // support for the next. The default forwards to the count-only form, which
+  // every existing model implements.
+  virtual void
+  initializeCoverages(unsigned numGeometryPoints,
+                      const std::vector<Vec3D<NumericType>> &coordinates) {
+    initializeCoverages(numGeometryPoints);
+  }
 
   virtual void initializeCoverages(unsigned numGeometryPoints) {
     // if no coverages get initialized here, they won't be used at all

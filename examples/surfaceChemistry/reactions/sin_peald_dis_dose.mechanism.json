@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "name": "sin_peald_dis_dose",
+  "siteTypes": [
+    {
+      "name": "default",
+      "density": 400000000000000.0
+    }
+  ],
+  "coverages": [
+    {
+      "name": "NH2*",
+      "site": 0
+    },
+    {
+      "name": "NH*",
+      "site": 0
+    },
+    {
+      "name": "NHSiH2I*",
+      "site": 0
+    },
+    {
+      "name": "NHSiH2*",
+      "site": 0
+    },
+    {
+      "name": "SiH2I2*",
+      "site": 0
+    },
+    {
+      "name": "I*",
+      "site": 0
+    }
+  ],
+  "gas": [
+    {
+      "name": "SiH2I2",
+      "traced": true,
+      "label": "SiH2I2_flux",
+      "flux": 100.0,
+      "sticking": {
+        "reaction": "R2",
+        "s0": 0.08,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 0
+      }
+    },
+    {
+      "name": "HI",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    }
+  ],
+  "solids": [
+    {
+      "name": "SiN",
+      "rho": 4.16,
+      "rhoMaterials": {}
+    }
+  ],
+  "solid": {
+    "name": "SiN",
+    "rho": 4.16,
+    "rhoMaterials": {}
+  },
+  "ionSource": null,
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "SiH2I2 + * -> SiH2I2*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.1,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        1
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R2",
+      "eq": "SiH2I2 + NH2* -> NHSiH2I* + HI",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.08,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -1.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    },
+    {
+      "id": "R3",
+      "eq": "NHSiH2I* + NH2* -> NHSiH2* + NH* + HI",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 10000000000000.0,
+        "Ea": 1.05,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        },
+        {
+          "idx": 2,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -1.0,
+        1.0,
+        -1.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ]
+    }
+  ],
+  "constants": {
+    "temperature": 573.15
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}
