@@ -77,8 +77,13 @@ public:
 
   /// Yield-weighted flux per channel, per cell. Index c follows
   /// mech.ionYields, whose gasIndex names the species each channel writes.
+  void setTraversalEngine(viennacs::TraversalEngine e) {
+    walker_.setTraversalEngine(e);
+  }
+
   std::vector<std::vector<NumericType>> trace(size_t numRays,
                                               unsigned seed = 1) const {
+    walker_.prepareTransport(); // the walker's rays fly outside its trace()
     const size_t nChannels = mech_.ionYields.size();
     std::vector<std::vector<NumericType>> flux(
         nChannels, std::vector<NumericType>(fill_.size(), NumericType(0)));
@@ -276,7 +281,7 @@ public:
       const int id = lattice_.cellId(idx);
       if (id < 0)
         continue;
-      const NumericType area = areas_.interfaceArea(fill_, idx);
+      const NumericType area = walker_.areaAt(idx); // per-trace cache
       if (area <= NumericType(1e-2) * faceArea)
         continue;
       for (size_t c = 0; c < nChannels; ++c)

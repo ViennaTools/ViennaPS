@@ -23,6 +23,7 @@
 
 #include <cmath>
 #include <iomanip>
+#include <chrono>
 #include <iostream>
 
 namespace ls = viennals;
@@ -106,7 +107,11 @@ Profile levelSetArm(ps::ChemicalMechanism<T> mech, T time, T gridDelta,
   cov.tolerance = 1e-6;
   cov.maxIterations = 40;
   process.setParameters(cov);
-  process.apply();
+  { const auto t0=std::chrono::steady_clock::now();
+    process.apply();
+    std::cout<<"    [time] level-set arm process: "<<std::fixed
+             <<std::setprecision(1)<<std::chrono::duration<double>(
+                 std::chrono::steady_clock::now()-t0).count()<<" s"<<std::endl; }
   const auto after = bounds();
   domain->saveSurfaceMesh(mech.name + (maskHeight > 0 ? "_masked" : "") +
                           "_ls_final.vtp");
@@ -191,6 +196,7 @@ Profile voxelArm(ps::ChemicalMechanism<T> mech, T time, T gridDelta, T width,
   // Without this the estimator argument is accepted and ignored, and the two
   // voxel rows of every table are the same run twice.
   voxel.setNormalEstimator(estimator);
+  voxel.setTraversalEngine(cs::TraversalEngine::EmbreeBVH);
   voxel.setRaysPerStep(rays * 200);
   auto coverages = voxel.makeCoverages();
 
@@ -242,8 +248,16 @@ Profile voxelArm(ps::ChemicalMechanism<T> mech, T time, T gridDelta, T width,
   writeCells(mech.name + (maskHeight > 0 ? "_masked" : "") +
              "_voxel_initial.vtu");
   const T field0 = surface(true), bottom0 = surface(false);
-  for (int s = 0; s < steps; ++s)
-    voxel.step(time / steps, coverages, 1 + s);
+  double tTr=0,tCh=0,tAd=0,tRe=0;
+  for (int s = 0; s < steps; ++s) {
+    const auto r = voxel.step(time / steps, coverages, 1 + s);
+    tTr+=r.secondsTransport; tCh+=r.secondsChemistry;
+    tAd+=r.secondsAdvance; tRe+=r.secondsRelabel;
+  }
+  std::cout<<"    [time] voxel arm, "<<steps<<" steps: transport "
+           <<std::fixed<<std::setprecision(1)<<tTr<<" s, chemistry "<<tCh
+           <<" s, advance "<<tAd<<" s, relabel "<<tRe<<" s  (total "
+           <<tTr+tCh+tAd+tRe<<" s)"<<std::endl;
   writeCells(mech.name + "_voxel_" + tag + "_final.vtu");
 
   Profile p;

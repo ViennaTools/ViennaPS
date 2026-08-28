@@ -13,6 +13,7 @@
 #include <iomanip>
 #include <string>
 #include <vector>
+#include <chrono>
 #include <iostream>
 namespace ps=viennaps; namespace cs=viennacs; namespace ls=viennals;
 using T=double; constexpr int D=3;
@@ -44,7 +45,11 @@ Profile levelSetArm(ps::ChemicalMechanism<T> mech, T time, unsigned rays,
   p.setFluxEngineType(ps::FluxEngineType::CPU_TRIANGLE);
   ps::RayTracingParameters rt; rt.raysPerPoint=rays; p.setParameters(rt);
   ps::CoverageParameters cv; cv.tolerance=1e-6; cv.maxIterations=40; p.setParameters(cv);
-  p.apply();
+  { const auto t0=std::chrono::steady_clock::now();
+    p.apply();
+    std::cout<<"    [time] level-set arm process: "<<std::fixed
+             <<std::setprecision(1)<<std::chrono::duration<double>(
+                 std::chrono::steady_clock::now()-t0).count()<<" s"<<std::endl; }
   const auto after=bounds();
   dom->saveSurfaceMesh(mech.name+"_3d_ls_final.vtp");
   Profile r; r.field=after.first-before.first; r.bottom=after.second-before.second;
@@ -89,6 +94,7 @@ Profile voxelArm(ps::ChemicalMechanism<T> mech, T time, int steps, size_t rays,
   }
   ps::VoxelChemistry<T,D> vox(mech,lat,fill,material);
   vox.setNormalEstimator(est);
+  vox.setTraversalEngine(cs::TraversalEngine::EmbreeBVH);
   vox.setRaysPerStep(rays);
   auto cov=vox.makeCoverages();
   const auto&dims=lat.dims();
@@ -116,7 +122,16 @@ Profile voxelArm(ps::ChemicalMechanism<T> mech, T time, int steps, size_t rays,
   };
   writeCells(mech.name+"_3d_voxel_initial.vtu");
   const T f0=surf(FLO,FHI), b0=surf(BLO,BHI);
-  for(int s=0;s<steps;++s) vox.step(time/steps,cov,1+s);
+  double tTr=0,tCh=0,tAd=0,tRe=0;
+  for(int s=0;s<steps;++s){
+    const auto r=vox.step(time/steps,cov,1+s);
+    tTr+=r.secondsTransport; tCh+=r.secondsChemistry;
+    tAd+=r.secondsAdvance; tRe+=r.secondsRelabel;
+  }
+  std::cout<<"    [time] voxel arm, "<<steps<<" steps: transport "
+           <<std::fixed<<std::setprecision(1)<<tTr<<" s, chemistry "<<tCh
+           <<" s, advance "<<tAd<<" s, relabel "<<tRe<<" s  (total "
+           <<tTr+tCh+tAd+tRe<<" s)"<<std::endl;
   writeCells(mech.name+"_3d_voxel_final.vtu");
   Profile r; r.field=surf(FLO,FHI)-f0; r.bottom=surf(BLO,BHI)-b0;
   r.cov=std::abs(r.field)>1e-12?r.bottom/r.field:0; return r;

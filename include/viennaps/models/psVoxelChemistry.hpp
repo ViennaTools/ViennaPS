@@ -7,6 +7,8 @@
 
 #include <csVoxelFlux.hpp>
 
+#include <chrono>
+
 namespace viennaps {
 
 using namespace viennacore;
@@ -41,6 +43,7 @@ template <class NumericType, int D> class VoxelChemistry {
   size_t raysPerStep_ = 100000;
   viennacs::NormalEstimator estimator_ =
       viennacs::NormalEstimator::FillGradientYoungs;
+  viennacs::TraversalEngine engine_ = viennacs::TraversalEngine::GridDDA;
   NumericType minimumArea_ = 0; // set from the grid spacing in the constructor
   int coverageIterations_ = 500;
   NumericType coverageTolerance_ = 1e-13;
@@ -67,6 +70,7 @@ public:
   /// the fractions move -- which is how this getter came to exist.
   const std::vector<int> &materials() const { return material_; }
   void setNormalEstimator(viennacs::NormalEstimator e) { estimator_ = e; }
+  void setTraversalEngine(viennacs::TraversalEngine e) { engine_ = e; }
   void setCoverageParameters(int iterations, NumericType tolerance) {
     coverageIterations_ = iterations;
     coverageTolerance_ = tolerance;
@@ -214,6 +218,14 @@ public:
     NumericType maxVelocity = 0;
     NumericType volumeMoved = 0;
     NumericType volumeLost = 0;
+    // Where the step's wall time went. The benchmark against the level set
+    // is only interpretable with this split: transport is what the traversal
+    // engines compete on, while advance and relabel sweep the whole lattice
+    // and dilute any transport win until they are band-limited.
+    double secondsTransport = 0; ///< neutral and ion Monte Carlo, together
+    double secondsChemistry = 0; ///< per-cell coverage solve and rate laws
+    double secondsAdvance = 0;   ///< moving the filling fractions
+    double secondsRelabel = 0;   ///< refreshing the material labels
   };
 
   /// The incident flux of every traced gas species, per cell.
@@ -267,6 +279,7 @@ public:
       }
 
       viennacs::VoxelFlux<NumericType, D> flux(lattice_, fill_, estimator_);
+      flux.setTraversalEngine(engine_);
       const auto result =
           flux.trace(raysPerStep_, species.sourceFlux, sticking,
                      NumericType(1), seed + static_cast<unsigned>(g));
@@ -280,6 +293,7 @@ public:
     if (!mech_.ionYields.empty()) {
       VoxelIonFlux<NumericType, D> ion(mech_, lattice_, fill_,
                                        effectiveMaterial_, estimator_);
+      ion.setTraversalEngine(engine_);
       const auto channels = ion.trace(raysPerStep_, seed + 977u);
       for (size_t c = 0; c < channels.size(); ++c)
         gamma[mech_.ionYields[c].gasIndex] = channels[c];
@@ -291,7 +305,9 @@ public:
   /// surface.
   StepReport step(NumericType dt, std::vector<std::vector<NumericType>> &theta,
                   unsigned seed = 1) {
+    const auto tTransport0 = std::chrono::steady_clock::now();
     const auto gamma = traceFluxes(seed, theta);
+    const auto tTransport1 = std::chrono::steady_clock::now();
     const size_t nCov = mech_.coverageNames.size();
     const size_t nGas = mech_.gas.size();
 
@@ -309,6 +325,11 @@ public:
     for (int d = 0; d < D; ++d)
       sites *= static_cast<size_t>(dims[d]);
 
+    // Only the interface band can hold surface cells: outside it the area is
+    // provably zero, and the loop below would reject every cell anyway --
+    // after paying the stencil for each. One linear pass buys the skip.
+    const auto band = advance_.interfaceBand(fill_);
+
     // Each cell's coverage solve is independent of every other, so this runs
     // in parallel like the transport above it.
 #pragma omp parallel for schedule(dynamic, 64)
@@ -322,6 +343,8 @@ public:
       const int id = lattice_.cellId(idx);
       if (id < 0)
         continue;
+      if (!band[id])
+        continue; // provably zero interface area out here
       // A cell has to hold enough interface to be a surface. Flux density is
       // a rate over an area, so a cell with a sliver of area divides a small
       // number by a smaller one and reports a flux far above anything
@@ -365,8 +388,10 @@ public:
     else
       report.minVelocity = report.maxVelocity = 0;
 
+    const auto tChemistry = std::chrono::steady_clock::now();
     const auto moved = advance_.apply(fill_, velocity, dt, &material_,
                                       static_cast<int>(Material::GAS), &velMat);
+    const auto tAdvance = std::chrono::steady_clock::now();
     // AFTER the advance, so the labels always describe the fill that exists:
     // refreshed before the trace instead, the final step's advance leaves
     // emptied cells still labelled solid in anything written afterwards --
@@ -374,6 +399,12 @@ public:
     // fractions that had left. The first step's trace is covered by the
     // resolution the constructor runs.
     refreshMaterials();
+    const auto tRelabel = std::chrono::steady_clock::now();
+    using Sec = std::chrono::duration<double>;
+    report.secondsTransport = Sec(tTransport1 - tTransport0).count();
+    report.secondsChemistry = Sec(tChemistry - tTransport1).count();
+    report.secondsAdvance = Sec(tAdvance - tChemistry).count();
+    report.secondsRelabel = Sec(tRelabel - tAdvance).count();
     report.volumeMoved = moved.volumeRequested;
     report.volumeLost = moved.volumeLost;
     return report;
