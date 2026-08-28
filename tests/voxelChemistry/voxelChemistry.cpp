@@ -1,5 +1,5 @@
-#include <psVoxelChemistry.hpp>
-#include <psChemicalMechanismIO.hpp>
+#include <models/psVoxelChemistry.hpp>
+#include <models/psChemicalMechanismIO.hpp>
 
 #include <lsMakeGeometry.hpp>
 
@@ -96,7 +96,7 @@ void blanket(const std::string &file) {
   std::vector<T> fill(cellSet.getNumberOfCells(), T(0));
   cs::fillFromSignedDistance<T, D>(lattice, fill,
                                    [](const viennacore::Vec3D<T> &p) {
-                                     return p[1] - T(0);
+                                     return p[D - 1] - T(0);
                                    });
   std::vector<int> material(cellSet.getNumberOfCells(),
                             static_cast<int>(ps::BuiltInMaterial::Si));

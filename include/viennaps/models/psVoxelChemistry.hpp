@@ -3,6 +3,8 @@
 #include "psSurfaceChemistry.hpp"
 
 #include <csVoxelAdvance.hpp>
+#include "psVoxelIon.hpp"
+
 #include <csVoxelFlux.hpp>
 
 namespace viennaps {
@@ -34,8 +36,11 @@ template <class NumericType, int D> class VoxelChemistry {
   std::vector<int> material_; ///< per cell, as the cell set reported it
 
   viennacs::VoxelAdvance<NumericType, D> advance_;
+  std::vector<int> effectiveMaterial_; ///< see resolveMaterials()
 
   size_t raysPerStep_ = 100000;
+  viennacs::NormalEstimator estimator_ =
+      viennacs::NormalEstimator::FillGradientYoungs;
   NumericType minimumArea_ = 0; // set from the grid spacing in the constructor
   int coverageIterations_ = 500;
   NumericType coverageTolerance_ = 1e-13;
@@ -47,6 +52,7 @@ public:
                  std::vector<int> material)
       : mech_(mech), lattice_(lattice), fill_(fill),
         material_(std::move(material)), advance_(lattice) {
+    resolveMaterials();
     NumericType faceArea = 1;
     for (int d = 0; d < D - 1; ++d)
       faceArea *= lattice.gridDelta();
@@ -54,9 +60,151 @@ public:
   }
 
   void setRaysPerStep(size_t n) { raysPerStep_ = n; }
+
+  /// The material labels as they NOW are. They evolve: refreshMaterials
+  /// promotes gas cells the film has grown into, so a writer that copies the
+  /// construction-time labels shows a Material field frozen at t = 0 while
+  /// the fractions move -- which is how this getter came to exist.
+  const std::vector<int> &materials() const { return material_; }
+  void setNormalEstimator(viennacs::NormalEstimator e) { estimator_ = e; }
   void setCoverageParameters(int iterations, NumericType tolerance) {
     coverageIterations_ = iterations;
     coverageTolerance_ = tolerance;
+  }
+
+  /// Keeps the material labels abreast of a moving surface, then re-resolves
+  /// the interface. Called at the start of every step.
+  ///
+  /// The labels come from the cell set at construction, where everything above
+  /// the initial surface is GAS. A deposit grows INTO that region, and a label
+  /// resolved once at construction reaches only a few rings up: the SiGe/Si
+  /// film grew exactly three cells -- the ring-search depth -- and froze, its
+  /// selective mechanism reading `default: 0` off the GAS label above. So a
+  /// gas-labelled cell that has acquired material takes the label of the
+  /// solid it grew from, one frontier ring per step, which is as fast as a
+  /// surface can move.
+  ///
+  /// A deposit is thereby labelled as its SUBSTRATE, which is right when film
+  /// and substrate are the same material and an approximation when they are
+  /// not; labelling by the mechanism's own depositing solid is the proper
+  /// extension for multi-solid chemistries.
+  void refreshMaterials() {
+    const auto gas = static_cast<int>(Material::GAS);
+    const auto &dims = lattice_.dims();
+    size_t sites = 1;
+    for (int d = 0; d < D; ++d)
+      sites *= static_cast<size_t>(dims[d]);
+
+    const std::vector<int> before = material_; // promote off a snapshot
+#pragma omp parallel for schedule(dynamic, 256)
+    for (long long flat = 0; flat < static_cast<long long>(sites); ++flat) {
+      std::array<int, D> idx{};
+      size_t rem = static_cast<size_t>(flat);
+      for (int d = 0; d < D; ++d) {
+        idx[d] = static_cast<int>(rem % static_cast<size_t>(dims[d]));
+        rem /= static_cast<size_t>(dims[d]);
+      }
+      const int id = lattice_.cellId(idx);
+      if (id < 0)
+        continue;
+      // THE RULE: filling fraction >= 0.5 is material, < 0.5 is gas. Label
+      // and geometry are then one statement -- the Material field equals the
+      // solid at the 0.5 iso, and a residue cell at fill 0.03 can never sit
+      // in the void labelled silicon. Chemistry loses nothing: a hit in a
+      // sub-0.5 surface cell takes its constants through the
+      // effectiveMaterial resolution below, exactly as gas-labelled
+      // interface cells always have.
+      if (before[id] != gas && fill_[id] < NumericType(0.5)) {
+        material_[id] = gas;
+        continue;
+      }
+      if (before[id] != gas || fill_[id] < NumericType(0.5))
+        continue;
+      for (int ring = 1; ring <= 2; ++ring) {
+        const int width = 2 * ring + 1;
+        int span = 1;
+        for (int d = 0; d < D; ++d)
+          span *= width;
+        bool done = false;
+        for (int q = 0; q < span && !done; ++q) {
+          std::array<int, D> probe = idx;
+          int r = q;
+          for (int d = 0; d < D; ++d) {
+            probe[d] += r % width - ring;
+            r /= width;
+          }
+          const int nid = lattice_.cellId(probe);
+          if (nid >= 0 && before[nid] != gas) {
+            material_[id] = before[nid];
+            done = true;
+          }
+        }
+        if (done)
+          break;
+      }
+    }
+    resolveMaterials();
+  }
+
+  /// The material a surface cell should react as.
+  ///
+  /// A cell set built to span the gas region labels everything above the
+  /// surface GAS, and the interface straddles that boundary -- so roughly half
+  /// the cells carrying interface area are labelled GAS. Reacting them as GAS
+  /// is wrong: a surface cell is the surface OF something, and that something
+  /// is the solid beneath it. It matters most for a selective mechanism, whose
+  /// `materials:` block names the substrate and leaves `default: 0`. On the
+  /// SiGe/Si stack this was the difference between 20 nm of growth and 1 nm:
+  /// the interface cells hit the default, stuck nothing, and reacted at zero
+  /// rate. The level-set arm never sees this, because its surface points carry
+  /// the material of the material below them.
+  ///
+  /// So a GAS cell holding interface takes the material of the nearest cell
+  /// that is not gas, searched outward by rings.
+  void resolveMaterials() {
+    const auto gas = static_cast<int>(Material::GAS);
+    effectiveMaterial_ = material_;
+    const auto &dims = lattice_.dims();
+
+    size_t sites = 1;
+    for (int d = 0; d < D; ++d)
+      sites *= static_cast<size_t>(dims[d]);
+
+    // Each cell's coverage solve is independent of every other, so this runs
+    // in parallel like the transport above it.
+#pragma omp parallel for schedule(dynamic, 64)
+    for (long long flat = 0; flat < static_cast<long long>(sites); ++flat) {
+      std::array<int, D> idx{};
+      size_t rem = static_cast<size_t>(flat);
+      for (int d = 0; d < D; ++d) {
+        idx[d] = static_cast<int>(rem % static_cast<size_t>(dims[d]));
+        rem /= static_cast<size_t>(dims[d]);
+      }
+      const int id = lattice_.cellId(idx);
+      if (id < 0 || material_[id] != gas)
+        continue;
+
+      int found = -1;
+      for (int ring = 1; ring <= 3 && found < 0; ++ring) {
+        const int width = 2 * ring + 1;
+        int span = 1;
+        for (int d = 0; d < D; ++d)
+          span *= width;
+        for (int s = 0; s < span && found < 0; ++s) {
+          std::array<int, D> probe = idx;
+          int r = s;
+          for (int d = 0; d < D; ++d) {
+            probe[d] += r % width - ring;
+            r /= width;
+          }
+          const int nid = lattice_.cellId(probe);
+          if (nid >= 0 && material_[nid] != gas)
+            found = material_[nid];
+        }
+      }
+      if (found >= 0)
+        effectiveMaterial_[id] = found;
+    }
   }
 
   struct StepReport {
@@ -79,7 +227,9 @@ public:
   ///
   /// Untraced species are left empty here; `step` fills them from
   /// `sourceFluxes`, which knows to weight an ion channel by its yield.
-  std::vector<std::vector<NumericType>> traceFluxes(unsigned seed) const {
+  std::vector<std::vector<NumericType>>
+  traceFluxes(unsigned seed,
+              const std::vector<std::vector<NumericType>> &theta) const {
     const size_t nGas = mech_.gas.size();
     std::vector<std::vector<NumericType>> gamma(
         nGas, std::vector<NumericType>(fill_.size(), NumericType(0)));
@@ -87,14 +237,52 @@ public:
     for (size_t g = 0; g < nGas; ++g) {
       const auto &species = mech_.gas[g];
       if (!species.traced || species.isIonChannel)
-        continue; // filled per cell from sourceFluxes, which weights ion yields
-      viennacs::VoxelFlux<NumericType, D> flux(lattice_, fill_);
+        continue; // ion channels are traced below, by the ion itself
+      // Sticking per cell -- and it is NOT s0. The level-set particle re-emits
+      // with s0 * theta_free^n, evaluated from the coverages at the point it
+      // hit (psSurfaceChemistry.hpp, ParticleNeutral::surfaceReflection). A
+      // saturated surface therefore reflects far more than s0 suggests, and
+      // that is what carries flux to the floor of a feature.
+      //
+      // Passing s0 alone made this arm stick rays that the level-set arm would
+      // have reflected, so it saw line of sight where the level set saw a
+      // near-conformal supply. On silane at s0 = 1 the surface saturates to
+      // theta_free ~ 0.17, so theta_free^2 ~ 0.03: effectively non-sticking,
+      // and the difference between a step coverage of 0.98 and one of 0.50.
+      const int freeExp = mech_.gas[g].stickingFreeSiteExponent;
+      const int site = mech_.gas[g].stickingSite;
+      std::vector<NumericType> sticking(fill_.size(), NumericType(0));
+      for (size_t c = 0; c < fill_.size(); ++c) {
+        NumericType s = mech_.stickingOf(
+            static_cast<int>(g),
+            MaterialMap::mapToMaterial(effectiveMaterial_[c]));
+        if (freeExp > 0 && !theta[c].empty()) {
+          const auto free = mech_.freeFractions(theta[c]);
+          const NumericType f =
+              site < static_cast<int>(free.size()) ? free[site] : NumericType(1);
+          for (int k = 0; k < freeExp; ++k)
+            s *= f;
+        }
+        sticking[c] = s;
+      }
+
+      viennacs::VoxelFlux<NumericType, D> flux(lattice_, fill_, estimator_);
       const auto result =
-          flux.trace(raysPerStep_, species.sourceFlux,
-                     mech_.stickingOf(static_cast<int>(g),
-                                      Material(BuiltInMaterial::Si)),
+          flux.trace(raysPerStep_, species.sourceFlux, sticking,
                      NumericType(1), seed + static_cast<unsigned>(g));
       gamma[g] = result.flux;
+    }
+
+    // The ion. Its channels carry a yield that depends on the energy it still
+    // has and on the angle it strikes at, so they cannot be taken from
+    // sourceFluxes once there is a feature: that value is the yield at normal
+    // incidence, which is exact on a blanket and unshadowed everywhere else.
+    if (!mech_.ionYields.empty()) {
+      VoxelIonFlux<NumericType, D> ion(mech_, lattice_, fill_,
+                                       effectiveMaterial_, estimator_);
+      const auto channels = ion.trace(raysPerStep_, seed + 977u);
+      for (size_t c = 0; c < channels.size(); ++c)
+        gamma[mech_.ionYields[c].gasIndex] = channels[c];
     }
     return gamma;
   }
@@ -103,11 +291,14 @@ public:
   /// surface.
   StepReport step(NumericType dt, std::vector<std::vector<NumericType>> &theta,
                   unsigned seed = 1) {
-    const auto gamma = traceFluxes(seed);
+    const auto gamma = traceFluxes(seed, theta);
     const size_t nCov = mech_.coverageNames.size();
     const size_t nGas = mech_.gas.size();
 
     std::vector<NumericType> velocity(fill_.size(), NumericType(0));
+    // the material each cell's velocity is computed FOR -- the advance may
+    // only place a share into that material
+    std::vector<int> velMat(fill_.size(), static_cast<int>(Material::GAS));
 
     StepReport report;
     report.minVelocity = std::numeric_limits<NumericType>::max();
@@ -118,9 +309,12 @@ public:
     for (int d = 0; d < D; ++d)
       sites *= static_cast<size_t>(dims[d]);
 
-    std::array<int, D> idx{};
-    for (size_t flat = 0; flat < sites; ++flat) {
-      size_t rem = flat;
+    // Each cell's coverage solve is independent of every other, so this runs
+    // in parallel like the transport above it.
+#pragma omp parallel for schedule(dynamic, 64)
+    for (long long flat = 0; flat < static_cast<long long>(sites); ++flat) {
+      std::array<int, D> idx{};
+      size_t rem = static_cast<size_t>(flat);
       for (int d = 0; d < D; ++d) {
         idx[d] = static_cast<int>(rem % static_cast<size_t>(dims[d]));
         rem /= static_cast<size_t>(dims[d]);
@@ -137,13 +331,15 @@ public:
       if (area <= minimumArea_)
         continue;
 
-      const Material material = MaterialMap::mapToMaterial(material_[id]);
+      const Material material =
+          MaterialMap::mapToMaterial(effectiveMaterial_[id]);
+      velMat[id] = effectiveMaterial_[id];
       // Start from the analytic incident fluxes, which carry the ion yield at
       // normal incidence for any yield channel, then replace the entries a
       // trace actually resolved.
       auto cellGamma = mech_.sourceFluxes(material);
       for (size_t g = 0; g < nGas; ++g)
-        if (mech_.gas[g].traced && !mech_.gas[g].isIonChannel)
+        if (mech_.gas[g].traced && !gamma[g].empty())
           cellGamma[g] = gamma[g][id];
 
       const auto k = mech_.rateConstantsFor(material);
@@ -156,17 +352,28 @@ public:
       }
       velocity[id] = mech_.growthRate(cellGamma, k, theta[id], material);
 
-      ++report.surfaceCells;
-      report.meanVelocity += velocity[id];
-      report.minVelocity = std::min(report.minVelocity, velocity[id]);
-      report.maxVelocity = std::max(report.maxVelocity, velocity[id]);
+#pragma omp critical
+      {
+        ++report.surfaceCells;
+        report.meanVelocity += velocity[id];
+        report.minVelocity = std::min(report.minVelocity, velocity[id]);
+        report.maxVelocity = std::max(report.maxVelocity, velocity[id]);
+      }
     }
     if (report.surfaceCells)
       report.meanVelocity /= static_cast<NumericType>(report.surfaceCells);
     else
       report.minVelocity = report.maxVelocity = 0;
 
-    const auto moved = advance_.apply(fill_, velocity, dt);
+    const auto moved = advance_.apply(fill_, velocity, dt, &material_,
+                                      static_cast<int>(Material::GAS), &velMat);
+    // AFTER the advance, so the labels always describe the fill that exists:
+    // refreshed before the trace instead, the final step's advance leaves
+    // emptied cells still labelled solid in anything written afterwards --
+    // which is how a Material view came to show un-etched matter over
+    // fractions that had left. The first step's trace is covered by the
+    // resolution the constructor runs.
+    refreshMaterials();
     report.volumeMoved = moved.volumeRequested;
     report.volumeLost = moved.volumeLost;
     return report;
