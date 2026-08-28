@@ -856,6 +856,22 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("MAX", viennaray::NormalizationType::MAX)
       .finalize();
 
+  // Voxel arm: how the normal is estimated and how a ray finds the surface
+  py::native_enum<viennacs::NormalEstimator>(module, "NormalEstimator",
+                                             "enum.IntEnum")
+      .value("Face", viennacs::NormalEstimator::Face)
+      .value("FillGradient", viennacs::NormalEstimator::FillGradient)
+      .value("FillGradientYoungs",
+             viennacs::NormalEstimator::FillGradientYoungs)
+      .finalize();
+
+  py::native_enum<viennacs::TraversalEngine>(module, "TraversalEngine",
+                                             "enum.IntEnum")
+      .value("GridDDA", viennacs::TraversalEngine::GridDDA)
+      .value("EmbreeBVH", viennacs::TraversalEngine::EmbreeBVH)
+      .value("Hybrid", viennacs::TraversalEngine::Hybrid)
+      .finalize();
+
   // Flux Engine Type Enum
   py::native_enum<FluxEngineType>(module, "FluxEngineType", "enum.IntEnum")
       .value("AUTO", FluxEngineType::AUTO)
@@ -865,6 +881,12 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("GPU_TRIANGLE", FluxEngineType::GPU_TRIANGLE)
       .value("GPU_LINE", FluxEngineType::GPU_LINE)
       .finalize();
+
+  // Where an apply() spent its wall time, for benchmarking
+  py::class_<ProcessingTimes>(module, "ProcessingTimes")
+      .def_readonly("total", &ProcessingTimes::total)
+      .def_readonly("flux", &ProcessingTimes::flux)
+      .def_readonly("advection", &ProcessingTimes::advection);
 
   // RayTracingParameters
   py::class_<RayTracingParameters>(module, "RayTracingParameters")

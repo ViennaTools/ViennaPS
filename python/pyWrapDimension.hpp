@@ -53,6 +53,7 @@
 // models
 #include <models/psCF4ArEtching.hpp>
 #include <models/psSurfaceChemistry.hpp>
+#include <models/psVoxelProcess.hpp>
 #include <models/psCF4O2Etching.hpp>
 #include <models/psCSVFileProcess.hpp>
 #include <models/psDirectionalProcess.hpp>
@@ -949,6 +950,46 @@ template <int D> void bindApi(py::module &module) {
       .def("getMechanism", &SurfaceChemistry<T, D>::getMechanism,
            py::return_value_policy::reference);
 
+  // The voxel arm: the same mechanism on a cell set instead of a level set.
+  {
+    using VP = VoxelProcess<T, D>;
+    using VPReport = typename VP::StepReport;
+    py::class_<VPReport>(module, "VoxelStepReport", py::module_local())
+        .def_readonly("surfaceCells", &VPReport::surfaceCells)
+        .def_readonly("meanVelocity", &VPReport::meanVelocity)
+        .def_readonly("minVelocity", &VPReport::minVelocity)
+        .def_readonly("maxVelocity", &VPReport::maxVelocity)
+        .def_readonly("volumeMoved", &VPReport::volumeMoved)
+        .def_readonly("volumeLost", &VPReport::volumeLost)
+        .def_readonly("secondsTransport", &VPReport::secondsTransport)
+        .def_readonly("secondsChemistry", &VPReport::secondsChemistry)
+        .def_readonly("secondsAdvance", &VPReport::secondsAdvance)
+        .def_readonly("secondsRelabel", &VPReport::secondsRelabel);
+    py::class_<VP, SmartPointer<VP>>(module, "VoxelProcess",
+                                     py::module_local())
+        .def(py::init([](SmartPointer<Domain<T, D>> domain,
+                         const ChemicalMechanism<T> &mechanism, T depthBelow,
+                         T coverAbove) {
+               return SmartPointer<VP>::New(domain, mechanism, depthBelow,
+                                            coverAbove);
+             }),
+             py::arg("domain"), py::arg("mechanism"), py::arg("depthBelow"),
+             py::arg("coverAbove"))
+        .def("setRaysPerStep", &VP::setRaysPerStep)
+        .def("setNormalEstimator", &VP::setNormalEstimator)
+        .def("setTraversalEngine", &VP::setTraversalEngine)
+        .def("setUseGPU", &VP::setUseGPU)
+        .def("step", &VP::step, py::arg("dt"), py::arg("seed") = 1)
+        .def("apply", &VP::apply, py::arg("duration"), py::arg("steps"))
+        .def("writeCells", &VP::writeCells, py::arg("fileName"))
+        .def("fills", &VP::fills, py::return_value_policy::copy)
+        .def("materials", &VP::materials, py::return_value_policy::copy)
+        .def("dims", &VP::dims)
+        .def("minCorner", &VP::minCorner)
+        .def("gridDelta", &VP::gridDelta)
+        .def("cellId", &VP::cellId, py::arg("index"));
+  }
+
   // Fluorocarbon Etching
   py::class_<FluorocarbonEtching<T, D>,
              SmartPointer<FluorocarbonEtching<T, D>>>(
@@ -1499,6 +1540,9 @@ template <int D> void bindApi(py::module &module) {
   py::class_<ProcessTD>(module, "Process", py::module_local())
       // constructors
       .def(py::init())
+      .def("getProcessingTimes", &ProcessTD::getProcessingTimes,
+           py::return_value_policy::copy,
+           "Wall-clock seconds of the last apply(): total, flux, advection.")
       .def(py::init<DomainType>(), py::arg("domain"))
       .def(py::init<DomainType, SmartPointer<ProcessModelBase<T, D>>, T>(),
            py::arg("domain"), py::arg("model"), py::arg("duration") = 0.)

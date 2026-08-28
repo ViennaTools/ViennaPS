@@ -107,11 +107,12 @@ Profile levelSetArm(ps::ChemicalMechanism<T> mech, T time, T gridDelta,
   cov.tolerance = 1e-6;
   cov.maxIterations = 40;
   process.setParameters(cov);
-  { const auto t0=std::chrono::steady_clock::now();
-    process.apply();
-    std::cout<<"    [time] level-set arm process: "<<std::fixed
-             <<std::setprecision(1)<<std::chrono::duration<double>(
-                 std::chrono::steady_clock::now()-t0).count()<<" s"<<std::endl; }
+  process.apply();
+  { const auto &pt = process.getProcessingTimes();
+    std::cout<<"    [time] level-set arm, "<<std::fixed<<std::setprecision(1)
+             <<pt.total<<" s: flux "<<pt.flux<<" s, advection "
+             <<pt.advection<<" s, other "<<pt.total-pt.flux-pt.advection
+             <<" s"<<std::endl; }
   const auto after = bounds();
   domain->saveSurfaceMesh(mech.name + (maskHeight > 0 ? "_masked" : "") +
                           "_ls_final.vtp");

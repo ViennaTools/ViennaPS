@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
 namespace ps=viennaps; namespace cs=viennacs; namespace ls=viennals;
 using T=double; constexpr int D=3;
@@ -42,14 +43,16 @@ Profile levelSetArm(ps::ChemicalMechanism<T> mech, T time, unsigned rays,
   dom->saveSurfaceMesh(mech.name+"_3d_ls_initial.vtp");
   auto model=ps::SmartPointer<ps::SurfaceChemistry<T,D>>::New(mech);
   ps::Process<T,D> p(dom,model,time);
-  p.setFluxEngineType(ps::FluxEngineType::CPU_TRIANGLE);
+  p.setFluxEngineType(std::getenv("LS_GPU") ? ps::FluxEngineType::GPU_TRIANGLE
+                                            : ps::FluxEngineType::CPU_TRIANGLE);
   ps::RayTracingParameters rt; rt.raysPerPoint=rays; p.setParameters(rt);
   ps::CoverageParameters cv; cv.tolerance=1e-6; cv.maxIterations=40; p.setParameters(cv);
-  { const auto t0=std::chrono::steady_clock::now();
-    p.apply();
-    std::cout<<"    [time] level-set arm process: "<<std::fixed
-             <<std::setprecision(1)<<std::chrono::duration<double>(
-                 std::chrono::steady_clock::now()-t0).count()<<" s"<<std::endl; }
+  p.apply();
+  { const auto &pt = p.getProcessingTimes();
+    std::cout<<"    [time] level-set arm, "<<std::fixed<<std::setprecision(1)
+             <<pt.total<<" s: flux "<<pt.flux<<" s, advection "
+             <<pt.advection<<" s, other "<<pt.total-pt.flux-pt.advection
+             <<" s"<<std::endl; }
   const auto after=bounds();
   dom->saveSurfaceMesh(mech.name+"_3d_ls_final.vtp");
   Profile r; r.field=after.first-before.first; r.bottom=after.second-before.second;
@@ -95,6 +98,8 @@ Profile voxelArm(ps::ChemicalMechanism<T> mech, T time, int steps, size_t rays,
   ps::VoxelChemistry<T,D> vox(mech,lat,fill,material);
   vox.setNormalEstimator(est);
   vox.setTraversalEngine(cs::TraversalEngine::EmbreeBVH);
+  if (std::getenv("VOXEL_GPU")) // opt-in: the whole transport on the GPU
+    vox.setUseGPU(true);
   vox.setRaysPerStep(rays);
   auto cov=vox.makeCoverages();
   const auto&dims=lat.dims();
@@ -168,10 +173,10 @@ int main(int argc,char**argv){
       std::cout<<"\n"; };
     const T maskH = analytic<0 ? T(15) : T(0);
     const bool maskOnly = maskH > 0; // flat substrate; the mask is the opening
-    const T timeR = maskOnly ? 5*time : time; // dig ~10 nm of real topography
+    const T timeR = maskOnly ? 15*time : time; // dig ~30 nm of real topography
     const auto lsr=levelSetArm(mech,timeR,200,maskH,maskOnly);
     row(maskH>0?"level set (mask/floor)":"level set",lsr);
-    const auto vy=voxelArm(mech,timeR,maskOnly?50:10,500000,
+    const auto vy=voxelArm(mech,timeR,maskOnly?150:10,500000,
                            cs::NormalEstimator::FillGradientYoungs,maskH,maskOnly);
     row(maskH>0?"voxel, Youngs (mask/floor)":"voxel, Youngs",vy);
     if(maskH>0)

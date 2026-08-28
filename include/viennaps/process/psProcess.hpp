@@ -68,6 +68,12 @@ public:
     context_.processDuration = duration;
   }
 
+  /// Where the last apply() spent its wall time, in seconds -- the level-set
+  /// arm's counterpart to the voxel step report's phase breakdown.
+  const ProcessingTimes &getProcessingTimes() const {
+    return context_.processingTimes;
+  }
+
   void setParameters(const RayTracingParameters &p) {
     context_.rayTracingParams = p;
   }

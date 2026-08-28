@@ -7,7 +7,12 @@
 
 #include <csVoxelFlux.hpp>
 
+#ifdef VIENNACORE_COMPILE_GPU
+#include "psVoxelFluxGPU.hpp"
+#endif
+
 #include <chrono>
+#include <memory>
 
 namespace viennaps {
 
@@ -44,6 +49,11 @@ template <class NumericType, int D> class VoxelChemistry {
   viennacs::NormalEstimator estimator_ =
       viennacs::NormalEstimator::FillGradientYoungs;
   viennacs::TraversalEngine engine_ = viennacs::TraversalEngine::GridDDA;
+  bool useGPU_ = false;
+#ifdef VIENNACORE_COMPILE_GPU
+  // lazily created on the first GPU trace; a cache, not part of the value
+  mutable std::unique_ptr<VoxelFluxGPU<NumericType, D>> gpuFlux_;
+#endif
   NumericType minimumArea_ = 0; // set from the grid spacing in the constructor
   int coverageIterations_ = 500;
   NumericType coverageTolerance_ = 1e-13;
@@ -71,6 +81,24 @@ public:
   const std::vector<int> &materials() const { return material_; }
   void setNormalEstimator(viennacs::NormalEstimator e) { estimator_ = e; }
   void setTraversalEngine(viennacs::TraversalEngine e) { engine_ = e; }
+
+  /// Trace the NEUTRAL transport on the GPU: the band as OptiX cell
+  /// primitives, per-cell sticking uploaded beside it. The ion channel stays
+  /// on the CPU for now; a step mixes the two freely, since each trace is
+  /// independent. Without GPU support compiled in this is refused loudly
+  /// rather than silently ignored.
+  void setUseGPU(bool use) {
+#ifdef VIENNACORE_COMPILE_GPU
+    useGPU_ = use;
+#else
+    if (use)
+      Logger::getInstance()
+          .addWarning("VoxelChemistry: built without GPU support; the flux "
+                      "stays on the CPU.")
+          .print();
+    useGPU_ = false;
+#endif
+  }
   void setCoverageParameters(int iterations, NumericType tolerance) {
     coverageIterations_ = iterations;
     coverageTolerance_ = tolerance;
@@ -246,6 +274,18 @@ public:
     std::vector<std::vector<NumericType>> gamma(
         nGas, std::vector<NumericType>(fill_.size(), NumericType(0)));
 
+#ifdef VIENNACORE_COMPILE_GPU
+    if (useGPU_) {
+      if (!gpuFlux_) {
+        gpuFlux_ = std::make_unique<VoxelFluxGPU<NumericType, D>>(
+            lattice_, fill_, DeviceContext::createContext());
+        gpuFlux_->configureIon(mech_); // a no-op for an ionless mechanism
+      }
+      // once per step: the fills do not move between the species traces
+      gpuFlux_->prepareGeometry(estimator_, &effectiveMaterial_);
+    }
+#endif
+
     for (size_t g = 0; g < nGas; ++g) {
       const auto &species = mech_.gas[g];
       if (!species.traced || species.isIonChannel)
@@ -278,6 +318,13 @@ public:
         sticking[c] = s;
       }
 
+#ifdef VIENNACORE_COMPILE_GPU
+      if (useGPU_) {
+        gamma[g] = gpuFlux_->trace(raysPerStep_, species.sourceFlux, sticking,
+                                   seed + static_cast<unsigned>(g));
+        continue;
+      }
+#endif
       viennacs::VoxelFlux<NumericType, D> flux(lattice_, fill_, estimator_);
       flux.setTraversalEngine(engine_);
       const auto result =
@@ -291,6 +338,16 @@ public:
     // sourceFluxes once there is a feature: that value is the yield at normal
     // incidence, which is exact on a blanket and unshadowed everywhere else.
     if (!mech_.ionYields.empty()) {
+#ifdef VIENNACORE_COMPILE_GPU
+      if (useGPU_ && gpuFlux_ && gpuFlux_->ionConfigured()) {
+        const auto channels = gpuFlux_->traceIon(
+            raysPerStep_,
+            mech_.gas[mech_.ionYields[0].gasIndex].sourceFlux, seed + 977u);
+        for (size_t c = 0; c < channels.size(); ++c)
+          gamma[mech_.ionYields[c].gasIndex] = channels[c];
+        return gamma;
+      }
+#endif
       VoxelIonFlux<NumericType, D> ion(mech_, lattice_, fill_,
                                        effectiveMaterial_, estimator_);
       ion.setTraversalEngine(engine_);

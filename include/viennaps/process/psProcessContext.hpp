@@ -19,6 +19,15 @@ enum class ProcessResult {
   NOT_IMPLEMENTED
 };
 
+/// Wall-clock accounting of the last apply(), in seconds, for benchmarking
+/// one arm against another. Filled by the flux process strategy; other
+/// strategies leave it zero.
+struct ProcessingTimes {
+  double total = 0.0;
+  double flux = 0.0;      ///< the flux engine: ray transport
+  double advection = 0.0; ///< moving the surface
+};
+
 VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
   // Core components
   SmartPointer<Domain<NumericType, D>> domain;
@@ -28,6 +37,7 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
   double processDuration = 0.0;
   double processTime = 0.0;
   double timeStep = 0.0;
+  ProcessingTimes processingTimes{};
 
   // Configuration
   AdvectionParameters advectionParams;

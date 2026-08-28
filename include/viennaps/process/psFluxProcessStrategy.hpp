@@ -272,6 +272,13 @@ private:
 
     processTimer.finish();
 
+    // Always recorded, whatever the log level: a benchmark reads these off
+    // the Process instead of parsing timing logs.
+    context.processingTimes.total = processTimer.totalDuration * 1e-9;
+    context.processingTimes.flux = fluxEngine_->getTimer().totalDuration * 1e-9;
+    context.processingTimes.advection =
+        advectionHandler_.getTimer().totalDuration * 1e-9;
+
     if (Logger::hasTiming()) {
       logProcessingTimes(context, processTimer);
     }

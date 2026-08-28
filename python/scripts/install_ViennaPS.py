@@ -319,6 +319,8 @@ def install_viennaps(
     gpu_build: bool,
     verbose: bool,
     sanitize: bool = False,
+    viennacs_dir: Path | None = None,
+    viennaray_dir: Path | None = None,
 ):
     if not viennaps_dir.exists():
         sys.exit(f"ViennaPS directory not found: {viennaps_dir}")
@@ -344,6 +346,21 @@ def install_viennaps(
 
     if viennals_dir:
         cmake_args.append(f"-DCPM_ViennaLS_SOURCE={str(viennals_dir)}")
+
+    # The voxel work spans three repos: without these, the pip build fetches
+    # upstream ViennaCS/ViennaRay and the voxel headers do not exist. The
+    # paths must be ABSOLUTE: CPM re-resolves them from the wheel's own
+    # build directory, where a relative path points at nothing.
+    if viennacs_dir:
+        viennacs_dir = viennacs_dir.resolve()
+        if not (viennacs_dir / "CMakeLists.txt").exists():
+            sys.exit(f"ViennaCS directory not valid: {viennacs_dir}")
+        cmake_args.append(f"-DCPM_ViennaCS_SOURCE={str(viennacs_dir)}")
+    if viennaray_dir:
+        viennaray_dir = viennaray_dir.resolve()
+        if not (viennaray_dir / "CMakeLists.txt").exists():
+            sys.exit(f"ViennaRay directory not valid: {viennaray_dir}")
+        cmake_args.append(f"-DCPM_ViennaRay_SOURCE={str(viennaray_dir)}")
 
     if sanitize:
         cmake_args.append(
@@ -397,6 +414,16 @@ def main():
         "--viennaps-dir",
         default=None,
         help="Path to ViennaPS directory (defaults to current dir if it's ViennaPS).",
+    )
+    parser.add_argument(
+        "--viennacs-dir",
+        default=None,
+        help="Path to a local ViennaCS checkout (needed for the voxel work).",
+    )
+    parser.add_argument(
+        "--viennaray-dir",
+        default=None,
+        help="Path to a local ViennaRay checkout (needed for the voxel GPU work).",
     )
     parser.add_argument(
         "--debug-build",
@@ -468,6 +495,8 @@ def main():
             not args.no_gpu,
             args.verbose,
             args.sanitize,
+            Path(args.viennacs_dir) if args.viennacs_dir else None,
+            Path(args.viennaray_dir) if args.viennaray_dir else None,
         )
 
     # Final info
