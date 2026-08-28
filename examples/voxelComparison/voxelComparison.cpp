@@ -181,6 +181,12 @@ Profile voxelArm(ps::ChemicalMechanism<T> mech, T time, T gridDelta, T width,
   for (size_t c = 0; c < fill.size(); ++c)
     fill[c] = material[c] == static_cast<int>(ps::Material::GAS) ? T(0) : T(1);
 
+  if(maskHeight>T(0)){ // a masked run whose initial state has no mask is wrong
+    size_t nm=0;
+    for(size_t c=0;c<fill.size();++c)
+      if(material[c]==(int)ps::Material::Mask && fill[c]>=T(0.5)) ++nm;
+    if(nm==0){ std::cerr<<"FATAL: masked geometry but no Mask cells at t=0\n"; std::abort(); }
+  }
   ps::VoxelChemistry<T, D> voxel(mech, lattice, fill, material);
   // Without this the estimator argument is accepted and ignored, and the two
   // voxel rows of every table are the same run twice.

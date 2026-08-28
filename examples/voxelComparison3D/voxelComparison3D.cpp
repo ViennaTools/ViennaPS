@@ -78,9 +78,14 @@ Profile voxelArm(ps::ChemicalMechanism<T> mech, T time, int steps, size_t rays,
   std::vector<T> fill(cellSet->getNumberOfCells(),T(0));
   std::vector<int> material(cellSet->getNumberOfCells());
   for(size_t c=0;c<fill.size();++c){
-    const bool solid=(int)mid[c]!=(int)ps::Material::GAS;
-    fill[c]=solid?T(1):T(0);
-    material[c]=solid?(int)ps::Material::Si:(int)ps::Material::GAS;
+    material[c]=(int)mid[c]; // keep the cell set's labels: the mask must stay Mask
+    fill[c]=material[c]==(int)ps::Material::GAS?T(0):T(1);
+  }
+  if(maskHeight>T(0)){ // a masked run whose initial state has no mask is wrong
+    size_t nm=0;
+    for(size_t c=0;c<fill.size();++c)
+      if(material[c]==(int)ps::Material::Mask && fill[c]>=T(0.5)) ++nm;
+    if(nm==0){ std::cerr<<"FATAL: masked geometry but no Mask cells at t=0\n"; std::abort(); }
   }
   ps::VoxelChemistry<T,D> vox(mech,lat,fill,material);
   vox.setNormalEstimator(est);
@@ -126,7 +131,7 @@ int main(int argc,char**argv){
   ps::units::Length::setUnit("nm"); ps::units::Time::setUnit("s");
   std::vector<std::string> files;
   if(argc>1) for(int a=1;a<argc;++a) files.emplace_back(argv[a]);
-  else for(const char*m:{"silane","sf6o2"})
+  else for(const char*m:{"sf6o2"}) // pass mechanism files as arguments for more
     files.emplace_back(std::string(VIENNAPS_MECHANISM_DIR)+"/"+m+".mechanism.json");
   for(const auto&file:files){
     auto mech=ps::readChemicalMechanism<T>(file);
