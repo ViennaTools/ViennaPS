@@ -4,6 +4,7 @@
 
 #include <lsMakeGeometry.hpp>
 
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -61,7 +62,14 @@ public:
     }
     std::vector<SmartPointer<viennals::Domain<NumericType, D>>> lss{deep};
     auto matMap = SmartPointer<viennals::MaterialMap>::New();
-    matMap->insertNextMaterial(static_cast<int>(Material::Si));
+    // the margin continues the domain's OWN bottom material: assuming silicon
+    // gives an oxide or nitride substrate a silicon floor the moment an etch
+    // reaches the margin, with no warning and the wrong rate constants
+    const int bottomMaterial =
+        domain->getMaterialMap()
+            ? static_cast<int>(domain->getMaterialMap()->getMaterialAtIdx(0))
+            : static_cast<int>(Material::Si);
+    matMap->insertNextMaterial(bottomMaterial);
     for (size_t l = 0; l < domain->getLevelSets().size(); ++l) {
       lss.push_back(domain->getLevelSets()[l]);
       matMap->insertNextMaterial(
@@ -85,12 +93,21 @@ public:
       if (material_[c] == static_cast<int>(Material::Mask))
         ++maskCells;
     }
-    // a masked domain whose voxel state has no mask is wrong at t = 0
-    if (domain->getLevelSets().size() > 1 && maskCells == 0) {
+    // A masked domain whose voxel state has no mask is wrong at t = 0. Keyed
+    // on the domain actually DECLARING a mask, not merely on having more than
+    // one level set: a SiGe-on-Si stack is a legal two-level-set domain with
+    // no mask in it, and it must not be refused.
+    bool domainHasMask = false;
+    if (domain->getMaterialMap())
+      for (size_t l = 0; l < domain->getLevelSets().size(); ++l)
+        if (static_cast<int>(domain->getMaterialMap()->getMaterialAtIdx(l)) ==
+            static_cast<int>(Material::Mask))
+          domainHasMask = true;
+    if (domainHasMask && maskCells == 0) {
       Logger::getInstance()
-          .addError("VoxelProcess: the domain carries a mask level set but "
-                    "the cell set holds no Mask cell -- the cover or the "
-                    "material map lost it.")
+          .addError("VoxelProcess: the domain declares a Mask material but "
+                    "the cell set holds no Mask cell -- the cover height or "
+                    "the material map lost it.")
           .print();
     }
 
@@ -98,6 +115,14 @@ public:
         mech_, lattice_, fill_, material_);
     coverages_ = chemistry_->makeCoverages();
   }
+
+  // The chemistry holds references to mech_, lattice_ and fill_, which are
+  // members of THIS object, so a moved or copied VoxelProcess would leave it
+  // pointing at the original's (emptied, or destroyed) state.
+  VoxelProcess(const VoxelProcess &) = delete;
+  VoxelProcess &operator=(const VoxelProcess &) = delete;
+  VoxelProcess(VoxelProcess &&) = delete;
+  VoxelProcess &operator=(VoxelProcess &&) = delete;
 
   void setRaysPerStep(size_t rays) { chemistry_->setRaysPerStep(rays); }
   void setNormalEstimator(viennacs::NormalEstimator e) {
@@ -117,13 +142,21 @@ public:
   /// the per-phase seconds summed for benchmarking.
   StepReport apply(NumericType duration, int steps) {
     StepReport total;
+    total.minVelocity = std::numeric_limits<NumericType>::max();
+    total.maxVelocity = std::numeric_limits<NumericType>::lowest();
+    NumericType velocityWeighted = 0;
+    size_t cellSteps = 0;
     for (int s = 0; s < steps; ++s) {
       const auto r = step(duration / static_cast<NumericType>(steps),
                           static_cast<unsigned>(1 + s));
+      // extrema over the RUN, not whatever the last step happened to see,
+      // and a mean weighted by the cells each step actually solved
       total.surfaceCells = r.surfaceCells;
-      total.meanVelocity = r.meanVelocity;
-      total.minVelocity = r.minVelocity;
-      total.maxVelocity = r.maxVelocity;
+      total.minVelocity = std::min(total.minVelocity, r.minVelocity);
+      total.maxVelocity = std::max(total.maxVelocity, r.maxVelocity);
+      velocityWeighted +=
+          r.meanVelocity * static_cast<NumericType>(r.surfaceCells);
+      cellSteps += r.surfaceCells;
       total.volumeMoved += r.volumeMoved;
       total.volumeLost += r.volumeLost;
       total.secondsTransport += r.secondsTransport;
@@ -131,6 +164,11 @@ public:
       total.secondsAdvance += r.secondsAdvance;
       total.secondsRelabel += r.secondsRelabel;
     }
+    if (cellSteps)
+      total.meanVelocity =
+          velocityWeighted / static_cast<NumericType>(cellSteps);
+    if (steps <= 0) // nothing ran: do not report sentinel extrema
+      total.minVelocity = total.maxVelocity = 0;
     return total;
   }
 

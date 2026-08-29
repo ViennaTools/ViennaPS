@@ -46,6 +46,7 @@ template <class NumericType, int D> class VoxelFluxGPU {
   CudaBuffer stickingBuffer_;
   std::vector<int> primCell_; ///< primID -> cell id
   std::vector<std::array<int, D>> primIdx_;
+  std::vector<float> walkOut_; ///< per band cell, the restart displacement
   NumericType sourceArea_ = 0;
 
   // The ion: its own tracer, because its particle, callables, and result
@@ -54,6 +55,10 @@ template <class NumericType, int D> class VoxelFluxGPU {
   CudaBuffer ionParamsBuffer_;
   bool ionConfigured_ = false;
   size_t nChannels_ = 0;
+  /// Source flux of the gas species each yield channel writes into. Applied
+  /// per channel, as the level-set arm does; one shared flux would misscale
+  /// every channel but the first.
+  std::vector<NumericType> channelFlux_;
 
 public:
   VoxelFluxGPU(const viennacs::LatticeMap<NumericType, D> &lattice,
@@ -75,6 +80,13 @@ public:
     tracer_.setCallables("ViennaRayCallableWrapper", context_->modulePath);
     tracer_.setParticleCallableMap({pMap, cMap});
     tracer_.insertNextParticle(particle);
+    // ONCE. This compiles the OptiX modules and builds the pipeline, which
+    // depend on the particles and callables, not on the geometry; apply()
+    // regenerates the shader binding table itself every launch. Calling it
+    // per trace recompiles the pipeline for every species on every step,
+    // leaks the previous modules, pipelines and streams, and charges the
+    // JIT to the transport time the benchmark is trying to measure.
+    tracer_.prepareParticlePrograms();
   }
 
   /// Sets the ion up once, from the mechanism: the SAME device callables and
@@ -107,6 +119,7 @@ public:
       if (nYield >= SurfaceChemistryParamsGPU::maxYields)
         break;
       ion.dataLabels.push_back(y.label);
+      channelFlux_.push_back(mech.gas[y.gasIndex].sourceFlux);
       p.yieldA[nYield] = static_cast<float>(y.A);
       p.yieldEth[nYield] = static_cast<float>(y.Eth);
       p.yieldB[nYield] = static_cast<float>(y.B);
@@ -152,8 +165,18 @@ public:
     ionTracer_.setParticleCallableMap({pMap, cMap});
     ionTracer_.insertNextParticle(ion);
     ionTracer_.setParameters(ionParamsBuffer_.dPointer());
+    ionTracer_.prepareParticlePrograms(); // once, as above
     ionConfigured_ = true;
   }
+
+  ~VoxelFluxGPU() {
+    stickingBuffer_.free();
+    ionParamsBuffer_.free();
+  }
+
+  // holds device buffers and a tracer bound to them: not copyable or movable
+  VoxelFluxGPU(const VoxelFluxGPU &) = delete;
+  VoxelFluxGPU &operator=(const VoxelFluxGPU &) = delete;
 
   bool ionConfigured() const { return ionConfigured_; }
 
@@ -191,6 +214,7 @@ public:
 
     primCell_.clear();
     primIdx_.clear();
+    walkOut_.clear();
     for (size_t flat = 0; flat < sites; ++flat) {
       size_t rem = flat;
       std::array<int, D> idx{};
@@ -209,11 +233,43 @@ public:
       grid.fills.push_back(static_cast<float>((*fill_)[id]));
       Vec3D<NumericType> up{0, 0, 0};
       up[D - 1] = 1; // where the gradient is degenerate the surface faces up
-      const auto n = interaction.gradientNormal(idx, up, true);
+      // the estimator the caller asked for, not always Youngs: the Face and
+      // narrow-gradient options exist to be compared against it, and forcing
+      // one here makes that switch silently do nothing on the GPU
+      const bool wide =
+          estimator != viennacs::NormalEstimator::FillGradient;
+      const auto n = interaction.gradientNormal(idx, up, wide);
       Vec3Df nf{0.f, 0.f, 0.f};
       for (int d = 0; d < D; ++d)
         nf[d] = static_cast<float>(n[d]);
       grid.normals.push_back(nf);
+
+      // THE SAFE WALK-OUT for a ray re-emitted here, computed the way the CPU
+      // does it: step along the dominant normal axis while cells still hold
+      // material, and displace just past the last one. A fixed 2*delta cannot
+      // know how thick the interface is: in a feature narrower than four
+      // cells it lands the ray inside the OPPOSITE wall, which then culls it
+      // and lets the ray escape through solid material.
+      int axis = 0;
+      NumericType steepest = 0;
+      for (int d = 0; d < D; ++d)
+        if (std::abs(n[d]) > steepest) {
+          steepest = std::abs(n[d]);
+          axis = d;
+        }
+      const int outward = n[axis] > NumericType(0) ? 1 : -1;
+      int clear = 1;
+      auto probe = idx;
+      for (int stepOut = 0; stepOut < 8; ++stepOut) {
+        probe[axis] += outward;
+        const int nid = lattice_->cellId(probe);
+        if (nid < 0 || (*fill_)[nid] <= NumericType(1e-9))
+          break;
+        ++clear;
+      }
+      walkOut_.push_back(static_cast<float>(
+          delta * (static_cast<NumericType>(clear) + NumericType(1e-3))));
+
       primCell_.push_back(id);
       primIdx_.push_back(idx);
     }
@@ -221,6 +277,8 @@ public:
     tracer_.setGeometry(grid);
     // the restart displaces the origin past the interface (in the reflection
     // callable), so the arming distance is only a self-intersection guard
+    // the neutral's reflection callable displaces the origin past the
+    // interface, so this is only a self-intersection guard
     tracer_.setArmingDistance(1e-3f * grid.gridDelta);
     std::vector<float> materialIds(primCell_.size(), 1.f);
     tracer_.setMaterialIds(materialIds);
@@ -230,7 +288,12 @@ public:
       // the ion re-emits SPECULARLY off the wall it grazed, not back into
       // the interface, so the guard alone suffices; and its near-unity
       // sticking ends most rays at the first hit anyway
-      ionTracer_.setArmingDistance(1e-3f * grid.gridDelta);
+      // The ion's reflection callable does NOT displace its origin (the
+      // neutral's does), so this gate is its only protection against
+      // re-interacting inside the interface it just left. Without it an ion
+      // burns its energy on immediate self-hits and never reaches a trench
+      // floor: measured, the floor stops advancing entirely.
+      ionTracer_.setArmingDistance(1.1f * grid.gridDelta);
       std::vector<float> legacyIds(primCell_.size());
       for (size_t p = 0; p < primCell_.size(); ++p) {
         const auto m =
@@ -249,15 +312,18 @@ public:
                                  const std::vector<NumericType> &sticking,
                                  unsigned seed,
                                  int smoothingNeighbors = 1) {
-    std::vector<float> stickingPrim(primCell_.size());
-    for (size_t p = 0; p < primCell_.size(); ++p)
-      stickingPrim[p] = static_cast<float>(sticking[primCell_[p]]);
-    stickingBuffer_.allocUpload(stickingPrim);
-    tracer_.setElementData(stickingBuffer_, 1);
+    // two per-cell arrays, laid out [sticking | walkOut] as the device
+    // indexes them: slot 0 at primID, slot 1 at numElements + primID
+    std::vector<float> cellData(2 * primCell_.size());
+    for (size_t p = 0; p < primCell_.size(); ++p) {
+      cellData[p] = static_cast<float>(sticking[primCell_[p]]);
+      cellData[primCell_.size() + p] = walkOut_[p];
+    }
+    stickingBuffer_.allocUpload(cellData);
+    tracer_.setElementData(stickingBuffer_, 2);
 
     tracer_.setNumberOfRaysFixed(numRays);
     tracer_.setRngSeed(seed);
-    tracer_.prepareParticlePrograms();
     tracer_.apply();
     const auto raw = tracer_.getFlux(0, 0);
 
@@ -300,14 +366,14 @@ public:
   /// convention -- spread, area-normalised with the same sliver guard,
   /// smoothed one ring.
   std::vector<std::vector<NumericType>>
-  traceIon(size_t numRays, NumericType sourceFlux, unsigned seed) {
+  traceIon(size_t numRays, unsigned seed) {
     ionTracer_.setNumberOfRaysFixed(numRays);
     ionTracer_.setRngSeed(seed);
-    ionTracer_.prepareParticlePrograms();
     ionTracer_.apply();
 
-    const NumericType rayRate =
-        sourceFlux * sourceArea_ / static_cast<NumericType>(numRays);
+    // the geometric share only; each channel is scaled by its own species
+    const NumericType rayShare =
+        sourceArea_ / static_cast<NumericType>(numRays);
     const NumericType delta = lattice_->gridDelta();
     NumericType faceArea = 1;
     for (int d = 0; d < D - 1; ++d)
@@ -320,6 +386,7 @@ public:
     std::vector<std::vector<NumericType>> channels(
         nChannels_, std::vector<NumericType>(fill_->size(), NumericType(0)));
     for (size_t c = 0; c < nChannels_; ++c) {
+      const NumericType rayRate = rayShare * channelFlux_[c];
       const auto raw = ionTracer_.getFlux(0, static_cast<int>(c));
       std::vector<NumericType> spread(fill_->size(), NumericType(0));
       for (size_t p = 0; p < raw.size(); ++p)

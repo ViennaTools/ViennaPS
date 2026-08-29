@@ -108,9 +108,17 @@ public:
     // of several hundred is a near-collimated beam, which is what makes the
     // sidewalls of a feature see almost no ion flux.
     const NumericType exponent = NumericType(1) / (src.exponent + NumericType(1));
+    // The geometric share a ray carries. The SOURCE FLUX is applied per
+    // channel at deposit time, because each yield channel writes into its own
+    // gas species and those species may declare different fluxes -- which is
+    // what the level-set arm does (gamma[g] = flux[g] * gas[g].sourceFlux).
+    // Scaling every channel by channel 0's flux silently halves or doubles
+    // the others.
     const NumericType rayRate =
-        mech_.gas[mech_.ionYields[0].gasIndex].sourceFlux * sourceArea /
-        static_cast<NumericType>(numRays);
+        sourceArea / static_cast<NumericType>(numRays);
+    std::vector<NumericType> channelFlux(nChannels);
+    for (size_t c = 0; c < nChannels; ++c)
+      channelFlux[c] = mech_.gas[mech_.ionYields[c].gasIndex].sourceFlux;
 
     const NumericType thetaRMin = src.thetaRMin * NumericType(M_PI) / 180;
     const NumericType thetaRMax = src.thetaRMax * NumericType(M_PI) / 180;
@@ -196,7 +204,7 @@ public:
             const NumericType Y =
                 A * std::max(sqrtE - std::sqrt(Eth), NumericType(0)) * f;
             if (Y > NumericType(0))
-              walker_.deposit(mine[c], hit.index, Y * weight);
+              walker_.deposit(mine[c], hit.index, Y * weight * channelFlux[c]);
           }
 
           // A steep hit is absorbed; a grazing one reflects.

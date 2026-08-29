@@ -23,7 +23,12 @@ viennacore_add_optixir(
   "${VIENNAPS_GPU_MODELS}/SingleParticle.cuh"
   "${VIENNAPS_GPU_MODELS}/SingleParticleALD.cuh"
   "${VIENNAPS_GPU_MODELS}/SurfaceChemistry.cuh"
-  "${VIENNAPS_GPU_MODELS}/TEOSPECVD.cuh")
+  "${VIENNAPS_GPU_MODELS}/TEOSPECVD.cuh"
+  # ViennaRay's shared device headers too: these callables read LaunchParams,
+  # so a layout change there must rebuild this module or the device reads a
+  # stale struct with no build error (it happened: the ion silently lost its
+  # yield parameters and stopped etching).
+  "${VIENNARAY_GPU_SHARED_HEADERS}")
 
 set(VIENNAPS_GPU_DEPENDENCIES
     ViennaPSCallableWrapper ${VIENNARAY_GPU_DEPENDENCIES}

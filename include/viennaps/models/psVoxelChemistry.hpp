@@ -49,6 +49,11 @@ template <class NumericType, int D> class VoxelChemistry {
   viennacs::NormalEstimator estimator_ =
       viennacs::NormalEstimator::FillGradientYoungs;
   viennacs::TraversalEngine engine_ = viennacs::TraversalEngine::GridDDA;
+  /// Species seeds are spaced far enough apart that species g at one step
+  /// cannot collide with species g-1 at the next: with a stride of one,
+  /// consecutive steps re-traced an identical primary-ray pattern and the
+  /// Monte-Carlo noise stopped averaging out over a slowly moving surface.
+  static constexpr unsigned kSeedStride = 7919u;
   bool useGPU_ = false;
 #ifdef VIENNACORE_COMPILE_GPU
   // lazily created on the first GPU trace; a cache, not part of the value
@@ -152,28 +157,37 @@ public:
       }
       if (before[id] != gas || fill_[id] < NumericType(0.5))
         continue;
+      // likewise nearest-first: a grown cell takes the label of the closest
+      // solid it grew from, not of whichever one raster order reaches first
+      int adopted = -1, adoptedDist = 0;
       for (int ring = 1; ring <= 2; ++ring) {
         const int width = 2 * ring + 1;
         int span = 1;
         for (int d = 0; d < D; ++d)
           span *= width;
-        bool done = false;
-        for (int q = 0; q < span && !done; ++q) {
+        for (int q = 0; q < span; ++q) {
           std::array<int, D> probe = idx;
-          int r = q;
+          int r = q, dist = 0;
           for (int d = 0; d < D; ++d) {
-            probe[d] += r % width - ring;
+            const int off = r % width - ring;
+            probe[d] += off;
+            dist += off * off;
             r /= width;
           }
+          if (dist == 0)
+            continue;
           const int nid = lattice_.cellId(probe);
-          if (nid >= 0 && before[nid] != gas) {
-            material_[id] = before[nid];
-            done = true;
+          if (nid >= 0 && before[nid] != gas &&
+              (adopted < 0 || dist < adoptedDist)) {
+            adopted = before[nid];
+            adoptedDist = dist;
           }
         }
-        if (done)
+        if (adopted >= 0)
           break;
       }
+      if (adopted >= 0)
+        material_[id] = adopted;
     }
     resolveMaterials();
   }
@@ -216,23 +230,40 @@ public:
       if (id < 0 || material_[id] != gas)
         continue;
 
-      int found = -1;
-      for (int ring = 1; ring <= 3 && found < 0; ++ring) {
+      // The NEAREST non-gas cell, by squared distance. Taking the first hit
+      // in raster order instead starts at the all-minus corner, so the
+      // 3-diagonal below-left-behind is tested before the face neighbour
+      // underneath: at a mask/substrate step that assigns Mask to cells
+      // sitting on silicon, and the mask's yield overrides then freeze a ring
+      // of cells along the mask foot -- the very footing artefact this
+      // resolution exists to prevent.
+      int found = -1, bestDist = 0;
+      for (int ring = 1; ring <= 3; ++ring) {
         const int width = 2 * ring + 1;
         int span = 1;
         for (int d = 0; d < D; ++d)
           span *= width;
-        for (int s = 0; s < span && found < 0; ++s) {
+        for (int s = 0; s < span; ++s) {
           std::array<int, D> probe = idx;
-          int r = s;
+          int r = s, dist = 0;
           for (int d = 0; d < D; ++d) {
-            probe[d] += r % width - ring;
+            const int off = r % width - ring;
+            probe[d] += off;
+            dist += off * off;
             r /= width;
           }
+          if (dist == 0)
+            continue;
           const int nid = lattice_.cellId(probe);
-          if (nid >= 0 && material_[nid] != gas)
+          if (nid >= 0 && material_[nid] != gas &&
+              (found < 0 || dist < bestDist)) {
             found = material_[nid];
+            bestDist = dist;
+          }
         }
+        // a nearer ring cannot be beaten by a farther one
+        if (found >= 0)
+          break;
       }
       if (found >= 0)
         effectiveMaterial_[id] = found;
@@ -286,6 +317,14 @@ public:
     }
 #endif
 
+    // ONE flux object for the whole step: the fills do not move between the
+    // species traces, so the acceleration structure and the per-cell caches
+    // are built once, as the GPU path already does. Rebuilding per species
+    // charged the CPU arm two extra full builds per step against the GPU's
+    // one, which a wall-time comparison would have read as method cost.
+    viennacs::VoxelFlux<NumericType, D> flux(lattice_, fill_, estimator_);
+    flux.setTraversalEngine(engine_);
+
     for (size_t g = 0; g < nGas; ++g) {
       const auto &species = mech_.gas[g];
       if (!species.traced || species.isIonChannel)
@@ -325,11 +364,9 @@ public:
         continue;
       }
 #endif
-      viennacs::VoxelFlux<NumericType, D> flux(lattice_, fill_, estimator_);
-      flux.setTraversalEngine(engine_);
       const auto result =
           flux.trace(raysPerStep_, species.sourceFlux, sticking,
-                     NumericType(1), seed + static_cast<unsigned>(g));
+                     NumericType(1), seed + kSeedStride * static_cast<unsigned>(g));
       gamma[g] = result.flux;
     }
 
@@ -340,9 +377,7 @@ public:
     if (!mech_.ionYields.empty()) {
 #ifdef VIENNACORE_COMPILE_GPU
       if (useGPU_ && gpuFlux_ && gpuFlux_->ionConfigured()) {
-        const auto channels = gpuFlux_->traceIon(
-            raysPerStep_,
-            mech_.gas[mech_.ionYields[0].gasIndex].sourceFlux, seed + 977u);
+        const auto channels = gpuFlux_->traceIon(raysPerStep_, seed + 977u);
         for (size_t c = 0; c < channels.size(); ++c)
           gamma[mech_.ionYields[c].gasIndex] = channels[c];
         return gamma;
