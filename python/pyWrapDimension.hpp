@@ -960,7 +960,25 @@ template <int D> void bindApi(py::module &module) {
            py::arg("mechanism"))
       .def("setMechanism", &SurfaceChemistry<T, D>::setMechanism)
       .def("getMechanism", &SurfaceChemistry<T, D>::getMechanism,
-           py::return_value_policy::reference);
+           py::return_value_policy::reference)
+      .def("addMechanism", &SurfaceChemistry<T, D>::addMechanism,
+           py::arg("name"), py::arg("mechanism"),
+           "Register the chemistry governing one step of an atomic layer "
+           "cycle. Every step must declare the same surface species.")
+      .def("setAtomicLayerProcess",
+           &SurfaceChemistry<T, D>::setAtomicLayerProcess,
+           py::arg("enable") = true,
+           "Integrate the coverages in time and carry them from one step of "
+           "the cycle into the next.")
+      .def("setSourceFlux", &SurfaceChemistry<T, D>::setSourceFlux,
+           py::arg("label"), py::arg("flux"),
+           "The incident flux of one gas species.")
+      .def("setMaxCoverageChange",
+           &SurfaceChemistry<T, D>::setMaxCoverageChange,
+           py::arg("maxChange"),
+           "Largest coverage change permitted in one integration sub-step.")
+      .def("growthPerCycle", &SurfaceChemistry<T, D>::growthPerCycle,
+           "Growth per cycle on the open field, in the process length unit.");
 
   // Fluorocarbon Etching
   py::class_<FluorocarbonEtching<T, D>,

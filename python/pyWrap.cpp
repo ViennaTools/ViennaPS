@@ -947,6 +947,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("toMetaDataString", &CoverageParameters::toMetaDataString,
            "Convert the coverage parameters to a metadata string.");
 
+  // CyclePhase: one step of an atomic layer cycle
+  py::class_<CyclePhase>(module, "CyclePhase")
+      .def(py::init<>())
+      .def_readwrite("name", &CyclePhase::name)
+      .def_readwrite("duration", &CyclePhase::duration)
+      .def_readwrite("timeStep", &CyclePhase::timeStep)
+      .def_readwrite("activeSpecies", &CyclePhase::activeSpecies)
+      .def_readwrite("mechanism", &CyclePhase::mechanism)
+      .def("isPurge", &CyclePhase::isPurge);
+
   // AtomicLayerProcessParameters
   py::class_<AtomicLayerProcessParameters>(module,
                                            "AtomicLayerProcessParameters")
@@ -959,6 +969,16 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &AtomicLayerProcessParameters::purgePulseTime)
       .def_readwrite("purgeTimeStep",
                      &AtomicLayerProcessParameters::purgeTimeStep)
+      .def_readwrite("phases", &AtomicLayerProcessParameters::phases)
+      .def("addPhase", &AtomicLayerProcessParameters::addPhase,
+           py::arg("name"), py::arg("duration"), py::arg("timeStep"),
+           py::arg("activeSpecies") = std::vector<std::string>{},
+           py::arg("mechanism") = std::string{},
+           "Append one step of the cycle: its duration, the interval at which "
+           "the fluxes are traced and the coverages advanced, the species "
+           "flowing, and the mechanism governing it. No species means a purge.")
+      .def("cycle", &AtomicLayerProcessParameters::cycle,
+           "The steps of one cycle, in order.")
       .def("toMetaData", &AtomicLayerProcessParameters::toMetaData,
            "Convert the ALD process parameters to a metadata dict.")
       .def("toMetaDataString", &AtomicLayerProcessParameters::toMetaDataString,
