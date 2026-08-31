@@ -3,6 +3,7 @@
 #include <psConstants.hpp>
 #include <psDomain.hpp>
 #include <psExtrude.hpp>
+#include <psModelDb.hpp>
 #include <psReader.hpp>
 #include <psSlice.hpp>
 #include <psUnits.hpp>
@@ -21,6 +22,9 @@
 #include <process/psProcess.hpp>
 #include <process/psSurfaceDiffusion.hpp>
 
+#include <models/psAnneal.hpp>
+#include <models/psAnnealParams.hpp>
+#include <models/psAnnealSetup.hpp>
 #include <models/psCF4ArEtching.hpp>
 #include <models/psSurfaceChemistry.hpp>
 #include <models/psCF4O2Etching.hpp>
@@ -30,8 +34,13 @@
 #include <models/psFluorocarbonEtching.hpp>
 #include <models/psGeometricDistributionModels.hpp>
 #include <models/psHBrO2Etching.hpp>
+#include <models/psImplantParams.hpp>
+#include <models/psImplantProfile.hpp>
+#include <models/psImplantSetup.hpp>
 #include <models/psIonBeamEtching.hpp>
+#include <models/psIonImplantation.hpp>
 #include <models/psIsotropicProcess.hpp>
+#include <models/psModelDbLookup.hpp>
 #include <models/psMultiParticleProcess.hpp>
 #include <models/psNeutralTransport.hpp>
 #include <models/psOxidation.hpp>

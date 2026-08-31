@@ -13,7 +13,34 @@ import viennaps.d3
 from . import constants
 from . import gpu
 from . import util
-__all__: list[str] = ['AdvectionParameters', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GpuMode', 'GpuPreconditioner', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel',  'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'SingleParticleALDParams', 'SiliconOrientation', 'Slice', 'SurfaceDiffusionParameters', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'gpu', 'gpuAvailable', 'setNumThreads', 'util', 'version']
+__all__: list[str] = ['AdvectionParameters', 'AnnealMode', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GpuMode', 'GpuPreconditioner', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDoseControl', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'PearsonIVParameters', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'SiliconOrientation', 'SingleParticleALDParams', 'Slice', 'SurfaceDiffusionParameters', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
+
+class AnnealMode(enum.IntEnum):
+    """Anneal diffusion solver mode"""
+    Explicit: int = ...
+    GaussSeidel: int = ...
+
+class ImplantDoseControl(enum.IntEnum):
+    """Implant dose control mode"""
+    Off: int = ...
+    WaferDose: int = ...
+    BeamDose: int = ...
+
+class PearsonIVParameters:
+    """Pearson IV moment parameters for ion implant profiles."""
+    mu: float
+    """Projected range / mean depth (length units, e.g. nm)"""
+    sigma: float
+    """Straggle / standard deviation (same units)"""
+    beta: float
+    """ViennaPS 'skewness' config key → β₂ position in Pearson formula"""
+    gamma: float
+    """ViennaPS 'kurtosis' config key → γ₁ position in Pearson formula"""
+    def __init__(self) -> None: ...
+    def __repr__(self) -> str: ...
+def setModelDbRoot(path: str) -> None: ...
+def getModelDbRoot() -> str: ...
+def initModelDbRoot() -> None: ...
 class OxidantType(enum.IntEnum):
     Dry: int = ...
     Wet: int = ...
@@ -1734,5 +1761,5 @@ def gpuAvailable() -> bool:
     """
 def setNumThreads(arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
     ...
-__version__: str = '4.6.1'
-version: str = '4.6.1'
+__version__: str = '4.7.0'
+version: str = '4.7.0'
