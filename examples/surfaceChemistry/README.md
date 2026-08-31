@@ -21,7 +21,9 @@ from one material to the next.
 |---|---|
 | `surfaceChemistry.cpp` | the C++ driver: reads a mechanism file, builds the model, runs a trench or a hole |
 | `surfaceChemistry.py` | the same in Python, reading either the `.yaml` or the mechanism data |
-| `reactions/` | twelve reaction files, each with its compiled `.mechanism.json` |
+| `reactions/` | fifteen reaction files, each with its compiled `.mechanism.json` |
+| `sinPEALD.cpp` | a SiNx PE-ALD cycle in a trench: two chemistries, coverages carried from step to step |
+| `reactions/sin_peald_cycle.py` | the same cycle integrated in time with no geometry: the place to fit the ALD rate constants |
 | `demoMultiMaterial.py` | selective growth on a SiGe/Si superlattice |
 | `demoPassivation.py` | a polymer film competing with an etch in a masked trench |
 | `validation/diamondRadicalFraction.py` | the diamond mechanism against its published closed form |
@@ -88,6 +90,7 @@ that does not know the version refuses the file rather than guessing.
 |---|---|---|
 | `silane.yaml` | the base case: LPCVD polysilicon from silane | checked against a by-hand implementation of the same mechanism |
 | `silane_kads.yaml` | a sticking coefficient derived from an adsorption rate constant, `s = 4k_ads/v̄` | same chemistry, different input form |
+| `silane_pressure.yaml` | the SiH₄ supply as a partial pressure (mTorr), converted by kinetic theory, `Γ = p/√(2πmk_BT)` | same chemistry, in reactor units |
 | `silane_selective.yaml` | a chemistry restricted to one material | illustrative |
 | `sige_stack.yaml` | per-material sticking *and* barrier on a SiGe/Si stack | illustrative; the Ge-catalysed H desorption is real |
 | `gaas_reversible.yaml` | two site types (cation and anion) and a reversible step | Mountziaris & Jensen 1991, Table II, reduced to [S5], [S11], [S22] |
@@ -98,6 +101,8 @@ that does not know the version refuses the file rather than guessing.
 | `cf4ar_etch.yaml` | ion-enhanced etching, and ion–neutral synergy (15× the sum of the parts) | illustrative |
 | `sf6o2.yaml` | **the acceptance test**: ViennaPS's own SF₆/O₂ silicon etch, written as a reaction file | every number from `SF6O2Etching::defaultParameters()`; matches the hand-written model to 0.16 % |
 | `polymer_etch.yaml` | passivation competing with the etch: two solids, one deposited while the other is removed | illustrative; the forms are standard |
+| `sin_peald_dis_dose.yaml` | SiNx PE-ALD, step 1 of 2: the diiodosilane dose, integrated in time — a dose saturates rather than reaching a steady state | Zeghouane et al. 2024; chemistry transcribed from Ovanesyan et al. 2015 and Ande et al. 2015 |
+| `sin_peald_n2h2_plasma.yaml` | step 2 of 2: the N₂-H₂ plasma strips the iodine and grows the Si-N network; the coverages the dose left are its initial condition | same sources |
 
 ## Demonstrations beyond the driver
 
@@ -143,11 +148,12 @@ is a check of the framework rather than a demonstration of it.
 
 ## What this directory does and does not contain
 
-**Running any of the twelve mechanisms needs nothing but this directory** and a
+**Running any of the fifteen mechanisms needs nothing but this directory** and a
 ViennaPS install. That holds for the C++ driver, the Python driver, both demos
 and the validation script.
 
-**Writing a twelfth needs one install.** Compiling a reaction file -- parsing the
+**Writing a sixteenth needs one install** (as does `reactions/sin_peald_cycle.py`,
+which reads the `.yaml` files directly). Compiling a reaction file -- parsing the
 equations, checking the atom balance, inferring the free sites, deriving the
 stoichiometry -- is ViennaChem's job:
 
