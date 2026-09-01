@@ -173,7 +173,11 @@ int main(int argc,char**argv){
       std::cout<<"\n"; };
     const T maskH = analytic<0 ? T(15) : T(0);
     const bool maskOnly = maskH > 0; // flat substrate; the mask is the opening
-    const T timeR = maskOnly ? 15*time : time; // dig ~30 nm of real topography
+    // dose multiplier: 15 digs ~27 nm. Settable so a convergence sweep can
+    // be produced from one binary without editing it.
+    const char *doseEnv = std::getenv("VOXEL_DOSE");
+    const T dose = doseEnv ? std::atof(doseEnv) : T(15);
+    const T timeR = maskOnly ? dose*time : time;
     const auto lsr=levelSetArm(mech,timeR,200,maskH,maskOnly);
     row(maskH>0?"level set (mask/floor)":"level set",lsr);
     const auto vy=voxelArm(mech,timeR,maskOnly?150:10,500000,
