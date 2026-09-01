@@ -425,6 +425,139 @@ public:
 };
 } // namespace impl
 
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
+template <typename NumericType, int D>
+class FluorocarbonEtching : public ProcessModelGPU<NumericType, D> {
+  bool initialized = false;
+
+public:
+  explicit FluorocarbonEtching(
+      const viennaps::FluorocarbonParameters<NumericType> &parameters)
+      : params_(parameters) {
+    initializeModel();
+  }
+
+  void setParameters(
+      const viennaps::FluorocarbonParameters<NumericType> &parameters) {
+    params_ = parameters;
+    initializeModel();
+  }
+
+  void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                  const NumericType processDuration) override {
+    if (initialized) {
+      return;
+    }
+
+    auto surfModel = std::dynamic_pointer_cast<
+        impl::FluorocarbonSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->resetTotalRates();
+    }
+
+    initialized = true;
+  }
+
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) override {
+    auto surfModel = std::dynamic_pointer_cast<
+        impl::FluorocarbonSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->logTotalRates();
+    }
+
+    initialized = false;
+  }
+
+private:
+  viennaps::FluorocarbonParameters<NumericType> params_;
+  viennaps::gpu::FluorocarbonParameters gpuParams_;
+
+  void initializeModel() {
+    // check if units have been set
+    if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
+        units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
+      VIENNACORE_LOG_ERROR("Units have not been set.");
+    }
+
+    if (params_.materials.empty()) {
+      VIENNACORE_LOG_WARNING("No materials have been set in the parameters.");
+    }
+
+    gpuParams_ = viennaps::gpu::FluorocarbonParameters(params_);
+
+    // particles
+    viennaray::gpu::Particle<NumericType> ion;
+    ion.name = "Ion"; // name for shader programs postfix
+    ion.dataLabels.push_back("ionSputterFlux");
+    ion.dataLabels.push_back("ionEnhancedFlux");
+    ion.dataLabels.push_back("ionEnhancedPassivationFlux");
+    ion.sticking = 0.f;
+    ion.cosineExponent = params_.Ions.exponent;
+
+    viennaray::gpu::Particle<NumericType> etchant;
+    etchant.name = "Etchant";
+    etchant.dataLabels.push_back("etchantFlux");
+    etchant.cosineExponent = 1.f;
+    for (auto entry : gpuParams_.materials) {
+      etchant.materialSticking[static_cast<int>(entry.id)] = entry.beta_e;
+    }
+
+    viennaray::gpu::Particle<NumericType> poly;
+    poly.name = "Polymer";
+    poly.dataLabels.push_back("polyFlux");
+    poly.cosineExponent = 1.f;
+    for (auto entry : gpuParams_.materials) {
+      poly.materialSticking[static_cast<int>(entry.id)] = entry.beta_p;
+    }
+
+    std::unordered_map<std::string, unsigned> pMap = {
+        {"Ion", 0}, {"Etchant", 1}, {"Polymer", 2}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__fluorocarbonIonCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__fluorocarbonIonReflection"},
+        {0, viennaray::gpu::CallableSlot::INIT,
+         "__direct_callable__fluorocarbonIonInit"},
+        {1, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__fluorocarbonNeutralCollision"},
+        {1, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__fluorocarbonNeutralReflection"},
+        {2, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__fluorocarbonNeutralCollision"},
+        {2, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__fluorocarbonNeutralReflection"}};
+    this->setParticleCallableMap(pMap, cMap);
+
+    // surface model
+    auto surfModel =
+        SmartPointer<impl::FluorocarbonSurfaceModel<NumericType, D>>::New(
+            params_);
+
+    // velocity field
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("FluorocarbonEtching");
+    this->particles.clear();
+    this->insertNextParticleType(ion);
+    this->insertNextParticleType(etchant);
+    this->insertNextParticleType(poly);
+    this->addProcessMetaData(params_);
+    this->addUnitsMetaData();
+  }
+};
+
+} // namespace gpu
+#endif
+
 template <typename NumericType, int D>
 class FluorocarbonEtching : public ProcessModelCPU<NumericType, D> {
   bool initialized = false;
@@ -507,10 +640,8 @@ private:
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(poly);
-    this->processMetaData = params_.toProcessMetaData();
-    this->processMetaData["Units"] = std::vector<double>{
-        static_cast<double>(units::Length::getInstance().getUnit()),
-        static_cast<double>(units::Time::getInstance().getUnit())};
+    this->addProcessMetaData(params_);
+    this->addUnitsMetaData();
   }
 };
 

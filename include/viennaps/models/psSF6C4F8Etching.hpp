@@ -84,8 +84,8 @@ private:
     this->processData.alloc(sizeof(viennaps::gpu::PlasmaEtchingParameters));
     this->processData.upload(&deviceParams, 1);
     this->hasGPU = true;
-
-    this->processMetaData = params.toProcessMetaData();
+    this->addProcessMetaData(params);
+    this->addUnitsMetaData();
   }
 
   void
@@ -242,17 +242,12 @@ private:
     this->setVelocityField(velField);
 
     this->setProcessName("SF6C4F8Etching");
+    this->addProcessMetaData(params);
+    this->addUnitsMetaData();
     this->hasGPU = true;
-
-    processMetaData = params.toProcessMetaData();
-    // add units
-    processMetaData["Units"] = std::vector<double>{
-        static_cast<double>(units::Length::getInstance().getUnit()),
-        static_cast<double>(units::Time::getInstance().getUnit())};
   }
 
   PlasmaEtchingParameters<NumericType> params;
-  using ProcessModelCPU<NumericType, D>::processMetaData;
 };
 
 PS_PRECOMPILE_PRECISION_DIMENSION(SF6C4F8Etching)

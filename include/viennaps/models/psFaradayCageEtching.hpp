@@ -1,7 +1,6 @@
 #pragma once
 
 #include "psIonBeamEtching.hpp"
-#include "psPipelineParameters.hpp"
 
 #include "../materials/psMaterialMap.hpp"
 #include "../process/psProcessModel.hpp"

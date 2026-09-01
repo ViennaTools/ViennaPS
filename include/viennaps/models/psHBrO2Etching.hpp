@@ -97,8 +97,8 @@ private:
     this->processData.alloc(sizeof(viennaps::gpu::PlasmaEtchingParameters));
     this->processData.upload(&deviceParams, 1);
     this->hasGPU = true;
-
-    this->processMetaData = params.toProcessMetaData();
+    this->addProcessMetaData(params);
+    this->addUnitsMetaData();
   }
 
   void
@@ -259,12 +259,8 @@ private:
 
     this->setProcessName("HBrO2Etching");
     this->hasGPU = true;
-
-    this->processMetaData = params.toProcessMetaData();
-    // add units
-    this->processMetaData["Units"] = std::vector<double>{
-        static_cast<double>(units::Length::getInstance().getUnit()),
-        static_cast<double>(units::Time::getInstance().getUnit())};
+    this->addProcessMetaData(params);
+    this->addUnitsMetaData();
   }
 
   PlasmaEtchingParameters<NumericType> params;

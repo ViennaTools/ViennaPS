@@ -96,7 +96,8 @@ private:
     this->processData.upload(&deviceParams, 1);
     this->hasGPU = true;
 
-    this->processMetaData = params.toProcessMetaData();
+    this->addProcessMetaData(params);
+    this->addUnitsMetaData();
   }
 
   void
@@ -259,12 +260,8 @@ private:
 
     this->setProcessName("SF6O2Etching");
     this->hasGPU = true;
-
-    this->processMetaData = params.toProcessMetaData();
-    // add units
-    this->processMetaData["Units"] =
-        std::vector<double>{static_cast<double>(units::Length::getUnit()),
-                            static_cast<double>(units::Time::getUnit())};
+    this->addProcessMetaData(params);
+    this->addUnitsMetaData();
   }
 
   PlasmaEtchingParameters<NumericType> params;

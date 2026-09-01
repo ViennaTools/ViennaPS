@@ -549,7 +549,8 @@ public:
 
     if (Logger::hasInfo()) {
       surfModel->resetTotalRates();
-      initialPosition = getSubstratePosition<NumericType, D>(domain, surfModel);
+      initialPosition = getSubstratePosition<NumericType, D>(
+          domain, surfModel->params_.rateFactors);
       VIENNACORE_LOG_DEBUG(
           "Initial substrate position: " + std::to_string(initialPosition) +
           " " + units::Length::toString());
@@ -565,8 +566,8 @@ public:
 
     if (Logger::hasInfo()) {
       surfModel->logTotalRates();
-      double finalPosition =
-          getSubstratePosition<NumericType, D>(domain, surfModel);
+      double finalPosition = getSubstratePosition<NumericType, D>(
+          domain, surfModel->params_.rateFactors);
       VIENNACORE_LOG_DEBUG(
           "Final substrate position: " + std::to_string(finalPosition) + " " +
           units::Length::toString());

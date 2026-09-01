@@ -5,7 +5,6 @@
 #include "../psConstants.hpp"
 #include "psIonBeamParameters.hpp"
 #include "psIonModelUtil.hpp"
-#include "psPipelineParameters.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -316,7 +315,7 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
-    this->processMetaData = params_.toProcessMetaData();
+    this->addProcessMetaData(params_);
     this->hasGPU = true;
   }
 
@@ -360,7 +359,7 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
-    this->processMetaData = params_.toProcessMetaData();
+    this->addProcessMetaData(params_);
     this->hasGPU = true;
   }
 

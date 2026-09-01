@@ -93,14 +93,14 @@ int main(int argc, char *argv[]) {
   // print final surface
   geometry->saveVolumeMesh("final");
 
-  std::cout << "Extruding to 3D ..." << std::endl;
-  auto extruded = Domain<NumericType, 3>::New();
-  Vec2D<NumericType> extrudeExtent{-20., 20.};
-  Extrude<NumericType>(geometry, extruded, extrudeExtent, 0,
-                       {viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
-                        viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
-                        viennals::BoundaryConditionEnum::INFINITE_BOUNDARY})
-      .apply();
+  // std::cout << "Extruding to 3D ..." << std::endl;
+  // auto extruded = Domain<NumericType, 3>::New();
+  // Vec2D<NumericType> extrudeExtent{-20., 20.};
+  // Extrude<NumericType>(geometry, extruded, extrudeExtent, 0,
+  //                      {viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+  //                       viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY,
+  //                       viennals::BoundaryConditionEnum::INFINITE_BOUNDARY})
+  //     .apply();
 
-  extruded->saveHullMesh("final_extruded");
+  // extruded->saveHullMesh("final_extruded");
 }
