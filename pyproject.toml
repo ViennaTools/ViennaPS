@@ -23,5 +23,5 @@ Issues = "https://github.com/ViennaTools/ViennaPS/issues"
 build-dir = "build"
 cmake.build-type = "Release"
 cmake.args = ["-DVIENNAPS_BUILD_PYTHON=ON"]
-sdist.exclude = ["tests", "examples", "lib", "assets"]
+sdist.exclude = ["tests", "examples", "lib", "assets", "benchmark"]
 wheel.packages = ["python/viennaps"]
