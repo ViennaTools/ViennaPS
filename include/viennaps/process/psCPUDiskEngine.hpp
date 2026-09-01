@@ -79,6 +79,7 @@ public:
                              context.rayTracingParams.diskRadius);
     }
     rayTracer_.setMaterialIds(materialIds);
+    rayTracer_.commitGeometry();
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;

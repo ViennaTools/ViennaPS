@@ -386,11 +386,12 @@ class FluorocarbonNeutral
                                  NumericType> {
   const FluorocarbonParameters<NumericType> &p_;
   const std::string label_;
+  const bool isEtchant_ = true; // true for etchant, false for polymer
 
 public:
   FluorocarbonNeutral(const FluorocarbonParameters<NumericType> &parameters,
-                      const std::string &label)
-      : p_(parameters), label_(label) {}
+                      const std::string &label, bool isEtchant = true)
+      : p_(parameters), label_(label), isEtchant_(isEtchant) {}
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
                         const int, PointData<NumericType> &localData,
@@ -412,8 +413,12 @@ public:
     NumericType Seff = std::max(1 - phi_e - phi_p, NumericType(0));
 
     if (Seff > 0) {
-      Seff *= p_.getMaterialParameters(MaterialMap::mapToMaterial(materialId))
-                  .beta_e;
+      Seff *=
+          isEtchant_
+              ? p_.getMaterialParameters(MaterialMap::mapToMaterial(materialId))
+                    .beta_e
+              : p_.getMaterialParameters(MaterialMap::mapToMaterial(materialId))
+                    .beta_p;
     }
 
     return std::pair<NumericType, Vec3D<NumericType>>{Seff, direction};
@@ -437,6 +442,8 @@ public:
       : params_(parameters) {
     initializeModel();
   }
+
+  ~FluorocarbonEtching() override { this->processData.free(); }
 
   void setParameters(
       const viennaps::FluorocarbonParameters<NumericType> &parameters) {
@@ -490,13 +497,15 @@ private:
     }
 
     gpuParams_ = viennaps::gpu::FluorocarbonParameters(params_);
+    this->processData.alloc(sizeof(viennaps::gpu::FluorocarbonParameters));
+    this->processData.upload(&gpuParams_, 1);
 
     // particles
     viennaray::gpu::Particle<NumericType> ion;
     ion.name = "Ion"; // name for shader programs postfix
     ion.dataLabels.push_back("ionSputterFlux");
     ion.dataLabels.push_back("ionEnhancedFlux");
-    ion.dataLabels.push_back("ionEnhancedPassivationFlux");
+    ion.dataLabels.push_back("ionpeFlux");
     ion.sticking = 0.f;
     ion.cosineExponent = params_.Ions.exponent;
 
@@ -504,7 +513,7 @@ private:
     etchant.name = "Etchant";
     etchant.dataLabels.push_back("etchantFlux");
     etchant.cosineExponent = 1.f;
-    for (auto entry : gpuParams_.materials) {
+    for (auto entry : params_.materials) {
       etchant.materialSticking[static_cast<int>(entry.id)] = entry.beta_e;
     }
 
@@ -512,7 +521,7 @@ private:
     poly.name = "Polymer";
     poly.dataLabels.push_back("polyFlux");
     poly.cosineExponent = 1.f;
-    for (auto entry : gpuParams_.materials) {
+    for (auto entry : params_.materials) {
       poly.materialSticking[static_cast<int>(entry.id)] = entry.beta_p;
     }
 
@@ -546,12 +555,17 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("FluorocarbonEtching");
-    this->particles.clear();
+    this->getParticleTypes().clear();
+
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(poly);
+
     this->addProcessMetaData(params_);
     this->addUnitsMetaData();
+
+    this->hasGPU = true;
+    this->setUseMaterialIds(true);
   }
 };
 
@@ -604,6 +618,15 @@ public:
     initialized = false;
   }
 
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
+    auto model =
+        SmartPointer<gpu::FluorocarbonEtching<NumericType, D>>::New(params_);
+    model->setProcessName(this->getProcessName().value());
+    return model;
+  }
+#endif
+
 private:
   FluorocarbonParameters<NumericType> params_;
 
@@ -621,9 +644,9 @@ private:
     // particles
     auto ion = std::make_unique<impl::FluorocarbonIon<NumericType, D>>(params_);
     auto etchant = std::make_unique<impl::FluorocarbonNeutral<NumericType, D>>(
-        params_, "etchantFlux");
+        params_, "etchantFlux", true);
     auto poly = std::make_unique<impl::FluorocarbonNeutral<NumericType, D>>(
-        params_, "polyFlux");
+        params_, "polyFlux", false);
 
     // surface model
     auto surfModel =
@@ -642,6 +665,7 @@ private:
     this->insertNextParticleType(poly);
     this->addProcessMetaData(params_);
     this->addUnitsMetaData();
+    this->hasGPU = true;
   }
 };
 

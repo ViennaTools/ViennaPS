@@ -147,6 +147,7 @@ public:
         pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
         .apply();
     rayTracer_.setMaterialIds(elementMaterialIds);
+    rayTracer_.commitGeometry();
 
     assert(context.diskMesh->nodes.size() > 0);
     assert(!surfaceMesh_->nodes.empty());

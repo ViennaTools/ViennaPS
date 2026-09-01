@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
   constexpr int D = 2;
 
   // set process verbosity
-  Logger::setLogLevel(LogLevel::INTERMEDIATE);
+  // Logger::setLogLevel(LogLevel::INTERMEDIATE);
 
   // Parse the parameters
   util::Parameters params;
@@ -32,66 +32,74 @@ int main(int argc, char *argv[]) {
   units::Time::setUnit(params.get<std::string>("timeUnit"));
 
   // geometry setup
-  auto geometry = Domain<NumericType, D>::New(
-      params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
-  MakeStack<NumericType, D>(geometry, params.get<int>("numLayers"),
-                            params.get("layerHeight"),
-                            params.get("substrateHeight"),
-                            0.0, // holeRadius
-                            params.get("trenchWidth"), params.get("maskHeight"))
-      .apply();
+  auto run = [&](FluxEngineType fluxEngineType, std::string name) {
+    auto geometry = Domain<NumericType, D>::New(
+        params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
+    MakeStack<NumericType, D>(
+        geometry, params.get<int>("numLayers"), params.get("layerHeight"),
+        params.get("substrateHeight"), 0.0, params.get("trenchWidth"),
+        params.get("maskHeight"))
+        .apply();
 
-  // copy top layer for deposition
-  geometry->duplicateTopLevelSet(Material::Polymer);
+    // copy top layer for deposition
+    geometry->duplicateTopLevelSet(Material::Polymer);
 
-  // use pre-defined Fluorocarbon etching model
-  auto parameters = FluorocarbonParameters<NumericType>();
-  parameters.addMaterial({.id = Material::Si, .density = 5.5});
-  parameters.addMaterial({.id = Material::SiO2, .density = 2.2});
-  parameters.addMaterial({.id = Material::Si3N4, .density = 2.3});
-  parameters.addMaterial({.id = Material::Polymer,
-                          .density = 2.,
-                          .beta_e = 0.6,
-                          .A_ie = 0.0361 * 2});
-  parameters.addMaterial({.id = Material::Mask,
-                          .density = 500.,
-                          .beta_p = 0.01,
-                          .beta_e = 0.1,
-                          .Eth_sp = 20.});
+    // use pre-defined Fluorocarbon etching model
+    auto parameters = FluorocarbonParameters<NumericType>();
+    parameters.addMaterial({.id = Material::Si, .density = 5.5});
+    parameters.addMaterial({.id = Material::SiO2, .density = 2.2});
+    parameters.addMaterial({.id = Material::Si3N4, .density = 2.3});
+    parameters.addMaterial({.id = Material::Polymer,
+                            .density = 2.,
+                            .beta_e = 0.6,
+                            .A_ie = 0.0361 * 2});
+    parameters.addMaterial({.id = Material::Mask,
+                            .density = 500.,
+                            .beta_p = 0.01,
+                            .beta_e = 0.1,
+                            .Eth_sp = 20.});
 
-  parameters.ionFlux = params.get("ionFlux");
-  parameters.etchantFlux = params.get("etchantFlux");
-  parameters.polyFlux = params.get("polyFlux");
-  parameters.Ions.meanEnergy = params.get("meanIonEnergy");
-  parameters.Ions.sigmaEnergy = params.get("sigmaIonEnergy");
-  parameters.Ions.exponent = params.get("ionExponent");
+    parameters.ionFlux = params.get("ionFlux");
+    parameters.etchantFlux = params.get("etchantFlux");
+    parameters.polyFlux = params.get("polyFlux");
+    parameters.Ions.meanEnergy = params.get("meanIonEnergy");
+    parameters.Ions.sigmaEnergy = params.get("sigmaIonEnergy");
+    parameters.Ions.exponent = params.get("ionExponent");
 
-  auto model =
-      SmartPointer<FluorocarbonEtching<NumericType, D>>::New(parameters);
+    auto model =
+        SmartPointer<FluorocarbonEtching<NumericType, D>>::New(parameters);
+    model->setProcessName(name);
 
-  AdvectionParameters advectionParams;
-  advectionParams.spatialScheme = SpatialScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
-  advectionParams.timeStepRatio = 0.25;
+    AdvectionParameters advectionParams;
+    advectionParams.spatialScheme =
+        SpatialScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+    advectionParams.timeStepRatio = 0.25;
 
-  CoverageParameters coverageParams;
-  coverageParams.maxIterations = 10;
-  coverageParams.tolerance = 1e-4;
+    CoverageParameters coverageParams;
+    coverageParams.maxIterations = 10;
+    coverageParams.tolerance = 1e-4;
 
-  // process setup
-  Process<NumericType, D> process;
-  process.setDomain(geometry);
-  process.setProcessModel(model);
-  process.setProcessDuration(params.get("processTime"));
-  process.setParameters(advectionParams);
-  process.setParameters(coverageParams);
+    // process setup
+    Process<NumericType, D> process;
+    process.setDomain(geometry);
+    process.setProcessModel(model);
+    process.setProcessDuration(params.get("processTime"));
+    process.setParameters(advectionParams);
+    process.setParameters(coverageParams);
+    process.setFluxEngineType(fluxEngineType);
 
-  // print initial surface
-  geometry->saveVolumeMesh("initial");
+    // print initial surface
+    // geometry->saveVolumeMesh("initial");
 
-  process.apply();
+    process.apply();
 
-  // print final surface
-  geometry->saveVolumeMesh("final");
+    // print final surface
+    geometry->saveVolumeMesh(name);
+  };
+
+  run(FluxEngineType::CPU_TRIANGLE, "final_cpu_triangle");
+  // run(FluxEngineType::CPU_DISK, "final_cpu_disk");
+  run(FluxEngineType::GPU_TRIANGLE, "final_gpu_triangle");
 
   // std::cout << "Extruding to 3D ..." << std::endl;
   // auto extruded = Domain<NumericType, 3>::New();

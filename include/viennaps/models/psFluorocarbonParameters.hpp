@@ -119,34 +119,29 @@ struct FluorocarbonParameters {
   struct MaterialParameters {
     int id = static_cast<int>(Material::Undefined);
 
-    // sticking
-    float beta_p = 0.26f;
-    float beta_e = 0.9f;
-
     // sputtering coefficients
-    float Eth_sp = 18.f; // eV
+    float Eth_sp = 18.f; // eV (sqrt(Eth_sp) is stored in GPU memory)
     float Eth_ie = 4.f;  // eV
     float B_sp = 9.3f;
 
     MaterialParameters() = default;
 
     template <typename Parameters>
-    explicit MaterialParameters(const Parameters &parameters)
+    __vc_host explicit MaterialParameters(const Parameters &parameters)
         : id(static_cast<int>(parameters.id)),
-          beta_p(static_cast<float>(parameters.beta_p)),
-          beta_e(static_cast<float>(parameters.beta_e)),
-          Eth_sp(static_cast<float>(parameters.Eth_sp)),
-          Eth_ie(static_cast<float>(parameters.Eth_ie)),
+          Eth_sp(static_cast<float>(std::sqrt(parameters.Eth_sp))),
+          Eth_ie(static_cast<float>(std::sqrt(parameters.Eth_ie))),
           B_sp(static_cast<float>(parameters.B_sp)) {}
   };
 
   MaterialParameters materials[maxMaterials]{};
   std::uint32_t numMaterials = 0;
 
-  struct IonType {
+  struct {
     float meanEnergy = 100.f; // eV
     float sigmaEnergy = 10.f; // eV
     float exponent = 500.f;
+    float minEnergy = 1.f; // eV
 
     float inflectAngle = 1.55334303f;
     float n_l = 10.f;
@@ -155,13 +150,13 @@ struct FluorocarbonParameters {
 
   FluorocarbonParameters() = default;
 
-#ifndef __CUDACC__
   template <typename Parameters>
-  explicit FluorocarbonParameters(const Parameters &parameters) {
+  __vc_host explicit FluorocarbonParameters(const Parameters &parameters) {
     set(parameters);
   }
 
-  template <typename Parameters> void set(const Parameters &parameters) {
+  template <typename Parameters>
+  __vc_host void set(const Parameters &parameters) {
     Ions.meanEnergy = static_cast<float>(parameters.Ions.meanEnergy);
     Ions.sigmaEnergy = static_cast<float>(parameters.Ions.sigmaEnergy);
     Ions.exponent = static_cast<float>(parameters.Ions.exponent);
@@ -169,27 +164,44 @@ struct FluorocarbonParameters {
     Ions.n_l = static_cast<float>(parameters.Ions.n_l);
     Ions.minAngle = static_cast<float>(parameters.Ions.minAngle);
 
-    auto materials = parameters.materials;
-    std::sort(materials.begin(), materials.end(),
-              [](const auto &a, const auto &b) { return a.id < b.id; });
-
     numMaterials = 0;
-    for (const auto &material : materials) {
+    Ions.minEnergy = std::numeric_limits<float>::max();
+    for (const auto &material : parameters.materials) {
       addMaterial(MaterialParameters(material));
+      Ions.minEnergy =
+          std::min(Ions.minEnergy, static_cast<float>(material.Eth_ie));
     }
   }
 
-  bool addMaterial(const MaterialParameters &material) {
+  __vc_host bool addMaterial(const MaterialParameters &material) {
     if (numMaterials >= maxMaterials) {
+#ifndef __CUDACC__
       VIENNACORE_LOG_ERROR(
           "Fluorocarbon GPU parameters support at most 10 materials.");
+#endif
       return false;
     }
 
     materials[numMaterials++] = material;
     return true;
   }
+
+  __both__ const MaterialParameters &
+  getMaterialParameters(const int material) const {
+    for (std::uint32_t i = 0; i < numMaterials; ++i) {
+      if (materials[i].id == material) {
+        return materials[i];
+      }
+    }
+#ifdef __CUDACC__
+    printf("Material '%d' not found in fluorocarbon model parameters.\n",
+           material);
+#else
+    VIENNACORE_LOG_ERROR("Material '" + std::to_string(material) +
+                         "' not found in fluorocarbon model parameters.");
 #endif
+    return materials[0]; // Return the first material as a fallback
+  }
 };
 
 static_assert(
