@@ -14,8 +14,8 @@ The coverages carry from each step into the next: what the dose leaves on the
 surface is what the plasma acts on, which is the whole content of an ALD
 cycle and is why the coverages here are integrated in time.
 
-    python sinPEALD.py --cycles 50
-    python sinPEALD.py --cycles 50 --gpu
+    python sinPEALD.py --cycles 50                   # GPU if one is present
+    python sinPEALD.py --cycles 50 --engine cpu      # force the CPU engine
     python sinPEALD.py --width 60 --depth 400        # aspect ratio 6.7
 
 Growing into a deep trench is the point of running this on a geometry: the
@@ -76,9 +76,10 @@ def parse():
                    help="largest coverage change per integration sub-step")
     p.add_argument("--width", type=float, default=60.0, help="nm")
     p.add_argument("--depth", type=float, default=300.0, help="nm")
-    p.add_argument("--grid", type=float, default=2.0, help="nm")
+    p.add_argument("--grid", type=float, default=1.0, help="nm")
     p.add_argument("--rays", type=int, default=1000)
-    p.add_argument("--gpu", action="store_true")
+    p.add_argument("--engine", choices=("auto", "cpu", "gpu"), default="auto",
+                   help="flux engine; auto uses the GPU when one is available")
     p.add_argument("--out", default="sinPEALD")
     return p.parse_args()
 
@@ -124,8 +125,18 @@ def main():
     print(f"trench {o.width} nm wide, {o.depth} nm deep "
           f"(aspect ratio {o.depth / o.width:.1f})\n")
 
+    # Only the transport moves to the device; the coverage integration runs
+    # on the host either way, so the two engines agree to within ray noise.
+    have_gpu = ps.gpuAvailable()
+    if o.engine == "gpu" and not have_gpu:
+        sys.exit("no GPU available: build with VIENNAPS_USE_GPU=ON, or use "
+                 "--engine cpu")
+    use_gpu = o.engine == "gpu" or (o.engine == "auto" and have_gpu)
+    print(f"flux engine: {'GPU' if use_gpu else 'CPU'}"
+          f"{' (auto)' if o.engine == 'auto' else ''}")
+
     process = ps.Process(domain, model)
-    process.setFluxEngineType(ps.FluxEngineType.GPU_LINE if o.gpu
+    process.setFluxEngineType(ps.FluxEngineType.GPU_LINE if use_gpu
                               else ps.FluxEngineType.CPU_DISK)
     process.setParameters(alp)
     tracing = ps.RayTracingParameters()

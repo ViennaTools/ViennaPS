@@ -20,6 +20,51 @@ OS_NAME = platform.system()
 REQUIRED_GCC = None
 
 
+def pybind11_requirement(viennaps_dir: Path) -> str | None:
+    """The pybind11 specifier ViennaPS builds against, from its pyproject.
+
+    pybind11 keys its type registry by an internals version that changes
+    across releases, and two extension modules only share registered types
+    when their internals versions agree. ViennaPS and ViennaLS are separate
+    modules that exchange types (ViennaLS registers the boundary-condition
+    enum ViennaPS uses as a default argument), so both must build against the
+    same pybind11 series.
+    """
+    pyproject = viennaps_dir / "pyproject.toml"
+    if not pyproject.exists():
+        return None
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python < 3.11
+        return None
+    with pyproject.open("rb") as f:
+        requires = tomllib.load(f).get("build-system", {}).get("requires", [])
+    for req in requires:
+        if req.replace(" ", "").lower().startswith("pybind11"):
+            return req
+    return None
+
+
+def with_pybind11_constraint(env: dict, requirement: str | None, tmpdir: Path):
+    """Apply `requirement` to pip's isolated build environments as well.
+
+    pip resolves each project's build dependencies in its own isolated
+    environment, so a pin in one project's pyproject does not reach a
+    dependency that pip builds from source. PIP_CONSTRAINT does reach it, and
+    is the documented way to constrain build-time requirements.
+    """
+    if not requirement:
+        return env
+    constraints = tmpdir / "viennatools-build-constraints.txt"
+    existing = env.get("PIP_CONSTRAINT", "").strip()
+    constraints.write_text(requirement + "\n")
+    env["PIP_CONSTRAINT"] = (
+        f"{existing} {constraints}" if existing else str(constraints)
+    )
+    print(f"Constraining build dependencies to: {requirement}")
+    return env
+
+
 def run(cmd, **kwargs):
     print("+", " ".join(str(c) for c in cmd))
     return subprocess.run(cmd, check=True, **kwargs)
@@ -231,8 +276,12 @@ def install_viennals(
     required_version: str,
     verbose: bool,
     gpu_build: bool = False,
+    pybind11_req: str | None = None,
+    constraint_dir: Path | None = None,
 ):
     env = os.environ.copy()
+    if constraint_dir is not None:
+        env = with_pybind11_constraint(env, pybind11_req, constraint_dir)
 
     # On Linux, set CC and CXX environment variables
     if IS_LINUX and REQUIRED_GCC is not None:
@@ -253,6 +302,12 @@ def install_viennals(
         return
 
     current = pip_show_version(pip_path, "ViennaLS")
+    if current is not None and current != required_version:
+        print(
+            f"Installed ViennaLS ({current}) does not match the required "
+            f"version ({required_version}); rebuilding."
+        )
+        current = None
     if current is None:
         print("ViennaLS not installed. A local build is required.")
         which_or_fail("git")  # git is required to clone
@@ -351,6 +406,10 @@ def install_viennaps(
         )
 
     env = os.environ.copy()
+    env = with_pybind11_constraint(
+        env, pybind11_requirement(viennaps_dir), viennaps_dir / "build"
+        if (viennaps_dir / "build").exists() else Path(tempfile.gettempdir())
+    )
 
     # On Linux, set CC and CXX environment variables
     if IS_LINUX and REQUIRED_GCC is not None:
@@ -465,6 +524,10 @@ def main():
     create_or_reuse_venv(venv_dir)
     venv_python, venv_pip = venv_paths(venv_dir)
 
+    # ViennaPS is resolved first: its pyproject carries the pybind11
+    # requirement that every build in this run must agree on.
+    viennaps_dir = get_viennaps_dir(args.viennaps_dir)
+
     # ViennaLS
     viennals_dir = (
         Path(args.viennals_dir).expanduser().resolve() if args.viennals_dir else None
@@ -491,7 +554,19 @@ def main():
             )
             viennals_dir = tmp_path
 
-        install_viennals(venv_pip, viennals_dir, args.viennals_version, args.verbose, not args.no_gpu)
+        # ViennaPS and ViennaLS must build against the same pybind11 series,
+        # or the two extension modules keep separate type registries and the
+        # import fails on an unregistered ViennaHRLE type.
+        pybind11_req = pybind11_requirement(viennaps_dir)
+        install_viennals(
+            venv_pip,
+            viennals_dir,
+            args.viennals_version,
+            args.verbose,
+            not args.no_gpu,
+            pybind11_req=pybind11_req,
+            constraint_dir=Path(tempfile.gettempdir()),
+        )
 
         # ViennaCS
         viennacs_dir = (
@@ -500,7 +575,6 @@ def main():
         install_viennacs(venv_pip, viennacs_dir, args.verbose)
 
         # ViennaPS
-        viennaps_dir = get_viennaps_dir(args.viennaps_dir)
         install_viennaps(
             venv_pip,
             viennaps_dir,

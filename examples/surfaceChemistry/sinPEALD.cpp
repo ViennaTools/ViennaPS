@@ -15,6 +15,9 @@
 //
 //     ./sinPEALD --cycles 50 --width 60 --depth 400
 //
+// The flux engine defaults to the GPU when one is available; --engine cpu
+// forces the host path.
+//
 // Growing into a deep trench is the point of running this on a geometry at
 // all: the plasma step's conformality is set by the recombination probability
 // of the N and H radicals, which the two reaction files carry as the sticking
@@ -58,7 +61,7 @@ struct Options {
   // surface can be watched saturating through a pulse and down the trench.
   // One file per sub-step per cycle, so keep --cycles small when using it.
   bool intermediate = false;
-  bool gpu = false;
+  std::string engine = "auto";  // auto | cpu | gpu
   double maxChange = 1e-3;  // transient integrator accuracy; ~5% at 1e-3
 };
 
@@ -97,8 +100,8 @@ Options parse(int argc, char **argv) {
       o.out = next();
     else if (arg == "--intermediate")
       o.intermediate = true;
-    else if (arg == "--gpu")
-      o.gpu = true;
+    else if (arg == "--engine")
+      o.engine = next();
     else if (arg == "--max-change")
       o.maxChange = std::stod(next());
     else {
@@ -154,9 +157,21 @@ int main(int argc, char **argv) {
             << "trench " << o.width << " nm wide, " << o.depth
             << " nm deep (aspect ratio " << o.depth / o.width << ")\n\n";
 
+  // Only the transport moves to the device; the coverage integration runs on
+  // the host either way, so the two engines agree to within ray noise.
+  const bool haveGPU = gpuAvailable();
+  if (o.engine == "gpu" && !haveGPU) {
+    std::cerr << "no GPU available: build with VIENNAPS_USE_GPU=ON, or use "
+                 "--engine cpu\n";
+    return 1;
+  }
+  const bool useGPU = o.engine == "gpu" || (o.engine == "auto" && haveGPU);
+  std::cout << "flux engine: " << (useGPU ? "GPU" : "CPU")
+            << (o.engine == "auto" ? " (auto)" : "") << "\n";
+
   Process<NumericType, D> process(domain, model);
-  process.setFluxEngineType(o.gpu ? FluxEngineType::GPU_LINE
-                                  : FluxEngineType::CPU_DISK);
+  process.setFluxEngineType(useGPU ? FluxEngineType::GPU_LINE
+                                   : FluxEngineType::CPU_DISK);
   process.setParameters(alp);
   RayTracingParameters tracing;
   tracing.raysPerPoint = o.rays;
