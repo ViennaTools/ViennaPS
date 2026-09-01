@@ -288,13 +288,13 @@ public:
   void addBlur(std::vector<NumericType> inSigmas,
                std::vector<NumericType> inWeights,
                NumericType inThreshold = 0.5, NumericType delta = -1.,
-               int gridRefinement = 4) {
+               int gridRefine = 4) {
     weights = inWeights;
     threshold = inThreshold;
     beamDelta = (delta == -1.) ? gridDelta_ : delta;
     // Defines the ratio of the beam grid to the storage of the
     // illumination during Gaussians convolution
-    gridRefinement = std::ceil(gridRefinement * beamDelta / gridDelta_);
+    gridRefinement = std::ceil(gridRefine * beamDelta / gridDelta_);
 
     VIENNACORE_LOG_INFO("gridDelta = " + std::to_string(gridDelta_) +
                         ", beamDelta = " + std::to_string(beamDelta) +
@@ -302,6 +302,7 @@ public:
 
     // Scale sigmas to represent geometry dimensions
     NumericType exposureDelta = beamDelta / gridRefinement;
+    sigmas.clear();
     for (auto sigma : inSigmas) {
       sigmas.push_back(sigma * gridDelta_ / exposureDelta);
     }
@@ -566,7 +567,9 @@ private:
 
     // --- Add points to mesh with offsets ---
     std::vector<unsigned> indices;
-    for (const auto &pt : points) {
+    for (auto pt : points) {
+      pt[0] += xOffset;
+      pt[1] += yOffset;
       indices.push_back(mesh->insertNextNode(pt));
     }
 
