@@ -296,8 +296,9 @@ int main(int argc, char *argv[]) {
   // ──────────────────────────────────────────────────────────────────────────
   // Step 1: P implant — mask the right half (x > 0)
   // ──────────────────────────────────────────────────────────────────────────
-  std::cout << "Step 1: P implant (" << pDose << " cm⁻²" << "  tilt=" << pTilt
-            << "°  rot=" << pRotation << "°" << "  left half)\n";
+  std::cout << "Step 1: P implant (" << pDose << " cm⁻²";
+  std::cout << "  tilt=" << pTilt << "°  rot=" << pRotation << "°";
+  std::cout << "  left half)\n";
   auto origMat = maskHalf(domain, /*maskRightHalf=*/true);
   runImplant(domain, "P_total", "P_damage", pRp, pSigma, pSkewness, pKurtosis,
              pRpTail, pSigmaTail, pSkewnessTail, pKurtTail, pHeadFrac, pDose,
@@ -308,8 +309,9 @@ int main(int argc, char *argv[]) {
   // ──────────────────────────────────────────────────────────────────────────
   // Step 2: B implant — mask the left half (x < 0)
   // ──────────────────────────────────────────────────────────────────────────
-  std::cout << "Step 2: B implant (" << bDose << " cm⁻²" << "  tilt=" << bTilt
-            << "°  rot=" << bRotation << "°" << "  right half)\n";
+  std::cout << "Step 2: B implant (" << bDose << " cm⁻²";
+  std::cout << "  tilt=" << bTilt << "°  rot=" << bRotation << "°";
+  std::cout << "  right half)\n";
   origMat = maskHalf(domain, /*maskRightHalf=*/false);
   runImplant(domain, "B_total", "B_damage", bRp, bSigma, bSkewness, bKurtosis,
              bRpTail, bSigmaTail, bSkewnessTail, bKurtTail, bHeadFrac, bDose,
