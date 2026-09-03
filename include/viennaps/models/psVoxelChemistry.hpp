@@ -71,6 +71,13 @@ template <class NumericType, int D> class VoxelChemistry {
   mutable std::unique_ptr<VoxelFluxGPU<NumericType, D>> gpuFlux_;
 #endif
   NumericType minimumArea_ = 0; // set from the grid spacing in the constructor
+  /// Angular width of the NEUTRAL source, as a cosine power. 1 is the
+  /// physical diffuse source; raising it collimates the beam, which is a
+  /// diagnostic knob: grazing trajectories are what the interaction rule
+  /// over-absorbs at a voxel wall, so collimating suppresses that error
+  /// without touching the transport. Ignored by the GPU path, which does not
+  /// take the parameter.
+  NumericType neutralCosinePower_ = 1;
   int coverageIterations_ = 500;
   NumericType coverageTolerance_ = 1e-13;
 
@@ -148,6 +155,7 @@ public:
     useGPU_ = false;
 #endif
   }
+  void setNeutralCosinePower(NumericType p) { neutralCosinePower_ = p; }
   void setCoverageParameters(int iterations, NumericType tolerance) {
     coverageIterations_ = iterations;
     coverageTolerance_ = tolerance;
@@ -412,7 +420,8 @@ public:
 #endif
       const auto result =
           flux.trace(rays, species.sourceFlux, sticking,
-                     NumericType(1), seed + kSeedStride * static_cast<unsigned>(g));
+                     neutralCosinePower_,
+                     seed + kSeedStride * static_cast<unsigned>(g));
       gamma[g] = result.flux;
     }
 

@@ -41,6 +41,7 @@ static T BLO=-0.35*W/2, BHI=0.35*W/2;   // floor band
 static bool BLANKET=false;
 // converge coverages on the initial surface before stepping, as the LS arm does
 static bool INITCOV=false;
+static T COSPOW=1.0;   // neutral source cosine power (1 = diffuse)
 static int INITSWEEPS=0;   // reported back for the last voxel run
 
 // h(x) binned on the grid pitch, so both arms report the same field
@@ -126,6 +127,7 @@ static Field voxelArm(ps::ChemicalMechanism<T> mech,T time,int steps,
   }
   ps::VoxelChemistry<T,D> vox(mech,lat,fill,material);
   vox.setRaysPerCell(rays);   // per SURFACE CELL, as the LS arm is per point
+  vox.setNeutralCosinePower(COSPOW);
   vox.setTraversalEngine(cs::TraversalEngine::EmbreeBVH);
   auto cov=vox.makeCoverages();
   if(INITCOV) INITSWEEPS=vox.initialiseCoverages(cov,seed,100,T(1e-6));
@@ -338,6 +340,7 @@ int main(int argc,char**argv){
     const std::string arm =argStr(kv,"arm","both");
     BLANKET = (geom=="blanket");
     INITCOV = argNum(kv,"init",0.0)!=0.0;
+    COSPOW= argNum(kv,"cos",1.0);
     W     = argNum(kv,"W",40.0);
     MASKH = argNum(kv,"mask",30.0);
     GD      = argNum(kv,"delta",1.0);
