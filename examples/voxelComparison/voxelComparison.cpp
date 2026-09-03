@@ -83,15 +83,22 @@ Profile levelSetArm(ps::ChemicalMechanism<T> mech, T time, T gridDelta,
   auto bounds = [&]() {
     auto mesh = ps::SmartPointer<ls::Mesh<T>>::New();
     ls::ToSurfaceMesh<T, D>(domain->getLevelSets().back(), mesh).apply();
-    T field = std::numeric_limits<T>::lowest(),
-      floor = std::numeric_limits<T>::lowest();
+    // the MEAN over the band, matching the voxel probe: a maximum compares
+    // the shallowest level-set point against the average voxel height
+    T fieldSum = 0, floorSum = 0;
+    int fieldN = 0, floorN = 0;
     for (const auto &n : mesh->getNodes()) {
-      if (n[0] >= bands.fieldLo && n[0] <= bands.fieldHi)
-        field = std::max(field, n[1]);
-      if (n[0] >= bands.floorLo && n[0] <= bands.floorHi)
-        floor = std::max(floor, n[1]);
+      if (n[0] >= bands.fieldLo && n[0] <= bands.fieldHi) {
+        fieldSum += n[1];
+        ++fieldN;
+      }
+      if (n[0] >= bands.floorLo && n[0] <= bands.floorHi) {
+        floorSum += n[1];
+        ++floorN;
+      }
     }
-    return std::pair<T, T>{field, floor};
+    return std::pair<T, T>{fieldN ? fieldSum / fieldN : T(0),
+                           floorN ? floorSum / floorN : T(0)};
   };
 
   const auto before = bounds();

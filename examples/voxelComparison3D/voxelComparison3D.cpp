@@ -20,8 +20,16 @@ namespace ps=viennaps; namespace cs=viennacs; namespace ls=viennals;
 using T=double; constexpr int D=3;
 
 struct Profile { T field=0, bottom=0, cov=0; };
-static const T W=20., DEPTH=30., GD=1.0;
+static const T W=20., DEPTH=30.;
+// Grid spacing and ray budget are settable so a refinement study runs from one
+// binary. VOXEL_RPC switches the voxel arm to rays-per-cell, the convention
+// that matches the level-set arm's rays-per-point.
+static T GD=1.0;
 static const T FLO=-0.45*4*W, FHI=-0.30*4*W, BLO=-0.35*W/2, BHI=0.35*W/2;
+// A timing sweep writes the same four files once per point and reads none of
+// them; the VTU alone is 57 MB at delta = 0.5. Skipping the writes keeps disk
+// traffic out of the measurement without touching the probes.
+static bool noWrite(){ static const bool v=std::getenv("VOXEL_NOWRITE")!=nullptr; return v; }
 
 Profile levelSetArm(ps::ChemicalMechanism<T> mech, T time, unsigned rays,
                     T maskHeight = 0, bool maskOnly = false){
@@ -32,20 +40,34 @@ Profile levelSetArm(ps::ChemicalMechanism<T> mech, T time, unsigned rays,
   auto bounds=[&](){
     auto mesh=ps::SmartPointer<ls::Mesh<T>>::New();
     ls::ToSurfaceMesh<T,D>(dom->getLevelSets().back(),mesh).apply();
-    T f=std::numeric_limits<T>::lowest(), b=std::numeric_limits<T>::lowest();
+    // The MEAN height over the band, because that is what the voxel probe
+    // computes. Taking the maximum here instead compared the shallowest
+    // point of the level-set floor against the average of the voxel floor:
+    // on a bowl-shaped floor that alone reads as a one-cell discrepancy
+    // (measured: 1.03 nm of an apparent 1.03 nm offset at 27 nm of etch).
+    T fs=0,bs=0; int fn=0,bn=0;
     for(const auto&n:mesh->getNodes()){
-      if(n[0]>=FLO&&n[0]<=FHI) f=std::max(f,n[D-1]);
-      if(n[0]>=BLO&&n[0]<=BHI) b=std::max(b,n[D-1]);
+      if(n[0]>=FLO&&n[0]<=FHI){ fs+=n[D-1]; ++fn; }
+      if(n[0]>=BLO&&n[0]<=BHI){ bs+=n[D-1]; ++bn; }
     }
-    return std::pair<T,T>{f,b};
+    return std::pair<T,T>{fn?fs/fn:T(0), bn?bs/bn:T(0)};
   };
   const auto before=bounds();
-  dom->saveSurfaceMesh(mech.name+"_3d_ls_initial.vtp");
+  { // the work the arm carries, in elements: a count is clock-independent,
+    // which a wall time on a thermally throttled laptop is not
+    auto mesh=ps::SmartPointer<ls::Mesh<T>>::New();
+    ls::ToSurfaceMesh<T,D>(dom->getLevelSets().back(),mesh).apply();
+    std::cout<<"    [size] level set: "<<mesh->getNodes().size()<<" nodes, "
+             <<mesh->getElements<3>().size()<<" triangles"<<std::endl; }
+  if(!noWrite()) dom->saveSurfaceMesh(mech.name+"_3d_ls_initial.vtp");
   auto model=ps::SmartPointer<ps::SurfaceChemistry<T,D>>::New(mech);
   ps::Process<T,D> p(dom,model,time);
   p.setFluxEngineType(std::getenv("LS_GPU") ? ps::FluxEngineType::GPU_TRIANGLE
                                             : ps::FluxEngineType::CPU_TRIANGLE);
-  ps::RayTracingParameters rt; rt.raysPerPoint=rays; p.setParameters(rt);
+  ps::RayTracingParameters rt;
+  if(const char*rpc=std::getenv("VOXEL_RPC")) rt.raysPerPoint=std::atol(rpc);
+  else rt.raysPerPoint=rays;
+  p.setParameters(rt);
   ps::CoverageParameters cv; cv.tolerance=1e-6; cv.maxIterations=40; p.setParameters(cv);
   p.apply();
   { const auto &pt = p.getProcessingTimes();
@@ -54,7 +76,7 @@ Profile levelSetArm(ps::ChemicalMechanism<T> mech, T time, unsigned rays,
              <<pt.advection<<" s, other "<<pt.total-pt.flux-pt.advection
              <<" s"<<std::endl; }
   const auto after=bounds();
-  dom->saveSurfaceMesh(mech.name+"_3d_ls_final.vtp");
+  if(!noWrite()) dom->saveSurfaceMesh(mech.name+"_3d_ls_final.vtp");
   Profile r; r.field=after.first-before.first; r.bottom=after.second-before.second;
   r.cov=std::abs(r.field)>1e-12?r.bottom/r.field:0; return r;
 }
@@ -100,7 +122,8 @@ Profile voxelArm(ps::ChemicalMechanism<T> mech, T time, int steps, size_t rays,
   vox.setTraversalEngine(cs::TraversalEngine::EmbreeBVH);
   if (std::getenv("VOXEL_GPU")) // opt-in: the whole transport on the GPU
     vox.setUseGPU(true);
-  vox.setRaysPerStep(rays);
+  if(const char*rpc=std::getenv("VOXEL_RPC")) vox.setRaysPerCell(std::atol(rpc));
+  else vox.setRaysPerStep(rays);
   auto cov=vox.makeCoverages();
   const auto&dims=lat.dims();
   auto surf=[&](T lo,T hi){
@@ -125,7 +148,9 @@ Profile voxelArm(ps::ChemicalMechanism<T> mech, T time, int steps, size_t rays,
     for(size_t c=0;c<fill.size();++c){ ff[c]=fill[c]; mm[c]=(T)labels[c]; }
     cellSet->writeVTU(f);
   };
-  writeCells(mech.name+"_3d_voxel_initial.vtu");
+  std::cout<<"    [size] voxel: "<<fill.size()<<" lattice cells, "
+           <<vox.surfaceCellCount()<<" surface cells"<<std::endl;
+  if(!noWrite()) writeCells(mech.name+"_3d_voxel_initial.vtu");
   const T f0=surf(FLO,FHI), b0=surf(BLO,BHI);
   double tTr=0,tCh=0,tAd=0,tRe=0;
   for(int s=0;s<steps;++s){
@@ -137,7 +162,7 @@ Profile voxelArm(ps::ChemicalMechanism<T> mech, T time, int steps, size_t rays,
            <<std::fixed<<std::setprecision(1)<<tTr<<" s, chemistry "<<tCh
            <<" s, advance "<<tAd<<" s, relabel "<<tRe<<" s  (total "
            <<tTr+tCh+tAd+tRe<<" s)"<<std::endl;
-  writeCells(mech.name+"_3d_voxel_final.vtu");
+  if(!noWrite()) writeCells(mech.name+"_3d_voxel_final.vtu");
   Profile r; r.field=surf(FLO,FHI)-f0; r.bottom=surf(BLO,BHI)-b0;
   r.cov=std::abs(r.field)>1e-12?r.bottom/r.field:0; return r;
 }
@@ -175,12 +200,14 @@ int main(int argc,char**argv){
     const bool maskOnly = maskH > 0; // flat substrate; the mask is the opening
     // dose multiplier: 15 digs ~27 nm. Settable so a convergence sweep can
     // be produced from one binary without editing it.
+    if(const char*g=std::getenv("VOXEL_GRID")) GD=std::atof(g);
     const char *doseEnv = std::getenv("VOXEL_DOSE");
     const T dose = doseEnv ? std::atof(doseEnv) : T(15);
     const T timeR = maskOnly ? dose*time : time;
     const auto lsr=levelSetArm(mech,timeR,200,maskH,maskOnly);
     row(maskH>0?"level set (mask/floor)":"level set",lsr);
-    const auto vy=voxelArm(mech,timeR,maskOnly?150:10,500000,
+    const int vsteps = maskOnly ? (int)std::lround(150.0/GD) : 10;
+    const auto vy=voxelArm(mech,timeR,vsteps,500000,
                            cs::NormalEstimator::FillGradientYoungs,maskH,maskOnly);
     row(maskH>0?"voxel, Youngs (mask/floor)":"voxel, Youngs",vy);
     if(maskH>0)

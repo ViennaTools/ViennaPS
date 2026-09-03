@@ -38,12 +38,12 @@ def make_domain():
 
 
 def band_top(nodes, lo, hi, axis=0):
-    """Highest point with material inside a lateral band: the shared probe."""
-    best = None
-    for n in nodes:
-        if lo <= n[axis] <= hi:
-            best = n[2] if best is None else max(best, n[2])
-    return best
+    """Mean surface height inside a lateral band, matching the voxel probe.
+    A maximum would compare the shallowest level-set point against the
+    average voxel height, which on a bowl-shaped floor reads as a one-cell
+    discrepancy that is not there."""
+    zs = [n[2] for n in nodes if lo <= n[axis] <= hi]
+    return sum(zs) / len(zs) if zs else 0.0
 
 
 def surface_nodes(domain):

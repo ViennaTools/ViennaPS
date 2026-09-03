@@ -125,6 +125,9 @@ public:
   VoxelProcess &operator=(VoxelProcess &&) = delete;
 
   void setRaysPerStep(size_t rays) { chemistry_->setRaysPerStep(rays); }
+  /// Rays per surface cell, matching the level-set arm's raysPerPoint.
+  void setRaysPerCell(size_t rays) { chemistry_->setRaysPerCell(rays); }
+  size_t surfaceCellCount() const { return chemistry_->surfaceCellCount(); }
   void setNormalEstimator(viennacs::NormalEstimator e) {
     chemistry_->setNormalEstimator(e);
   }
@@ -132,6 +135,15 @@ public:
     chemistry_->setTraversalEngine(e);
   }
   void setUseGPU(bool use) { chemistry_->setUseGPU(use); }
+
+  /// Converge the coverages on the initial surface before any material
+  /// moves, matching what the level-set arm's Process does. Call once after
+  /// construction; `apply`/`step` then start from a converged state.
+  int initialiseCoverages(unsigned seed = 1, int maxSweeps = 100,
+                          NumericType tolerance = NumericType(1e-6)) {
+    return chemistry_->initialiseCoverages(coverages_, seed, maxSweeps,
+                                           tolerance);
+  }
 
   /// One step of `dt`. The coverages carry over between calls.
   StepReport step(NumericType dt, unsigned seed = 1) {

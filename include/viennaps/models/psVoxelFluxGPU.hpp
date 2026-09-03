@@ -358,6 +358,12 @@ public:
       if (area > NumericType(1e-2) * faceArea)
         flux[id] = spread[id] / area;
     }
+    // The GPU deposits raw per hit cell and the host applies the CPU's own
+    // operators, so it inherits the same defect and the same cure: a cell's
+    // Youngs area and its share of the deposits partition the interface
+    // differently, and dividing them cell by cell reports a flux far off
+    // incident on the band's outer cells.
+    ops_.bandNormalise(spread, flux);
     ops_.smooth(flux, smoothingNeighbors);
     return flux;
   }
@@ -407,6 +413,7 @@ public:
         if (area > NumericType(1e-2) * faceArea)
           channels[c][id] = spread[id] / area;
       }
+      ops_.bandNormalise(spread, channels[c]);
       ops_.smooth(channels[c], 1);
     }
     return channels;

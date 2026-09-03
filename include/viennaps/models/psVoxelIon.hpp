@@ -295,8 +295,16 @@ public:
       for (size_t c = 0; c < nChannels; ++c)
         flux[c][id] = collected[c][id] / area;
     }
-    for (size_t c = 0; c < nChannels; ++c)
+    // Same patch normalisation the neutral channels get: a cell's Youngs area
+    // and its share of the deposits partition the interface differently, and
+    // for the near-collimated ion beam the mismatch is WORSE than for a
+    // neutral, because the beam penetrates the partial cell and loads the
+    // solid-side cell hardest. Divide summed deposits by summed area across
+    // the band instead of cell by cell.
+    for (size_t c = 0; c < nChannels; ++c) {
+      walker_.bandNormalise(collected[c], flux[c]);
       walker_.smooth(flux[c], 1);
+    }
     return flux;
   }
 };

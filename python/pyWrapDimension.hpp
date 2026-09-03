@@ -976,6 +976,11 @@ template <int D> void bindApi(py::module &module) {
              py::arg("domain"), py::arg("mechanism"), py::arg("depthBelow"),
              py::arg("coverAbove"))
         .def("setRaysPerStep", &VP::setRaysPerStep)
+        .def("setRaysPerCell", &VP::setRaysPerCell)
+      .def("initialiseCoverages", &VP::initialiseCoverages,
+           pybind11::arg("seed") = 1, pybind11::arg("maxSweeps") = 100,
+           pybind11::arg("tolerance") = 1e-6)
+        .def("surfaceCellCount", &VP::surfaceCellCount)
         .def("setNormalEstimator", &VP::setNormalEstimator)
         .def("setTraversalEngine", &VP::setTraversalEngine)
         .def("setUseGPU", &VP::setUseGPU)

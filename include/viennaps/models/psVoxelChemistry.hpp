@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdlib>
+#include <cmath>
+
 #include "psSurfaceChemistry.hpp"
 
 #include <csVoxelAdvance.hpp>
@@ -46,6 +49,14 @@ template <class NumericType, int D> class VoxelChemistry {
   std::vector<int> effectiveMaterial_; ///< see resolveMaterials()
 
   size_t raysPerStep_ = 100000;
+  /// Rays per SURFACE CELL, the analogue of the level-set arm's
+  /// raysPerPoint: ViennaRay traces raysPerPoint * numElements in total, so a
+  /// budget expressed per cell scales with the surface the way the level-set
+  /// arm's does. With a fixed per-step budget instead, refining the grid
+  /// silently hands the level-set arm more total rays and the voxel arm the
+  /// same number, which makes a grid-refinement comparison measure the budget
+  /// convention rather than the method. Zero means: use raysPerStep_.
+  size_t raysPerCell_ = 0;
   viennacs::NormalEstimator estimator_ =
       viennacs::NormalEstimator::FillGradientYoungs;
   viennacs::TraversalEngine engine_ = viennacs::TraversalEngine::GridDDA;
@@ -77,7 +88,40 @@ public:
     minimumArea_ = NumericType(1e-2) * faceArea;
   }
 
-  void setRaysPerStep(size_t n) { raysPerStep_ = n; }
+  void setRaysPerStep(size_t n) { raysPerStep_ = n; raysPerCell_ = 0; }
+  /// Budget per surface cell; overrides setRaysPerStep.
+  void setRaysPerCell(size_t n) { raysPerCell_ = n; }
+
+  /// Cells carrying enough interface to be a surface -- the same test the
+  /// chemistry uses to decide where to solve.
+  size_t surfaceCellCount() const {
+    const auto band = advance_.interfaceBand(fill_);
+    const auto &dims = lattice_.dims();
+    size_t sites = 1;
+    for (int d = 0; d < D; ++d)
+      sites *= static_cast<size_t>(dims[d]);
+    size_t count = 0;
+#pragma omp parallel for reduction(+ : count) schedule(dynamic, 256)
+    for (long long flat = 0; flat < static_cast<long long>(sites); ++flat) {
+      std::array<int, D> idx{};
+      size_t rem = static_cast<size_t>(flat);
+      for (int d = 0; d < D; ++d) {
+        idx[d] = static_cast<int>(rem % static_cast<size_t>(dims[d]));
+        rem /= static_cast<size_t>(dims[d]);
+      }
+      const int id = lattice_.cellId(idx);
+      if (id < 0 || !band[id])
+        continue;
+      if (advance_.interfaceArea(fill_, idx) > minimumArea_)
+        ++count;
+    }
+    return count;
+  }
+
+  /// The total ray budget for one trace, under whichever convention is set.
+  size_t raysThisStep() const {
+    return raysPerCell_ ? raysPerCell_ * surfaceCellCount() : raysPerStep_;
+  }
 
   /// The material labels as they NOW are. They evolve: refreshMaterials
   /// promotes gas cells the film has grown into, so a writer that copies the
@@ -317,6 +361,8 @@ public:
     }
 #endif
 
+    const size_t rays = raysThisStep();
+
     // ONE flux object for the whole step: the fills do not move between the
     // species traces, so the acceleration structure and the per-cell caches
     // are built once, as the GPU path already does. Rebuilding per species
@@ -359,13 +405,13 @@ public:
 
 #ifdef VIENNACORE_COMPILE_GPU
       if (useGPU_) {
-        gamma[g] = gpuFlux_->trace(raysPerStep_, species.sourceFlux, sticking,
+        gamma[g] = gpuFlux_->trace(rays, species.sourceFlux, sticking,
                                    seed + static_cast<unsigned>(g));
         continue;
       }
 #endif
       const auto result =
-          flux.trace(raysPerStep_, species.sourceFlux, sticking,
+          flux.trace(rays, species.sourceFlux, sticking,
                      NumericType(1), seed + kSeedStride * static_cast<unsigned>(g));
       gamma[g] = result.flux;
     }
@@ -377,7 +423,7 @@ public:
     if (!mech_.ionYields.empty()) {
 #ifdef VIENNACORE_COMPILE_GPU
       if (useGPU_ && gpuFlux_ && gpuFlux_->ionConfigured()) {
-        const auto channels = gpuFlux_->traceIon(raysPerStep_, seed + 977u);
+        const auto channels = gpuFlux_->traceIon(rays, seed + 977u);
         for (size_t c = 0; c < channels.size(); ++c)
           gamma[mech_.ionYields[c].gasIndex] = channels[c];
         return gamma;
@@ -386,11 +432,89 @@ public:
       VoxelIonFlux<NumericType, D> ion(mech_, lattice_, fill_,
                                        effectiveMaterial_, estimator_);
       ion.setTraversalEngine(engine_);
-      const auto channels = ion.trace(raysPerStep_, seed + 977u);
+      const auto channels = ion.trace(rays, seed + 977u);
       for (size_t c = 0; c < channels.size(); ++c)
         gamma[mech_.ionYields[c].gasIndex] = channels[c];
     }
     return gamma;
+  }
+
+  /// Converge the coverages on the CURRENT surface without moving it, as the
+  /// level-set arm's Process does before its first advection. Starting from
+  /// bare (zero) coverages otherwise runs the opening steps at the wrong
+  /// rate, so the two arms differ at t = 0 for no physical reason -- the
+  /// error is a fixed startup cost, largest for short runs.
+  ///
+  /// The trace has to be repeated each sweep, not just the solve: a neutral's
+  /// sticking depends on the free-site fraction, so the incident flux and the
+  /// coverages are mutually dependent and must be iterated together.
+  ///
+  /// Returns the sweeps used; `residual` receives the last coverage change.
+  int initialiseCoverages(std::vector<std::vector<NumericType>> &theta,
+                          unsigned seed = 1, int maxSweeps = 100,
+                          NumericType tolerance = NumericType(1e-6),
+                          NumericType *residual = nullptr) {
+    const size_t nCov = mech_.coverageNames.size();
+    if (nCov == 0) {
+      if (residual)
+        *residual = 0;
+      return 0;
+    }
+    const size_t nGas = mech_.gas.size();
+    const auto &dims = lattice_.dims();
+    size_t sites = 1;
+    for (int d = 0; d < D; ++d)
+      sites *= static_cast<size_t>(dims[d]);
+    const auto band = advance_.interfaceBand(fill_);
+
+    NumericType change = 0;
+    int sweep = 0;
+    for (; sweep < maxSweeps; ++sweep) {
+      // ONE seed for every sweep. Re-seeding per sweep gives each trace fresh
+      // Monte-Carlo noise, so the coverage jitters at the noise level -- far
+      // above any sensible tolerance -- and the loop can never converge, it
+      // just burns maxSweeps. Held fixed, flux and coverage converge together
+      // to the self-consistent solution for that one realisation, which is
+      // what an initial condition needs to be.
+      const auto gamma = traceFluxes(seed, theta);
+      change = 0;
+#pragma omp parallel for schedule(dynamic, 64) reduction(max : change)
+      for (long long flat = 0; flat < static_cast<long long>(sites); ++flat) {
+        std::array<int, D> idx{};
+        size_t rem = static_cast<size_t>(flat);
+        for (int d = 0; d < D; ++d) {
+          idx[d] = static_cast<int>(rem % static_cast<size_t>(dims[d]));
+          rem /= static_cast<size_t>(dims[d]);
+        }
+        const int id = lattice_.cellId(idx);
+        if (id < 0 || !band[id])
+          continue;
+        if (advance_.interfaceArea(fill_, idx) <= minimumArea_)
+          continue;
+        const Material material =
+            MaterialMap::mapToMaterial(effectiveMaterial_[id]);
+        auto cellGamma = mech_.sourceFluxes(material);
+        for (size_t g = 0; g < nGas; ++g)
+          if (mech_.gas[g].traced && !gamma[g].empty())
+            cellGamma[g] = gamma[g][id];
+        const auto k = mech_.rateConstantsFor(material);
+        const auto before = theta[id];
+        mech_.solveCoverages(cellGamma, k, theta[id], coverageIterations_,
+                             coverageTolerance_);
+        for (size_t c = 0; c < nCov; ++c) {
+          const NumericType d2 =
+              std::abs(theta[id][c] - before[c]);
+          change = std::max(change, d2);
+        }
+      }
+      if (change < tolerance) {
+        ++sweep;
+        break;
+      }
+    }
+    if (residual)
+      *residual = change;
+    return sweep;
   }
 
   /// One step: trace, solve the chemistry on every surface cell, move the
@@ -479,6 +603,122 @@ public:
       report.meanVelocity /= static_cast<NumericType>(report.surfaceCells);
     else
       report.minVelocity = report.maxVelocity = 0;
+
+    // Diagnostic (env-guarded, first step only): the band of one column, cell
+    // by cell. Per-cell flux is deposit/interfaceArea, so a sliver cell
+    // reports a flux far above anything incident; this prints what each cell
+    // actually believed, and the area-weighted mean the advance will act on.
+    if (std::getenv("VOXEL_DUMP_BAND")) {
+      static int dumpStep = 0;
+      {
+        ++dumpStep;
+        const int ic = dims[0] / 2;
+        std::cout << "# --- step " << dumpStep << " ---\n";
+        std::cout << "# band dump, column i=" << ic
+                  << "   (area in units of faceArea=" << std::pow(lattice_.gridDelta(), D - 1)
+                  << ", minimumArea=" << minimumArea_ << ")\n";
+        std::cout << "#   k     fill      area   area/face";
+        for (size_t g = 0; g < nGas; ++g)
+          if (!gamma[g].empty()) std::cout << "   gamma[" << g << "]";
+        for (size_t c = 0; c < nCov; ++c) std::cout << "   theta[" << c << "]";
+        std::cout << "    velocity\n";
+        const NumericType faceA = std::pow(lattice_.gridDelta(), D - 1);
+        NumericType sumVA = 0, sumA = 0;
+        for (int k = dims[D - 1] - 1; k >= 0; --k) {
+          std::array<int, D> idx{};
+          idx[0] = ic; idx[D - 1] = k;
+          const int id = lattice_.cellId(idx);
+          if (id < 0 || !band[id]) continue;
+          const NumericType a = advance_.interfaceArea(fill_, idx);
+          if (a <= NumericType(0)) continue;
+          std::cout << "  " << std::setw(4) << k << std::fixed
+                    << std::setprecision(4) << std::setw(9) << fill_[id]
+                    << std::setw(10) << a << std::setw(12) << a / faceA;
+          for (size_t g = 0; g < nGas; ++g)
+            if (!gamma[g].empty())
+              std::cout << std::setw(11) << gamma[g][id];
+          for (size_t c = 0; c < nCov; ++c)
+            std::cout << std::setw(11) << theta[id][c];
+          std::cout << std::setw(12) << velocity[id];
+          if (a <= minimumArea_) std::cout << "  <-- below minimumArea";
+          std::cout << "\n";
+          if (a > minimumArea_) { sumVA += velocity[id] * a; sumA += a; }
+        }
+        std::cout << "# area-weighted mean velocity = "
+                  << (sumA ? sumVA / sumA : 0) << "   (sum area/face = "
+                  << sumA / faceA << ")\n";
+        // Every band cell, so Monte-Carlo noise averages down: the traced
+        // flux per channel against what the mechanism says is incident.
+        {
+          std::vector<NumericType> gsum(nGas, 0);
+          NumericType asum = 0;
+          for (long long f2 = 0; f2 < static_cast<long long>(sites); ++f2) {
+            std::array<int, D> jd{}; size_t rr = static_cast<size_t>(f2);
+            for (int d = 0; d < D; ++d) {
+              jd[d] = static_cast<int>(rr % static_cast<size_t>(dims[d]));
+              rr /= static_cast<size_t>(dims[d]);
+            }
+            const int jid = lattice_.cellId(jd);
+            if (jid < 0 || !band[jid]) continue;
+            const NumericType a2 = advance_.interfaceArea(fill_, jd);
+            if (a2 <= minimumArea_) continue;
+            asum += a2;
+            for (size_t g = 0; g < nGas; ++g)
+              if (!gamma[g].empty()) gsum[g] += gamma[g][jid] * a2;
+          }
+          const auto ref = mech_.sourceFluxes(
+              MaterialMap::mapToMaterial(effectiveMaterial_[lattice_.cellId(
+                  std::array<int, D>{})] ));
+          // The coverage the mechanism WOULD reach on the analytic incident
+          // fluxes, against the mean coverage the band actually holds. The
+          // rate is linear in theta for the ion-enhanced channel, so a bias
+          // here lands straight in the velocity.
+          {
+            std::vector<NumericType> tsum(nCov, 0);
+            NumericType asum2 = 0;
+            for (long long f3 = 0; f3 < static_cast<long long>(sites); ++f3) {
+              std::array<int, D> jd{}; size_t rr = static_cast<size_t>(f3);
+              for (int d = 0; d < D; ++d) {
+                jd[d] = static_cast<int>(rr % static_cast<size_t>(dims[d]));
+                rr /= static_cast<size_t>(dims[d]);
+              }
+              const int jid = lattice_.cellId(jd);
+              if (jid < 0 || !band[jid]) continue;
+              const NumericType a3 = advance_.interfaceArea(fill_, jd);
+              if (a3 <= minimumArea_) continue;
+              asum2 += a3;
+              for (size_t c = 0; c < nCov; ++c) tsum[c] += theta[jid][c] * a3;
+            }
+            const Material m0 = MaterialMap::mapToMaterial(
+                effectiveMaterial_[lattice_.cellId(std::array<int, D>{})]);
+            auto refG = mech_.sourceFluxes(m0);
+            const auto refK = mech_.rateConstantsFor(m0);
+            std::vector<NumericType> refT(nCov, 0);
+            mech_.solveCoverages(refG, refK, refT, coverageIterations_,
+                                 coverageTolerance_);
+            std::cout << "# coverage: band mean vs analytic steady state\n";
+            for (size_t c = 0; c < nCov; ++c) {
+              const NumericType m = asum2 ? tsum[c] / asum2 : 0;
+              std::cout << "#   theta[" << c << "] band " << std::setw(11) << m
+                        << "   analytic " << std::setw(11) << refT[c]
+                        << "   ratio " << std::setw(9)
+                        << (refT[c] != 0 ? m / refT[c] : 0) << "\n";
+            }
+            std::cout << "#   velocity(analytic gamma, analytic theta) = "
+                      << mech_.growthRate(refG, refK, refT, m0) << "\n";
+          }
+          std::cout << "# mean traced flux vs mechanism incident:\n";
+          for (size_t g = 0; g < nGas; ++g) {
+            if (gamma[g].empty()) continue;
+            const NumericType m = asum ? gsum[g] / asum : 0;
+            std::cout << "#   gamma[" << g << "] traced " << std::setw(12) << m
+                      << "   analytic " << std::setw(12) << ref[g]
+                      << "   ratio " << std::setw(9)
+                      << (ref[g] != 0 ? m / ref[g] : 0) << "\n";
+          }
+        }
+      }
+    }
 
     const auto tChemistry = std::chrono::steady_clock::now();
     const auto moved = advance_.apply(fill_, velocity, dt, &material_,
