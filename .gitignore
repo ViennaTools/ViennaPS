@@ -26,3 +26,5 @@ output/
 .cache/
 modeldb_backup_local/
 _viennals/
+graphify*
+AGENTS.md

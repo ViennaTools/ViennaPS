@@ -239,10 +239,9 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleALD");
+    this->addProcessMetaData(params_);
     this->isALP = true;
     this->hasGPU = true;
-
-    this->processMetaData = params_.toProcessMetaData();
   }
 };
 } // namespace gpu
@@ -270,10 +269,9 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleALD");
+    this->addProcessMetaData(params_);
     this->isALP = true;
     this->hasGPU = true;
-
-    this->processMetaData = params_.toProcessMetaData();
   }
 
 #ifdef VIENNACORE_COMPILE_GPU

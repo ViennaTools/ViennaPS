@@ -8,24 +8,28 @@ import typing
 import viennals._core
 import viennals.d2
 import viennaps._core
-__all__: list[str] = ['AdvectionCallback', 'Anneal', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'CustomSphereDistribution', 'DamageTableModel', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'ImplantDamageHobler', 'ImplantDualPearsonIV', 'ImplantPearsonIV', 'ImplantPearsonIVChanneling', 'ImplantProfileModel', 'ImplantTableModel', 'Interpolation', 'IonBeamEtching', 'IonImplantation', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'NetDoping', 'NeutralTransport', 'Oxidation', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SheetResistance', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
+from viennaps._core import GpuMode
+from viennaps._core import GpuPreconditioner
+from viennaps._core import OxidantType
+from viennaps._core import SiliconOrientation
 from . import gpu
+__all__: list[str] = ['AdvectionCallback', 'Anneal', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'CustomSphereDistribution', 'DamageTableModel', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'GpuMode', 'GpuPreconditioner', 'HBrO2Etching', 'ImplantDamageHobler', 'ImplantDualPearsonIV', 'ImplantPearsonIV', 'ImplantPearsonIVChanneling', 'ImplantProfileModel', 'ImplantTableModel', 'Interpolation', 'IonBeamEtching', 'IonImplantation', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'NetDoping', 'NeutralTransport', 'OxidantType', 'Oxidation', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SheetResistance', 'SiliconOrientation', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
 class AdvectionCallback:
-    domain: viennaps.d2.Domain
-    def __init__(self: viennaps.d2.AdvectionCallback) -> None:
+    domain: Domain
+    def __init__(self) -> None:
         ...
-    def applyPostAdvect(self: viennaps.d2.AdvectionCallback, arg0: typing.SupportsFloat) -> bool:
+    def applyPostAdvect(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> bool:
         ...
-    def applyPreAdvect(self: viennaps.d2.AdvectionCallback, arg0: typing.SupportsFloat) -> bool:
+    def applyPreAdvect(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> bool:
         ...
-class Anneal(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.Anneal) -> None:
+class Anneal(ProcessModel):
+    def __init__(self) -> None:
         ...
-    def addIsothermalStep(self: viennaps.d2.Anneal, duration: typing.SupportsFloat, temperatureK: typing.SupportsFloat) -> None:
+    def addIsothermalStep(self, duration: typing.SupportsFloat | typing.SupportsIndex, temperatureK: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def addRampStep(self: viennaps.d2.Anneal, duration: typing.SupportsFloat, startT: typing.SupportsFloat, endT: typing.SupportsFloat) -> None:
+    def addRampStep(self, duration: typing.SupportsFloat | typing.SupportsIndex, startT: typing.SupportsFloat | typing.SupportsIndex, endT: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def applyActivation(self: viennaps.d2.Anneal, domain: viennaps.d2.Domain) -> None:
+    def applyActivation(self, domain: Domain) -> None:
         """
         Apply only the solid-activation model without running diffusion.
         
@@ -36,678 +40,720 @@ class Anneal(viennaps.d2.ProcessModel):
         Prerequisites: enableSolidActivation(True) and
         setSolidSolubilityArrhenius(C0, Ea) must be configured.
         """
-    def clearDefectDiagnostics(self: viennaps.d2.Anneal) -> None:
+    def clearDefectDiagnostics(self) -> None:
         ...
-    def clearEquilibriumArrhenius(self: viennaps.d2.Anneal) -> None:
+    def clearEquilibriumArrhenius(self) -> None:
         ...
-    def clearTemperatureSchedule(self: viennaps.d2.Anneal) -> None:
+    def clearSourceField(self) -> None:
+        """
+        Remove the previously set source field.
+        """
+    def clearTemperatureSchedule(self) -> None:
         ...
-    def enableDefectClustering(self: viennaps.d2.Anneal, enable: bool = True) -> None:
+    def enableAmorphousLayerFill(self, enable: bool = True) -> None:
         ...
-    def enableDefectCoupling(self: viennaps.d2.Anneal, enable: bool = True) -> None:
+    def enableDamageActivation(self, enable: bool = True) -> None:
         ...
-    def enableDefectEquilibrium(self: viennaps.d2.Anneal, enable: bool = True) -> None:
+    def enableDefectClustering(self, enable: bool = True) -> None:
         ...
-    def enableDiagnostics(self: viennaps.d2.Anneal, enable: bool = True) -> None:
+    def enableDefectCoupling(self, enable: bool = True) -> None:
         ...
-    def enableSolidActivation(self: viennaps.d2.Anneal, enable: bool = True) -> None:
+    def enableDefectEquilibrium(self, enable: bool = True) -> None:
         ...
-    def getDefectDiagnostics(self: viennaps.d2.Anneal) -> list[..., ...]:
+    def enableDiagnostics(self, enable: bool = True) -> None:
         ...
-    def resetDefectInitialization(self: viennaps.d2.Anneal) -> None:
+    def enableFermiEnhancement(self, enable: bool = True) -> None:
+        """
+        Enable Fermi-level concentration-dependent diffusivity.
+        
+        D_eff(z) = D(T) * [f*(p/ni) + (1-f)*(ni/p)]
+        where p is the local hole concentration from the dopant field
+        and ni is the Si intrinsic carrier density (Varshni model).
+        Intended for p-type dopants (B) in Si.
+        """
+    def enableSolidActivation(self, enable: bool = True) -> None:
         ...
-    def setActiveLabel(self: viennaps.d2.Anneal, label: str) -> None:
+    def getDefectDiagnostics(self) -> list[..., ...]:
         ...
-    def setArrheniusParameters(self: viennaps.d2.Anneal, D0: typing.SupportsFloat, Ea_eV: typing.SupportsFloat) -> None:
+    def resetDefectInitialization(self) -> None:
         ...
-    def setBlockingMaterials(self: viennaps.d2.Anneal, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def setActivationFloor(self, floor: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setClampNonNegative(self: viennaps.d2.Anneal, enable: bool = True) -> None:
+    def setActiveLabel(self, label: str) -> None:
         ...
-    def setSourceField(self: viennaps.d2.Anneal, source: typing.Sequence[float]) -> None:
+    def setAmorphizationThreshold(self, damageThreshold: typing.SupportsFloat | typing.SupportsIndex, beta: typing.SupportsFloat | typing.SupportsIndex = 2.0) -> None:
         ...
-    def clearSourceField(self: viennaps.d2.Anneal) -> None:
+    def setArrheniusParameters(self, D0: typing.SupportsFloat | typing.SupportsIndex, Ea_eV: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDamageLabels(self: viennaps.d2.Anneal, damageLabel: str, lastDamageLabel: str) -> None:
+    def setBlockingMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         ...
-    def setDefectClusterInitFraction(self: viennaps.d2.Anneal, fraction: typing.SupportsFloat) -> None:
+    def setClampNonNegative(self, enable: bool = True) -> None:
         ...
-    def setDefectClusterKinetics(self: viennaps.d2.Anneal, kfi: typing.SupportsFloat, kfc: typing.SupportsFloat, kr: typing.SupportsFloat) -> None:
+    def setDamageLabels(self, damageLabel: str, lastDamageLabel: str) -> None:
         ...
-    def setDefectClusterLabel(self: viennaps.d2.Anneal, label: str) -> None:
+    def setDefectClusterInitFraction(self, fraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDefectDiffusivities(self: viennaps.d2.Anneal, Di: typing.SupportsFloat, Dv: typing.SupportsFloat) -> None:
+    def setDefectClusterKinetics(self, kfi: typing.SupportsFloat | typing.SupportsIndex, kfc: typing.SupportsFloat | typing.SupportsIndex, kr: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDefectEnhancedDiffusion(self: viennaps.d2.Anneal, tedCoefficient: typing.SupportsFloat, normalization: typing.SupportsFloat) -> None:
+    def setDefectClusterLabel(self, label: str) -> None:
         ...
-    def setTEDFromDamageFactor(self: viennaps.d2.Anneal, damageFactor: typing.SupportsFloat, coefficientScale: typing.SupportsFloat = 0.5, normalization: typing.SupportsFloat = 1e+20) -> None:
+    def setDefectDiffusivities(self, Di: typing.SupportsFloat | typing.SupportsIndex, Dv: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDefectEquilibrium(self: viennaps.d2.Anneal, Ieq: typing.SupportsFloat, Veq: typing.SupportsFloat) -> None:
+    def setDefectEnhancedDiffusion(self, tedCoefficient: typing.SupportsFloat | typing.SupportsIndex, normalization: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDefectEquilibriumArrhenius(self: viennaps.d2.Anneal, interstitialC0: typing.SupportsFloat, interstitialEa_eV: typing.SupportsFloat, vacancyC0: typing.SupportsFloat, vacancyEa_eV: typing.SupportsFloat) -> None:
+    def setDefectEquilibrium(self, Ieq: typing.SupportsFloat | typing.SupportsIndex, Veq: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDefectLabels(self: viennaps.d2.Anneal, interstitialLabel: str, vacancyLabel: str) -> None:
+    def setDefectEquilibriumArrhenius(self, interstitialC0: typing.SupportsFloat | typing.SupportsIndex, interstitialEa_eV: typing.SupportsFloat | typing.SupportsIndex, vacancyC0: typing.SupportsFloat | typing.SupportsIndex, vacancyEa_eV: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDefectPartition(self: viennaps.d2.Anneal, interstitialFraction: typing.SupportsFloat, vacancyFraction: typing.SupportsFloat) -> None:
+    def setDefectLabels(self, interstitialLabel: str, vacancyLabel: str) -> None:
         ...
-    def setDefectPartitionFactors(self: viennaps.d2.Anneal, interstitialFactor: typing.SupportsFloat, vacancyFactor: typing.SupportsFloat) -> None:
+    def setDefectPartition(self, interstitialFraction: typing.SupportsFloat | typing.SupportsIndex, vacancyFraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDefectReactionRates(self: viennaps.d2.Anneal, kRecombination: typing.SupportsFloat, kInterstitialSink: typing.SupportsFloat, kVacancySink: typing.SupportsFloat) -> None:
+    def setDefectPartitionFactors(self, interstitialFactor: typing.SupportsFloat | typing.SupportsIndex, vacancyFactor: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDefectSourceWeights(self: viennaps.d2.Anneal, historyWeight: typing.SupportsFloat, lastImpWeight: typing.SupportsFloat) -> None:
+    def setDefectReactionRates(self, kRecombination: typing.SupportsFloat | typing.SupportsIndex, kInterstitialSink: typing.SupportsFloat | typing.SupportsIndex, kVacancySink: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDiagnosticsMaterialFilter(self: viennaps.d2.Anneal, materialId: typing.SupportsInt) -> None:
+    def setDefectSourceWeights(self, historyWeight: typing.SupportsFloat | typing.SupportsIndex, lastImpWeight: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDiffusionCoefficient(self: viennaps.d2.Anneal, diffCoeff: typing.SupportsFloat) -> None:
+    def setDiagnosticsMaterialFilter(self, materialId: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
-    def setDiffusionMaterials(self: viennaps.d2.Anneal, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def setDiffusionCoefficient(self, diffCoeff: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setDuration(self: viennaps.d2.Anneal, seconds: typing.SupportsFloat) -> None:
+    def setDiffusionMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         ...
-    def setImplicitSolverOptions(self: viennaps.d2.Anneal, maxIterations: typing.SupportsInt, relativeTolerance: typing.SupportsFloat, relaxation: typing.SupportsFloat = 1.0) -> None:
+    def setDuration(self, seconds: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setMaterialLabel(self: viennaps.d2.Anneal, label: str) -> None:
+    def setFermiChargedFraction(self, chargedFraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Set the fraction of diffusion via negatively-charged interstitials.
+        Typical value for B in Si: 0.9 (default).
+        """
+    def setImplicitSolverOptions(self, maxIterations: typing.SupportsInt | typing.SupportsIndex, relativeTolerance: typing.SupportsFloat | typing.SupportsIndex, relaxation: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> None:
         ...
-    def setMode(self: viennaps.d2.Anneal, mode: viennaps._core.AnnealMode) -> None:
+    def setInterfaceSegregation(self, velocity: typing.SupportsFloat | typing.SupportsIndex, width: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         ...
-    def setSolidSolubilityArrhenius(self: viennaps.d2.Anneal, C0: typing.SupportsFloat, Ea_eV: typing.SupportsFloat) -> None:
+    def setInterfaceTrap(self, velocity: typing.SupportsFloat | typing.SupportsIndex, width: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         ...
-    def setSpeciesLabel(self: viennaps.d2.Anneal, label: str) -> None:
+    def setMaterialLabel(self, label: str) -> None:
         ...
-    def setStabilityFactor(self: viennaps.d2.Anneal, factor: typing.SupportsFloat) -> None:
+    def setMode(self, mode: viennaps._core.AnnealMode) -> None:
         ...
-    def setTemperature(self: viennaps.d2.Anneal, temperatureK: typing.SupportsFloat) -> None:
+    def setSegregationMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         ...
-    def setTemperatureSchedule(self: viennaps.d2.Anneal, durations: collections.abc.Sequence[typing.SupportsFloat], temperatures: collections.abc.Sequence[typing.SupportsFloat]) -> None:
+    def setSolidSolubilityArrhenius(self, C0: typing.SupportsFloat | typing.SupportsIndex, Ea_eV: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setSourceField(self, source: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        """
+        Set an external source term (cell-indexed vector) added each time step.
+        """
+    def setSpeciesLabel(self, label: str) -> None:
+        ...
+    def setStabilityFactor(self, factor: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setTEDFromDamageFactor(self, damageFactor: typing.SupportsFloat | typing.SupportsIndex, coefficientScale: typing.SupportsFloat | typing.SupportsIndex = 0.5, normalization: typing.SupportsFloat | typing.SupportsIndex = 1e+20) -> None:
+        ...
+    def setTemperature(self, temperatureK: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setTemperatureSchedule(self, durations: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], temperatures: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
         """
         N durations + N (isothermal) or N+1 (ramp) temperatures.
         """
-    def setTimeStep(self: viennaps.d2.Anneal, dt: typing.SupportsFloat) -> None:
+    def setTimeStep(self, dt: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-class BoxDistribution(viennaps.d2.ProcessModel):
+    def setTrapMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+        ...
+    def setTrappedLabel(self, label: str) -> None:
+        ...
+class BoxDistribution(ProcessModel):
     @typing.overload
-    def __init__(self: viennaps.d2.BoxDistribution, halfAxes: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], mask: viennals.d2.Domain) -> None:
-        ...
-    @typing.overload
-    def __init__(self: viennaps.d2.BoxDistribution, halfAxes: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"]) -> None:
-        ...
-    def addMaskMaterial(self: viennaps.d2.BoxDistribution, material: viennaps._core.Material) -> None:
-        ...
-    def applyToSingleMaterial(self: viennaps.d2.BoxDistribution, material: viennaps._core.Material) -> None:
-        ...
-class CF4O2Etching(viennaps.d2.ProcessModel):
-    @typing.overload
-    def __init__(self: viennaps.d2.CF4O2Etching) -> None:
+    def __init__(self, halfAxes: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], mask: viennals.d2.Domain) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.CF4O2Etching, ionFlux: typing.SupportsFloat, etchantFlux: typing.SupportsFloat, oxygenFlux: typing.SupportsFloat, polymerFlux: typing.SupportsFloat, meanIonEnergy: typing.SupportsFloat = 100.0, sigmaIonEnergy: typing.SupportsFloat = 10.0, ionExponent: typing.SupportsFloat = 100.0, oxySputterYield: typing.SupportsFloat = 3.0, polySputterYield: typing.SupportsFloat = 3.0, etchStopDepth: typing.SupportsFloat = -1.7976931348623157e+308) -> None:
+    def __init__(self, halfAxes: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> None:
+        ...
+    def addMaskMaterial(self, material: viennaps._core.Material) -> None:
+        ...
+    def applyToSingleMaterial(self, material: viennaps._core.Material) -> None:
+        ...
+class CF4O2Etching(ProcessModel):
+    @typing.overload
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.CF4O2Etching, parameters: viennaps._core.CF4O2Parameters) -> None:
-        ...
-    def getParameters(self: viennaps.d2.CF4O2Etching) -> viennaps._core.CF4O2Parameters:
-        ...
-    def setParameters(self: viennaps.d2.CF4O2Etching, arg0: viennaps._core.CF4O2Parameters) -> None:
-        ...
-class CSVFileProcess(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.CSVFileProcess, ratesFile: str, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], offset: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(2)"], isotropicComponent: typing.SupportsFloat = 0.0, directionalComponent: typing.SupportsFloat = 1.0, maskMaterials: collections.abc.Sequence[viennaps._core.Material] = ..., calculateVisibility: bool = True) -> None:
-        ...
-    def setCustomInterpolator(self: viennaps.d2.CSVFileProcess, function: collections.abc.Callable) -> None:
-        ...
-    def setIDWNeighbors(self: viennaps.d2.CSVFileProcess, k: typing.SupportsInt = 4) -> None:
+    def __init__(self, ionFlux: typing.SupportsFloat | typing.SupportsIndex, etchantFlux: typing.SupportsFloat | typing.SupportsIndex, oxygenFlux: typing.SupportsFloat | typing.SupportsIndex, polymerFlux: typing.SupportsFloat | typing.SupportsIndex, meanIonEnergy: typing.SupportsFloat | typing.SupportsIndex = 100.0, sigmaIonEnergy: typing.SupportsFloat | typing.SupportsIndex = 10.0, ionExponent: typing.SupportsFloat | typing.SupportsIndex = 100.0, oxySputterYield: typing.SupportsFloat | typing.SupportsIndex = 3.0, polySputterYield: typing.SupportsFloat | typing.SupportsIndex = 3.0, etchStopDepth: typing.SupportsFloat | typing.SupportsIndex = -1.7976931348623157e+308) -> None:
         ...
     @typing.overload
-    def setInterpolationMode(self: viennaps.d2.CSVFileProcess, mode: viennaps.d2.Interpolation) -> None:
+    def __init__(self, parameters: viennaps._core.CF4O2Parameters) -> None:
+        ...
+    def getParameters(self) -> viennaps._core.CF4O2Parameters:
+        ...
+    def setParameters(self, arg0: viennaps._core.CF4O2Parameters) -> None:
+        ...
+class CSVFileProcess(ProcessModel):
+    def __init__(self, ratesFile: str, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], offset: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(2)"], isotropicComponent: typing.SupportsFloat | typing.SupportsIndex = 0.0, directionalComponent: typing.SupportsFloat | typing.SupportsIndex = 1.0, maskMaterials: collections.abc.Sequence[viennaps._core.Material] = ..., calculateVisibility: bool = True) -> None:
+        ...
+    def setCustomInterpolator(self, function: collections.abc.Callable) -> None:
+        ...
+    def setIDWNeighbors(self, k: typing.SupportsInt | typing.SupportsIndex = 4) -> None:
         ...
     @typing.overload
-    def setInterpolationMode(self: viennaps.d2.CSVFileProcess, mode: str) -> None:
+    def setInterpolationMode(self, mode: Interpolation) -> None:
         ...
-    def setOffset(self: viennaps.d2.CSVFileProcess, offset: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(2)"]) -> None:
+    @typing.overload
+    def setInterpolationMode(self, mode: str) -> None:
         ...
-class CustomSphereDistribution(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.CustomSphereDistribution, radii: collections.abc.Sequence[typing.SupportsFloat], mask: viennals.d2.Domain = None) -> None:
+    def setOffset(self, offset: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(2)"]) -> None:
         ...
-    def addMaskMaterial(self: viennaps.d2.CustomSphereDistribution, material: viennaps._core.Material) -> None:
+class CustomSphereDistribution(ProcessModel):
+    def __init__(self, radii: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], mask: viennals.d2.Domain = None) -> None:
         ...
-class DamageTableModel(viennaps.d2.ImplantProfileModel):
-    def __init__(self: viennaps.d2.DamageTableModel, fileName: str, species: str, material: str, energyKeV: typing.SupportsFloat, tiltDeg: typing.SupportsFloat, rotationDeg: typing.SupportsFloat, dosePerCm2: typing.SupportsFloat = 0.0, screenThickness: typing.SupportsFloat = 0.0) -> None:
+    def addMaskMaterial(self, material: viennaps._core.Material) -> None:
+        ...
+class DamageTableModel(ImplantProfileModel):
+    def __init__(self, fileName: str, species: str, material: str, energyKeV: typing.SupportsFloat | typing.SupportsIndex, tiltDeg: typing.SupportsFloat | typing.SupportsIndex, rotationDeg: typing.SupportsFloat | typing.SupportsIndex, dosePerCm2: typing.SupportsFloat | typing.SupportsIndex = 0.0, screenThickness: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         """
         Table-backed implant-damage profile model. Pass an explicit modeldb CSV path.
         """
 class DenseCellSet:
-    def __init__(self: viennaps.d2.DenseCellSet) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def addFillingFraction(self: viennaps.d2.DenseCellSet, arg0: typing.SupportsInt, arg1: typing.SupportsFloat) -> bool:
+    def addFillingFraction(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: typing.SupportsFloat | typing.SupportsIndex) -> bool:
         """
         Add to the filling fraction at given cell index.
         """
     @typing.overload
-    def addFillingFraction(self: viennaps.d2.DenseCellSet, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], arg1: typing.SupportsFloat) -> bool:
+    def addFillingFraction(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], arg1: typing.SupportsFloat | typing.SupportsIndex) -> bool:
         """
         Add to the filling fraction for cell which contains given point.
         """
-    def addFillingFractionInMaterial(self: viennaps.d2.DenseCellSet, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], arg1: typing.SupportsFloat, arg2: typing.SupportsInt) -> bool:
+    def addFillingFractionInMaterial(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], arg1: typing.SupportsFloat | typing.SupportsIndex, arg2: typing.SupportsInt | typing.SupportsIndex) -> bool:
         """
         Add to the filling fraction for cell which contains given point only if the cell has the specified material ID.
         """
-    def addScalarData(self: viennaps.d2.DenseCellSet, arg0: str, arg1: typing.SupportsFloat) -> None:
+    def addScalarData(self, arg0: str, arg1: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Add a scalar value to be stored and modified in each cell.
         """
-    def buildNeighborhood(self: viennaps.d2.DenseCellSet, forceRebuild: bool = False) -> None:
+    def buildNeighborhood(self, forceRebuild: bool = False) -> None:
         """
         Generate fast neighbor access for each cell.
         """
-    def clear(self: viennaps.d2.DenseCellSet) -> None:
+    def clear(self) -> None:
         """
         Clear the filling fractions.
         """
-    def fromLevelSets(self: viennaps.d2.DenseCellSet, levelSets: collections.abc.Sequence[viennals.d2.Domain], materialMap: viennals._core.MaterialMap = None, depth: typing.SupportsFloat = 0.0) -> None:
+    def fromLevelSets(self, levelSets: collections.abc.Sequence[viennals.d2.Domain], materialMap: viennals._core.MaterialMap = None, depth: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         ...
-    def getAverageFillingFraction(self: viennaps.d2.DenseCellSet, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], arg1: typing.SupportsFloat) -> float:
+    def getAverageFillingFraction(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], arg1: typing.SupportsFloat | typing.SupportsIndex) -> float:
         """
         Get the average filling at a point in some radius.
         """
-    def getBoundingBox(self: viennaps.d2.DenseCellSet) -> typing.Annotated[list[typing.Annotated[list[float], "FixedSize(2)"]], "FixedSize(2)"]:
+    def getBoundingBox(self) -> typing.Annotated[list[typing.Annotated[list[float], "FixedSize(2)"]], "FixedSize(2)"]:
         ...
-    def getCellCenter(self: viennaps.d2.DenseCellSet, arg0: typing.SupportsInt) -> typing.Annotated[list[float], "FixedSize(3)"]:
+    def getCellCenter(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> typing.Annotated[list[float], "FixedSize(3)"]:
         """
         Get the center of a cell with given index
         """
-    def getCellGrid(self: viennaps.d2.DenseCellSet) -> viennals._core.Mesh:
+    def getCellGrid(self) -> viennals._core.Mesh:
         """
         Get the underlying mesh of the cell set.
         """
-    def getDepth(self: viennaps.d2.DenseCellSet) -> float:
+    def getDepth(self) -> float:
         """
         Get the depth of the cell set.
         """
-    def getElement(self: viennaps.d2.DenseCellSet, arg0: typing.SupportsInt) -> typing.Annotated[list[int], "FixedSize(4)"]:
+    def getElement(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> typing.Annotated[list[int], "FixedSize(4)"]:
         """
         Get the element at the given index.
         """
-    def getElements(self: viennaps.d2.DenseCellSet) -> list[typing.Annotated[list[int], "FixedSize(4)"]]:
+    def getElements(self) -> list[typing.Annotated[list[int], "FixedSize(4)"]]:
         """
         Get elements (cells). The indicies in the elements correspond to the corner nodes.
         """
-    def getFillingFraction(self: viennaps.d2.DenseCellSet, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(2)"]) -> float:
+    def getFillingFraction(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(2)"]) -> float:
         """
         Get the filling fraction of the cell containing the point.
         """
-    def getFillingFractions(self: viennaps.d2.DenseCellSet) -> list[float]:
+    def getFillingFractions(self) -> list[float]:
         """
         Get the filling fractions of all cells.
         """
-    def getGridDelta(self: viennaps.d2.DenseCellSet) -> float:
+    def getGridDelta(self) -> float:
         """
         Get the cell size.
         """
-    def getIndex(self: viennaps.d2.DenseCellSet, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"]) -> int:
+    def getIndex(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> int:
         """
         Get the index of the cell containing the given point.
         """
-    def getNeighbors(self: viennaps.d2.DenseCellSet, arg0: typing.SupportsInt) -> typing.Annotated[list[int], "FixedSize(4)"]:
+    def getNeighbors(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> typing.Annotated[list[int], "FixedSize(4)"]:
         """
         Get the neighbor indices for a cell.
         """
-    def getNode(self: viennaps.d2.DenseCellSet, arg0: typing.SupportsInt) -> typing.Annotated[list[float], "FixedSize(3)"]:
+    def getNode(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> typing.Annotated[list[float], "FixedSize(3)"]:
         """
         Get the node at the given index.
         """
-    def getNodes(self: viennaps.d2.DenseCellSet) -> list[typing.Annotated[list[float], "FixedSize(3)"]]:
+    def getNodes(self) -> list[typing.Annotated[list[float], "FixedSize(3)"]]:
         """
         Get the nodes of the cell set which correspond to the corner points of the cells.
         """
-    def getNumberOfCells(self: viennaps.d2.DenseCellSet) -> int:
+    def getNumberOfCells(self) -> int:
         """
         Get the number of cells.
         """
-    def getScalarData(self: viennaps.d2.DenseCellSet, arg0: str) -> list[float]:
+    def getScalarData(self, arg0: str) -> list[float]:
         """
         Get the data stored at each cell. WARNING: This function only returns a copy of the data
         """
-    def getScalarDataLabels(self: viennaps.d2.DenseCellSet) -> list[str]:
+    def getScalarDataLabels(self) -> list[str]:
         """
         Get the labels of the scalar data stored in the cell set.
         """
-    def getSurface(self: viennaps.d2.DenseCellSet) -> viennals.d2.Domain:
+    def getSurface(self) -> viennals.d2.Domain:
         """
         Get the surface level-set.
         """
-    def readCellSetData(self: viennaps.d2.DenseCellSet, arg0: str) -> None:
+    def readCellSetData(self, arg0: str) -> None:
         """
         Read cell set data from text.
         """
-    def setCellSetPosition(self: viennaps.d2.DenseCellSet, arg0: bool) -> None:
+    def setCellSetPosition(self, arg0: bool) -> None:
         """
         Set whether the cell set should be created below (false) or above (true) the surface.
         """
-    def setCoverMaterial(self: viennaps.d2.DenseCellSet, arg0: typing.SupportsInt) -> None:
+    def setCoverMaterial(self, arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
         Set the material of the cells which are above or below the surface.
         """
     @typing.overload
-    def setFillingFraction(self: viennaps.d2.DenseCellSet, arg0: typing.SupportsInt, arg1: typing.SupportsFloat) -> bool:
+    def setFillingFraction(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: typing.SupportsFloat | typing.SupportsIndex) -> bool:
         """
         Sets the filling fraction at given cell index.
         """
     @typing.overload
-    def setFillingFraction(self: viennaps.d2.DenseCellSet, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], arg1: typing.SupportsFloat) -> bool:
+    def setFillingFraction(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], arg1: typing.SupportsFloat | typing.SupportsIndex) -> bool:
         """
         Sets the filling fraction for cell which contains given point.
         """
-    def setPeriodicBoundary(self: viennaps.d2.DenseCellSet, arg0: typing.Annotated[collections.abc.Sequence[bool], "FixedSize(2)"]) -> None:
+    def setPeriodicBoundary(self, arg0: typing.Annotated[collections.abc.Sequence[bool], "FixedSize(2)"]) -> None:
         """
         Enable periodic boundary conditions in specified dimensions.
         """
-    def setScalarData(self: viennaps.d2.DenseCellSet, name: str, newData: collections.abc.Sequence[typing.SupportsFloat]) -> None:
+    def setScalarData(self, name: str, newData: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
         """
         Overwrite the scalar data associated with 'name' with a new array.
         """
-    def updateMaterials(self: viennaps.d2.DenseCellSet) -> None:
+    def updateMaterials(self) -> None:
         """
         Update the material IDs of the cell set. This function should be called if the level sets, the cell set is made out of, have changed. This does not work if the surface of the volume has changed. In this case, call the function 'updateSurface' first.
         """
-    def updateSurface(self: viennaps.d2.DenseCellSet) -> None:
+    def updateSurface(self) -> None:
         """
         Updates the surface of the cell set. The new surface should be below the old surface as this function can only remove cells from the cell set.
         """
-    def writeCellSetData(self: viennaps.d2.DenseCellSet, arg0: str) -> None:
+    def writeCellSetData(self, arg0: str) -> None:
         """
         Save cell set data in simple text format.
         """
-    def writeVTU(self: viennaps.d2.DenseCellSet, arg0: str) -> None:
+    def writeVTU(self, arg0: str) -> None:
         """
         Write the cell set as .vtu file
         """
-class DirectionalProcess(viennaps.d2.ProcessModel):
+class DirectionalProcess(ProcessModel):
     @typing.overload
-    def __init__(self: viennaps.d2.DirectionalProcess, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], materialRates: collections.abc.Mapping[viennaps._core.Material, tuple[typing.SupportsFloat, typing.SupportsFloat]], defaultDirectionalRate: typing.SupportsFloat = 0.0, defaultIsotropicRate: typing.SupportsFloat = 0.0) -> None:
+    def __init__(self, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], materialRates: collections.abc.Mapping[viennaps._core.Material, tuple[typing.SupportsFloat | typing.SupportsIndex, typing.SupportsFloat | typing.SupportsIndex]], defaultDirectionalRate: typing.SupportsFloat | typing.SupportsIndex = 0.0, defaultIsotropicRate: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.DirectionalProcess, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], directionalVelocity: typing.SupportsFloat, isotropicVelocity: typing.SupportsFloat = 0.0, maskMaterial: viennaps._core.Material = ..., calculateVisibility: bool = True) -> None:
+    def __init__(self, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], directionalVelocity: typing.SupportsFloat | typing.SupportsIndex, isotropicVelocity: typing.SupportsFloat | typing.SupportsIndex = 0.0, maskMaterial: viennaps._core.Material = ..., calculateVisibility: bool = True) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.DirectionalProcess, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], directionalVelocity: typing.SupportsFloat, isotropicVelocity: typing.SupportsFloat, maskMaterial: collections.abc.Sequence[viennaps._core.Material], calculateVisibility: bool = True) -> None:
+    def __init__(self, direction: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], directionalVelocity: typing.SupportsFloat | typing.SupportsIndex, isotropicVelocity: typing.SupportsFloat | typing.SupportsIndex, maskMaterial: collections.abc.Sequence[viennaps._core.Material], calculateVisibility: bool = True) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.DirectionalProcess, rateSets: collections.abc.Sequence[viennaps._core.RateSet]) -> None:
+    def __init__(self, rateSets: collections.abc.Sequence[viennaps._core.RateSet]) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.DirectionalProcess, rateSet: viennaps._core.RateSet) -> None:
+    def __init__(self, rateSet: viennaps._core.RateSet) -> None:
         ...
 class Domain:
     @typing.overload
-    def __init__(self: viennaps.d2.Domain) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Domain, domain: viennaps.d2.Domain) -> None:
+    def __init__(self, domain: Domain) -> None:
         """
         Deep copy constructor.
         """
     @typing.overload
-    def __init__(self: viennaps.d2.Domain, gridDelta: typing.SupportsFloat, xExtent: typing.SupportsFloat, yExtent: typing.SupportsFloat, boundary: viennals._core.BoundaryConditionEnum = ...) -> None:
+    def __init__(self, gridDelta: typing.SupportsFloat | typing.SupportsIndex, xExtent: typing.SupportsFloat | typing.SupportsIndex, yExtent: typing.SupportsFloat | typing.SupportsIndex, boundary: viennals._core.BoundaryConditionEnum = ...) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Domain, gridDelta: typing.SupportsFloat, xExtent: typing.SupportsFloat, boundary: viennals._core.BoundaryConditionEnum = ...) -> None:
+    def __init__(self, gridDelta: typing.SupportsFloat | typing.SupportsIndex, xExtent: typing.SupportsFloat | typing.SupportsIndex, boundary: viennals._core.BoundaryConditionEnum = ...) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Domain, bounds: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(4)"], boundaryConditions: typing.Annotated[collections.abc.Sequence[viennals._core.BoundaryConditionEnum], "FixedSize(2)"], gridDelta: typing.SupportsFloat = 1.0) -> None:
+    def __init__(self, bounds: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(4)"], boundaryConditions: typing.Annotated[collections.abc.Sequence[viennals._core.BoundaryConditionEnum], "FixedSize(2)"], gridDelta: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Domain, setup: viennaps.d2.DomainSetup) -> None:
+    def __init__(self, setup: DomainSetup) -> None:
         ...
     @typing.overload
-    def addMetaData(self: viennaps.d2.Domain, arg0: str, arg1: typing.SupportsFloat) -> None:
+    def addMetaData(self, arg0: str, arg1: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Add a single metadata entry to the domain.
         """
     @typing.overload
-    def addMetaData(self: viennaps.d2.Domain, arg0: str, arg1: collections.abc.Sequence[typing.SupportsFloat]) -> None:
+    def addMetaData(self, arg0: str, arg1: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
         """
         Add a single metadata entry to the domain.
         """
     @typing.overload
-    def addMetaData(self: viennaps.d2.Domain, arg0: collections.abc.Mapping[str, collections.abc.Sequence[typing.SupportsFloat]]) -> None:
+    def addMetaData(self, arg0: collections.abc.Mapping[str, collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]]) -> None:
         """
         Add metadata to the domain.
         """
-    def applyBooleanOperation(self: viennaps.d2.Domain, levelSet: viennals.d2.Domain, operation: viennals._core.BooleanOperationEnum, applyToAll: bool = True) -> None:
+    def applyBooleanOperation(self, levelSet: viennals.d2.Domain, operation: viennals._core.BooleanOperationEnum, applyToAll: bool = True) -> None:
         """
         Apply a boolean operation with the passed Level-Set to all (or top only) Level-Sets in the domain.
         """
-    def clear(self: viennaps.d2.Domain) -> None:
+    def clear(self) -> None:
         ...
-    def clearMetaData(self: viennaps.d2.Domain, clearDomainData: bool = False) -> None:
+    def clearMetaData(self, clearDomainData: bool = False) -> None:
         """
         Clear meta data from domain.
         """
-    def deepCopy(self: viennaps.d2.Domain, arg0: viennaps.d2.Domain) -> None:
+    def deepCopy(self, arg0: Domain) -> None:
         ...
-    def disableMetaData(self: viennaps.d2.Domain) -> None:
+    def disableMetaData(self) -> None:
         """
         Disable adding meta data to domain.
         """
     @typing.overload
-    def duplicateTopLevelSet(self: viennaps.d2.Domain, arg0: viennaps._core.Material) -> None:
+    def duplicateTopLevelSet(self, arg0: viennaps._core.Material) -> None:
         """
         Duplicate the top level set. Should be used before a deposition process.
         """
     @typing.overload
-    def duplicateTopLevelSet(self: viennaps.d2.Domain, arg0: str) -> None:
+    def duplicateTopLevelSet(self, arg0: str) -> None:
         """
         Duplicate the top level set. Should be used before a deposition process.
         """
-    def enableMetaData(self: viennaps.d2.Domain, level: viennaps._core.MetaDataLevel = ...) -> None:
+    def enableMetaData(self, level: viennaps._core.MetaDataLevel = ...) -> None:
         """
         Enable adding meta data from processes to domain.
         """
-    def generateCellSet(self: viennaps.d2.Domain, position: typing.SupportsFloat, coverMaterial: viennaps._core.Material, isAboveSurface: bool = False, withEmbeddedBoundaries: bool = False) -> None:
+    def generateCellSet(self, position: typing.SupportsFloat | typing.SupportsIndex, coverMaterial: viennaps._core.Material, isAboveSurface: bool = False, withEmbeddedBoundaries: bool = False) -> None:
         """
         Generate the cell set.
         """
-    def getBoundaryConditions(self: viennaps.d2.Domain) -> typing.Annotated[list[viennals._core.BoundaryConditionEnum], "FixedSize(2)"]:
+    def getBoundaryConditions(self) -> typing.Annotated[list[viennals._core.BoundaryConditionEnum], "FixedSize(2)"]:
         """
         Get the boundary conditions of the domain.
         """
-    def getBoundingBox(self: viennaps.d2.Domain) -> typing.Annotated[list[typing.Annotated[list[float], "FixedSize(3)"]], "FixedSize(2)"]:
+    def getBoundingBox(self) -> typing.Annotated[list[typing.Annotated[list[float], "FixedSize(3)"]], "FixedSize(2)"]:
         """
         Get the bounding box of the domain.
         """
-    def getCellSet(self: viennaps.d2.Domain) -> viennaps.d2.DenseCellSet:
+    def getCellSet(self) -> DenseCellSet:
         """
         Get the cell set.
         """
-    def getDiskMesh(self: viennaps.d2.Domain) -> viennals._core.Mesh:
+    def getDiskMesh(self) -> viennals._core.Mesh:
         ...
-    def getGrid(self: viennaps.d2.Domain) -> viennals.d2.hrleGrid:
+    def getGrid(self) -> viennals.d2.hrleGrid:
         """
         Get the grid
         """
-    def getGridDelta(self: viennaps.d2.Domain) -> float:
+    def getGridDelta(self) -> float:
         """
         Get the grid delta.
         """
-    def getHullMesh(self: viennaps.d2.Domain, bottomExtension: typing.SupportsFloat = 0.0, sharpCorners: bool = False) -> viennals._core.Mesh:
+    def getHullMesh(self, bottomExtension: typing.SupportsFloat | typing.SupportsIndex = 0.0, sharpCorners: bool = False) -> viennals._core.Mesh:
         ...
-    def getLevelSetMesh(self: viennaps.d2.Domain, width: typing.SupportsInt = 1) -> list[viennals._core.Mesh]:
+    def getLevelSetMesh(self, width: typing.SupportsInt | typing.SupportsIndex = 1) -> list[viennals._core.Mesh]:
         """
         Get the level set grids of layers in the domain.
         """
-    def getLevelSets(self: viennaps.d2.Domain) -> list[viennals.d2.Domain]:
+    def getLevelSets(self) -> list[viennals.d2.Domain]:
         ...
-    def getMaterialLevelSet(self: viennaps.d2.Domain, material: viennaps._core.Material) -> viennals.d2.Domain:
+    def getMaterialLevelSet(self, material: viennaps._core.Material) -> viennals.d2.Domain:
         """
         Returns a Level-Set representing the specified material in the domain.
         """
-    def getMaterialMap(self: viennaps.d2.Domain) -> viennaps._core.MaterialMap:
+    def getMaterialMap(self) -> viennaps._core.MaterialMap:
         ...
-    def getMaterialsInDomain(self: viennaps.d2.Domain) -> set[viennaps._core.Material]:
+    def getMaterialsInDomain(self) -> set[viennaps._core.Material]:
         """
         Get the material IDs present in the domain.
         """
-    def getMetaData(self: viennaps.d2.Domain) -> dict[str, list[float]]:
+    def getMetaData(self) -> dict[str, list[float]]:
         """
         Get meta data (e.g. process data) stored in the domain
         """
-    def getMetaDataLevel(self: viennaps.d2.Domain) -> viennaps._core.MetaDataLevel:
+    def getMetaDataLevel(self) -> viennaps._core.MetaDataLevel:
         """
         Get the current meta data level of the domain.
         """
-    def getNumberOfComponents(self: viennaps.d2.Domain) -> int:
+    def getNumberOfComponents(self) -> int:
         """
         Get the number of connected components in the domain.
         """
-    def getNumberOfLevelSets(self: viennaps.d2.Domain) -> int:
+    def getNumberOfLevelSets(self) -> int:
         """
         Get the number of level sets in the domain.
         """
-    def getSetup(self: viennaps.d2.Domain) -> viennaps.d2.DomainSetup:
+    def getSetup(self) -> DomainSetup:
         """
         Get the domain setup.
         """
-    def getSurface(self: viennaps.d2.Domain) -> viennals.d2.Domain:
+    def getSurface(self) -> viennals.d2.Domain:
         """
         Get the surface level set.
         """
-    def getSurfaceMesh(self: viennaps.d2.Domain, addInterfaces: bool = True, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat = 0.01) -> viennals._core.Mesh:
+    def getSurfaceMesh(self, addInterfaces: bool = True, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> viennals._core.Mesh:
         """
         Get the surface mesh of the domain
         """
-    def insertMask(self: viennaps.d2.Domain, mask: viennals.d2.Domain, material: viennaps._core.Material = ...) -> None:
+    def insertMask(self, mask: viennals.d2.Domain, material: viennaps._core.Material = ...) -> None:
         """
         Insert a mask level set to the domain. The mask is inserted at the front of the level set vector and can be used to exclude areas from processes.
         """
     @typing.overload
-    def insertNextLevelSetAsMaterial(self: viennaps.d2.Domain, levelSet: viennals.d2.Domain, material: str, wrapLowerLevelSet: bool = True) -> None:
+    def insertNextLevelSetAsMaterial(self, levelSet: viennals.d2.Domain, material: str, wrapLowerLevelSet: bool = True) -> None:
         """
         Insert a level set to domain as a material.
         """
     @typing.overload
-    def insertNextLevelSetAsMaterial(self: viennaps.d2.Domain, levelSet: viennals.d2.Domain, material: viennaps._core.Material, wrapLowerLevelSet: bool = True) -> None:
+    def insertNextLevelSetAsMaterial(self, levelSet: viennals.d2.Domain, material: viennaps._core.Material, wrapLowerLevelSet: bool = True) -> None:
         """
         Insert a level set to domain as a material.
         """
-    def print(self: viennaps.d2.Domain, hrleInfo: bool = False) -> None:
+    def print(self, hrleInfo: bool = False) -> None:
         """
         Print the domain information.
         """
-    def removeLevelSet(self: viennaps.d2.Domain, arg0: typing.SupportsInt, arg1: bool) -> None:
+    def removeLevelSet(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: bool) -> None:
         ...
-    def removeMaterial(self: viennaps.d2.Domain, arg0: viennaps._core.Material) -> None:
+    def removeMaterial(self, arg0: viennaps._core.Material) -> None:
         ...
-    def removeStrayPoints(self: viennaps.d2.Domain) -> None:
+    def removeStrayPoints(self) -> None:
         ...
-    def removeTopLevelSet(self: viennaps.d2.Domain) -> None:
+    def removeTopLevelSet(self) -> None:
         ...
-    def saveDiskMesh(self: viennaps.d2.Domain, filename: str) -> None:
+    def saveDiskMesh(self, filename: str) -> None:
         ...
-    def saveHullMesh(self: viennaps.d2.Domain, filename: str, bottomExtension: typing.SupportsFloat = 0.0, sharpCorners: bool = False) -> None:
+    def saveHullMesh(self, filename: str, bottomExtension: typing.SupportsFloat | typing.SupportsIndex = 0.0, sharpCorners: bool = False) -> None:
         """
         Save the hull of the domain.
         """
-    def saveLevelSetMesh(self: viennaps.d2.Domain, filename: str, width: typing.SupportsInt = 1) -> None:
+    def saveLevelSetMesh(self, filename: str, width: typing.SupportsInt | typing.SupportsIndex = 1) -> None:
         """
         Save the level set grids of layers in the domain.
         """
-    def saveLevelSets(self: viennaps.d2.Domain, filename: str) -> None:
+    def saveLevelSets(self, filename: str) -> None:
         ...
-    def saveSurfaceMesh(self: viennaps.d2.Domain, filename: str, addInterfaces: bool = True, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat = 0.01) -> None:
+    def saveSurfaceMesh(self, filename: str, addInterfaces: bool = True, sharpCorners: bool = False, minNodeDistanceFactor: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> None:
         """
         Save the surface of the domain.
         """
-    def saveVolumeMesh(self: viennaps.d2.Domain, filename: str, wrappingLayerEpsilon: typing.SupportsFloat = 0.01) -> None:
+    def saveVolumeMesh(self, filename: str, wrappingLayerEpsilon: typing.SupportsFloat | typing.SupportsIndex = 0.01) -> None:
         """
         Save the volume representation of the domain.
         """
-    def setMaterialMap(self: viennaps.d2.Domain, arg0: viennaps._core.MaterialMap) -> None:
+    def setMaterialMap(self, arg0: viennaps._core.MaterialMap) -> None:
         ...
     @typing.overload
-    def setup(self: viennaps.d2.Domain, arg0: viennaps.d2.DomainSetup) -> None:
+    def setup(self, arg0: DomainSetup) -> None:
         """
         Setup the domain.
         """
     @typing.overload
-    def setup(self: viennaps.d2.Domain, gridDelta: typing.SupportsFloat, xExtent: typing.SupportsFloat, yExtent: typing.SupportsFloat = 0.0, boundary: viennals._core.BoundaryConditionEnum = ...) -> None:
+    def setup(self, gridDelta: typing.SupportsFloat | typing.SupportsIndex, xExtent: typing.SupportsFloat | typing.SupportsIndex, yExtent: typing.SupportsFloat | typing.SupportsIndex = 0.0, boundary: viennals._core.BoundaryConditionEnum = ...) -> None:
         """
         Setup the domain.
         """
-    def show(self: viennaps.d2.Domain) -> None:
+    def show(self) -> None:
         """
         Render the domain using VTK.
         """
 class DomainSetup:
     @typing.overload
-    def __init__(self: viennaps.d2.DomainSetup) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.DomainSetup, gridDelta: typing.SupportsFloat, xExtent: typing.SupportsFloat, yExtent: typing.SupportsFloat, boundary: viennals._core.BoundaryConditionEnum = ...) -> None:
+    def __init__(self, gridDelta: typing.SupportsFloat | typing.SupportsIndex, xExtent: typing.SupportsFloat | typing.SupportsIndex, yExtent: typing.SupportsFloat | typing.SupportsIndex, boundary: viennals._core.BoundaryConditionEnum = ...) -> None:
         ...
-    def boundaryCons(self: viennaps.d2.DomainSetup) -> typing.Annotated[list[viennals._core.BoundaryConditionEnum], "FixedSize(2)"]:
+    def boundaryCons(self) -> typing.Annotated[list[viennals._core.BoundaryConditionEnum], "FixedSize(2)"]:
         ...
-    def bounds(self: viennaps.d2.DomainSetup) -> typing.Annotated[list[float], "FixedSize(4)"]:
+    def bounds(self) -> typing.Annotated[list[float], "FixedSize(4)"]:
         ...
-    def check(self: viennaps.d2.DomainSetup) -> None:
+    def check(self) -> None:
         ...
-    def grid(self: viennaps.d2.DomainSetup) -> viennals.d2.hrleGrid:
+    def grid(self) -> viennals.d2.hrleGrid:
         ...
-    def gridDelta(self: viennaps.d2.DomainSetup) -> float:
+    def gridDelta(self) -> float:
         ...
-    def halveXAxis(self: viennaps.d2.DomainSetup) -> None:
+    def halveXAxis(self) -> None:
         ...
-    def halveYAxis(self: viennaps.d2.DomainSetup) -> None:
+    def halveYAxis(self) -> None:
         ...
-    def hasPeriodicBoundary(self: viennaps.d2.DomainSetup) -> bool:
+    def hasPeriodicBoundary(self) -> bool:
         ...
-    def isValid(self: viennaps.d2.DomainSetup) -> bool:
+    def isValid(self) -> bool:
         ...
-    def print(self: viennaps.d2.DomainSetup) -> None:
+    def print(self) -> None:
         ...
-    def xExtent(self: viennaps.d2.DomainSetup) -> float:
+    def xExtent(self) -> float:
         ...
-    def yExtent(self: viennaps.d2.DomainSetup) -> float:
+    def yExtent(self) -> float:
         ...
-class FaradayCageEtching(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.FaradayCageEtching, parameters: viennaps._core.FaradayCageParameters, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+class FaradayCageEtching(ProcessModel):
+    def __init__(self, parameters: viennaps._core.FaradayCageParameters, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         ...
-class FluorocarbonEtching(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.FluorocarbonEtching, parameters: viennaps._core.FluorocarbonParameters) -> None:
+class FluorocarbonEtching(ProcessModel):
+    def __init__(self, parameters: viennaps._core.FluorocarbonParameters) -> None:
         ...
-    def setParameters(self: viennaps.d2.FluorocarbonEtching, arg0: viennaps._core.FluorocarbonParameters) -> None:
+    def setParameters(self, arg0: viennaps._core.FluorocarbonParameters) -> None:
         ...
 class GDSGeometry:
     @typing.overload
-    def __init__(self: viennaps.d2.GDSGeometry) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.GDSGeometry, gridDelta: typing.SupportsFloat) -> None:
+    def __init__(self, gridDelta: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.GDSGeometry, gridDelta: typing.SupportsFloat, boundaryConditions: typing.Annotated[collections.abc.Sequence[viennals._core.BoundaryConditionEnum], "FixedSize(2)"]) -> None:
+    def __init__(self, gridDelta: typing.SupportsFloat | typing.SupportsIndex, boundaryConditions: typing.Annotated[collections.abc.Sequence[viennals._core.BoundaryConditionEnum], "FixedSize(2)"]) -> None:
         ...
-    def addBlur(self: viennaps.d2.GDSGeometry, sigmas: collections.abc.Sequence[typing.SupportsFloat], weights: collections.abc.Sequence[typing.SupportsFloat], threshold: typing.SupportsFloat = 0.5, delta: typing.SupportsFloat = 0.0, gridRefinement: typing.SupportsInt = 4) -> None:
+    def addBlur(self, sigmas: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], weights: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], threshold: typing.SupportsFloat | typing.SupportsIndex = 0.5, delta: typing.SupportsFloat | typing.SupportsIndex = 0.0, gridRefinement: typing.SupportsInt | typing.SupportsIndex = 4) -> None:
         """
         Set parameters for applying mask blurring.
         """
-    def getAllLayers(self: viennaps.d2.GDSGeometry) -> set[int]:
+    def getAllLayers(self) -> set[int]:
         """
         Return a set of all layers found in the GDS file.
         """
-    def getBounds(self: viennaps.d2.GDSGeometry) -> typing.Annotated[list[float], "FixedSize(6)"]:
+    def getBounds(self) -> typing.Annotated[list[float], "FixedSize(6)"]:
         """
         Get the bounds of the geometry.
         """
-    def getNumberOfStructures(self: viennaps.d2.GDSGeometry) -> int:
+    def getNumberOfStructures(self) -> int:
         """
         Return number of structure definitions.
         """
-    def layerToLevelSet(self: viennaps.d2.GDSGeometry, layer: typing.SupportsInt, blurLayer: bool = True) -> viennals.d2.Domain:
+    def layerToLevelSet(self, layer: typing.SupportsInt | typing.SupportsIndex, blurLayer: bool = True) -> viennals.d2.Domain:
         ...
-    def print(self: viennaps.d2.GDSGeometry) -> None:
+    def print(self) -> None:
         """
         Print the geometry contents.
         """
-    def setBoundaryConditions(self: viennaps.d2.GDSGeometry, arg0: collections.abc.Sequence[viennals._core.BoundaryConditionEnum]) -> None:
+    def setBoundaryConditions(self, arg0: collections.abc.Sequence[viennals._core.BoundaryConditionEnum]) -> None:
         """
         Set the boundary conditions
         """
-    def setBoundaryPadding(self: viennaps.d2.GDSGeometry, arg0: typing.SupportsFloat, arg1: typing.SupportsFloat) -> None:
+    def setBoundaryPadding(self, arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Set padding between the largest point of the geometry and the boundary of the domain.
         """
-    def setGridDelta(self: viennaps.d2.GDSGeometry, arg0: typing.SupportsFloat) -> None:
+    def setGridDelta(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Set the grid spacing.
         """
 class GDSReader:
     @typing.overload
-    def __init__(self: viennaps.d2.GDSReader) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.GDSReader, arg0: viennaps.d2.GDSGeometry, arg1: str) -> None:
+    def __init__(self, arg0: GDSGeometry, arg1: str) -> None:
         ...
-    def apply(self: viennaps.d2.GDSReader) -> None:
+    def apply(self) -> None:
         """
         Parse the GDS file.
         """
-    def setFileName(self: viennaps.d2.GDSReader, arg0: str) -> None:
+    def setFileName(self, arg0: str) -> None:
         """
         Set name of the GDS file.
         """
-    def setGeometry(self: viennaps.d2.GDSReader, arg0: viennaps.d2.GDSGeometry) -> None:
+    def setGeometry(self, arg0: GDSGeometry) -> None:
         """
         Set the domain to be parsed in.
         """
-class GeometricTrenchDeposition(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.GeometricTrenchDeposition, trenchWidth: typing.SupportsFloat, trenchDepth: typing.SupportsFloat, depositionRate: typing.SupportsFloat, bottomMed: typing.SupportsFloat, a: typing.SupportsFloat, b: typing.SupportsFloat, n: typing.SupportsFloat) -> None:
+class GeometricTrenchDeposition(ProcessModel):
+    def __init__(self, trenchWidth: typing.SupportsFloat | typing.SupportsIndex, trenchDepth: typing.SupportsFloat | typing.SupportsIndex, depositionRate: typing.SupportsFloat | typing.SupportsIndex, bottomMed: typing.SupportsFloat | typing.SupportsIndex, a: typing.SupportsFloat | typing.SupportsIndex, b: typing.SupportsFloat | typing.SupportsIndex, n: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class GeometryFactory:
-    def __init__(self: viennaps.d2.GeometryFactory, domainSetup: viennaps.d2.DomainSetup, name: str = 'GeometryFactory') -> None:
+    def __init__(self, domainSetup: DomainSetup, name: str = 'GeometryFactory') -> None:
         ...
-    def makeBoxStencil(self: viennaps.d2.GeometryFactory, position: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(2)"], width: typing.SupportsFloat, height: typing.SupportsFloat, angle: typing.SupportsFloat = 0.0, length: typing.SupportsFloat = -1.0) -> viennals.d2.Domain:
+    def makeBoxStencil(self, position: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(2)"], width: typing.SupportsFloat | typing.SupportsIndex, height: typing.SupportsFloat | typing.SupportsIndex, angle: typing.SupportsFloat | typing.SupportsIndex = 0.0, length: typing.SupportsFloat | typing.SupportsIndex = -1.0) -> viennals.d2.Domain:
         ...
-    def makeCylinderStencil(self: viennaps.d2.GeometryFactory, position: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(2)"], radius: typing.SupportsFloat, height: typing.SupportsFloat, angle: typing.SupportsFloat = 0.0) -> viennals.d2.Domain:
+    def makeCylinderStencil(self, position: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(2)"], radius: typing.SupportsFloat | typing.SupportsIndex, height: typing.SupportsFloat | typing.SupportsIndex, angle: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> viennals.d2.Domain:
         ...
-    def makeMask(self: viennaps.d2.GeometryFactory, base: typing.SupportsFloat, height: typing.SupportsFloat) -> viennals.d2.Domain:
+    def makeMask(self, base: typing.SupportsFloat | typing.SupportsIndex, height: typing.SupportsFloat | typing.SupportsIndex) -> viennals.d2.Domain:
         ...
-    def makeSubstrate(self: viennaps.d2.GeometryFactory, base: typing.SupportsFloat) -> viennals.d2.Domain:
+    def makeSubstrate(self, base: typing.SupportsFloat | typing.SupportsIndex) -> viennals.d2.Domain:
         ...
-class HBrO2Etching(viennaps.d2.ProcessModel):
+class HBrO2Etching(ProcessModel):
     @staticmethod
     def defaultParameters() -> viennaps._core.PlasmaEtchingParameters:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.HBrO2Etching) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.HBrO2Etching, ionFlux: typing.SupportsFloat, etchantFlux: typing.SupportsFloat, oxygenFlux: typing.SupportsFloat, meanIonEnergy: typing.SupportsFloat = 100.0, sigmaIonEnergy: typing.SupportsFloat = 10.0, ionExponent: typing.SupportsFloat = 100.0, oxySputterYield: typing.SupportsFloat = 3.0, etchStopDepth: typing.SupportsFloat = -1.7976931348623157e+308) -> None:
+    def __init__(self, ionFlux: typing.SupportsFloat | typing.SupportsIndex, etchantFlux: typing.SupportsFloat | typing.SupportsIndex, oxygenFlux: typing.SupportsFloat | typing.SupportsIndex, meanIonEnergy: typing.SupportsFloat | typing.SupportsIndex = 100.0, sigmaIonEnergy: typing.SupportsFloat | typing.SupportsIndex = 10.0, ionExponent: typing.SupportsFloat | typing.SupportsIndex = 100.0, oxySputterYield: typing.SupportsFloat | typing.SupportsIndex = 3.0, etchStopDepth: typing.SupportsFloat | typing.SupportsIndex = -1.7976931348623157e+308) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.HBrO2Etching, parameters: viennaps._core.PlasmaEtchingParameters) -> None:
+    def __init__(self, parameters: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
-    def getParameters(self: viennaps.d2.HBrO2Etching) -> viennaps._core.PlasmaEtchingParameters:
+    def getParameters(self) -> viennaps._core.PlasmaEtchingParameters:
         ...
-    def setParameters(self: viennaps.d2.HBrO2Etching, arg0: viennaps._core.PlasmaEtchingParameters) -> None:
+    def setParameters(self, arg0: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
-class ImplantDamageHobler(viennaps.d2.ImplantProfileModel):
-    def __init__(self: viennaps.d2.ImplantDamageHobler, projectedRange: typing.SupportsFloat, verticalSigma: typing.SupportsFloat, lambdaValue: typing.SupportsFloat, defectsPerIon: typing.SupportsFloat, lateralSigma: typing.SupportsFloat, lateralDeltaSigma: typing.SupportsFloat = 0.0) -> None:
+class ImplantDamageHobler(ImplantProfileModel):
+    def __init__(self, projectedRange: typing.SupportsFloat | typing.SupportsIndex, verticalSigma: typing.SupportsFloat | typing.SupportsIndex, lambdaValue: typing.SupportsFloat | typing.SupportsIndex, defectsPerIon: typing.SupportsFloat | typing.SupportsIndex, lateralSigma: typing.SupportsFloat | typing.SupportsIndex, lateralDeltaSigma: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         """
         Hobler damage depth profile with linear-depth-scale lateral spread.
         """
-class ImplantDualPearsonIV(viennaps.d2.ImplantProfileModel):
-    def __init__(self: viennaps.d2.ImplantDualPearsonIV, headParams: viennaps._core.PearsonIVParameters, tailParams: viennaps._core.PearsonIVParameters, headFraction: typing.SupportsFloat, headLateralMu: typing.SupportsFloat, headLateralSigma: typing.SupportsFloat, tailLateralMu: typing.SupportsFloat, tailLateralSigma: typing.SupportsFloat) -> None:
+class ImplantDualPearsonIV(ImplantProfileModel):
+    @typing.overload
+    def __init__(self, headParams: viennaps._core.PearsonIVParameters, tailParams: viennaps._core.PearsonIVParameters, headFraction: typing.SupportsFloat | typing.SupportsIndex, headLateralMu: typing.SupportsFloat | typing.SupportsIndex, headLateralSigma: typing.SupportsFloat | typing.SupportsIndex, tailLateralMu: typing.SupportsFloat | typing.SupportsIndex, tailLateralSigma: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Weighted sum of two Pearson IV components (head fraction in head).
         """
-class ImplantPearsonIV(viennaps.d2.ImplantProfileModel):
-    def __init__(self: viennaps.d2.ImplantPearsonIV, params: viennaps._core.PearsonIVParameters, lateralMu: typing.SupportsFloat, lateralSigma: typing.SupportsFloat) -> None:
+    @typing.overload
+    def __init__(self, headParams: viennaps._core.PearsonIVParameters, tailParams: viennaps._core.PearsonIVParameters, headFraction: typing.SupportsFloat | typing.SupportsIndex, headLateralMu: typing.SupportsFloat | typing.SupportsIndex, headLateralSigma: typing.SupportsFloat | typing.SupportsIndex, tailLateralMu: typing.SupportsFloat | typing.SupportsIndex, tailLateralSigma: typing.SupportsFloat | typing.SupportsIndex, screenModel: viennaps._core.ScreenEnergyLoss, screenThickness: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        As above, but with a screen energy-loss model applied: the projected range is scaled for the given screen thickness (k==1 at the model's reference thickness, leaving shapes untouched there).
+        """
+class ImplantPearsonIV(ImplantProfileModel):
+    def __init__(self, params: viennaps._core.PearsonIVParameters, lateralMu: typing.SupportsFloat | typing.SupportsIndex, lateralSigma: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Construct from PearsonIVParameters and Gaussian lateral spread.
         """
-class ImplantPearsonIVChanneling(viennaps.d2.ImplantProfileModel):
-    def __init__(self: viennaps.d2.ImplantPearsonIVChanneling, params: viennaps._core.PearsonIVParameters, lateralMu: typing.SupportsFloat, lateralSigma: typing.SupportsFloat, tailFraction: typing.SupportsFloat, tailStartDepth: typing.SupportsFloat, tailDecayLength: typing.SupportsFloat, tailBlendWidth: typing.SupportsFloat = 0.0) -> None:
+class ImplantPearsonIVChanneling(ImplantProfileModel):
+    def __init__(self, params: viennaps._core.PearsonIVParameters, lateralMu: typing.SupportsFloat | typing.SupportsIndex, lateralSigma: typing.SupportsFloat | typing.SupportsIndex, tailFraction: typing.SupportsFloat | typing.SupportsIndex, tailStartDepth: typing.SupportsFloat | typing.SupportsIndex, tailDecayLength: typing.SupportsFloat | typing.SupportsIndex, tailBlendWidth: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         """
         Single Pearson IV plus exponential channeling tail.
         """
 class ImplantProfileModel:
-    def getDepthProfile(self: viennaps.d2.ImplantProfileModel, depth: typing.SupportsFloat) -> float:
+    def getDepthProfile(self, depth: typing.SupportsFloat | typing.SupportsIndex) -> float:
         ...
-    def getLateralProfile(self: viennaps.d2.ImplantProfileModel, offset: typing.SupportsFloat, depth: typing.SupportsFloat) -> float:
+    def getLateralProfile(self, offset: typing.SupportsFloat | typing.SupportsIndex, depth: typing.SupportsFloat | typing.SupportsIndex) -> float:
         ...
-    def getMaxDepth(self: viennaps.d2.ImplantProfileModel) -> float:
+    def getMaxDepth(self) -> float:
         ...
-    def getMaxLateralRange(self: viennaps.d2.ImplantProfileModel) -> float:
+    def getMaxLateralRange(self) -> float:
         ...
-class ImplantTableModel(viennaps.d2.ImplantProfileModel):
-    def __init__(self: viennaps.d2.ImplantTableModel, fileName: str, species: str, material: str, substrateType: str, energyKeV: typing.SupportsFloat, tiltDeg: typing.SupportsFloat, rotationDeg: typing.SupportsFloat, dosePerCm2: typing.SupportsFloat = 0.0, screenThickness: typing.SupportsFloat = 0.0, damageLevel: typing.SupportsFloat = 0.0, preferredModel: str = 'auto') -> None:
+class ImplantTableModel(ImplantProfileModel):
+    def __init__(self, fileName: str, species: str, material: str, substrateType: str, energyKeV: typing.SupportsFloat | typing.SupportsIndex, tiltDeg: typing.SupportsFloat | typing.SupportsIndex, rotationDeg: typing.SupportsFloat | typing.SupportsIndex, dosePerCm2: typing.SupportsFloat | typing.SupportsIndex = 0.0, screenThickness: typing.SupportsFloat | typing.SupportsIndex = 0.0, damageLevel: typing.SupportsFloat | typing.SupportsIndex = 0.0, preferredModel: str = 'auto') -> None:
         """
         Table-backed implant profile model. Pass an explicit modeldb CSV path; the selected row is interpolated and converted to a profile.
         """
 class Interpolation(enum.IntEnum):
-    CUSTOM: typing.ClassVar[viennaps.d2.Interpolation]  # value = <Interpolation.CUSTOM: 2>
-    IDW: typing.ClassVar[viennaps.d2.Interpolation]  # value = <Interpolation.IDW: 1>
-    LINEAR: typing.ClassVar[viennaps.d2.Interpolation]  # value = <Interpolation.LINEAR: 0>
+    CUSTOM: typing.ClassVar[Interpolation]  # value = <Interpolation.CUSTOM: 2>
+    IDW: typing.ClassVar[Interpolation]  # value = <Interpolation.IDW: 1>
+    LINEAR: typing.ClassVar[Interpolation]  # value = <Interpolation.LINEAR: 0>
     @classmethod
     def __new__(cls, value):
         ...
@@ -715,161 +761,161 @@ class Interpolation(enum.IntEnum):
         """
         Convert to a string according to format_spec.
         """
-class IonBeamEtching(viennaps.d2.ProcessModel):
+class IonBeamEtching(ProcessModel):
     @staticmethod
     def defaultParameters() -> viennaps._core.IBEParameters:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.IonBeamEtching, parameters: viennaps._core.IBEParameters) -> None:
+    def __init__(self, parameters: viennaps._core.IBEParameters) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.IonBeamEtching, parameters: viennaps._core.IBEParameters, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def __init__(self, parameters: viennaps._core.IBEParameters, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         ...
-class IonImplantation(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.IonImplantation) -> None:
+class IonImplantation(ProcessModel):
+    def __init__(self) -> None:
         ...
-    def enableBeamHits(self: viennaps.d2.IonImplantation, enable: bool = True) -> None:
+    def enableBeamHits(self, enable: bool = True) -> None:
         """
         Write the optional beam-hit count field.
         """
-    def setBeamHitsLabel(self: viennaps.d2.IonImplantation, label: str) -> None:
-        """
-        Field name for optional beam-hit counts.
-        """
-    def setConcentrationLabel(self: viennaps.d2.IonImplantation, label: str) -> None:
-        """
-        Cell-set field name for deposited concentration.
-        """
-    def setDamageFactor(self: viennaps.d2.IonImplantation, factor: typing.SupportsFloat) -> None:
-        """
-        Scale factor for damage accumulation across multiple implants.
-        """
-    def enableEmbeddedBoundaries(self: viennaps.d2.IonImplantation, enable: bool = True) -> None:
+    def enableEmbeddedBoundaries(self, enable: bool = True) -> None:
         """
         Rebuild the cell set with embedded boundary points before implanting.
         Enables sub-grid surface offsets via ray-plane intersection for tilt accuracy.
         """
-    def setDamageLabel(self: viennaps.d2.IonImplantation, label: str) -> None:
+    def setBeamHitsLabel(self, label: str) -> None:
+        """
+        Field name for optional beam-hit counts.
+        """
+    def setConcentrationLabel(self, label: str) -> None:
+        """
+        Cell-set field name for deposited concentration.
+        """
+    def setDamageFactor(self, factor: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Scale factor for damage accumulation across multiple implants.
+        """
+    def setDamageLabel(self, label: str) -> None:
         """
         Cell-set field name for accumulated damage.
         """
-    def setDamageModel(self: viennaps.d2.IonImplantation, model: viennaps.d2.ImplantProfileModel) -> None:
+    def setDamageModel(self, model: ImplantProfileModel) -> None:
         """
         Set the damage profile model (optional).
         """
-    def setDose(self: viennaps.d2.IonImplantation, dosePerCm2: typing.SupportsFloat) -> None:
+    def setDose(self, dosePerCm2: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Implant dose in ions/cm².
         """
-    def setDoseControl(self: viennaps.d2.IonImplantation, mode: viennaps._core.ImplantDoseControl) -> None:
+    def setDoseControl(self, mode: viennaps._core.ImplantDoseControl) -> None:
         """
         Dose control mode: Off, WaferDose, BeamDose.
         """
-    def setImplantModel(self: viennaps.d2.IonImplantation, model: viennaps.d2.ImplantProfileModel) -> None:
+    def setImplantModel(self, model: ImplantProfileModel) -> None:
         """
         Set the dopant concentration profile model.
         """
-    def setLastDamageLabel(self: viennaps.d2.IonImplantation, label: str) -> None:
+    def setLastDamageLabel(self, label: str) -> None:
         """
         Field name for damage from the last step only.
         """
-    def setLengthUnit(self: viennaps.d2.IonImplantation, lengthUnitInCm: typing.SupportsFloat) -> None:
+    def setLengthUnit(self, lengthUnitInCm: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Length unit in cm (default 1e-7 = nanometres).
         """
-    def setMaskMaterials(self: viennaps.d2.IonImplantation, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def setMaskMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         """
         Materials that completely block the beam.
         """
-    def setOutputConcentrationInCm3(self: viennaps.d2.IonImplantation, enable: bool = True) -> None:
+    def setOutputConcentrationInCm3(self, enable: bool = True) -> None:
         """
         Store concentration in cm⁻³ instead of length-unit⁻³.
         """
-    def setScreenMaterials(self: viennaps.d2.IonImplantation, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def setScreenMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         """
         Materials the beam passes through without absorbing dose.
         """
-    def setTiltAngle(self: viennaps.d2.IonImplantation, angleDeg: typing.SupportsFloat) -> None:
+    def setTiltAngle(self, angleDeg: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Beam tilt angle in degrees (0 = normal).
         """
-    def setVoidMaterials(self: viennaps.d2.IonImplantation, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def setVoidMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         """
         Materials ignored by implantation rays; usually set from the domain cover material automatically.
         """
-class IsotropicProcess(viennaps.d2.ProcessModel):
+class IsotropicProcess(ProcessModel):
     @typing.overload
-    def __init__(self: viennaps.d2.IsotropicProcess, rate: typing.SupportsFloat = 1.0, maskMaterial: viennaps._core.Material = ...) -> None:
-        ...
-    @typing.overload
-    def __init__(self: viennaps.d2.IsotropicProcess, rate: typing.SupportsFloat = 1.0, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def __init__(self, rate: typing.SupportsFloat | typing.SupportsIndex = 1.0, maskMaterial: viennaps._core.Material = ...) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.IsotropicProcess, materialRates: collections.abc.Mapping[viennaps._core.Material, typing.SupportsFloat], defaultRate: typing.SupportsFloat = 0.0) -> None:
+    def __init__(self, rate: typing.SupportsFloat | typing.SupportsIndex = 1.0, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         ...
-    def setIsotropicRate(self: viennaps.d2.IsotropicProcess, arg0: typing.SupportsFloat) -> None:
+    @typing.overload
+    def __init__(self, materialRates: collections.abc.Mapping[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex], defaultRate: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         ...
-    def setMaterialRate(self: viennaps.d2.IsotropicProcess, material: viennaps._core.Material, rate: typing.SupportsFloat) -> None:
+    def setIsotropicRate(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setMaterialRate(self, material: viennaps._core.Material, rate: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class MakeFin:
     @typing.overload
-    def __init__(self: viennaps.d2.MakeFin, domain: viennaps.d2.Domain, finWidth: typing.SupportsFloat, finHeight: typing.SupportsFloat, finTaperAngle: typing.SupportsFloat = 0.0, maskHeight: typing.SupportsFloat = 0, maskTaperAngle: typing.SupportsFloat = 0, halfFin: bool = False, material: viennaps._core.Material = ..., maskMaterial: viennaps._core.Material = ...) -> None:
+    def __init__(self, domain: Domain, finWidth: typing.SupportsFloat | typing.SupportsIndex, finHeight: typing.SupportsFloat | typing.SupportsIndex, finTaperAngle: typing.SupportsFloat | typing.SupportsIndex = 0.0, maskHeight: typing.SupportsFloat | typing.SupportsIndex = 0, maskTaperAngle: typing.SupportsFloat | typing.SupportsIndex = 0, halfFin: bool = False, material: viennaps._core.Material = ..., maskMaterial: viennaps._core.Material = ...) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.MakeFin, domain: viennaps.d2.Domain, gridDelta: typing.SupportsFloat, xExtent: typing.SupportsFloat, yExtent: typing.SupportsFloat, finWidth: typing.SupportsFloat, finHeight: typing.SupportsFloat, taperAngle: typing.SupportsFloat = 0.0, baseHeight: typing.SupportsFloat = 0.0, periodicBoundary: bool = False, makeMask: bool = False, material: viennaps._core.Material = ...) -> None:
+    def __init__(self, domain: Domain, gridDelta: typing.SupportsFloat | typing.SupportsIndex, xExtent: typing.SupportsFloat | typing.SupportsIndex, yExtent: typing.SupportsFloat | typing.SupportsIndex, finWidth: typing.SupportsFloat | typing.SupportsIndex, finHeight: typing.SupportsFloat | typing.SupportsIndex, taperAngle: typing.SupportsFloat | typing.SupportsIndex = 0.0, baseHeight: typing.SupportsFloat | typing.SupportsIndex = 0.0, periodicBoundary: bool = False, makeMask: bool = False, material: viennaps._core.Material = ...) -> None:
         ...
-    def apply(self: viennaps.d2.MakeFin) -> None:
+    def apply(self) -> None:
         """
         Create a fin geometry.
         """
 class MakeHole:
     @typing.overload
-    def __init__(self: viennaps.d2.MakeHole, domain: viennaps.d2.Domain, holeRadius: typing.SupportsFloat, holeDepth: typing.SupportsFloat, holeTaperAngle: typing.SupportsFloat = 0.0, maskHeight: typing.SupportsFloat = 0.0, maskTaperAngle: typing.SupportsFloat = 0.0, holeShape: viennaps._core.HoleShape = ..., material: viennaps._core.Material = ..., maskMaterial: viennaps._core.Material = ...) -> None:
+    def __init__(self, domain: Domain, holeRadius: typing.SupportsFloat | typing.SupportsIndex, holeDepth: typing.SupportsFloat | typing.SupportsIndex, holeTaperAngle: typing.SupportsFloat | typing.SupportsIndex = 0.0, maskHeight: typing.SupportsFloat | typing.SupportsIndex = 0.0, maskTaperAngle: typing.SupportsFloat | typing.SupportsIndex = 0.0, holeShape: viennaps._core.HoleShape = ..., material: viennaps._core.Material = ..., maskMaterial: viennaps._core.Material = ...) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.MakeHole, domain: viennaps.d2.Domain, gridDelta: typing.SupportsFloat, xExtent: typing.SupportsFloat, yExtent: typing.SupportsFloat, holeRadius: typing.SupportsFloat, holeDepth: typing.SupportsFloat, taperingAngle: typing.SupportsFloat = 0.0, baseHeight: typing.SupportsFloat = 0.0, periodicBoundary: bool = False, makeMask: bool = False, material: viennaps._core.Material = ..., holeShape: viennaps._core.HoleShape = ...) -> None:
+    def __init__(self, domain: Domain, gridDelta: typing.SupportsFloat | typing.SupportsIndex, xExtent: typing.SupportsFloat | typing.SupportsIndex, yExtent: typing.SupportsFloat | typing.SupportsIndex, holeRadius: typing.SupportsFloat | typing.SupportsIndex, holeDepth: typing.SupportsFloat | typing.SupportsIndex, taperingAngle: typing.SupportsFloat | typing.SupportsIndex = 0.0, baseHeight: typing.SupportsFloat | typing.SupportsIndex = 0.0, periodicBoundary: bool = False, makeMask: bool = False, material: viennaps._core.Material = ..., holeShape: viennaps._core.HoleShape = ...) -> None:
         ...
-    def apply(self: viennaps.d2.MakeHole) -> None:
+    def apply(self) -> None:
         """
         Create a hole geometry.
         """
 class MakePlane:
     @typing.overload
-    def __init__(self: viennaps.d2.MakePlane, domain: viennaps.d2.Domain, height: typing.SupportsFloat = 0.0, material: viennaps._core.Material = ..., addToExisting: bool = False) -> None:
+    def __init__(self, domain: Domain, height: typing.SupportsFloat | typing.SupportsIndex = 0.0, material: viennaps._core.Material = ..., addToExisting: bool = False) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.MakePlane, domain: viennaps.d2.Domain, gridDelta: typing.SupportsFloat, xExtent: typing.SupportsFloat, yExtent: typing.SupportsFloat, height: typing.SupportsFloat = 0.0, periodicBoundary: bool = False, material: viennaps._core.Material = ...) -> None:
+    def __init__(self, domain: Domain, gridDelta: typing.SupportsFloat | typing.SupportsIndex, xExtent: typing.SupportsFloat | typing.SupportsIndex, yExtent: typing.SupportsFloat | typing.SupportsIndex, height: typing.SupportsFloat | typing.SupportsIndex = 0.0, periodicBoundary: bool = False, material: viennaps._core.Material = ...) -> None:
         ...
-    def apply(self: viennaps.d2.MakePlane) -> None:
+    def apply(self) -> None:
         """
         Create a plane geometry or add plane to existing geometry.
         """
 class MakeStack:
     @typing.overload
-    def __init__(self: viennaps.d2.MakeStack, domain: viennaps.d2.Domain, numLayers: typing.SupportsInt, layerHeight: typing.SupportsFloat, substrateHeight: typing.SupportsFloat = 0, holeRadius: typing.SupportsFloat = 0, trenchWidth: typing.SupportsFloat = 0, maskHeight: typing.SupportsFloat = 0, taperAngle: typing.SupportsFloat = 0, halfStack: bool = False, maskMaterial: viennaps._core.Material = ...) -> None:
+    def __init__(self, domain: Domain, numLayers: typing.SupportsInt | typing.SupportsIndex, layerHeight: typing.SupportsFloat | typing.SupportsIndex, substrateHeight: typing.SupportsFloat | typing.SupportsIndex = 0, holeRadius: typing.SupportsFloat | typing.SupportsIndex = 0, trenchWidth: typing.SupportsFloat | typing.SupportsIndex = 0, maskHeight: typing.SupportsFloat | typing.SupportsIndex = 0, taperAngle: typing.SupportsFloat | typing.SupportsIndex = 0, halfStack: bool = False, maskMaterial: viennaps._core.Material = ...) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.MakeStack, domain: viennaps.d2.Domain, gridDelta: typing.SupportsFloat, xExtent: typing.SupportsFloat, yExtent: typing.SupportsFloat, numLayers: typing.SupportsInt, layerHeight: typing.SupportsFloat, substrateHeight: typing.SupportsFloat, holeRadius: typing.SupportsFloat, trenchWidth: typing.SupportsFloat, maskHeight: typing.SupportsFloat, periodicBoundary: bool = False) -> None:
+    def __init__(self, domain: Domain, gridDelta: typing.SupportsFloat | typing.SupportsIndex, xExtent: typing.SupportsFloat | typing.SupportsIndex, yExtent: typing.SupportsFloat | typing.SupportsIndex, numLayers: typing.SupportsInt | typing.SupportsIndex, layerHeight: typing.SupportsFloat | typing.SupportsIndex, substrateHeight: typing.SupportsFloat | typing.SupportsIndex, holeRadius: typing.SupportsFloat | typing.SupportsIndex, trenchWidth: typing.SupportsFloat | typing.SupportsIndex, maskHeight: typing.SupportsFloat | typing.SupportsIndex, periodicBoundary: bool = False) -> None:
         ...
-    def apply(self: viennaps.d2.MakeStack) -> None:
+    def apply(self) -> None:
         """
         Create a stack of alternating SiO2 and Si3N4 layers.
         """
-    def getHeight(self: viennaps.d2.MakeStack) -> float:
+    def getHeight(self) -> float:
         """
         Returns the total height of the stack.
         """
-    def getTopLayer(self: viennaps.d2.MakeStack) -> int:
+    def getTopLayer(self) -> int:
         """
         Returns the number of layers included in the stack
         """
 class MakeTrench:
     class MaterialLayer:
         @typing.overload
-        def __init__(self: viennaps.d2.MakeTrench.MaterialLayer) -> None:
+        def __init__(self) -> None:
             ...
         @typing.overload
-        def __init__(self: viennaps.d2.MakeTrench.MaterialLayer, height: typing.SupportsFloat, width: typing.SupportsFloat, taperAngle: typing.SupportsFloat, material: viennaps._core.Material, isMask: bool) -> None:
+        def __init__(self, height: typing.SupportsFloat | typing.SupportsIndex, width: typing.SupportsFloat | typing.SupportsIndex, taperAngle: typing.SupportsFloat | typing.SupportsIndex, material: viennaps._core.Material, isMask: bool) -> None:
             ...
         @property
         def height(self) -> float:
@@ -877,7 +923,7 @@ class MakeTrench:
             Layer thickness
             """
         @height.setter
-        def height(self, arg0: typing.SupportsFloat) -> None:
+        def height(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
             ...
         @property
         def isMask(self) -> bool:
@@ -901,7 +947,7 @@ class MakeTrench:
             Taper angle for cutout (degrees)
             """
         @taperAngle.setter
-        def taperAngle(self, arg0: typing.SupportsFloat) -> None:
+        def taperAngle(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
             ...
         @property
         def width(self) -> float:
@@ -909,33 +955,33 @@ class MakeTrench:
             Width of cutout for this layer
             """
         @width.setter
-        def width(self, arg0: typing.SupportsFloat) -> None:
+        def width(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
             ...
     @typing.overload
-    def __init__(self: viennaps.d2.MakeTrench, domain: viennaps.d2.Domain, trenchWidth: typing.SupportsFloat, trenchDepth: typing.SupportsFloat, trenchTaperAngle: typing.SupportsFloat = 0, maskHeight: typing.SupportsFloat = 0, maskTaperAngle: typing.SupportsFloat = 0, halfTrench: bool = False, material: viennaps._core.Material = ..., maskMaterial: viennaps._core.Material = ...) -> None:
+    def __init__(self, domain: Domain, trenchWidth: typing.SupportsFloat | typing.SupportsIndex, trenchDepth: typing.SupportsFloat | typing.SupportsIndex, trenchTaperAngle: typing.SupportsFloat | typing.SupportsIndex = 0, maskHeight: typing.SupportsFloat | typing.SupportsIndex = 0, maskTaperAngle: typing.SupportsFloat | typing.SupportsIndex = 0, halfTrench: bool = False, material: viennaps._core.Material = ..., maskMaterial: viennaps._core.Material = ...) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.MakeTrench, domain: viennaps.d2.Domain, gridDelta: typing.SupportsFloat, xExtent: typing.SupportsFloat, yExtent: typing.SupportsFloat, trenchWidth: typing.SupportsFloat, trenchDepth: typing.SupportsFloat, taperingAngle: typing.SupportsFloat = 0.0, baseHeight: typing.SupportsFloat = 0.0, periodicBoundary: bool = False, makeMask: bool = False, material: viennaps._core.Material = ...) -> None:
+    def __init__(self, domain: Domain, gridDelta: typing.SupportsFloat | typing.SupportsIndex, xExtent: typing.SupportsFloat | typing.SupportsIndex, yExtent: typing.SupportsFloat | typing.SupportsIndex, trenchWidth: typing.SupportsFloat | typing.SupportsIndex, trenchDepth: typing.SupportsFloat | typing.SupportsIndex, taperingAngle: typing.SupportsFloat | typing.SupportsIndex = 0.0, baseHeight: typing.SupportsFloat | typing.SupportsIndex = 0.0, periodicBoundary: bool = False, makeMask: bool = False, material: viennaps._core.Material = ...) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.MakeTrench, domain: viennaps.d2.Domain, materialLayers: collections.abc.Sequence[viennaps.d2.MakeTrench.MaterialLayer], halfTrench: bool = False) -> None:
+    def __init__(self, domain: Domain, materialLayers: collections.abc.Sequence[MakeTrench.MaterialLayer], halfTrench: bool = False) -> None:
         ...
-    def apply(self: viennaps.d2.MakeTrench) -> None:
+    def apply(self) -> None:
         """
         Create a trench geometry.
         """
-class MultiParticleProcess(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.MultiParticleProcess) -> None:
+class MultiParticleProcess(ProcessModel):
+    def __init__(self) -> None:
         ...
-    def addIonParticle(self: viennaps.d2.MultiParticleProcess, sourcePower: typing.SupportsFloat, thetaRMin: typing.SupportsFloat = 0.0, thetaRMax: typing.SupportsFloat = 90.0, minAngle: typing.SupportsFloat = 80.0, B_sp: typing.SupportsFloat = -1.0, meanEnergy: typing.SupportsFloat = 0.0, sigmaEnergy: typing.SupportsFloat = 0.0, thresholdEnergy: typing.SupportsFloat = 0.0, inflectAngle: typing.SupportsFloat = 0.0, n: typing.SupportsFloat = 1, label: str = 'ionFlux') -> None:
-        ...
-    @typing.overload
-    def addNeutralParticle(self: viennaps.d2.MultiParticleProcess, stickingProbability: typing.SupportsFloat, label: str = 'neutralFlux') -> None:
+    def addIonParticle(self, sourcePower: typing.SupportsFloat | typing.SupportsIndex, thetaRMin: typing.SupportsFloat | typing.SupportsIndex = 0.0, thetaRMax: typing.SupportsFloat | typing.SupportsIndex = 90.0, minAngle: typing.SupportsFloat | typing.SupportsIndex = 80.0, B_sp: typing.SupportsFloat | typing.SupportsIndex = -1.0, meanEnergy: typing.SupportsFloat | typing.SupportsIndex = 0.0, sigmaEnergy: typing.SupportsFloat | typing.SupportsIndex = 0.0, thresholdEnergy: typing.SupportsFloat | typing.SupportsIndex = 0.0, inflectAngle: typing.SupportsFloat | typing.SupportsIndex = 0.0, n: typing.SupportsFloat | typing.SupportsIndex = 1, label: str = 'ionFlux') -> None:
         ...
     @typing.overload
-    def addNeutralParticle(self: viennaps.d2.MultiParticleProcess, materialSticking: collections.abc.Mapping[viennaps._core.Material, typing.SupportsFloat], defaultStickingProbability: typing.SupportsFloat = 1.0, label: str = 'neutralFlux') -> None:
+    def addNeutralParticle(self, stickingProbability: typing.SupportsFloat | typing.SupportsIndex, label: str = 'neutralFlux') -> None:
         ...
-    def setRateFunction(self: viennaps.d2.MultiParticleProcess, arg0: collections.abc.Callable[[collections.abc.Sequence[typing.SupportsFloat], viennaps._core.Material], float]) -> None:
+    @typing.overload
+    def addNeutralParticle(self, materialSticking: collections.abc.Mapping[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex], defaultStickingProbability: typing.SupportsFloat | typing.SupportsIndex = 1.0, label: str = 'neutralFlux') -> None:
+        ...
+    def setRateFunction(self, arg0: collections.abc.Callable[[list[float], viennaps._core.Material], typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
 class NetDoping:
     """
@@ -952,66 +998,64 @@ class NetDoping:
       xj = nd.junctionDepth()         # nm — metallurgical junction depth
       print(nd.junctionCount(), 'junction(s)')
     """
-    def __init__(self: viennaps.d2.NetDoping) -> None:
+    def __init__(self) -> None:
         ...
-    def addAcceptorLabel(self: viennaps.d2.NetDoping, label: str) -> None:
+    def addAcceptorLabel(self, label: str) -> None:
         """
         Append one acceptor (p-type) concentration field name.
         """
-    def addDonorLabel(self: viennaps.d2.NetDoping, label: str) -> None:
+    def addDonorLabel(self, label: str) -> None:
         """
         Append one donor (n-type) concentration field name.
         """
-    def apply(self: viennaps.d2.NetDoping) -> None:
+    def apply(self) -> None:
         """
         Compute net_doping = Σ donors − Σ acceptors and write to the output field in the cell set.
         """
-    def junctionCount(self: viennaps.d2.NetDoping) -> int:
+    def junctionCount(self) -> int:
         """
         Number of metallurgical junctions in the depth profile.
         """
-    def junctionDepth(self: viennaps.d2.NetDoping) -> float:
+    def junctionDepth(self) -> float:
         """
         Shallowest depth [nm] where net_doping changes sign. Returns inf if no junction exists or apply() has not been called.
         """
-    def junctionDepths(self: viennaps.d2.NetDoping) -> list[float]:
+    def junctionDepths(self) -> list[float]:
         """
         All junction depths [nm], sorted ascending.  Useful for retrograde profiles with multiple crossings.
         """
-    def lateralJunctionPosition(self: viennaps.d2.NetDoping, atDepth: typing.SupportsFloat) -> float:
+    def lateralJunctionPosition(self, atDepth: typing.SupportsFloat | typing.SupportsIndex) -> float:
         """
         Lateral position [nm] where net_doping changes sign at the given depth.  Use for vertical (lateral) PN junctions where P and B are implanted side by side.  Returns inf if no crossing exists.
         """
-    def lateralJunctionPositions(self: viennaps.d2.NetDoping, atDepth: typing.SupportsFloat) -> list[float]:
+    def lateralJunctionPositions(self, atDepth: typing.SupportsFloat | typing.SupportsIndex) -> list[float]:
         """
         All lateral junction positions at the given depth [nm], ascending.
         """
-    def setAcceptorLabels(self: viennaps.d2.NetDoping, labels: collections.abc.Sequence[str]) -> None:
+    def setAcceptorLabels(self, labels: collections.abc.Sequence[str]) -> None:
         """
         Replace the full acceptor label list.
         """
-    def setCellSet(self: viennaps.d2.NetDoping, cellSet: viennaps.d2.DenseCellSet) -> None:
+    def setCellSet(self, cellSet: DenseCellSet) -> None:
         """
         Attach the cell set to analyse.
         """
-    def setDepthAxis(self: viennaps.d2.NetDoping, axis: typing.SupportsInt) -> None:
+    def setDepthAxis(self, axis: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
         Cell-centre axis index for depth (default: D−1).
         """
-    def setDonorLabels(self: viennaps.d2.NetDoping, labels: collections.abc.Sequence[str]) -> None:
+    def setDonorLabels(self, labels: collections.abc.Sequence[str]) -> None:
         """
         Replace the full donor label list.
         """
-    def setOutputLabel(self: viennaps.d2.NetDoping, label: str) -> None:
+    def setOutputLabel(self, label: str) -> None:
         """
         Name of the output field written by apply() (default: 'net_doping').
         """
-    def setSurfacePosition(self: viennaps.d2.NetDoping, surfacePosition: typing.SupportsFloat) -> None:
+    def setSurfacePosition(self, surfacePosition: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Wafer-surface coordinate along the depth axis. Depth is computed as surfacePosition minus the cell-centre coordinate.
         """
-class OxideRegrowth(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.OxideRegrowth, nitrideEtchRate: typing.SupportsFloat, oxideEtchRate: typing.SupportsFloat, redepositionRate: typing.SupportsFloat, redepositionThreshold: typing.SupportsFloat, redepositionTimeInt: typing.SupportsFloat, diffusionCoefficient: typing.SupportsFloat, sinkStrength: typing.SupportsFloat, scallopVelocity: typing.SupportsFloat, centerVelocity: typing.SupportsFloat, topHeight: typing.SupportsFloat, centerWidth: typing.SupportsFloat, stabilityFactor: typing.SupportsFloat) -> None:
 class NeutralTransport(ProcessModel):
     @typing.overload
     def __init__(self) -> None:
@@ -1023,173 +1067,248 @@ class NeutralTransport(ProcessModel):
         ...
     def setParameters(self, arg0: viennaps._core.NeutralTransportParameters) -> None:
         ...
-class Oxidation(ProcessModelBase):
+class Oxidation(ProcessModel):
     def __init__(self) -> None:
         ...
-    def setTemperature(self, temperatureC: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Oxidation temperature in °C (800–1200 °C)."""
-    def setTime(self, timeHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Total oxidation time in hours."""
-    def setOxidant(self, oxidant: viennaps._core.OxidantType) -> None:
-        """Oxidant species: OxidantType.Dry (O₂) or OxidantType.Wet (H₂O)."""
-    def setPressure(self, pressureAtm: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Ambient pressure in atm (scales B and B/A linearly)."""
-    def setOrientation(self, orientation: viennaps._core.SiliconOrientation) -> None:
-        """Crystal orientation: SiliconOrientation.Si100, Si110, Si111, or PolySi."""
-    def setTimeStep(self, dtHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Maximum internal step duration in hours (0 = CFL-only)."""
+    def clearMaskBendingBounds(self) -> None:
+        ...
+    def clearSolveBounds(self) -> None:
+        ...
+    def estimatePlanarOxideThickness(self, initialOxideThickness: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> float:
+        """
+        Deal-Grove planar oxide thickness estimate in µm.
+        """
+    def saveSurfaceMesh(self, domain: Domain, fileName: str) -> None:
+        """
+        Extracts and saves a mathematically wrapped surface mesh.
+        """
+    def saveVolumeMesh(self, domain: Domain, baseName: str) -> None:
+        """
+        Extracts and saves a mathematically wrapped volume mesh.
+        """
     def setCFLFactor(self, factor: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Courant number for CFL-limited internal stepping (default 0.499)."""
-    def setInitialOxideThickness(self, thicknessUm: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Native-oxide seed thickness in µm when no SiO2 layer exists."""
-    def setTransferCoefficient(self, coefficient: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Gas-transfer coefficient in µm/hr."""
-    def setReactionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Stress-coupling activation volume for interface reaction rate (m³)."""
-    def setDiffusionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Stress-coupling activation volume for oxide diffusivity (m³)."""
-    def setMaxGridPoints(self, maxGridPoints: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """Maximum Cartesian grid points for the diffusion/mechanics solve."""
+        """
+        Courant number for CFL-limited internal stepping (default 0.499).
+        """
     def setCouplingIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     def setCouplingTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setMechanicsIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """Maximum iterations for the viscous mechanics solve."""
-    def setMechanicsTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Convergence tolerance for the mechanics solve."""
-    def setSimpleVelocityRelaxation(self, alpha: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """SIMPLE velocity under-relaxation factor (0 < alpha <= 1)."""
-    def setSimplePressureRelaxation(self, beta: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """SIMPLE pressure under-relaxation factor (0 < beta <= 1)."""
-    def setPressureIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """Maximum iterations for the pressure Poisson solve."""
-    def setPressureTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Convergence tolerance for the pressure solve."""
-    def setStokesIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """Maximum iterations for the Stokes velocity solve."""
-    def setStokesTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Convergence tolerance for the Stokes solve."""
-    def setSolveBounds(self, minIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], maxIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"]) -> None:
-        """Cartesian index bounds for the diffusion/deformation solve."""
-    def clearSolveBounds(self) -> None:
-        ...
+    def setDiffusionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Stress-coupling activation volume for oxide diffusivity (m³).
+        """
+    def setGpuMode(self, mode: viennaps._core.GpuMode) -> None:
+        """
+        BiCGSTAB solver back-end: GpuMode.Cpu (default) or GpuMode.Gpu.
+        """
+    def setGpuPreconditioner(self, preconditioner: viennaps._core.GpuPreconditioner) -> None:
+        """
+        GPU BiCGSTAB preconditioner (GpuPreconditioner.Jacobi matches CPU).
+        """
+    def setInitialOxideThickness(self, thicknessUm: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Native-oxide seed thickness in µm when no SiO2 layer exists.
+        """
     def setMaskBendingBounds(self, minIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], maxIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"]) -> None:
-        """Cartesian index bounds for the mask bending solve."""
-    def clearMaskBendingBounds(self) -> None:
-        ...
-    def setSiliconMaterial(self, mat: viennaps._core.Material) -> None:
-        """Override which material is treated as silicon."""
-    def setOxideMaterial(self, mat: viennaps._core.Material) -> None:
-        """Override which material is treated as oxide."""
-    def setMaskMaterial(self, mat: viennaps._core.Material) -> None:
-        """Material treated as the oxidation mask (activates LOCOS physics)."""
-    def setMaskParameters(self, params: viennals.d2.OxidationMaskParameters) -> None:
-        """Viscous-elasticity parameters for the mask layer."""
+        """
+        Cartesian index bounds for the mask bending solve.
+        """
+    def setMaskContactLoadRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Under-relaxation for the unilateral contact active-set load (0.02–1).
+        """
+    def setMaskContactReleaseFraction(self, fraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Relative traction floor for releasing a relaxed contact face (0–0.25).
+        """
     def setMaskCouplingIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     def setMaskCouplingTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setMaskTractionIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """Maximum iterations for the inner mask traction solve."""
-    def setMaskTractionTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Convergence tolerance for the inner mask traction solve."""
-    def setMaskTractionRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Outer Aitken relaxation factor for the mask/oxide coupling (0.01–1)."""
-    def setMaskContactLoadRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Under-relaxation for the unilateral contact active-set load (0.02–1)."""
-    def setMaskContactReleaseFraction(self, fraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Relative traction floor for releasing a relaxed contact face (0–0.25)."""
-    def setMaskUnilateralContact(self, enabled: bool) -> None:
-        """Enable unilateral (compression-only) contact at the mask/oxide interface."""
+    def setMaskMaterial(self, mat: viennaps._core.Material) -> None:
+        """
+        Material treated as the oxidation mask (activates LOCOS physics).
+        """
+    def setMaskParameters(self, params: ...) -> None:
+        """
+        Viscous-elasticity parameters for the mask layer.
+        """
     def setMaskSmootherOmega(self, omega: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """SOR omega for the mask multigrid smoother (0.2–1.4; 1.0 = Gauss-Seidel)."""
-    def setGpuMode(self, mode: viennaps._core.GpuMode) -> None:
-        """BiCGSTAB solver back-end: GpuMode.Cpu (default) or GpuMode.Gpu."""
-    def setGpuPreconditioner(self, preconditioner: viennaps._core.GpuPreconditioner) -> None:
-        """GPU BiCGSTAB preconditioner (GpuPreconditioner.Jacobi matches CPU)."""
-    def estimatePlanarOxideThickness(self, initialOxideThickness: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> float:
-        """Deal-Grove planar oxide thickness estimate in µm."""
-    def saveSurfaceMesh(self, domain: Domain, fileName: str) -> None:
-        """Extracts and saves a mathematically wrapped surface mesh."""
-    def saveVolumeMesh(self, domain: Domain, baseName: str) -> None:
-        """Extracts and saves a mathematically wrapped volume mesh."""
+        """
+        SOR omega for the mask multigrid smoother (0.2–1.4; 1.0 = Gauss-Seidel).
+        """
+    def setMaskTractionIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Maximum iterations for the inner mask traction solve.
+        """
+    def setMaskTractionRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Outer Aitken relaxation factor for the mask/oxide coupling (0.01–1).
+        """
+    def setMaskTractionTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Convergence tolerance for the inner mask traction solve.
+        """
+    def setMaskUnilateralContact(self, enabled: bool) -> None:
+        """
+        Enable unilateral (compression-only) contact at the mask/oxide interface.
+        """
+    def setMaxGridPoints(self, maxGridPoints: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Maximum Cartesian grid points for the diffusion/mechanics solve.
+        """
+    def setMechanicsIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Maximum iterations for the viscous mechanics solve.
+        """
+    def setMechanicsTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Convergence tolerance for the mechanics solve.
+        """
+    def setOrientation(self, orientation: viennaps._core.SiliconOrientation) -> None:
+        """
+        Crystal orientation: Si100, Si111, or PolySi.
+        """
+    def setOxidant(self, oxidant: viennaps._core.OxidantType) -> None:
+        """
+        Oxidant species: OxidantType.Dry (O₂) or OxidantType.Wet (H₂O).
+        """
+    def setOxideMaterial(self, mat: viennaps._core.Material) -> None:
+        """
+        Override which material is treated as oxide.
+        """
+    def setPressure(self, pressureAtm: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Ambient pressure in atm (scales B and B/A linearly).
+        """
+    def setPressureIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Maximum iterations for the pressure Poisson solve.
+        """
+    def setPressureTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Convergence tolerance for the pressure solve.
+        """
+    def setReactionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Stress-coupling activation volume for interface reaction rate (m³).
+        """
+    def setSiliconMaterial(self, mat: viennaps._core.Material) -> None:
+        """
+        Override which material is treated as silicon.
+        """
+    def setSimplePressureRelaxation(self, beta: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        SIMPLE pressure under-relaxation factor (0 < beta <= 1).
+        """
+    def setSimpleVelocityRelaxation(self, alpha: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        SIMPLE velocity under-relaxation factor (0 < alpha <= 1).
+        """
+    def setSolveBounds(self, minIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], maxIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"]) -> None:
+        """
+        Cartesian index bounds for the diffusion/deformation solve.
+        """
+    def setStokesIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Maximum iterations for the Stokes velocity solve.
+        """
+    def setStokesTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Convergence tolerance for the Stokes solve.
+        """
+    def setTemperature(self, temperatureC: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Oxidation temperature in °C (800–1200 °C).
+        """
+    def setTime(self, timeHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Total oxidation time in hours.
+        """
+    def setTimeStep(self, dtHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Duration of each explicit time step in hours. Default: time/20.
+        """
+    def setTransferCoefficient(self, coefficient: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Gas-transfer coefficient in µm/hr.
+        """
 class OxideRegrowth(ProcessModel):
     def __init__(self, nitrideEtchRate: typing.SupportsFloat | typing.SupportsIndex, oxideEtchRate: typing.SupportsFloat | typing.SupportsIndex, redepositionRate: typing.SupportsFloat | typing.SupportsIndex, redepositionThreshold: typing.SupportsFloat | typing.SupportsIndex, redepositionTimeInt: typing.SupportsFloat | typing.SupportsIndex, diffusionCoefficient: typing.SupportsFloat | typing.SupportsIndex, sinkStrength: typing.SupportsFloat | typing.SupportsIndex, scallopVelocity: typing.SupportsFloat | typing.SupportsIndex, centerVelocity: typing.SupportsFloat | typing.SupportsIndex, topHeight: typing.SupportsFloat | typing.SupportsIndex, centerWidth: typing.SupportsFloat | typing.SupportsIndex, stabilityFactor: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class Planarize:
     @typing.overload
-    def __init__(self: viennaps.d2.Planarize) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Planarize, geometry: viennaps.d2.Domain, cutoffHeight: typing.SupportsFloat = 0.0) -> None:
+    def __init__(self, geometry: Domain, cutoffHeight: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         ...
-    def apply(self: viennaps.d2.Planarize) -> None:
+    def apply(self) -> None:
         """
         Apply the planarization.
         """
-    def setCutoffPosition(self: viennaps.d2.Planarize, arg0: typing.SupportsFloat) -> None:
+    def setCutoffPosition(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Set the cutoff height for the planarization.
         """
-    def setDomain(self: viennaps.d2.Planarize, arg0: viennaps.d2.Domain) -> None:
+    def setDomain(self, arg0: Domain) -> None:
         """
         Set the domain in the planarization.
         """
 class Process:
     @typing.overload
-    def __init__(self: viennaps.d2.Process) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Process, domain: viennaps.d2.Domain) -> None:
+    def __init__(self, domain: Domain) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Process, domain: viennaps.d2.Domain, model: viennaps.d2.ProcessModelBase, duration: typing.SupportsFloat = 0.0) -> None:
+    def __init__(self, domain: Domain, model: ProcessModelBase, duration: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Process, domain: viennaps.d2.Domain, model: viennaps.d2.ProcessModelBase, duration: typing.SupportsFloat = 0.0, *args) -> None:
+    def __init__(self, domain: Domain, model: ProcessModelBase, duration: typing.SupportsFloat | typing.SupportsIndex = 0.0, *args) -> None:
         ...
-    def apply(self: viennaps.d2.Process) -> None:
+    def apply(self) -> None:
         """
         Run the process.
         """
-    def calculateFlux(self: viennaps.d2.Process) -> viennals._core.Mesh:
+    def calculateFlux(self) -> viennals._core.Mesh:
         """
         Perform a single-pass flux calculation.
         """
-    def setDomain(self: viennaps.d2.Process, arg0: viennaps.d2.Domain) -> None:
+    def setDomain(self, arg0: Domain) -> None:
         """
         Set the process domain.
         """
-    def setFluxEngineType(self: viennaps.d2.Process, arg0: viennaps._core.FluxEngineType) -> None:
+    def setFluxEngineType(self, arg0: viennaps._core.FluxEngineType) -> None:
         """
         Set the flux engine type (CPU or GPU).
         """
-    def setIntermediateOutputPath(self: viennaps.d2.Process, path: str) -> None:
+    def setIntermediateOutputPath(self, path: str) -> None:
         """
         Set the path for intermediate output files during the process.
         """
     @typing.overload
-    def setParameters(self: viennaps.d2.Process, parameters: viennaps._core.AdvectionParameters) -> None:
+    def setParameters(self, parameters: viennaps._core.AdvectionParameters) -> None:
         """
         Set the advection parameters for the process.
         """
     @typing.overload
-    def setParameters(self: viennaps.d2.Process, parameters: viennaps._core.RayTracingParameters) -> None:
+    def setParameters(self, parameters: viennaps._core.RayTracingParameters) -> None:
         """
         Set the ray tracing parameters for the process.
         """
     @typing.overload
-    def setParameters(self: viennaps.d2.Process, parameters: viennaps._core.CoverageParameters) -> None:
+    def setParameters(self, parameters: viennaps._core.CoverageParameters) -> None:
         """
         Set the coverage parameters for the process.
         """
     @typing.overload
-    def setParameters(self: viennaps.d2.Process, parameters: viennaps._core.AtomicLayerProcessParameters) -> None:
+    def setParameters(self, parameters: viennaps._core.AtomicLayerProcessParameters) -> None:
         """
         Set the atomic layer parameters for the process.
         """
-    def setProcessDuration(self: viennaps.d2.Process, arg0: typing.SupportsFloat) -> None:
     @typing.overload
     def setParameters(self, parameters: viennaps._core.SurfaceDiffusionParameters) -> None:
         """
@@ -1199,11 +1318,11 @@ class Process:
         """
         Set the process duration.
         """
-    def setProcessModel(self: viennaps.d2.Process, arg0: viennaps.d2.ProcessModelBase) -> None:
+    def setProcessModel(self, arg0: ProcessModelBase) -> None:
         """
         Set the process model. This has to be a pre-configured process model.
         """
-class ProcessModel(viennaps.d2.ProcessModelBase):
+class ProcessModel(ProcessModelBase):
     @staticmethod
     def setAdvectionCallback(*args, **kwargs) -> None:
         ...
@@ -1213,114 +1332,114 @@ class ProcessModel(viennaps.d2.ProcessModelBase):
     @staticmethod
     def setVelocityField(*args, **kwargs) -> None:
         ...
-    def __init__(self: viennaps.d2.ProcessModel) -> None:
+    def __init__(self) -> None:
         ...
-    def getAdvectionCallback(self: viennaps.d2.ProcessModel) -> ...:
+    def getAdvectionCallback(self) -> ...:
         ...
-    def getGeometricModel(self: viennaps.d2.ProcessModel) -> ...:
+    def getGeometricModel(self) -> ...:
         ...
-    def getPrimaryDirection(self: viennaps.d2.ProcessModel) -> typing.Annotated[list[float], "FixedSize(3)"] | None:
+    def getPrimaryDirection(self) -> typing.Annotated[list[float], "FixedSize(3)"] | None:
         ...
-    def getProcessName(self: viennaps.d2.ProcessModel) -> str | None:
+    def getProcessName(self) -> str | None:
         ...
-    def getSurfaceModel(self: viennaps.d2.ProcessModel) -> ...:
+    def getSurfaceModel(self) -> ...:
         ...
-    def getVelocityField(self: viennaps.d2.ProcessModel) -> ...:
+    def getVelocityField(self) -> ...:
         ...
-    def setPrimaryDirection(self: viennaps.d2.ProcessModel, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"]) -> None:
+    def setPrimaryDirection(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> None:
         ...
-    def setProcessName(self: viennaps.d2.ProcessModel, arg0: str) -> None:
+    def setProcessName(self, arg0: str) -> None:
         ...
-    def setSurfaceModel(self: viennaps.d2.ProcessModel, arg0: ...) -> None:
+    def setSurfaceModel(self, arg0: ...) -> None:
         ...
 class ProcessModelBase:
     pass
 class RateGrid:
-    def __init__(self: viennaps.d2.RateGrid) -> None:
+    def __init__(self) -> None:
         ...
-    def interpolate(self: viennaps.d2.RateGrid, coord: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"]) -> float:
+    def interpolate(self, coord: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> float:
         ...
-    def loadFromCSV(self: viennaps.d2.RateGrid, filename: str) -> bool:
+    def loadFromCSV(self, filename: str) -> bool:
         ...
-    def setCustomInterpolator(self: viennaps.d2.RateGrid, function: collections.abc.Callable) -> None:
+    def setCustomInterpolator(self, function: collections.abc.Callable) -> None:
         ...
-    def setIDWNeighbors(self: viennaps.d2.RateGrid, k: typing.SupportsInt) -> None:
-        ...
-    @typing.overload
-    def setInterpolationMode(self: viennaps.d2.RateGrid, mode: viennaps.d2.Interpolation) -> None:
+    def setIDWNeighbors(self, k: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     @typing.overload
-    def setInterpolationMode(self: viennaps.d2.RateGrid, mode: str) -> None:
+    def setInterpolationMode(self, mode: Interpolation) -> None:
         ...
-    def setOffset(self: viennaps.d2.RateGrid, offset: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(2)"]) -> None:
+    @typing.overload
+    def setInterpolationMode(self, mode: str) -> None:
+        ...
+    def setOffset(self, offset: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(2)"]) -> None:
         ...
 class Reader:
     @typing.overload
-    def __init__(self: viennaps.d2.Reader) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Reader, fileName: str) -> None:
+    def __init__(self, fileName: str) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Reader, domain: viennaps.d2.Domain, fileName: str) -> None:
+    def __init__(self, domain: Domain, fileName: str) -> None:
         ...
-    def apply(self: viennaps.d2.Reader) -> None:
+    def apply(self) -> None:
         """
         Read the domain from the specified file.
         """
-    def setDomain(self: viennaps.d2.Reader, arg0: viennaps.d2.Domain) -> None:
+    def setDomain(self, arg0: Domain) -> None:
         """
         Set the domain to read into.
         """
-    def setFileName(self: viennaps.d2.Reader, arg0: str) -> None:
+    def setFileName(self, arg0: str) -> None:
         """
         Set the input file name to read (should end with .vpsd).
         """
-class SF6C4F8Etching(viennaps.d2.ProcessModel):
+class SF6C4F8Etching(ProcessModel):
     @staticmethod
     def defaultParameters() -> viennaps._core.PlasmaEtchingParameters:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.SF6C4F8Etching) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.SF6C4F8Etching, ionFlux: typing.SupportsFloat, etchantFlux: typing.SupportsFloat, meanEnergy: typing.SupportsFloat, sigmaEnergy: typing.SupportsFloat, ionExponent: typing.SupportsFloat = 300.0, etchStopDepth: typing.SupportsFloat = -1.7976931348623157e+308) -> None:
+    def __init__(self, ionFlux: typing.SupportsFloat | typing.SupportsIndex, etchantFlux: typing.SupportsFloat | typing.SupportsIndex, meanEnergy: typing.SupportsFloat | typing.SupportsIndex, sigmaEnergy: typing.SupportsFloat | typing.SupportsIndex, ionExponent: typing.SupportsFloat | typing.SupportsIndex = 300.0, etchStopDepth: typing.SupportsFloat | typing.SupportsIndex = -1.7976931348623157e+308) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.SF6C4F8Etching, parameters: viennaps._core.PlasmaEtchingParameters) -> None:
+    def __init__(self, parameters: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
-    def getParameters(self: viennaps.d2.SF6C4F8Etching) -> viennaps._core.PlasmaEtchingParameters:
+    def getParameters(self) -> viennaps._core.PlasmaEtchingParameters:
         ...
-    def setParameters(self: viennaps.d2.SF6C4F8Etching, arg0: viennaps._core.PlasmaEtchingParameters) -> None:
+    def setParameters(self, arg0: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
-class SF6O2Etching(viennaps.d2.ProcessModel):
+class SF6O2Etching(ProcessModel):
     @staticmethod
     def defaultParameters() -> viennaps._core.PlasmaEtchingParameters:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.SF6O2Etching) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.SF6O2Etching, ionFlux: typing.SupportsFloat, etchantFlux: typing.SupportsFloat, oxygenFlux: typing.SupportsFloat, meanIonEnergy: typing.SupportsFloat = 100.0, sigmaIonEnergy: typing.SupportsFloat = 10.0, ionExponent: typing.SupportsFloat = 100.0, oxySputterYield: typing.SupportsFloat = 3.0, etchStopDepth: typing.SupportsFloat = -1.7976931348623157e+308) -> None:
+    def __init__(self, ionFlux: typing.SupportsFloat | typing.SupportsIndex, etchantFlux: typing.SupportsFloat | typing.SupportsIndex, oxygenFlux: typing.SupportsFloat | typing.SupportsIndex, meanIonEnergy: typing.SupportsFloat | typing.SupportsIndex = 100.0, sigmaIonEnergy: typing.SupportsFloat | typing.SupportsIndex = 10.0, ionExponent: typing.SupportsFloat | typing.SupportsIndex = 100.0, oxySputterYield: typing.SupportsFloat | typing.SupportsIndex = 3.0, etchStopDepth: typing.SupportsFloat | typing.SupportsIndex = -1.7976931348623157e+308) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.SF6O2Etching, parameters: viennaps._core.PlasmaEtchingParameters) -> None:
+    def __init__(self, parameters: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
-    def getParameters(self: viennaps.d2.SF6O2Etching) -> viennaps._core.PlasmaEtchingParameters:
+    def getParameters(self) -> viennaps._core.PlasmaEtchingParameters:
         ...
-    def setParameters(self: viennaps.d2.SF6O2Etching, arg0: viennaps._core.PlasmaEtchingParameters) -> None:
+    def setParameters(self, arg0: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
-class SelectiveEpitaxy(viennaps.d2.ProcessModel):
+class SelectiveEpitaxy(ProcessModel):
     @typing.overload
-    def __init__(self: viennaps.d2.SelectiveEpitaxy, rate111: typing.SupportsFloat = 0.5, rate100: typing.SupportsFloat = 1.0) -> None:
-        ...
-    @typing.overload
-    def __init__(self: viennaps.d2.SelectiveEpitaxy, materialRates: collections.abc.Sequence[tuple[viennaps._core.Material, typing.SupportsFloat]], rate111: typing.SupportsFloat = 0.5, rate100: typing.SupportsFloat = 1.0) -> None:
+    def __init__(self, rate111: typing.SupportsFloat | typing.SupportsIndex = 0.5, rate100: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.SelectiveEpitaxy, nvFactors: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], rate111: typing.SupportsFloat = 0.5, rate100: typing.SupportsFloat = 1.0) -> None:
+    def __init__(self, materialRates: collections.abc.Sequence[tuple[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex]], rate111: typing.SupportsFloat | typing.SupportsIndex = 0.5, rate100: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> None:
         ...
-    def setMaterialRate(self: viennaps.d2.SelectiveEpitaxy, material: viennaps._core.Material, rate: typing.SupportsFloat) -> None:
+    @typing.overload
+    def __init__(self, nvFactors: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], rate111: typing.SupportsFloat | typing.SupportsIndex = 0.5, rate100: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> None:
+        ...
+    def setMaterialRate(self, material: viennaps._core.Material, rate: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
 class SheetResistance:
     """
@@ -1339,183 +1458,180 @@ class SheetResistance:
       sr.setConcentrationLabel("P_active")
       rsh = sr.computeElectron()   # Masetti n-type (P in Si)
     """
-    def __init__(self: viennaps.d2.SheetResistance) -> None:
-class SingleParticleALD(ProcessModel):
-    def __init__(self, parameters: viennaps._core.SingleParticleALDParams) -> None:
+    def __init__(self) -> None:
         ...
-    def computeElectron(self: viennaps.d2.SheetResistance) -> float:
+    def computeElectron(self) -> float:
         """
         Rsh [Ω/□] using the Masetti-Severi electron mobility model (n-type, e.g. P-doped Si).
         """
-    def computeHole(self: viennaps.d2.SheetResistance) -> float:
+    def computeHole(self) -> float:
         """
         Rsh [Ω/□] using the Masetti-Severi hole mobility model (p-type, e.g. B-doped Si).
         """
-    def setCellSet(self: viennaps.d2.SheetResistance, cellSet: viennaps.d2.DenseCellSet) -> None:
+    def setCellSet(self, cellSet: DenseCellSet) -> None:
         """
         Attach the cell set to analyse.
         """
-    def setConcentrationLabel(self: viennaps.d2.SheetResistance, label: str) -> None:
+    def setConcentrationLabel(self, label: str) -> None:
         """
         Name of the scalar field containing the active concentration (default: 'active_concentration').
         """
-    def setConcentrationUnit(self: viennaps.d2.SheetResistance, unit: typing.SupportsFloat) -> None:
+    def setConcentrationUnit(self, unit: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Multiplicative factor to convert the cell-set concentration to cm⁻³ (default: 1e21 for nm⁻³ fields).
         """
-    def setDepthAxis(self: viennaps.d2.SheetResistance, axis: typing.SupportsInt) -> None:
+    def setDepthAxis(self, axis: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
         Cell-centre axis index for depth  (default: D−1).
         """
-    def setLengthUnit(self: viennaps.d2.SheetResistance, lu_cm: typing.SupportsFloat) -> None:
+    def setLengthUnit(self, lu_cm: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Length-unit → cm conversion factor (default: 1e-7 for nm domains). Also updates the concentration unit to stay consistent.
         """
-    def setSurfacePosition(self: viennaps.d2.SheetResistance, surfacePosition: typing.SupportsFloat) -> None:
+    def setSurfacePosition(self, surfacePosition: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Wafer-surface coordinate along the depth axis. Depth is computed as surfacePosition minus the cell-centre coordinate.
         """
-class SingleParticleALD(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.SingleParticleALD, stickingProbability: typing.SupportsFloat, numCycles: typing.SupportsInt, growthPerCycle: typing.SupportsFloat, totalCycles: typing.SupportsInt, coverageTimeStep: typing.SupportsFloat, evFlux: typing.SupportsFloat, inFlux: typing.SupportsFloat, s0: typing.SupportsFloat, gasMFP: typing.SupportsFloat) -> None:
+class SingleParticleALD(ProcessModel):
+    def __init__(self, parameters: viennaps._core.SingleParticleALDParams) -> None:
         ...
-class SingleParticleProcess(viennaps.d2.ProcessModel):
+class SingleParticleProcess(ProcessModel):
     @typing.overload
-    def __init__(self: viennaps.d2.SingleParticleProcess, rate: typing.SupportsFloat = 1.0, stickingProbability: typing.SupportsFloat = 1.0, sourceExponent: typing.SupportsFloat = 1.0, maskMaterial: viennaps._core.Material = ...) -> None:
-        ...
-    @typing.overload
-    def __init__(self: viennaps.d2.SingleParticleProcess, rate: typing.SupportsFloat, stickingProbability: typing.SupportsFloat, sourceExponent: typing.SupportsFloat, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+    def __init__(self, rate: typing.SupportsFloat | typing.SupportsIndex = 1.0, stickingProbability: typing.SupportsFloat | typing.SupportsIndex = 1.0, sourceExponent: typing.SupportsFloat | typing.SupportsIndex = 1.0, maskMaterial: viennaps._core.Material = ...) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.SingleParticleProcess, materialRates: collections.abc.Mapping[viennaps._core.Material, typing.SupportsFloat], stickingProbability: typing.SupportsFloat, sourceExponent: typing.SupportsFloat) -> None:
-        ...
-    def setDefaultRate(self: viennaps.d2.SingleParticleProcess, arg0: typing.SupportsFloat) -> None:
-        ...
-    def setMaterialRate(self: viennaps.d2.SingleParticleProcess, material: viennaps._core.Material, rate: typing.SupportsFloat) -> None:
-        ...
-class SphereDistribution(viennaps.d2.ProcessModel):
-    @typing.overload
-    def __init__(self: viennaps.d2.SphereDistribution, radius: typing.SupportsFloat, mask: viennals.d2.Domain) -> None:
+    def __init__(self, rate: typing.SupportsFloat | typing.SupportsIndex, stickingProbability: typing.SupportsFloat | typing.SupportsIndex, sourceExponent: typing.SupportsFloat | typing.SupportsIndex, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.SphereDistribution, radius: typing.SupportsFloat) -> None:
+    def __init__(self, materialRates: collections.abc.Mapping[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex], stickingProbability: typing.SupportsFloat | typing.SupportsIndex, sourceExponent: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def addMaskMaterial(self: viennaps.d2.SphereDistribution, material: viennaps._core.Material) -> None:
+    def setDefaultRate(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def applyToSingleMaterial(self: viennaps.d2.SphereDistribution, material: viennaps._core.Material) -> None:
+    def setMaterialRate(self, material: viennaps._core.Material, rate: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+class SphereDistribution(ProcessModel):
+    @typing.overload
+    def __init__(self, radius: typing.SupportsFloat | typing.SupportsIndex, mask: viennals.d2.Domain) -> None:
+        ...
+    @typing.overload
+    def __init__(self, radius: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def addMaskMaterial(self, material: viennaps._core.Material) -> None:
+        ...
+    def applyToSingleMaterial(self, material: viennaps._core.Material) -> None:
         ...
 class StencilLocalLaxFriedrichsScalar:
     @staticmethod
-    def setMaxDissipation(maxDissipation: typing.SupportsFloat) -> None:
+    def setMaxDissipation(maxDissipation: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-class TEOSDeposition(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.TEOSDeposition, stickingProbabilityP1: typing.SupportsFloat, rateP1: typing.SupportsFloat, orderP1: typing.SupportsFloat, stickingProbabilityP2: typing.SupportsFloat = 0.0, rateP2: typing.SupportsFloat = 0.0, orderP2: typing.SupportsFloat = 0.0) -> None:
+class TEOSDeposition(ProcessModel):
+    def __init__(self, stickingProbabilityP1: typing.SupportsFloat | typing.SupportsIndex, rateP1: typing.SupportsFloat | typing.SupportsIndex, orderP1: typing.SupportsFloat | typing.SupportsIndex, stickingProbabilityP2: typing.SupportsFloat | typing.SupportsIndex = 0.0, rateP2: typing.SupportsFloat | typing.SupportsIndex = 0.0, orderP2: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         ...
-class TEOSPECVD(viennaps.d2.ProcessModel):
-    def __init__(self: viennaps.d2.TEOSPECVD, stickingProbabilityRadical: typing.SupportsFloat, depositionRateRadical: typing.SupportsFloat, depositionRateIon: typing.SupportsFloat, exponentIon: typing.SupportsFloat, stickingProbabilityIon: typing.SupportsFloat = 1.0, reactionOrderRadical: typing.SupportsFloat = 1.0, reactionOrderIon: typing.SupportsFloat = 1.0, minAngleIon: typing.SupportsFloat = 0.0) -> None:
+class TEOSPECVD(ProcessModel):
+    def __init__(self, stickingProbabilityRadical: typing.SupportsFloat | typing.SupportsIndex, depositionRateRadical: typing.SupportsFloat | typing.SupportsIndex, depositionRateIon: typing.SupportsFloat | typing.SupportsIndex, exponentIon: typing.SupportsFloat | typing.SupportsIndex, stickingProbabilityIon: typing.SupportsFloat | typing.SupportsIndex = 1.0, reactionOrderRadical: typing.SupportsFloat | typing.SupportsIndex = 1.0, reactionOrderIon: typing.SupportsFloat | typing.SupportsIndex = 1.0, minAngleIon: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
         ...
 class ToDiskMesh:
     @typing.overload
-    def __init__(self: viennaps.d2.ToDiskMesh, domain: viennaps.d2.Domain, mesh: viennals._core.Mesh) -> None:
+    def __init__(self, domain: Domain, mesh: viennals._core.Mesh) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.ToDiskMesh) -> None:
+    def __init__(self) -> None:
         ...
-    def apply(self: viennaps.d2.ToDiskMesh) -> None:
+    def apply(self) -> None:
         ...
-    def setDomain(self: viennaps.d2.ToDiskMesh, arg0: viennaps.d2.Domain) -> None:
+    def setDomain(self, arg0: Domain) -> None:
         """
         Set the domain in the mesh converter.
         """
-    def setMesh(self: viennaps.d2.ToDiskMesh, arg0: viennals._core.Mesh) -> None:
+    def setMesh(self, arg0: viennals._core.Mesh) -> None:
         """
         Set the mesh in the mesh converter
         """
 class VTKRenderWindow:
     @typing.overload
-    def __init__(self: viennaps.d2.VTKRenderWindow) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.VTKRenderWindow, domain: viennaps.d2.Domain) -> None:
+    def __init__(self, domain: Domain) -> None:
         ...
-    def insertNextDomain(self: viennaps.d2.VTKRenderWindow, domain: viennaps.d2.Domain, offset: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"] = [0.0, 0.0, 0.0]) -> None:
+    def insertNextDomain(self, domain: Domain, offset: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"] = [0.0, 0.0, 0.0]) -> None:
         """
         Insert domain to be visualized.
         """
-    def printCameraInfo(self: viennaps.d2.VTKRenderWindow) -> None:
+    def printCameraInfo(self) -> None:
         """
         Print the current camera settings to the console.
         """
-    def render(self: viennaps.d2.VTKRenderWindow) -> None:
+    def render(self) -> None:
         """
         Render the current domain state.
         """
-    def saveScreenshot(self: viennaps.d2.VTKRenderWindow, fileName: str, scale: typing.SupportsInt = 1) -> None:
+    def saveScreenshot(self, fileName: str, scale: typing.SupportsInt | typing.SupportsIndex = 1) -> None:
         """
         Save a screenshot of the current render window.
         """
-    def setBackgroundColor(self: viennaps.d2.VTKRenderWindow, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"]) -> None:
+    def setBackgroundColor(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> None:
         """
         Set the background color of the render window.
         """
-    def setCameraFocalPoint(self: viennaps.d2.VTKRenderWindow, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"]) -> None:
+    def setCameraFocalPoint(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> None:
         """
         Set the camera focal point in world coordinates.
         """
-    def setCameraPosition(self: viennaps.d2.VTKRenderWindow, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"]) -> None:
+    def setCameraPosition(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> None:
         """
         Set the camera position in world coordinates.
         """
-    def setCameraView(self: viennaps.d2.VTKRenderWindow, axis: typing.SupportsInt) -> None:
+    def setCameraView(self, axis: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
         Set the camera view along an axix (x,y,z)
         """
-    def setCameraViewUp(self: viennaps.d2.VTKRenderWindow, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"]) -> None:
+    def setCameraViewUp(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> None:
         """
         Set the camera view up vector.
         """
-    def setDomainOffset(self: viennaps.d2.VTKRenderWindow, arg0: typing.SupportsInt, arg1: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"]) -> None:
+    def setDomainOffset(self, arg0: typing.SupportsInt | typing.SupportsIndex, arg1: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"]) -> None:
         """
         Set an offset to be applied to the domain during rendering.
         """
-    def setRenderMode(self: viennaps.d2.VTKRenderWindow, arg0: viennaps._core.RenderMode) -> None:
+    def setRenderMode(self, arg0: viennaps._core.RenderMode) -> None:
         """
         Set the render mode (surface, interfaces, volume).
         """
-    def setWindowSize(self: viennaps.d2.VTKRenderWindow, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsInt], "FixedSize(2)"]) -> None:
+    def setWindowSize(self, arg0: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"]) -> None:
         """
         Set the size of the render window.
         """
-    def toggleInstructionText(self: viennaps.d2.VTKRenderWindow) -> None:
+    def toggleInstructionText(self) -> None:
         """
         Toggle the instruction text overlay on/off.
         """
-class WetEtching(viennaps.d2.ProcessModel):
+class WetEtching(ProcessModel):
     @typing.overload
-    def __init__(self: viennaps.d2.WetEtching, materialRates: collections.abc.Sequence[tuple[viennaps._core.Material, typing.SupportsFloat]]) -> None:
+    def __init__(self, materialRates: collections.abc.Sequence[tuple[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex]]) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.WetEtching, direction100: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], direction010: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat], "FixedSize(3)"], rate100: typing.SupportsFloat, rate110: typing.SupportsFloat, rate111: typing.SupportsFloat, rate311: typing.SupportsFloat, materialRates: collections.abc.Sequence[tuple[viennaps._core.Material, typing.SupportsFloat]]) -> None:
+    def __init__(self, direction100: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], direction010: typing.Annotated[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], "FixedSize(3)"], rate100: typing.SupportsFloat | typing.SupportsIndex, rate110: typing.SupportsFloat | typing.SupportsIndex, rate111: typing.SupportsFloat | typing.SupportsIndex, rate311: typing.SupportsFloat | typing.SupportsIndex, materialRates: collections.abc.Sequence[tuple[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex]]) -> None:
         ...
 class Writer:
     @typing.overload
-    def __init__(self: viennaps.d2.Writer) -> None:
+    def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Writer, domain: viennaps.d2.Domain) -> None:
+    def __init__(self, domain: Domain) -> None:
         ...
     @typing.overload
-    def __init__(self: viennaps.d2.Writer, domain: viennaps.d2.Domain, fileName: str) -> None:
+    def __init__(self, domain: Domain, fileName: str) -> None:
         ...
-    def apply(self: viennaps.d2.Writer) -> None:
+    def apply(self) -> None:
         """
         Write the domain to the specified file.
         """
-    def setDomain(self: viennaps.d2.Writer, arg0: viennaps.d2.Domain) -> None:
+    def setDomain(self, arg0: Domain) -> None:
         """
         Set the domain to be written to a file.
         """
-    def setFileName(self: viennaps.d2.Writer, arg0: str) -> None:
+    def setFileName(self, arg0: str) -> None:
         """
         Set the output file name (should end with .vpsd).
         """
-gpu = viennaps.d2.gpu

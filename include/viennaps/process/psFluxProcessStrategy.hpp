@@ -503,7 +503,8 @@ private:
     for (const auto &[name, coefficient] : diffusionCoefficients) {
       if (auto target = targets->getScalarData(name, true); target != nullptr) {
         hasValidTarget = coefficient > 0.;
-        break;
+        if (hasValidTarget)
+          break;
       }
     }
     if (!hasValidTarget)

@@ -142,7 +142,7 @@ jobs:
             CMAKE_ARGS="${CMAKE_EXTRA}" ./venv/bin/pip install ./_viennals
             CMAKE_EXTRA="${CMAKE_EXTRA} -DCPM_ViennaLS_SOURCE=$(pwd)/_viennals"
           fi
-          CMAKE_ARGS="${CMAKE_EXTRA}" ./venv/bin/pip install . --no-deps
+          CMAKE_ARGS="${CMAKE_EXTRA}" ./venv/bin/pip install . --no-deps -v
           ./venv/bin/python -c "import viennaps; print(viennaps.__doc__)"
 
       - name: 🐍 Build and check Python Module (macOS)

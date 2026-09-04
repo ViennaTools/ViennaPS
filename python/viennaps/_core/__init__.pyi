@@ -1,5 +1,5 @@
 """
-ViennaPS is a topography simulation library for microelectronic fabrication processes. It models the evolution of 2D and 3D surfaces during etching, deposition, and related steps, combining advanced level-set methods for surface evolution with Monte Carlo ray tracing for flux calculation. This allows accurate, feature-scale simulation of complex fabrication geometries.
+ViennaPS is a header-only C++ library for process and topography simulation in microelectronic fabrication. It models the evolution of 2D and 3D surfaces during etching, deposition, oxidation, and related steps, combining advanced level-set methods for surface evolution with Monte Carlo ray tracing for flux calculation and physics-based solvers for coupled processes. The oxidation model simulates LOCOS and trench oxidation through a fully coupled diffusion-viscous flow solver with nitride mask deformation, capturing bird's beak formation and stress-driven oxide redistribution.
 """
 from __future__ import annotations
 import collections.abc
@@ -8,53 +8,12 @@ import typing
 import viennals._core
 from viennaps import d2
 import viennaps.d2
-from viennaps import d3
 import viennaps.d3
+from viennaps import d3
 from . import constants
 from . import gpu
 from . import util
-__all__: list[str] = ['AdvectionParameters', 'AnnealMode', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GpuMode', 'GpuPreconditioner', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDoseControl', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'PearsonIVParameters', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'SiliconOrientation', 'SingleParticleALDParams', 'Slice', 'SurfaceDiffusionParameters', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
-
-class AnnealMode(enum.IntEnum):
-    """Anneal diffusion solver mode"""
-    Explicit: int = ...
-    GaussSeidel: int = ...
-
-class ImplantDoseControl(enum.IntEnum):
-    """Implant dose control mode"""
-    Off: int = ...
-    WaferDose: int = ...
-    BeamDose: int = ...
-
-class PearsonIVParameters:
-    """Pearson IV moment parameters for ion implant profiles."""
-    mu: float
-    """Projected range / mean depth (length units, e.g. nm)"""
-    sigma: float
-    """Straggle / standard deviation (same units)"""
-    beta: float
-    """ViennaPS 'skewness' config key → β₂ position in Pearson formula"""
-    gamma: float
-    """ViennaPS 'kurtosis' config key → γ₁ position in Pearson formula"""
-    def __init__(self) -> None: ...
-    def __repr__(self) -> str: ...
-def setModelDbRoot(path: str) -> None: ...
-def getModelDbRoot() -> str: ...
-def initModelDbRoot() -> None: ...
-class OxidantType(enum.IntEnum):
-    Dry: int = ...
-    Wet: int = ...
-class SiliconOrientation(enum.IntEnum):
-    Si100: int = ...
-    Si110: int = ...
-    Si111: int = ...
-    PolySi: int = ...
-class GpuMode(enum.IntEnum):
-    Gpu: int = ...
-    Cpu: int = ...
-class GpuPreconditioner(enum.IntEnum):
-    Jacobi: int = ...
-    ILU0: int = ...
+__all__: list[str] = ['AdvectionParameters', 'AnnealMode', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GpuMode', 'GpuPreconditioner', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDoseControl', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'PearsonIVParameters', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'ScreenEnergyLoss', 'SiliconOrientation', 'SingleParticleALDParams', 'Slice', 'SurfaceDiffusionParameters', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
 class AdvectionParameters:
     adaptiveTimeStepping: bool
     calculateIntermediateVelocities: bool
@@ -92,6 +51,19 @@ class AdvectionParameters:
     @timeStepRatio.setter
     def timeStepRatio(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
+class AnnealMode(enum.IntEnum):
+    """
+    Anneal diffusion solver mode
+    """
+    Explicit: typing.ClassVar[AnnealMode]  # value = <AnnealMode.Explicit: 0>
+    GaussSeidel: typing.ClassVar[AnnealMode]  # value = <AnnealMode.GaussSeidel: 1>
+    @classmethod
+    def __new__(cls, value):
+        ...
+    def __format__(self, format_spec):
+        """
+        Convert to a string according to format_spec.
+        """
 class AtomicLayerProcessParameters:
     def __init__(self) -> None:
         ...
@@ -703,6 +675,27 @@ class FluxEngineType(enum.IntEnum):
         """
         Convert to a string according to format_spec.
         """
+class GpuMode(enum.IntEnum):
+    Auto: typing.ClassVar[GpuMode]  # value = <GpuMode.Auto: 2>
+    Cpu: typing.ClassVar[GpuMode]  # value = <GpuMode.Cpu: 0>
+    Gpu: typing.ClassVar[GpuMode]  # value = <GpuMode.Gpu: 1>
+    @classmethod
+    def __new__(cls, value):
+        ...
+    def __format__(self, format_spec):
+        """
+        Convert to a string according to format_spec.
+        """
+class GpuPreconditioner(enum.IntEnum):
+    ILU0: typing.ClassVar[GpuPreconditioner]  # value = <GpuPreconditioner.ILU0: 1>
+    Jacobi: typing.ClassVar[GpuPreconditioner]  # value = <GpuPreconditioner.Jacobi: 0>
+    @classmethod
+    def __new__(cls, value):
+        ...
+    def __format__(self, format_spec):
+        """
+        Convert to a string according to format_spec.
+        """
 class HoleShape(enum.IntEnum):
     FULL: typing.ClassVar[HoleShape]  # value = <HoleShape.FULL: 0>
     HALF: typing.ClassVar[HoleShape]  # value = <HoleShape.HALF: 1>
@@ -831,6 +824,20 @@ class IBEParametersCos4Yield:
     @a4.setter
     def a4(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
+class ImplantDoseControl(enum.IntEnum):
+    """
+    Implant dose control mode
+    """
+    BeamDose: typing.ClassVar[ImplantDoseControl]  # value = <ImplantDoseControl.BeamDose: 2>
+    Off: typing.ClassVar[ImplantDoseControl]  # value = <ImplantDoseControl.Off: 0>
+    WaferDose: typing.ClassVar[ImplantDoseControl]  # value = <ImplantDoseControl.WaferDose: 1>
+    @classmethod
+    def __new__(cls, value):
+        ...
+    def __format__(self, format_spec):
+        """
+        Convert to a string according to format_spec.
+        """
 class Length:
     @staticmethod
     def convertAngstrom() -> float:
@@ -1155,7 +1162,11 @@ class MaterialRegistry:
     def setInfo(self, arg0: Material, arg1: MaterialInfo) -> None:
         ...
 class MaterialValueMap:
+    @typing.overload
     def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, d: dict) -> None:
         ...
     def clearAll(self) -> None:
         ...
@@ -1244,6 +1255,53 @@ class NormalizationType(enum.IntEnum):
         """
         Convert to a string according to format_spec.
         """
+class OxidantType(enum.IntEnum):
+    Dry: typing.ClassVar[OxidantType]  # value = <OxidantType.Dry: 0>
+    Wet: typing.ClassVar[OxidantType]  # value = <OxidantType.Wet: 1>
+    @classmethod
+    def __new__(cls, value):
+        ...
+    def __format__(self, format_spec):
+        """
+        Convert to a string according to format_spec.
+        """
+class PearsonIVParameters:
+    def __init__(self) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def beta(self) -> float:
+        """
+        ViennaPS 'skewness' config key → β₂ position in formula
+        """
+    @beta.setter
+    def beta(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def gamma(self) -> float:
+        """
+        ViennaPS 'kurtosis' config key → γ₁ position in formula
+        """
+    @gamma.setter
+    def gamma(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def mu(self) -> float:
+        """
+        Projected range / mean depth (length units, e.g. nm)
+        """
+    @mu.setter
+    def mu(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def sigma(self) -> float:
+        """
+        Straggle / standard deviation (same units)
+        """
+    @sigma.setter
+    def sigma(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
 class PlasmaEtchingParameters:
     Ions: PlasmaEtchingParametersIons
     Mask: PlasmaEtchingParametersMask
@@ -1602,6 +1660,31 @@ class RenderMode(enum.IntEnum):
         """
         Convert to a string according to format_spec.
         """
+class ScreenEnergyLoss:
+    def __init__(self, screenRangePrefactor: typing.SupportsFloat | typing.SupportsIndex, screenRangeExponent: typing.SupportsFloat | typing.SupportsIndex, substrateRangeExponent: typing.SupportsFloat | typing.SupportsIndex, energyKeV: typing.SupportsFloat | typing.SupportsIndex, referenceThicknessNm: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Analytic screen energy-loss model: power-law ranges Rp(E)=a*E^p. Returns the projected-range scale factor k relative to the reference screen thickness (k==1 at the reference).
+        """
+    def rangeScale(self, screenThicknessNm: typing.SupportsFloat | typing.SupportsIndex) -> float:
+        """
+        Projected-range scale factor k for the given screen thickness.
+        """
+    def residualEnergy(self, screenThicknessNm: typing.SupportsFloat | typing.SupportsIndex) -> float:
+        """
+        Residual ion energy [keV] after passing through the screen.
+        """
+class SiliconOrientation(enum.IntEnum):
+    PolySi: typing.ClassVar[SiliconOrientation]  # value = <SiliconOrientation.PolySi: 3>
+    Si100: typing.ClassVar[SiliconOrientation]  # value = <SiliconOrientation.Si100: 0>
+    Si110: typing.ClassVar[SiliconOrientation]  # value = <SiliconOrientation.Si110: 1>
+    Si111: typing.ClassVar[SiliconOrientation]  # value = <SiliconOrientation.Si111: 2>
+    @classmethod
+    def __new__(cls, value):
+        ...
+    def __format__(self, format_spec):
+        """
+        Convert to a string according to format_spec.
+        """
 class SingleParticleALDParams:
     def __init__(self) -> None:
         ...
@@ -1755,9 +1838,21 @@ class TimeUnit(enum.IntEnum):
         """
         Convert to a string according to format_spec.
         """
+def getModelDbRoot() -> str:
+    """
+    Get the configured ViennaPS modeldb root directory.
+    """
 def gpuAvailable() -> bool:
     """
     Check if ViennaPS was compiled with GPU support.
+    """
+def initModelDbRoot() -> None:
+    """
+    Initialize the ViennaPS modeldb root from the compiled default or VIENNAPS_MODELDB_DIR.
+    """
+def setModelDbRoot(path: str) -> None:
+    """
+    Set the ViennaPS modeldb root directory.
     """
 def setNumThreads(arg0: typing.SupportsInt | typing.SupportsIndex) -> None:
     ...

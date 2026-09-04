@@ -1,8 +1,6 @@
 [build-system]
 requires = [
     "scikit-build-core>=0.12.2",
-    # pybind11 3.1 bumped the internals ABI to v12; the published ViennaLS
-    # wheel is v11, so pin to 3.0.x for cross-module type compatibility.
     "pybind11>=3.0,<3.1",
 ]
 build-backend = "scikit_build_core.build"
@@ -25,5 +23,5 @@ Issues = "https://github.com/ViennaTools/ViennaPS/issues"
 build-dir = "build"
 cmake.build-type = "Release"
 cmake.args = ["-DVIENNAPS_BUILD_PYTHON=ON"]
-sdist.exclude = ["tests", "examples", "lib", "assets"]
+sdist.exclude = ["tests", "examples", "lib", "assets", "benchmark"]
 wheel.packages = ["python/viennaps"]
