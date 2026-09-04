@@ -64,7 +64,6 @@ int main(int argc, char *argv[]) {
 
   auto model =
       SmartPointer<FluorocarbonEtching<NumericType, D>>::New(parameters);
-  model->setProcessName(name);
 
   AdvectionParameters advectionParams;
   advectionParams.spatialScheme = SpatialScheme::LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
@@ -81,7 +80,6 @@ int main(int argc, char *argv[]) {
   process.setProcessDuration(params.get("processTime"));
   process.setParameters(advectionParams);
   process.setParameters(coverageParams);
-  process.setFluxEngineType(fluxEngineType);
 
   // print initial surface
   geometry->saveVolumeMesh("initial");
