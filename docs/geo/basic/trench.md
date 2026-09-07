@@ -61,7 +61,7 @@ MakeTrench(viennaps::Domain domain,
 | `baseHeight`           | (Optional) Sets the base height of the trench. Default is set to 0.                                         | `NumericType`    |
 | `periodicBoundary`     | (Optional) If set to true, enables periodic boundaries in both x and y directions (only applicable in 3D). Default is set to false. | `bool`   |
 | `makeMask`             | (Optional) If set to true, allows the trench to function as a mask, with specified material applied only to the bottom. Default is set to false. | `bool`                  |
-| `material`             | (Optional) Specifies the material used for the trench. Default is set to `Material_None`.                |    `Material`               |
+| `material`             | (Optional) Specifies the material used for the trench. Default is set to `Material::Si`.                |    `Material`               |
 
 __Example usage__:
 
@@ -100,3 +100,30 @@ vps.MakeTrench(domain=domain,
              ).apply()
 ```
 </details>
+
+## Layered trench geometry
+
+For a configured domain, a third constructor accepts a sequence of
+`MakeTrench<NumericType, D>::MaterialLayer` objects. Layers are built upward
+from height zero. Each layer specifies `height`, `width`, `taperAngle`,
+`material`, and `isMask`. A layer with `isMask = true` receives a cutout of the
+specified width and taper; a layer with `isMask = false` is solid.
+
+```python
+import viennaps as vps
+
+vps.setDimension(2)
+domain = vps.Domain(0.5, 50.0)
+layer = vps.MakeTrench.MaterialLayer
+layers = [
+    layer(10.0, 0.0, 0.0, vps.Material.Si, False),
+    layer(2.0, 20.0, 0.0, vps.Material.SiO2, True),
+    layer(5.0, 20.0, 5.0, vps.Material.Mask, True),
+]
+vps.MakeTrench(domain, layers, halfTrench=False).apply()
+```
+
+The configured-domain width/depth constructor instead accepts
+`trenchTaperAngle`, `maskHeight`, `maskTaperAngle`, `halfTrench`, `material`,
+and `maskMaterial`. These are separate from the older grid/extents constructor's
+`taperingAngle`, `baseHeight`, `periodicBoundary`, and `makeMask` options.

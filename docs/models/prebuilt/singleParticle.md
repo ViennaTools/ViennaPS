@@ -10,7 +10,7 @@ nav_order: 3
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psSingleParticleProcess.hpp>
+#include <models/psSingleParticleProcess.hpp>
 ```
 GPU and CPU compatible
 {: .label .label-green}

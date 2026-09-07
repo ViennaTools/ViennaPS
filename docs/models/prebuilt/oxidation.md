@@ -10,7 +10,7 @@ nav_order: 14
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psOxidation.hpp>
+#include <models/psOxidation.hpp>
 ```
 ---
 
@@ -122,8 +122,14 @@ built with GPU support.
 
 | Method | Description |
 |--------|-------------|
-| `setGpuMode(mode)` | Selects `GpuMode::Cpu` or `GpuMode::Gpu`. |
+| `setGpuMode(mode)` | Selects `GpuMode::Cpu` (default), `GpuMode::Gpu`, or `GpuMode::Auto`. |
 | `setGpuPreconditioner(preconditioner)` | Selects the GPU BiCGSTAB preconditioner, such as Jacobi or ILU0. |
+
+`GpuMode::Auto` tries the GPU and falls back to CPU if the GPU solver is
+unavailable or fails. `GpuMode::Gpu` requires GPU execution and reports an
+error on failure. In Python use `vps.GpuMode.Auto`, `vps.GpuMode.Cpu`, or
+`vps.GpuMode.Gpu`. This selection controls the oxidation solver independently
+of the process ray-tracing `FluxEngineType`.
 
 ## Output Helpers
 

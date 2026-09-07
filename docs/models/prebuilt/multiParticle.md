@@ -21,7 +21,7 @@ MathJax = {
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psMultiParticleProcess.hpp>
+#include <models/psMultiParticleProcess.hpp>
 ```
 GPU and CPU compatible
 {: .label .label-green}

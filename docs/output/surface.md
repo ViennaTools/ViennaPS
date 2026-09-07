@@ -19,8 +19,8 @@ nav_order: 2
 Use the domain member function `saveSurfaceMesh` or `getSurfaceMesh` to export the triangulated surface of a geometry.  
 The function can output either:
 
-- the **topmost surface** (default), or  
-- **all material interfaces** when `addInterfaces` is enabled.
+- the **topmost surface** (`getSurfaceMesh()` defaults to this), or
+- **all material interfaces** (`saveSurfaceMesh()` defaults to this).
 
 ---
 

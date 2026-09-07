@@ -21,7 +21,7 @@ MathJax = {
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psOxideRegrowth.hpp>
+#include <models/psOxideRegrowth.hpp>
 ```
 ---
 

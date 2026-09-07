@@ -10,7 +10,7 @@ nav_order: 1
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psIsotropicProcess.hpp>
+#include <models/psIsotropicProcess.hpp>
 ```
 ---
 
@@ -92,9 +92,9 @@ C++
 {: .label .label-blue}
 </summary>
 ```c++
-#include <psIsotropicProcess.hpp>
-#include <psMakeTrench.hpp>
-#include <psProcess.hpp>
+#include <models/psIsotropicProcess.hpp>
+#include <geometries/psMakeTrench.hpp>
+#include <process/psProcess.hpp>
 
 using namespace viennaps;
 
@@ -163,9 +163,9 @@ C++
 {: .label .label-blue}
 </summary>
 ```c++
-#include <psIsotropicProcess.hpp>
-#include <psMakeTrench.hpp>
-#include <psProcess.hpp>
+#include <models/psIsotropicProcess.hpp>
+#include <geometries/psMakeTrench.hpp>
+#include <process/psProcess.hpp>
 
 using namespace viennaps;
 

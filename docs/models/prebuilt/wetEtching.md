@@ -10,7 +10,7 @@ nav_order: 10
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psWetEtching.hpp>
+#include <models/psWetEtching.hpp>
 ```
 ---
 

@@ -57,12 +57,18 @@ For C++ projects, ViennaPS is usually consumed with
 [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake):
 
 ```cmake
-CPMAddPackage("gh:viennatools/viennaps@4.6.1")
+CPMAddPackage("gh:viennatools/viennaps@4.7.0")
 target_link_libraries(${PROJECT_NAME} PUBLIC ViennaTools::ViennaPS)
 ```
 
 See [Installing the Library]({% link inst/index.md %}) for full installation
 instructions.
+
+## Citation
+
+If you use ViennaPS, please cite the following paper:
+
+T. Reiter and L. Filipovic, [ViennaPS: A flexible framework for semiconductor process simulation](https://doi.org/10.1016/j.softx.2025.102453), *SoftwareX*, **32**, 102453 (2025).
 
 ## Dependencies
 

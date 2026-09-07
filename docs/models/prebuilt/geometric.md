@@ -10,7 +10,7 @@ nav_order: 12
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psGeometricDistributionModels.hpp>
+#include <models/psGeometricDistributionModels.hpp>
 ```
 ---
 

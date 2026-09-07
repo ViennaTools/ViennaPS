@@ -31,12 +31,13 @@ cmake --build build
 
 The examples can then be executed in their respective build folders with the config files, e.g.:
 ```bash
-cd examples/exampleName
+cd build/examples/exampleName
 ./ExampleName.bat config.txt # (Windows)
 ./ExampleName config.txt # (Other)
 ```
 
-Individual examples can also be build by calling `make` in their respective build folder. An equivalent Python script, using the ViennaPS Python bindings, is also given for most examples.
+Build one example with `cmake --build build --target exampleName`. Most
+examples also provide a Python script using the ViennaPS bindings.
 
 ## Examples
 
@@ -63,3 +64,6 @@ More Examples:
 * [Surface Diffusion](https://github.com/ViennaTools/ViennaPS/tree/master/examples/surfaceDiffusion)
 * [SiGe Selective Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/SiGeSelectiveEtching)
 * [Trench Deposition Geometric](https://github.com/ViennaTools/ViennaPS/tree/master/examples/trenchDepositionGeometric)
+* [Ion Implantation and Anneal](https://github.com/ViennaTools/ViennaPS/tree/master/examples/ionImplantation)
+* [Manual Phosphorus Implant and Anneal](https://github.com/ViennaTools/ViennaPS/tree/master/examples/pImplantManual)
+* [PN Junction](https://github.com/ViennaTools/ViennaPS/tree/master/examples/pnJunction)

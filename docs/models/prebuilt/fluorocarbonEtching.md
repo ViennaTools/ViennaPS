@@ -20,10 +20,11 @@ MathJax = {
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psFluorocarbonEtching.hpp>
+#include <process/psProcess.hpp>
+#include <models/psFluorocarbonEtching.hpp>
 ```
-CPU only
-{: .label .label-yellow}
+GPU and CPU compatible
+{: .label .label-green}
 ---
 
 Our model assumes that, in any complex plasma etch process, there are three fundamental types of particles:
@@ -47,7 +48,7 @@ The first term $J_{p} S_{p}$ gives the rate of polymer particles reaching and ad
 Together, these terms describe the deposition of polymer material on the surface, which acts as passivation layer for the chemical etching process. 
 If, on the other hand, etching of the substrate dominates, the negative surface velocity of the substrate is given by
 \begin{equation}
-  v=\frac{1}{\rho_{m}}\left[J_{e v} \phi_{e}+J_{i} Y_{ie} \phi_{e}+J_{i} Y_{sp}\left(1-\phi_{e}\right)\right], 
+  v=-\frac{1}{\rho_{m}}\left[J_{e v} \phi_{e}+J_{i} Y_{ie} \phi_{e}+J_{i} Y_{sp}\left(1-\phi_{e}\right)\right],
 \end{equation}
 where $\rho_m$ is the atomic density of the etched material and depends on which layer in the stack is being etched. 
 Each term accounts for a different type of surface reaction.
@@ -165,9 +166,9 @@ struct FluorocarbonParameters {
 
 **Key changes**
 
-* You can add **any** `Material` from the global enum and set per-material parameters.
-* Parameters are applied to the model via the **unified `setParameters(...)`** API on the process/model.
-* Direct field mutation on the process or model is deprecated.
+* Entries can use built-in or registered custom `Material` handles.
+* Pass the completed parameter pack to the model constructor. Use the model's
+  `setParameters(...)` method to replace it later.
 
 {: .note }
 Time and length units must be set before initializing the model. See [Units]({% link misc/units.md %}).
@@ -179,9 +180,11 @@ Time and length units must be set before initializing the model. See [Units]({% 
 ### C++
 
 ```c++
-// Create model and parameter pack
+// Configure parameters before constructing the model
+namespace ps = viennaps;
 using T = double;
-auto model = SmartPointer<FluorocarbonEtching<T, 3>>::New();
+ps::units::Length::setUnit("nm");
+ps::units::Time::setUnit("s");
 
 ps::FluorocarbonParameters<T> params;
 
@@ -225,8 +228,7 @@ params.ionFlux = 56.;
 params.etchantFlux = 500.;
 params.polyFlux = 100.;
 
-// Apply parameters via unified API
-model->setParameters(params);
+auto model = ps::SmartPointer<ps::FluorocarbonEtching<T, 3>>::New(params);
 ```
 
 ### Python
@@ -234,7 +236,8 @@ model->setParameters(params);
 ```python
 import viennaps as vps
 
-model = vps.FluorocarbonEtching()
+vps.Length.setUnit("nm")
+vps.Time.setUnit("s")
 
 params = vps.FluorocarbonParameters()
 
@@ -273,20 +276,26 @@ params.ionFlux = 56.0
 params.etchantFlux = 500.0
 params.polyFlux = 100.0
 
-# Apply via unified API
-model.setParameters(params)
+model = vps.FluorocarbonEtching(params)
 ```
 
 ---
 
 ## Notes and tips
 
-* Add only the materials that appear in your stack. Unlisted materials will use defaults unless you define them.
-* Use the global `Material` enum introduced in the **Material Mapping** docs to ensure consistent IDs.
+* Add every exposed material, including the mask, and a `Material::Polymer`
+  entry for the passivation calculation. A missing material lookup reports an
+  error; it does not silently supply calibrated defaults.
+* Use the `Material` handles described in [Material Mapping]({% link domain/material.md %}).
 * For multi-material stacks, tuning (K, E_a), thresholds, and sticking allows selective etching vs passivation.
-* The model works with any flux engine. Choose via `setFluxEngineType(...)` on the process using this model.
+* Choose a compatible engine via `Process::setFluxEngineType(...)`. `AUTO`
+  can select the GPU implementation when available. The GPU parameter pack
+  supports at most **10 material entries**, including polymer and mask.
+
+At `INFO` verbosity or higher, the model reports normalized chemical,
+ion-enhanced, and sputtering contributions after a process run. See
+[Logging]({% link misc/logging.md %}).
 
 ## Related examples
 
 * [Stack Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/stackEtching)
-

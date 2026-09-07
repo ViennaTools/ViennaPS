@@ -21,14 +21,14 @@ If there is no pre-built package available for your operating system, you can bu
 To use ViennaPS in C++, we recommend using CPM to manage the dependency. A simple CMake setup looks like this:
 
 ```cmake
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 project(MyViennaPSProject)  
 
 include(cmake/CPM.cmake) # Download from https://github.com/cpm-cmake/CPM.cmake/releases
 
 CPMAddPackage(
     NAME ViennaPS
-    VERSION 4.6.1
+    VERSION 4.7.0
     GIT_REPOSITORY "https://github.com/ViennaTools/ViennaPS.git")
 
 add_executable(my_executable main.cpp)
@@ -52,7 +52,8 @@ On macOS, you can install Embree using Homebrew with the command: `brew install 
 
 ## System Requirements
 
-* C++20 Compiler with OpenMP support
+* C++20 compiler with OpenMP support
+* CMake 3.20 or newer
 
 ## Installing
 
@@ -123,7 +124,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 
 * Installation with CPM
   ```cmake
-  CPMAddPackage("gh:viennatools/viennaps@4.6.1")
+  CPMAddPackage("gh:viennatools/viennaps@4.7.0")
   ```
 
 * With a local installation
@@ -140,7 +141,7 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 In order to save build time during development, dynamically linked shared libraries can be used if ViennaPS was built with them. This is done by precompiling the most common template specialisations. In order to use shared libraries, use
 
 ```bash
-cmake -B build -DVIENNALS_PRECOMPILE_HEADERS=ON
+cmake -B build -DVIENNAPS_PRECOMPILE_HEADERS=ON
 ```
 
 If ViennaPS was built with shared libraries and you use ViennaPS in your project (see above), CMake will automatically link them to your project.

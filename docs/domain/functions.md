@@ -140,7 +140,9 @@ Apply a Boolean operation with another Level-Set. By default, the operation is a
 ### Cell-Set Generation
 
 ```cpp
-void generateCellSet(NumericType position, Material coverMaterial, bool isAboveSurface = false);
+void generateCellSet(NumericType position, Material coverMaterial,
+                     bool isAboveSurface = false,
+                     bool withEmbeddedBoundaries = false);
 ```
 
 Convert Level-Set stack into a Cell-Set for volume process modeling.

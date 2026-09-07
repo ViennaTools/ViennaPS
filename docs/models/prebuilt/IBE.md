@@ -10,7 +10,7 @@ nav_order: 9
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psIonBeamEtching.hpp>
+#include <models/psIonBeamEtching.hpp>
 ```
 GPU and CPU compatible
 {: .label .label-green}

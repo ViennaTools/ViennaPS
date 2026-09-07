@@ -9,7 +9,7 @@ has_children: true
 {: .fs-9 .fw-700}
 
 ```c++
-#include <psProcess.hpp>
+#include <process/psProcess.hpp>
 ```
 
 ![]({% link assets/images/process.png %})
@@ -17,18 +17,6 @@ has_children: true
 ---
 
 The `Process` class is the main simulation interface. It holds the domain, the process model, the duration, and advanced parameters. Configure it, then call `apply()`. The passed domain is modified in place.
-
-<!-- ## What’s new in 4.0.0
-
-* **Flux engine switch** on the process via `setFluxEngineType(...)`.
-
-  * Options: `AUTO` *(default)*, `CPU_DISK`, `GPU_DISK`, `GPU_LINE`, `GPU_TRIANGLE`.
-  * `AUTO` selects CPU or GPU based on build and model availability.
-* **Unified parameter API**: set all parameter structs via `setParameters(...)`.
-
-  * Supported structs: `AdvectionParameters`, `RayTracingParameters`, `CoverageParameters`, `AtomicLayerProcessParameters`.
-* **AtomicLayerProcess removed**. The standard `Process()` detects ALP behavior from the selected model.
-* **Python bindings unified**. Use `viennaps` (with `viennaps.d2` / `viennaps.d3`). Change default dimension via `viennaps.setDimension()`. -->
 
 ---
 
@@ -54,16 +42,16 @@ process.setProcessDuration(10.0);
 process.setFluxEngineType(ps::FluxEngineType::AUTO);
 
 // Optional parameters
-ps::AdvectionParameters<T> adv;
+ps::AdvectionParameters adv;
 adv.timeStepRatio = 0.25;
 
-ps::RayTracingParameters<T, D> rt;
+ps::RayTracingParameters rt;
 rt.raysPerPoint = 500;
 
-ps::CoverageParameters<T> cov;
+ps::CoverageParameters cov;
 cov.maxIterations = 10;
 
-ps::AtomicLayerProcessParameters<T> alp;
+ps::AtomicLayerProcessParameters alp;
 alp.numCycles = 2;
 
 ps::SurfaceDiffusionParameters sd;
@@ -129,7 +117,9 @@ process.apply()
 
 ## Process parameters 
 
-All advanced parameters are set via `setParameters(...)`.
+All advanced process parameters are set via `setParameters(...)`. These
+parameter structs are not templates in C++; only `Process` takes numeric type
+and dimension arguments. Model-specific parameters are set on the model.
 
 ---
 
@@ -140,16 +130,23 @@ Select the flux computation method at runtime.
 ```c++
 // C++
 process.setFluxEngineType(ps::FluxEngineType::AUTO);       // default
-// or: CPU_DISK, GPU_DISK, GPU_LINE, GPU_TRIANGLE
+// or: CPU_DISK, CPU_TRIANGLE, GPU_DISK, GPU_LINE, GPU_TRIANGLE
 ```
 
 ```python
 # Python
 process.setFluxEngineType(vps.FluxEngineType.AUTO)  # default
-# or: CPU_DISK, GPU_DISK, GPU_LINE, GPU_TRIANGLE
+# or: CPU_DISK, CPU_TRIANGLE, GPU_DISK, GPU_LINE, GPU_TRIANGLE
 ```
 
-`AUTO` chooses CPU or GPU based on the build and whether the selected model has a GPU implementation.
+`AUTO` selects a GPU engine when a GPU is available and the model provides a
+GPU implementation: `GPU_DISK` for periodic domains and `GPU_TRIANGLE`
+otherwise. It falls back to `CPU_DISK` when those conditions are not met.
+`CPU_TRIANGLE` is available for triangle-based CPU tracing. GPU engines require
+a build with GPU support and a compatible model.
+
+Flux engine selection is separate from the oxidation solver's
+[`GpuMode`]({% link models/prebuilt/oxidation.md %}).
 
 ---
 
@@ -159,7 +156,20 @@ process.setFluxEngineType(vps.FluxEngineType.AUTO)  # default
 SmartPointer<viennals::Mesh<NumericType>> calculateFlux()
 ```
 
-Computes flux for the current configuration and returns a mesh with flux data.
+Computes flux for the current configuration without advancing the geometry and
+returns a disk mesh with flux arrays in its **cell data**. The selected model
+must use a flux engine. In C++, with a triangle engine, `getTriangleMesh()`
+also returns the per-triangle flux mesh from the last calculation; otherwise
+it is null.
+
+## Volume processes
+
+[Ion implantation]({% link models/prebuilt/ionImplantation.md %}) and
+[annealing]({% link models/prebuilt/anneal.md %}) operate on the domain's cell
+set. Create it before applying either model and pass **zero** as the `Process`
+duration. The callback runs once; configure implant dose or anneal duration on
+the model itself. These processes update volume fields without advecting the
+level sets.
 
 ---
 
@@ -202,10 +212,10 @@ void setProcessDuration(NumericType passedDuration)
 ### Set parameters (unified)
 
 ```c++
-void setParameters(const AdvectionParameters<NumericType>&)
-void setParameters(const RayTracingParameters<NumericType, D>&)
-void setParameters(const CoverageParameters<NumericType>&)
-void setParameters(const AtomicLayerProcessParameters<NumericType>&)
+void setParameters(const AdvectionParameters&)
+void setParameters(const RayTracingParameters&)
+void setParameters(const CoverageParameters&)
+void setParameters(const AtomicLayerProcessParameters&)
 void setParameters(const SurfaceDiffusionParameters&)
 ```
 
@@ -216,7 +226,7 @@ void setFluxEngineType(FluxEngineType type)
 ```
 
 ### Set intermediate output path
-Path for writing intermediate results, if enabled. See [Logging]({% link misc/logging.md %}). for details.
+Path for writing intermediate results, if enabled. See [Logging]({% link misc/logging.md %}) for details.
 ```c++
 void setIntermediateOutputPath(const std::string &path)
 ```

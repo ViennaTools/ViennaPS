@@ -20,7 +20,7 @@ MathJax = {
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psTEOSDeposition.hpp>
+#include <models/psTEOSDeposition.hpp>
 ```
 CPU only
 {: .label .label-yellow}

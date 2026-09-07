@@ -103,6 +103,7 @@ C++
 </summary>
 ```cpp
 #include <materials/psMaterial.hpp>
+#include <materials/psMaterialMap.hpp>
 #include <materials/psMaterialRegistry.hpp>
 #include <materials/psMaterialValueMap.hpp>
 

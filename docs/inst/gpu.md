@@ -63,7 +63,7 @@ python python/scripts/install_ViennaTools.py
 Or download the script directly from a tagged release:
 
 ```sh
-wget https://raw.githubusercontent.com/ViennaTools/ViennaPS/refs/tags/v4.6.1/python/scripts/install_ViennaTools.py
+wget https://raw.githubusercontent.com/ViennaTools/ViennaPS/refs/tags/v4.7.0/python/scripts/install_ViennaTools.py
 python3 install_ViennaTools.py
 ```
 
@@ -93,14 +93,14 @@ To enable GPU support during CMake configuration, follow these steps:
 Here is an example CMake project that demonstrates how to link against the ViennaPS GPU module using CPM to download ViennaPS:
 
 ```cmake
-cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project("ExampleProject")
 
 include("cmake/cpm.cmake") # Include CPM.cmake (get from: https://github.com/cpm-cmake/CPM.cmake/releases)
 
 CPMFindPackage(
   NAME ViennaPS
-  VERSION 4.6.1
+  VERSION 4.7.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaPS"
   OPTIONS "VIENNAPS_USE_GPU ON")
 
@@ -108,3 +108,20 @@ CPMFindPackage(
 add_executable(example_gpu main.cpp)
 target_link_libraries(example_gpu PRIVATE ViennaTools::ViennaPS)
 ```
+
+## Runtime selection
+
+For particle transport, use `Process::setFluxEngineType` (Python:
+`process.setFluxEngineType`). `FluxEngineType::AUTO` chooses a compatible engine
+based on the model, hardware, and domain boundaries. CPU triangle tracing is
+also available through `CPU_TRIANGLE`. See
+[Running a Process]({% link process/index.md %}).
+
+For thermal oxidation, set `Oxidation::setGpuMode` instead. `GpuMode::Cpu` is
+the default, `GpuMode::Auto` allows CPU fallback, and `GpuMode::Gpu` requires
+successful GPU execution. See [Thermal Oxidation]({% link models/prebuilt/oxidation.md %}).
+
+ViennaPS uses ViennaLS 5.8.5 in its CMake dependency configuration. GPU Python
+builds package the required ViennaLS GPU library (`libViennaLS_GPU.so` on
+Linux) alongside the extension. Keep locally built ViennaLS and ViennaPS
+packages compatible when updating an installation.

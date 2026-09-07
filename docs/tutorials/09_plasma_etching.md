@@ -120,7 +120,7 @@ The resulting `model` computes local etch/passivation behavior based on:
 
 ```python
 processParams = ps.AdvectionParameters()
-processParams.integrationScheme = ps.IntegrationScheme.LOCAL_LAX_FRIEDRICHS_1ST_ORDER
+processParams.spatialScheme = ps.SpatialScheme.LOCAL_LAX_FRIEDRICHS_1ST_ORDER
 ```
 
 This selects a robust first-order scheme for the level-set advection.

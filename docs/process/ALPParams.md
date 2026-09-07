@@ -18,3 +18,4 @@ nav_order: 4
 | `pulseTime`        | `double`      | `1.0`   | Duration of the active pulse step within a cycle. |
 | `coverageTimeStep` | `double`      | `1.0`   | Time step used for updating coverages within a pulse (smaller can improve accuracy but increases runtime). |
 | `purgePulseTime`   | `double`      | `0.0`   | Optional purge (or idle) duration after a pulse. Use `0.0` to disable. |
+| `purgeTimeStep` | `double` | `1.0` | Time step for coverage evolution during the purge pulse. |

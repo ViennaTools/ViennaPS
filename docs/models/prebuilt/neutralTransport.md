@@ -98,7 +98,7 @@ params.sourceDistributionPower = 1.0;
 
 auto model = SmartPointer<NeutralTransport<double, 3>>::New(params);
 
-RayTracingParameters<double, 3> rayTracing;
+RayTracingParameters rayTracing;
 rayTracing.raysPerPoint = 1000;
 
 CoverageParameters coverage;

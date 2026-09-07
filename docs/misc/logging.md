@@ -44,3 +44,18 @@ Python
 vps.Logger.setLogLevel(vps.LogLevel.INTERMEDIATE)
 ```
 </details>
+
+## Plasma etch diagnostics
+
+At `INFO` verbosity or higher, the plasma models based on `PlasmaEtching`
+(including SF6/O2, HBr/O2, and SF6/C4F8) and `FluorocarbonEtching` report the
+normalized chemical, ion-enhanced, and sputtering contributions at the end of
+a process. These are fractions of accumulated rate contributions, not rates
+in length/time. The plasma base models additionally report substrate etch
+depth in the configured length unit.
+
+At `INTERMEDIATE` verbosity, flux processes write disk meshes containing
+available flux, coverage, and surface-data arrays in cell data. Set the output
+directory with `process.setIntermediateOutputPath(...)`. Source flux and
+surface-emitted/desorption flux are distinct fields; the latter use the
+`_surface` suffix.

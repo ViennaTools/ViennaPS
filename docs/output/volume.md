@@ -12,6 +12,12 @@ nav_order: 3
 
 Volume meshes can be saved using the domain member function `saveVolumeMesh`. The generated `.vtu` mesh is intended for visualization and post-processing, not as input for subsequent ViennaPS simulations.
 
+To export implantation or annealing fields, write the domain's **cell set**
+instead: `domain->getCellSet()->writeVTU("volume")` in C++, or
+`domain.getCellSet().writeVTU("volume")` in Python. This preserves the cell-set
+scalar arrays, such as total dopant, active dopant, and damage. See
+[Volume]({% link domain/volume.md %}).
+
 Hull and disk meshes are also available as VTK `.vtp` outputs. Hull meshes visualize the exterior hull of the Level-Set stack, while disk meshes contain the material-resolved disk representation with material IDs.
 
 ## API

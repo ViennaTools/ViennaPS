@@ -10,7 +10,7 @@ nav_order: 11
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psSelectiveEpitaxy.hpp>
+#include <models/psSelectiveEpitaxy.hpp>
 ```
 ---
 

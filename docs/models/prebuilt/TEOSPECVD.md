@@ -20,7 +20,7 @@ MathJax = {
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psTEOSPECVD.hpp>
+#include <models/psTEOSPECVD.hpp>
 ```
 GPU and CPU compatible
 {: .label .label-green}

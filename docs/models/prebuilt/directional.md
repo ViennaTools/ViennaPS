@@ -10,7 +10,7 @@ nav_order: 2
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psDirectionalProcess.hpp>
+#include <models/psDirectionalProcess.hpp>
 ```
 ---
 

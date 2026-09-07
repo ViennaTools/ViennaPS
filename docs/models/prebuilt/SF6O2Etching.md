@@ -21,7 +21,7 @@ MathJax = {
 {: .fs-9 .fw-500}
 
 ```c++
-#include <psSF6O2Etching.hpp>
+#include <models/psSF6O2Etching.hpp>
 ```
 GPU and CPU compatible
 {: .label .label-green}

@@ -23,7 +23,8 @@ Some parameters are only meaningful for CPU ray tracing (e.g., `ignoreFluxBounda
 | `rngSeed`                | `unsigned`          | `0`      | Fixed RNG seed for reproducible runs. Only used if `useRandomSeeds == false`. |
 | `raysPerPoint`           | `unsigned`          | `1000`   | Number of rays launched per surface point. Higher values reduce Monte-Carlo noise but increase runtime. |
 | `smoothingNeighbors`     | `int`               | `1`      | Optional post-trace flux smoothing neighborhood size. Use `0` to disable smoothing. |
-| `diskRadius`             | `double`            | `0.0`    | Ray-launch disk radius. `0` means automatic selection. |
+| `diskRadius`             | `double`            | `0.0`    | Radius of the surface disks used for ray intersections. `0` means automatic selection. |
 | `minNodeDistanceFactor`  | `double`            | `0.05`   | Factor of the grid spacing used to derive the minimum node distance for triangle mesh generation. Higher values produce coarser meshes (faster, less detailed). |
+| `minRayDistance`         | `float`             | `1e-4`   | Minimum accepted hit distance for engines that support `tnear`; keep below half the grid spacing. Currently exposed in C++ only. |
 | `maxBoundaryHits`        | `unsigned`          | `1000`   | Maximum number of boundary interactions allowed per ray before termination (prevents infinite bounce loops). |
 | `maxReflections`         | `unsigned`          | *(max `unsigned`)* | Maximum number of reflections allowed per ray. The default is effectively unlimited. |

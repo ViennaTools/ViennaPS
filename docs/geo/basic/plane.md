@@ -73,9 +73,9 @@ Python
 {: .label .label-green }
 </summary>
 ```python
-domain = vps.Domain(gridDelta=0.5, xExtent=10.0, yExtent=10.0, boundaryType=vps.BoundaryType.REFLECTIVE_BOUNDARY)
+domain = vps.Domain(gridDelta=0.5, xExtent=10.0, yExtent=10.0, boundary=vps.BoundaryType.REFLECTIVE_BOUNDARY)
 vps.MakePlane(domain=domain,
-              baseHeight=0.0,
+              height=0.0,
               material=vps.Material.Si,
              ).apply()
 ```
@@ -100,7 +100,7 @@ Python
 </summary>
 ```python
 vps.MakePlane(domain=domain,
-              height=0.0,
+              height=10.0,
               material=vps.Material.Si,
               addToExisting=True
              ).apply()

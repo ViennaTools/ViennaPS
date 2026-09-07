@@ -9,7 +9,8 @@ has_children: true
 # Pre-Built Models
 {: .fs-9 .fw-500}
 
-ViennaPS provides ready-to-use process models for common etching, deposition, and process-emulation workflows.
+ViennaPS provides ready-to-use process models for etching, deposition, oxidation,
+ion implantation, annealing, and process emulation.
 
 ## Documented Models
 
@@ -28,6 +29,11 @@ ViennaPS provides ready-to-use process models for common etching, deposition, an
 * [Oxide Regrowth]({% link models/prebuilt/oxideRegrowth.md %})
 * [Thermal Oxidation]({% link models/prebuilt/oxidation.md %})
 * [Neutral Transport]({% link models/prebuilt/neutralTransport.md %})
+* [Ion Implantation]({% link models/prebuilt/ionImplantation.md %})
+* [Thermal Annealing]({% link models/prebuilt/anneal.md %})
+
+Implantation and annealing can use the public
+[Model Database]({% link models/modelDatabase.md %}).
 
 ## Exposed Models With Example Coverage
 

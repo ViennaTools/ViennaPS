@@ -37,11 +37,11 @@ ps::Extrude<double>(
     domain2D, domain3D,
     {0., 1.}, // min and max extent in the extruded dimension
     2,        // extrude along z-axis (0=x, 1=y, 2=z)
-    {viennals::BoundaryConditionEnum::REFLECTIVE,
-     viennals::BoundaryConditionEnum::REFLECTIVE,
-     viennals::BoundaryConditionEnum::INFINITE_BOUNDARY}
+    {ps::BoundaryType::REFLECTIVE_BOUNDARY,
+     ps::BoundaryType::REFLECTIVE_BOUNDARY,
+     ps::BoundaryType::INFINITE_BOUNDARY}
 ).apply();
-````
+```
 
 </details>
 
@@ -57,11 +57,11 @@ import viennaps as vps
 vps.Extrude(
     domain2d, domain3d,
     extent=(0.0, 1.0),
-    axis=2,  # extrude along z-axis
-    boundary_conditions=[
-        vps.BoundaryCondition.REFLECTIVE,
-        vps.BoundaryCondition.REFLECTIVE,
-        vps.BoundaryCondition.INFINITE_BOUNDARY
+    extrusionAxis=2,  # extrude along z-axis
+    boundaryConditions=[
+        vps.BoundaryType.REFLECTIVE_BOUNDARY,
+        vps.BoundaryType.REFLECTIVE_BOUNDARY,
+        vps.BoundaryType.INFINITE_BOUNDARY
     ]
 ).apply()
 ```
@@ -87,7 +87,7 @@ C++
 ps::Slice<double>(
     domain3D, domain2D,
     2,    // slice along z-axis (0=x, 1=y, 2=z)
-    0.5   // normalized slice position (between min/max domain bounds)
+    0.5   // slice position in geometry length units
 ).apply();
 ```
 
@@ -104,8 +104,8 @@ import viennaps as vps
 
 vps.Slice(
     domain3d, domain2d,
-    axis=2,       # slice along z-axis
-    position=0.5  # relative position within domain bounds
+    sliceDimension=2, # slice along z-axis
+    slicePosition=0.5 # position in geometry length units
 ).apply()
 ```
 

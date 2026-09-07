@@ -28,13 +28,13 @@ The `DomainSetup` class defines the geometric grid configuration for a simulatio
 
 ```cpp
 DomainSetup();
-DomainSetup(double bounds[2 * D], BoundaryType boundaryCons[D], NumericType gridDelta);
-DomainSetup(NumericType gridDelta, NumericType xExtent, NumericType yExtent, BoundaryType boundary);
+DomainSetup(double bounds[2 * D], BoundaryType boundaryCons[D], double gridDelta);
+DomainSetup(double gridDelta, double xExtent, double yExtent, BoundaryType boundary);
 ```
 
 * **Default constructor** initializes all bounds to zero with `INFINITE_BOUNDARY`.
 * **Bounding box constructor** accepts explicit bounds and boundary conditions.
-* **Extent constructor** simplifies setup by defining half-extents along the x and y axes and applies default or specified boundary types.
+* **Extent constructor** simplifies setup by placing bounds at plus/minus half of the supplied full x and y extents and applies default or specified boundary types.
 
 ---
 
@@ -44,11 +44,11 @@ DomainSetup(NumericType gridDelta, NumericType xExtent, NumericType yExtent, Bou
 
 ```cpp
 auto& grid() const;
-NumericType gridDelta() const;
+double gridDelta() const;
 std::array<double, 2 * D> bounds() const;
 std::array<BoundaryType, D> boundaryCons() const;
-NumericType xExtent() const;
-NumericType yExtent() const;
+double xExtent() const;
+double yExtent() const;
 ```
 
 Access the internal grid, resolution, and geometric/boundary parameters.
@@ -90,7 +90,7 @@ Prints all configured parameters to `stdout`, including grid delta, extents, and
 ## Example
 
 ```cpp
-using Setup = viennaps::DomainSetup<double, 3>;
+using Setup = viennaps::DomainSetup<3>;
 BoundaryType boundaries[3] = {
     BoundaryType::REFLECTIVE_BOUNDARY,
     BoundaryType::REFLECTIVE_BOUNDARY,
@@ -108,6 +108,6 @@ setup.print();
 
 * In 2D, the `yExtent()` function still exists but returns the fixed height of the domain.
 * Grid cells are computed as integer multiples of `gridDelta`, ensuring alignment with HRLE.
-* The final z-direction always has an `INFINITE_BOUNDARY` to prevent undesired reflection artifacts during etching or deposition.
+* The extent constructor sets the primary direction (y in 2D, z in 3D) to `INFINITE_BOUNDARY`. The bounding-box constructor preserves the supplied boundary conditions.
 
 

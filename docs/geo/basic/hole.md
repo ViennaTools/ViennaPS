@@ -21,13 +21,13 @@ Additionally, the hole can serve as a mask, with the specified material only app
 // namespace viennaps
 
 // with DomainSetup configured (v3.3.0)
-MakeHole(pviennaps::Domain domain, 
+MakeHole(viennaps::Domain domain,
          NumericType holeRadius, 
          NumericType holeDepth,
          NumericType holeTaperAngle = 0., 
          NumericType maskHeight = 0.,
          NumericType maskTaperAngle = 0., 
-         HoleShape shape = HoleShape::Full,
+         HoleShape shape = HoleShape::FULL,
          Material material = Material::Si,
          Material maskMaterial = Material::Mask)
 
@@ -42,7 +42,7 @@ MakeHole(viennaps::Domain domain,
          bool periodicBoundary = false,
          bool makeMask = false,
          Material material = Material::Si,
-         HoleShape holeShape = HoleShape::Full)
+         HoleShape holeShape = HoleShape::FULL)
 ```
 
 | Parameter          | Type           | Description  | Applicable Constructor |
@@ -53,7 +53,7 @@ MakeHole(viennaps::Domain domain,
 | `holeTaperAngle` | `NumericType`  | Taper angle of the hole (default: `0.`). | Both |
 | `maskHeight`     | `NumericType`  | Height of the masking layer (default: `0.`). | First constructor only |
 | `maskTaperAngle` | `NumericType`  | Taper angle of the masking layer (default: `0.`). | First constructor only |
-| `shape`          | `HoleShape`    | Shape of the hole (default: `HoleShape::Full`). | Both |
+| `shape`          | `HoleShape`    | Shape of the hole (default: `HoleShape::FULL`). | Both |
 | `material`       | `Material`     | Material of the hole (default: `Material::Si`). | Both |
 | `maskMaterial`   | `Material`     | Material of the mask (default: `Material::Mask`). | First constructor only |
 | `gridDelta`      | `NumericType`  | Grid spacing in the simulation domain. | Second constructor only |
@@ -81,7 +81,7 @@ C++
 
 // with DomainSetup configured (v3.3.0)
 auto domain = Domain<NumericType, D>::New(0.5, 10., 10., BoundaryType::REFLECTIVE_BOUNDARY);
-MakeHole<NumericType, D>(domain, 5.0, 5.0, 10., 0., 0., HoleShape::Quarter, Material::Si, Material::Mask)
+MakeHole<NumericType, D>(domain, 5.0, 5.0, 10., 0., 0., HoleShape::QUARTER, Material::Si, Material::Mask)
     .apply();
 
 // without DomainSetup
@@ -102,14 +102,14 @@ Python
 domain = vps.Domain(gridDelta=0.5, 
                     xExtent=10.0, 
                     yExtent=10.0, 
-                    boundaryType=vps.BoundaryType.REFLECTIVE_BOUNDARY)
+                    boundary=vps.BoundaryType.REFLECTIVE_BOUNDARY)
 vps.MakeHole(domain=domain,
              holeRadius=5.0,
              holeDepth=0.0,
              holeTaperAngle=0.0,
              maskHeight=5.0,
              maskTaperAngle=2.0,
-             shape=vps.HoleShape.Quarter,
+             holeShape=vps.HoleShape.QUARTER,
              material=vps.Material.Si,
              maskMaterial=vps.Material.Mask
             ).apply()
@@ -126,7 +126,7 @@ vps.MakeHole(domain=domain,
               periodicBoundary=False,
               makeMask=False,
               material=vps.Material.Si,
-              holeShape=vps.HoleShape.Quarter
+              holeShape=vps.HoleShape.QUARTER
              ).apply()
 ```
 </details>
