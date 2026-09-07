@@ -1,0 +1,41 @@
+# Reference output of the SurfaceChemistry point solve.
+# Regenerate with: python3 testsuite.py --update
+# columns: mechanism, quantity, value
+ar_sputter             rate_nm_per_s            -1.101170000e+00
+cf4ar_etch             rate_nm_per_s            -7.421285000e+00
+cf4ar_etch             theta_F*                 9.073204000e-01
+diamond                rate_nm_per_s            7.437752000e-01
+diamond                theta_H*                 8.483175000e-01
+gaas_cvd               rate_nm_per_s            1.887352000e+01
+gaas_cvd               theta_As*                0.000000000e+00
+gaas_cvd               theta_AsH*               8.881403000e-01
+gaas_cvd               theta_CH3_A*             0.000000000e+00
+gaas_cvd               theta_CH3_G*             0.000000000e+00
+gaas_cvd               theta_GaCH3*             2.911994000e-01
+gaas_cvd               theta_H_A*               2.229503000e-20
+gaas_cvd               theta_H_G*               0.000000000e+00
+gaas_reversible        rate_nm_per_s            1.887215000e+01
+gaas_reversible        theta_AsH*               8.881411000e-01
+gaas_reversible        theta_GaCH3*             2.911995000e-01
+gaas_toy               rate_nm_per_s            9.489761000e-01
+gaas_toy               theta_As*                9.114141000e-04
+gaas_toy               theta_Ga*                9.114141000e-04
+polymer_etch           rate_nm_per_s            -6.225990000e+00
+polymer_etch           theta_CF2*               9.286204000e-03
+polymer_etch           theta_F*                 7.897313000e-01
+sf6o2                  rate_nm_per_s            -5.806831000e+01
+sf6o2                  theta_F*                 4.905587000e-01
+sf6o2                  theta_O*                 1.471532000e-01
+sige_stack             rate_nm_per_s            7.177863000e-02
+sige_stack             theta_H*                 9.159010000e-02
+sige_stack             theta_SiH3*              1.329904000e-05
+silane                 rate_nm_per_s            7.177863000e-02
+silane                 theta_H*                 9.159010000e-02
+silane                 theta_SiH3*              1.329904000e-05
+silane_inputs          rate_nm_per_s            7.178418000e-02
+silane_inputs          theta_H*                 9.159364000e-02
+silane_inputs          theta_SiH3*              1.330007000e-05
+silane_selective       rate_nm_per_s            7.177863000e-02
+silane_selective       theta_H*                 9.159010000e-02
+silane_selective       theta_SiH3*              1.329904000e-05
+toy_cycle              growth_per_cycle_A       2.482540000e+00
