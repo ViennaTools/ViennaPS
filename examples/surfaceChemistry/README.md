@@ -27,7 +27,6 @@ from one material to the next.
 | `reactions/sin_peald_cycle.py` | the same cycle integrated in time with no geometry: the place to fit the ALD rate constants |
 | `demoMultiMaterial.py` | selective growth on a SiGe/Si superlattice |
 | `demoPassivation.py` | a polymer film competing with an etch in a masked trench |
-| `validation/diamondRadicalFraction.py` | the diamond mechanism against its published closed form |
 
 ## Running it
 
@@ -264,23 +263,10 @@ to 13.1 um as the dose grows. The film reaches zero at 13.5 um, so the
 remaining 86 um of the cavity stays bare at the unity sticking the file
 declares.
 
-## Validation
-
-### Diamond radical fraction
-
-```bash
-python validation/diamondRadicalFraction.py
-```
-
-Solves the diamond mechanism over 900–1400 K and compares the radical fraction
-against the published closed form (0.26 % worst case). It runs no simulation: it
-is a check of the framework rather than a demonstration of it.
-
 ## Running a mechanism, and writing a new one
 
 **Running any of the nineteen mechanisms needs this directory and a ViennaPS
-install.** That holds for the C++ driver, the Python driver, both demos and the
-validation script.
+install.** That holds for the C++ driver, the Python driver and both demos.
 
 **Writing a twentieth needs one install.** Compiling a reaction file -- parsing
 the equations, checking the atom balance, inferring the free sites, deriving the
