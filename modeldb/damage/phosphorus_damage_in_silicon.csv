@@ -1,0 +1,13 @@
+# GENERIC phosphorus damage table (PUBLIC). Hobler damage shape + NRT magnitude.
+# Shape (projectedRange, verticalSigma, lambda) from MCIMPL-II vacancy profile;
+# defectsPerIon from analytic NRT/Kinchin-Pease (Ed=15 eV, amorphous - valid at >=3 deg tilt).
+# Spatial units nm | Energy keV | Dose cm^-2 | Angles deg.
+#
+species,material,energyKeV,tiltDeg,rotationDeg,dosePerCm2,screenThickness,projectedRange,verticalSigma,lambda,defectsPerIon,lateralSigma,lateralModel,lateralDeltaSigma
+phosphorus,silicon,8,7.0,22.0,10000000000000.0,0,10.61,12.191,4.877,151.95,10.16,linear_depth_scale,0
+phosphorus,silicon,10,7.0,22.0,10000000000000.0,0,12.663,16.969,6.788,186.96,14.141,linear_depth_scale,0
+phosphorus,silicon,30,7.0,22.0,10000000000000.0,0,34.736,19.675,7.87,505.28,16.396,linear_depth_scale,0
+phosphorus,silicon,50,7.0,22.0,10000000000000.0,0,51.514,42.768,17.107,784.02,35.64,linear_depth_scale,0
+phosphorus,silicon,100,7.0,22.0,10000000000000.0,0,96.881,44.813,17.925,1369.7,37.344,linear_depth_scale,0
+phosphorus,silicon,130,7.0,22.0,10000000000000.0,0,127.231,74.394,29.757,1666.23,61.995,linear_depth_scale,0
+phosphorus,silicon,200,7.0,22.0,10000000000000.0,0,192.888,74.109,29.643,2247.19,61.757,linear_depth_scale,0

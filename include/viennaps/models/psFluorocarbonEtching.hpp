@@ -2,12 +2,14 @@
 
 #include <cmath>
 
+#include "psFluorocarbonParameters.hpp"
+#include "psIonModelUtil.hpp"
+#include "psPlasmaEtching.hpp"
+
 #include "../materials/psMaterialMap.hpp"
 #include "../process/psProcessModel.hpp"
 #include "../psConstants.hpp"
 #include "../psUnits.hpp"
-
-#include "psIonModelUtil.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -24,104 +26,6 @@ using namespace viennacore;
 // etching of SiO2: Modeling and experimental verification" Journal of the
 // Electrochemical Society 150(10) 2003 pp. 1896-1902
 
-template <typename NumericType> struct FluorocarbonParameters {
-
-  struct MaterialParameters {
-
-    Material id = Material::Undefined;
-
-    // density
-    NumericType density = 2.2; // 1e22 atoms/cm³
-
-    // sticking
-    NumericType beta_p = 0.26;
-    NumericType beta_e = 0.9;
-
-    // sputtering coefficients
-    NumericType Eth_sp = 18.; // eV
-    NumericType Eth_ie = 4.;  // eV
-    NumericType A_sp = 0.0139;
-    NumericType B_sp = 9.3;
-    NumericType A_ie = 0.0361;
-
-    // chemical etching
-    NumericType K = 0.002789491704544977;
-    NumericType E_a = 0.168; // eV
-  };
-
-  std::vector<MaterialParameters> materials;
-
-  // fluxes in (1e15 /cm² /s)
-  NumericType ionFlux = 56.;
-  NumericType etchantFlux = 500.;
-  NumericType polyFlux = 100.;
-
-  NumericType delta_p = 1.;
-  NumericType etchStopDepth = std::numeric_limits<NumericType>::lowest();
-
-  NumericType temperature = 300.; // K
-  NumericType k_ie = 2.;
-  NumericType k_ev = 2.;
-
-  struct IonType {
-    NumericType meanEnergy = 100.; // eV
-    NumericType sigmaEnergy = 10.; // eV
-    NumericType exponent = 500.;
-
-    NumericType inflectAngle = 1.55334303;
-    NumericType n_l = 10.;
-    NumericType minAngle = 1.3962634;
-  } Ions;
-
-  void addMaterial(const MaterialParameters &material) {
-    materials.push_back(material);
-  }
-
-  MaterialParameters getMaterialParameters(const Material material) const {
-    for (const auto &m : materials) {
-      if (m.id == material)
-        return m;
-    }
-    VIENNACORE_LOG_ERROR("Material '" + MaterialMap::toString(material) +
-                         "' not found in fluorocarbon model parameters.");
-    return MaterialParameters{};
-  }
-
-  auto toProcessMetaData() const {
-    std::unordered_map<std::string, std::vector<double>> processData;
-
-    processData["ionFlux"] = std::vector<double>{ionFlux};
-    processData["etchantFlux"] = std::vector<double>{etchantFlux};
-    processData["polymerFlux"] = std::vector<double>{polyFlux};
-    processData["delta_p"] = std::vector<double>{delta_p};
-    processData["etchStopDepth"] = std::vector<double>{etchStopDepth};
-    processData["temperature"] = std::vector<double>{temperature};
-    processData["k_ie"] = std::vector<double>{k_ie};
-    processData["k_ev"] = std::vector<double>{k_ev};
-    processData["Ion MeanEnergy"] = std::vector<double>{Ions.meanEnergy};
-    processData["Ion SigmaEnergy"] = std::vector<double>{Ions.sigmaEnergy};
-    processData["Ion Exponent"] = std::vector<double>{Ions.exponent};
-    processData["Ion InflectAngle"] = std::vector<double>{Ions.inflectAngle};
-    processData["Ion n_k"] = std::vector<double>{Ions.n_l};
-    processData["Ion MinAngle"] = std::vector<double>{Ions.minAngle};
-    for (auto mat : materials) {
-      std::string prefix = MaterialMap::toString(mat.id) + " ";
-      processData[prefix + "density"] = std::vector<double>{mat.density};
-      processData[prefix + "beta_p"] = std::vector<double>{mat.beta_p};
-      processData[prefix + "beta_e"] = std::vector<double>{mat.beta_e};
-      processData[prefix + "Eth_sp"] = std::vector<double>{mat.Eth_sp};
-      processData[prefix + "Eth_ie"] = std::vector<double>{mat.Eth_ie};
-      processData[prefix + "A_sp"] = std::vector<double>{mat.A_sp};
-      processData[prefix + "B_sp"] = std::vector<double>{mat.B_sp};
-      processData[prefix + "A_ie"] = std::vector<double>{mat.A_ie};
-      processData[prefix + "K"] = std::vector<double>{mat.K};
-      processData[prefix + "E_a"] = std::vector<double>{mat.E_a};
-    }
-
-    return processData;
-  }
-};
-
 namespace impl {
 
 template <typename NumericType, int D>
@@ -130,6 +34,11 @@ class FluorocarbonSurfaceModel : public SurfaceModel<NumericType> {
   using SurfaceModel<NumericType>::surfaceData;
   static constexpr double eps = 1e-6;
   const FluorocarbonParameters<NumericType> &p;
+
+  double totalSputterRate_ = 0.;
+  double totalIonEnhancedRate_ = 0.;
+  double totalChemicalRate_ = 0.;
+  double totalPolymerDepositionRate_ = 0.;
 
 public:
   FluorocarbonSurfaceModel(
@@ -202,7 +111,12 @@ public:
     const auto polyParams = p.getMaterialParameters(Material::Polymer);
     const auto maskParams = p.getMaterialParameters(Material::Mask);
 
-#pragma omp parallel for reduction(|| : etchStop)
+    double totalSputterRate = 0.;
+    double totalIonEnhancedRate = 0.;
+    double totalChemicalRate = 0.;
+
+#pragma omp parallel for reduction(|| : etchStop)                              \
+    reduction(+ : totalSputterRate, totalIonEnhancedRate, totalChemicalRate)
     for (std::size_t i = 0; i < numPoints; ++i) {
       if (coordinates[i][D - 1] <= p.etchStopDepth || etchStop) {
         etchStop = true;
@@ -215,46 +129,62 @@ public:
         etchRate[i] =
             (1 / polyParams.density) *
             std::max((polyFlux->at(i) * p.polyFlux * polyParams.beta_p -
-                      ionpeFlux->at(i) * p.ionFlux * peCoverage->at(i)),
+                      ionpeFlux->at(i) * p.ionFlux * peCoverage->at(i)) *
+                         polyParams.A_ie,
                      static_cast<NumericType>(0)) *
             unitConversion;
         assert(etchRate[i] >= 0 && "Negative deposition");
+
       } else if (matId == Material::Mask) {
         // Mask sputtering
         etchRate[i] = (-1. / maskParams.density) * ionSputterFlux->at(i) *
-                      p.ionFlux * unitConversion;
+                      p.ionFlux * maskParams.A_sp * unitConversion;
+
       } else if (matId == Material::Polymer) {
-        // Etching depo layer
+        // Polymer etching
         etchRate[i] =
             std::min((1. / polyParams.density) *
                          (polyFlux->at(i) * p.polyFlux * polyParams.beta_p -
-                          ionpeFlux->at(i) * p.ionFlux * peCoverage->at(i)),
+                          ionpeFlux->at(i) * p.ionFlux * polyParams.A_ie *
+                              peCoverage->at(i)),
                      0.) *
             unitConversion;
+
       } else {
+        // Substrate etching
         auto matParams = p.getMaterialParameters(matId);
         NumericType density = matParams.density;
-        NumericType F_ev =
-            matParams.K * p.etchantFlux *
-            std::exp(-matParams.E_a / (constants::kB * p.temperature));
 
-        etchRate[i] =
-            (-1. / density) *
-            (F_ev * eCoverage->at(i) +
-             ionEnhancedFlux->at(i) * p.ionFlux * eCoverage->at(i) +
-             ionSputterFlux->at(i) * p.ionFlux * (1. - eCoverage->at(i))) *
-            unitConversion;
+        auto sputterRate = ionSputterFlux->at(i) * p.ionFlux *
+                           (1. - eCoverage->at(i)) * matParams.A_sp;
+        auto ionEnhancedRate = eCoverage->at(i) * ionEnhancedFlux->at(i) *
+                               p.ionFlux * matParams.A_ie;
+        auto chemicalRate =
+            matParams.K * p.etchantFlux *
+            std::exp(-matParams.E_a / (constants::kB * p.temperature)) *
+            eCoverage->at(i);
+
+        etchRate[i] = (-1. / density) *
+                      (chemicalRate + sputterRate + ionEnhancedRate) *
+                      unitConversion;
 
         if (Logger::hasIntermediate()) {
-          chRate->at(i) = F_ev * eCoverage->at(i);
-          spRate->at(i) =
-              ionSputterFlux->at(i) * p.ionFlux * (1. - eCoverage->at(i));
-          ieRate->at(i) = ionEnhancedFlux->at(i) * p.ionFlux * eCoverage->at(i);
+          chRate->at(i) = chemicalRate;
+          spRate->at(i) = sputterRate;
+          ieRate->at(i) = ionEnhancedRate;
         }
+
+        totalSputterRate += sputterRate;
+        totalIonEnhancedRate += ionEnhancedRate;
+        totalChemicalRate += chemicalRate;
       }
 
       assert(!std::isnan(etchRate[i]) && "etchRate NaN");
     }
+
+    totalSputterRate_ += totalSputterRate;
+    totalIonEnhancedRate_ += totalIonEnhancedRate;
+    totalChemicalRate_ += totalChemicalRate;
 
     if (etchStop) {
       std::fill(etchRate.begin(), etchRate.end(), 0.);
@@ -338,6 +268,24 @@ public:
       assert(!std::isnan(eCoverage->at(i)) && "eCoverage NaN");
     }
   }
+
+  void resetTotalRates() {
+    totalSputterRate_ = 0.;
+    totalIonEnhancedRate_ = 0.;
+    totalChemicalRate_ = 0.;
+  }
+
+  void logTotalRates() {
+    double totalRate =
+        totalSputterRate_ + totalIonEnhancedRate_ + totalChemicalRate_;
+    VIENNACORE_LOG_INFO("Substrate etch rate components (normalized):");
+    VIENNACORE_LOG_INFO("Chemical: " +
+                        std::to_string(totalChemicalRate_ / totalRate));
+    VIENNACORE_LOG_INFO("Ion Enhanced: " +
+                        std::to_string(totalIonEnhancedRate_ / totalRate));
+    VIENNACORE_LOG_INFO("Sputter: " +
+                        std::to_string(totalSputterRate_ / totalRate));
+  }
 };
 
 template <typename NumericType, int D>
@@ -373,9 +321,7 @@ public:
 
     auto matParams =
         p.getMaterialParameters(MaterialMap::mapToMaterial(materialId));
-    const NumericType A_sp = matParams.A_sp;
     const NumericType B_sp = matParams.B_sp;
-    const NumericType A_ie = matParams.A_ie;
     const NumericType Eth_sp = matParams.Eth_sp;
     const NumericType Eth_ie = matParams.Eth_ie;
 
@@ -384,21 +330,20 @@ public:
     // sputtering yield Y_s
     localData.addToScalarData(
         0, primID,
-        A_sp * std::max(sqrtE - std::sqrt(Eth_sp), (NumericType)0) *
+        std::max(sqrtE - std::sqrt(Eth_sp), (NumericType)0) *
             (1 + B_sp * (1 - cosTheta * cosTheta)) * cosTheta);
 
     // ion enhanced etching yield Y_ie
     localData.addToScalarData(
         1, primID,
-        A_ie * std::max(sqrtE - std::sqrt(Eth_ie), (NumericType)0) * cosTheta);
+        std::max(sqrtE - std::sqrt(Eth_ie), (NumericType)0) * cosTheta);
 
     // polymer yield Y_p
     if (matParams.id != Material::Polymer)
       matParams = p.getMaterialParameters(Material::Polymer);
     localData.addToScalarData(
         2, primID,
-        matParams.A_ie *
-            std::max(sqrtE - std::sqrt(matParams.Eth_ie), (NumericType)0) *
+        std::max(sqrtE - std::sqrt(matParams.Eth_ie), (NumericType)0) *
             cosTheta);
   }
   std::pair<NumericType, Vec3D<NumericType>>
@@ -441,11 +386,12 @@ class FluorocarbonNeutral
                                  NumericType> {
   const FluorocarbonParameters<NumericType> &p_;
   const std::string label_;
+  const bool isEtchant_ = true; // true for etchant, false for polymer
 
 public:
   FluorocarbonNeutral(const FluorocarbonParameters<NumericType> &parameters,
-                      const std::string &label)
-      : p_(parameters), label_(label) {}
+                      const std::string &label, bool isEtchant = true)
+      : p_(parameters), label_(label), isEtchant_(isEtchant) {}
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
                         const int, PointData<NumericType> &localData,
@@ -467,8 +413,12 @@ public:
     NumericType Seff = std::max(1 - phi_e - phi_p, NumericType(0));
 
     if (Seff > 0) {
-      Seff *= p_.getMaterialParameters(MaterialMap::mapToMaterial(materialId))
-                  .beta_e;
+      Seff *=
+          isEtchant_
+              ? p_.getMaterialParameters(MaterialMap::mapToMaterial(materialId))
+                    .beta_e
+              : p_.getMaterialParameters(MaterialMap::mapToMaterial(materialId))
+                    .beta_p;
     }
 
     return std::pair<NumericType, Vec3D<NumericType>>{Seff, direction};
@@ -480,24 +430,207 @@ public:
 };
 } // namespace impl
 
+#ifdef VIENNACORE_COMPILE_GPU
+namespace gpu {
+template <typename NumericType, int D>
+class FluorocarbonEtching : public ProcessModelGPU<NumericType, D> {
+  bool initialized = false;
+
+public:
+  explicit FluorocarbonEtching(
+      const viennaps::FluorocarbonParameters<NumericType> &parameters)
+      : params_(parameters) {
+    initializeModel();
+  }
+
+  ~FluorocarbonEtching() override { this->processData.free(); }
+
+  void setParameters(
+      const viennaps::FluorocarbonParameters<NumericType> &parameters) {
+    params_ = parameters;
+    initializeModel();
+  }
+
+  void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                  const NumericType processDuration) override {
+    if (initialized) {
+      return;
+    }
+
+    auto surfModel = std::dynamic_pointer_cast<
+        impl::FluorocarbonSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->resetTotalRates();
+    }
+
+    initialized = true;
+  }
+
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) override {
+    auto surfModel = std::dynamic_pointer_cast<
+        impl::FluorocarbonSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->logTotalRates();
+    }
+
+    initialized = false;
+  }
+
+private:
+  viennaps::FluorocarbonParameters<NumericType> params_;
+  viennaps::gpu::FluorocarbonParameters gpuParams_;
+
+  void initializeModel() {
+    // check if units have been set
+    if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
+        units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
+      VIENNACORE_LOG_ERROR("Units have not been set.");
+    }
+
+    if (params_.materials.empty()) {
+      VIENNACORE_LOG_WARNING("No materials have been set in the parameters.");
+    }
+
+    gpuParams_ = viennaps::gpu::FluorocarbonParameters(params_);
+    this->processData.alloc(sizeof(viennaps::gpu::FluorocarbonParameters));
+    this->processData.upload(&gpuParams_, 1);
+
+    // particles
+    viennaray::gpu::Particle<NumericType> ion;
+    ion.name = "Ion"; // name for shader programs postfix
+    ion.dataLabels.push_back("ionSputterFlux");
+    ion.dataLabels.push_back("ionEnhancedFlux");
+    ion.dataLabels.push_back("ionpeFlux");
+    ion.sticking = 0.f;
+    ion.cosineExponent = params_.Ions.exponent;
+
+    viennaray::gpu::Particle<NumericType> etchant;
+    etchant.name = "Etchant";
+    etchant.dataLabels.push_back("etchantFlux");
+    etchant.cosineExponent = 1.f;
+    for (auto entry : params_.materials) {
+      etchant.materialSticking[static_cast<int>(entry.id)] = entry.beta_e;
+    }
+
+    viennaray::gpu::Particle<NumericType> poly;
+    poly.name = "Polymer";
+    poly.dataLabels.push_back("polyFlux");
+    poly.cosineExponent = 1.f;
+    for (auto entry : params_.materials) {
+      poly.materialSticking[static_cast<int>(entry.id)] = entry.beta_p;
+    }
+
+    std::unordered_map<std::string, unsigned> pMap = {
+        {"Ion", 0}, {"Etchant", 1}, {"Polymer", 2}};
+    std::vector<viennaray::gpu::CallableConfig> cMap = {
+        {0, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__fluorocarbonIonCollision"},
+        {0, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__fluorocarbonIonReflection"},
+        {0, viennaray::gpu::CallableSlot::INIT,
+         "__direct_callable__fluorocarbonIonInit"},
+        {1, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__fluorocarbonNeutralCollision"},
+        {1, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__fluorocarbonNeutralReflection"},
+        {2, viennaray::gpu::CallableSlot::COLLISION,
+         "__direct_callable__fluorocarbonNeutralCollision"},
+        {2, viennaray::gpu::CallableSlot::REFLECTION,
+         "__direct_callable__fluorocarbonNeutralReflection"}};
+    this->setParticleCallableMap(pMap, cMap);
+
+    // surface model
+    auto surfModel =
+        SmartPointer<impl::FluorocarbonSurfaceModel<NumericType, D>>::New(
+            params_);
+
+    // velocity field
+    auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
+
+    this->setSurfaceModel(surfModel);
+    this->setVelocityField(velField);
+    this->setProcessName("FluorocarbonEtching");
+    this->getParticleTypes().clear();
+
+    this->insertNextParticleType(ion);
+    this->insertNextParticleType(etchant);
+    this->insertNextParticleType(poly);
+
+    this->addProcessMetaData(params_);
+    this->addUnitsMetaData();
+
+    this->hasGPU = true;
+    this->setUseMaterialIds(true);
+  }
+};
+
+} // namespace gpu
+#endif
+
 template <typename NumericType, int D>
 class FluorocarbonEtching : public ProcessModelCPU<NumericType, D> {
+  bool initialized = false;
+
 public:
   explicit FluorocarbonEtching(
       const FluorocarbonParameters<NumericType> &parameters)
       : params_(parameters) {
-    initialize();
+    initializeModel();
   }
 
   void setParameters(const FluorocarbonParameters<NumericType> &parameters) {
     params_ = parameters;
-    initialize();
+    initializeModel();
   }
+
+  void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                  const NumericType processDuration) override {
+    if (initialized) {
+      return;
+    }
+
+    auto surfModel = std::dynamic_pointer_cast<
+        impl::FluorocarbonSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->resetTotalRates();
+    }
+
+    initialized = true;
+  }
+
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) override {
+    auto surfModel = std::dynamic_pointer_cast<
+        impl::FluorocarbonSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->logTotalRates();
+    }
+
+    initialized = false;
+  }
+
+#ifdef VIENNACORE_COMPILE_GPU
+  SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
+    auto model =
+        SmartPointer<gpu::FluorocarbonEtching<NumericType, D>>::New(params_);
+    model->setProcessName(this->getProcessName().value());
+    return model;
+  }
+#endif
 
 private:
   FluorocarbonParameters<NumericType> params_;
 
-  void initialize() {
+  void initializeModel() {
     // check if units have been set
     if (units::Length::getInstance().getUnit() == units::Length::UNDEFINED ||
         units::Time::getInstance().getUnit() == units::Time::UNDEFINED) {
@@ -511,9 +644,9 @@ private:
     // particles
     auto ion = std::make_unique<impl::FluorocarbonIon<NumericType, D>>(params_);
     auto etchant = std::make_unique<impl::FluorocarbonNeutral<NumericType, D>>(
-        params_, "etchantFlux");
+        params_, "etchantFlux", true);
     auto poly = std::make_unique<impl::FluorocarbonNeutral<NumericType, D>>(
-        params_, "polyFlux");
+        params_, "polyFlux", false);
 
     // surface model
     auto surfModel =
@@ -530,10 +663,9 @@ private:
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);
     this->insertNextParticleType(poly);
-    this->processMetaData = params_.toProcessMetaData();
-    this->processMetaData["Units"] = std::vector<double>{
-        static_cast<double>(units::Length::getInstance().getUnit()),
-        static_cast<double>(units::Time::getInstance().getUnit())};
+    this->addProcessMetaData(params_);
+    this->addUnitsMetaData();
+    this->hasGPU = true;
   }
 };
 

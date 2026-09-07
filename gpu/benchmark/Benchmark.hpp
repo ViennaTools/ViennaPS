@@ -147,7 +147,7 @@ auto getDeviceParams() {
   }
   auto params_ = getIBEParameters<float>();
   // Parameters to upload to device
-  viennaps::gpu::impl::IonParams deviceParams;
+  viennaps::gpu::IonParams deviceParams;
   deviceParams.thetaRMin = viennaps::constants::degToRad(params_.thetaRMin);
   deviceParams.thetaRMax = viennaps::constants::degToRad(params_.thetaRMax);
   deviceParams.meanEnergy = params_.meanEnergy;

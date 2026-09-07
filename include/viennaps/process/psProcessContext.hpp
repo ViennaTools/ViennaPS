@@ -60,6 +60,7 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
   void updateFlags() {
     assert(model && "Process model must be set before updating flags.");
     assert(domain && "Domain must be set before updating flags.");
+    flags = Flags{}; // Reset flags
     flags.isGeometric = model->getGeometricModel() != nullptr;
     flags.useFluxEngine = model->useFluxEngine();
     flags.useAdvectionCallback = model->getAdvectionCallback() != nullptr;

@@ -6,7 +6,8 @@
 #include "raygLaunchParams.hpp"
 #include "raygReflection.hpp"
 
-#include <models/psPipelineParameters.hpp>
+#include "models/psIonBeamParameters.hpp"
+#include "models/psIonModelUtil.hpp"
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
@@ -16,8 +17,8 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
 __forceinline__ __device__ void IBECollision(const void *sbtData,
                                              viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
   const bool yieldDefined = abs(params->aSum) > 1e-6f;
   const bool redepositionEnabled = params->redepositionRate > 0.f;
 
@@ -54,8 +55,8 @@ __forceinline__ __device__ void IBECollision(const void *sbtData,
 
 __forceinline__ __device__ void IBEReflection(const void *sbtData,
                                               viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
   auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
   auto cosTheta = __saturatef(
       -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
@@ -87,8 +88,7 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
   }
 
   // Update energy
-  viennaps::gpu::impl::updateEnergy(prd, params->inflectAngle, params->n_l,
-                                    theta);
+  viennaps::impl::updateEnergy(prd, params->inflectAngle, params->n_l, theta);
 
   if (prd->energy > params->thresholdEnergy * params->thresholdEnergy ||
       prd->load > params->redepositionThreshold) {
@@ -101,10 +101,10 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
 }
 
 __forceinline__ __device__ void IBEInit(viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  viennaps::gpu::impl::initNormalDistEnergy(prd, params->meanEnergy,
-                                            params->sigmaEnergy);
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
+  viennaps::impl::initNormalDistEnergy(prd, params->meanEnergy,
+                                       params->sigmaEnergy);
   prd->load = 0.f;
 
   if (params->rotating) {

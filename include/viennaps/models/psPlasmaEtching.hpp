@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "../materials/psMaterialValueMap.hpp"
+#include "../process/psProcessModel.hpp"
 #include "../process/psSurfaceModel.hpp"
 #include "../psUnits.hpp"
 
@@ -20,11 +21,15 @@ class PlasmaEtchingSurfaceModel : public SurfaceModel<NumericType> {
 public:
   using SurfaceModel<NumericType>::coverages;
   using SurfaceModel<NumericType>::surfaceData;
-  const PlasmaEtchingParameters<NumericType> &params;
+  const PlasmaEtchingParameters<NumericType> &params_;
+
+  double totalSputterRate_ = 0.;
+  double totalIonEnhancedRate_ = 0.;
+  double totalChemicalRate_ = 0.;
 
   explicit PlasmaEtchingSurfaceModel(
       const PlasmaEtchingParameters<NumericType> &pParams)
-      : params(pParams) {}
+      : params_(pParams) {}
 
   void initializeCoverages(unsigned numGeometryPoints) override {
     if (coverages == nullptr) {
@@ -60,7 +65,7 @@ public:
     std::vector<NumericType> etchRate(numPoints, 0.);
 
     std::vector<NumericType> ionEnhancedFlux, ionSputterFlux;
-    if (params.ionFlux > 0) {
+    if (params_.ionFlux > 0) {
       ionEnhancedFlux = *fluxes->getScalarData("ionEnhancedFlux");
       ionSputterFlux = *fluxes->getScalarData("ionSputterFlux");
     } else {
@@ -89,47 +94,67 @@ public:
     const double unitConversion =
         units::Time::convertSecond() / units::Length::convertNanometer();
 
-#pragma omp parallel for reduction(|| : stop)
+    double totalSputterRate = 0.;
+    double totalIonEnhancedRate = 0.;
+    double totalChemicalRate = 0.;
+
+#pragma omp parallel for reduction(|| : stop)                                  \
+    reduction(+ : totalSputterRate, totalIonEnhancedRate, totalChemicalRate)
     for (size_t i = 0; i < numPoints; ++i) {
-      if (coordinates[i][D - 1] < params.etchStopDepth || stop) {
+      if (coordinates[i][D - 1] < params_.etchStopDepth || stop) {
         stop = true;
         continue;
       }
 
-      const auto sputterRate = ionSputterFlux[i] * params.ionFlux;
-      const auto ionEnhancedRate =
-          eCoverage->at(i) * ionEnhancedFlux[i] * params.ionFlux;
-      const auto chemicalRate =
-          params.Substrate.k_sigma * eCoverage->at(i) / 4.;
+      const auto rateFactor =
+          params_.rateFactors.get(Material::fromLegacyId(materialIds[i]));
+      auto sputterRate = ionSputterFlux[i] * params_.ionFlux;
 
       if (MaterialMap::isHardmask(materialIds[i])) {
-        etchRate[i] = -(1 / params.Mask.rho) * sputterRate * unitConversion;
+        sputterRate *= params_.Mask.A_sp;
+        etchRate[i] = -(1 / params_.Mask.rho) * sputterRate * unitConversion;
         if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = 0.;
           chRate->at(i) = 0.;
         }
       } else if (MaterialMap::isMaterial(materialIds[i], Material::Polymer)) {
-        etchRate[i] = -(1 / params.Polymer.rho) * sputterRate * unitConversion;
+        sputterRate *= params_.Polymer.A_sp;
+        etchRate[i] = -(1 / params_.Polymer.rho) * sputterRate * unitConversion;
         if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = 0.;
           chRate->at(i) = 0.;
         }
       } else {
-        etchRate[i] = -(1 / params.Substrate.rho) *
+
+        sputterRate *= params_.Substrate.A_sp;
+        const auto ionEnhancedRate = eCoverage->at(i) * ionEnhancedFlux[i] *
+                                     params_.ionFlux * params_.Substrate.A_ie;
+        const auto chemicalRate =
+            params_.Substrate.k_sigma * eCoverage->at(i) / 4.;
+
+        etchRate[i] = -(1 / params_.Substrate.rho) *
                       (chemicalRate + sputterRate + ionEnhancedRate) *
                       unitConversion;
+
         if (Logger::hasIntermediate()) {
           spRate->at(i) = sputterRate;
           ieRate->at(i) = ionEnhancedRate;
           chRate->at(i) = chemicalRate;
         }
+
+        totalSputterRate += sputterRate * rateFactor;
+        totalIonEnhancedRate += ionEnhancedRate * rateFactor;
+        totalChemicalRate += chemicalRate * rateFactor;
       }
 
-      etchRate[i] *=
-          params.rateFactors.get(Material::fromLegacyId(materialIds[i]));
+      etchRate[i] *= rateFactor;
     }
+
+    totalSputterRate_ += totalSputterRate;
+    totalIonEnhancedRate_ += totalIonEnhancedRate;
+    totalChemicalRate_ += totalChemicalRate;
 
     if (stop) {
       std::fill(etchRate.begin(), etchRate.end(), 0.);
@@ -148,19 +173,19 @@ public:
                              *ionEnhancedFlux = nullptr,
                              *ionEnhancedPassivationFlux = nullptr;
 
-    if (params.etchantFlux > 0) {
+    if (params_.etchantFlux > 0) {
       etchantFlux = fluxes->getScalarData("etchantFlux");
     } else {
       etchantFlux = &zero;
     }
 
-    if (params.passivationFlux > 0) {
+    if (params_.passivationFlux > 0) {
       passivationFlux = fluxes->getScalarData("passivationFlux");
     } else {
       passivationFlux = &zero;
     }
 
-    if (params.ionFlux > 0) {
+    if (params_.ionFlux > 0) {
       ionEnhancedFlux = fluxes->getScalarData("ionEnhancedFlux");
       ionEnhancedPassivationFlux =
           fluxes->getScalarData("ionEnhancedPassivationFlux");
@@ -178,29 +203,49 @@ public:
 
 #pragma omp parallel for
     for (size_t i = 0; i < numPoints; ++i) {
-      auto Gb_E = etchantFlux->at(i) * params.etchantFlux;
-      auto Gb_P = passivationFlux->at(i) * params.passivationFlux;
-      auto GY_ie = ionEnhancedFlux->at(i) * params.ionFlux;
-      auto GY_p = ionEnhancedPassivationFlux->at(i) * params.ionFlux;
+      auto Gb_E = etchantFlux->at(i) * params_.etchantFlux;
+      auto Gb_P = passivationFlux->at(i) * params_.passivationFlux;
+      auto GY_ie =
+          ionEnhancedFlux->at(i) * params_.ionFlux * params_.Substrate.A_ie;
+      auto GY_p = ionEnhancedPassivationFlux->at(i) * params_.ionFlux *
+                  params_.Passivation.A_ie;
 
       if (Gb_P < 1e-6) {
         // No passivation case - avoid division by zero
         eCoverage->at(i) =
             Gb_E < 1e-6 ? 0.
-                        : Gb_E / (Gb_E + params.Substrate.k_sigma + 2 * GY_ie);
+                        : Gb_E / (Gb_E + params_.Substrate.k_sigma + 2 * GY_ie);
         pCoverage->at(i) = 0.;
       } else if (Gb_E < 1e-6) {
         // No etchant case - avoid division by zero
         eCoverage->at(i) = 0.;
-        pCoverage->at(i) = Gb_P / (Gb_P + params.Substrate.beta_sigma + GY_p);
+        pCoverage->at(i) = Gb_P / (Gb_P + params_.Substrate.beta_sigma + GY_p);
       } else {
         // Normal case with both fluxes present
-        auto a = (params.Substrate.k_sigma + 2 * GY_ie) / Gb_E;
-        auto b = (params.Substrate.beta_sigma + GY_p) / Gb_P;
+        auto a = (params_.Substrate.k_sigma + 2 * GY_ie) / Gb_E;
+        auto b = (params_.Substrate.beta_sigma + GY_p) / Gb_P;
         eCoverage->at(i) = 1 / (1 + (a * (1 + 1 / b)));
         pCoverage->at(i) = 1 / (1 + (b * (1 + 1 / a)));
       }
     }
+  }
+
+  void resetTotalRates() {
+    totalSputterRate_ = 0.;
+    totalIonEnhancedRate_ = 0.;
+    totalChemicalRate_ = 0.;
+  }
+
+  void logTotalRates() {
+    double totalRate =
+        totalSputterRate_ + totalIonEnhancedRate_ + totalChemicalRate_;
+    VIENNACORE_LOG_INFO("Substrate etch rate components (normalized):");
+    VIENNACORE_LOG_INFO("Chemical: " +
+                        std::to_string(totalChemicalRate_ / totalRate));
+    VIENNACORE_LOG_INFO("Ion Enhanced: " +
+                        std::to_string(totalIonEnhancedRate_ / totalRate));
+    VIENNACORE_LOG_INFO("Sputter: " +
+                        std::to_string(totalSputterRate_ / totalRate));
   }
 };
 
@@ -393,4 +438,146 @@ public:
     return {fluxLabel};
   }
 };
-} // namespace viennaps::impl
+
+template <typename NumericType, int D>
+auto castSurfaceModelToPlasmaEtching(
+    SmartPointer<SurfaceModel<NumericType>> surfaceModel) {
+  auto model =
+      std::dynamic_pointer_cast<PlasmaEtchingSurfaceModel<NumericType, D>>(
+          surfaceModel);
+  if (!model) {
+    VIENNACORE_LOG_ERROR(
+        "Surface model is not of type PlasmaEtchingSurfaceModel");
+  }
+  return model;
+}
+
+template <typename NumericType, int D>
+double
+getSubstratePosition(SmartPointer<Domain<NumericType, D>> domain,
+                     MaterialValueMap<NumericType> const &materialRates) {
+
+  auto surface = domain->getDiskMesh();
+  const auto &nodes = surface->getNodes();
+  const auto materialIds = surface->getMaterialIds();
+
+  double position = std::numeric_limits<double>::max();
+#pragma omp parallel for reduction(min : position)
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    auto material = Material::fromLegacyId(materialIds->at(i));
+    if (MaterialMap::isMaterial(material, Material::Mask) ||
+        MaterialMap::isMaterial(material, Material::Polymer) ||
+        materialRates.get(material) < 1e-6) {
+      continue;
+    }
+
+    position = std::min(position, static_cast<double>(nodes[i][D - 1]));
+  }
+
+  if (position == std::numeric_limits<double>::max()) {
+    VIENNACORE_LOG_WARNING("No substrate material found in the domain. Cannot "
+                           "provide depth info.");
+    position = 0.;
+  }
+
+  return position;
+}
+
+VIENNAPS_TEMPLATE_ND(NumericType, D)
+class PlasmaModelCPU : public ProcessModelCPU<NumericType, D> {
+  bool initialized = false;
+  double initialPosition;
+
+public:
+  void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                  const NumericType processDuration) override {
+    if (initialized) {
+      return;
+    }
+
+    auto surfModel = castSurfaceModelToPlasmaEtching<NumericType, D>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->resetTotalRates();
+      initialPosition = getSubstratePosition<NumericType, D>(
+          domain, surfModel->params_.rateFactors);
+      VIENNACORE_LOG_DEBUG(
+          "Initial substrate position: " + std::to_string(initialPosition) +
+          " " + units::Length::toString());
+    }
+
+    initialized = true;
+  }
+
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) override {
+    auto surfModel = castSurfaceModelToPlasmaEtching<NumericType, D>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->logTotalRates();
+      double finalPosition = getSubstratePosition<NumericType, D>(
+          domain, surfModel->params_.rateFactors);
+      VIENNACORE_LOG_DEBUG(
+          "Final substrate position: " + std::to_string(finalPosition) + " " +
+          units::Length::toString());
+      double etchDepth = std::abs(initialPosition - finalPosition);
+      VIENNACORE_LOG_INFO("Etch depth: " + std::to_string(etchDepth) + " " +
+                          units::Length::toString());
+    }
+
+    initialized = false;
+  }
+};
+
+#ifdef VIENNACORE_COMPILE_GPU
+VIENNAPS_TEMPLATE_ND(NumericType, D)
+class PlasmaModelGPU : public viennaps::gpu::ProcessModelGPU<NumericType, D> {
+  bool initialized = false;
+  double initialPosition;
+
+public:
+  void initialize(SmartPointer<Domain<NumericType, D>> domain,
+                  const NumericType processDuration) override {
+    if (initialized) {
+      return;
+    }
+
+    auto surfModel = castSurfaceModelToPlasmaEtching<NumericType, D>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->resetTotalRates();
+      initialPosition = getSubstratePosition<NumericType, D>(
+          domain, surfModel->params_.rateFactors);
+      VIENNACORE_LOG_DEBUG(
+          "Initial substrate position: " + std::to_string(initialPosition) +
+          " " + units::Length::toString());
+    }
+
+    initialized = true;
+  }
+
+  void finalize(SmartPointer<Domain<NumericType, D>> domain,
+                const NumericType processedDuration) override {
+    auto surfModel = castSurfaceModelToPlasmaEtching<NumericType, D>(
+        this->getSurfaceModel());
+
+    if (Logger::hasInfo()) {
+      surfModel->logTotalRates();
+      double finalPosition = getSubstratePosition<NumericType, D>(
+          domain, surfModel->params_.rateFactors);
+      VIENNACORE_LOG_DEBUG(
+          "Final substrate position: " + std::to_string(finalPosition) + " " +
+          units::Length::toString());
+      double etchDepth = std::abs(initialPosition - finalPosition);
+      VIENNACORE_LOG_INFO("Etch depth: " + std::to_string(etchDepth) + " " +
+                          units::Length::toString());
+    }
+
+    initialized = false;
+  }
+};
+#endif
+}; // namespace viennaps::impl

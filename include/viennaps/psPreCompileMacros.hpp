@@ -48,10 +48,15 @@ concept Dimension = (D == 2 || D == 3);
   template <Numeric NTypeName, int DName>                                      \
     requires Dimension<DName>
 
+#define REQUIRES_PROCESS_METADATA(T)                                           \
+  requires requires(const T &p) { p.toProcessMetaData(); }
+
 #else
 
 // Fallback path (no concepts)
 #define VIENNAPS_TEMPLATE_ND(NTypeName, DName)                                 \
   template <typename NTypeName, int DName>
+
+#define REQUIRES_PROCESS_METADATA(T)
 
 #endif

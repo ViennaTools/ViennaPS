@@ -24,15 +24,12 @@ RUN git clone https://github.com/ViennaTools/ViennaLS.git
 WORKDIR /src/ViennaLS
 
 # Install ViennaLS
-RUN pip install .
+RUN python python/scripts/install_ViennaLS.py
 
 # Get ViennaPS sources
 WORKDIR /src
 RUN git clone https://github.com/ViennaTools/ViennaPS.git
 WORKDIR /src/ViennaPS
 
-# Build with GPU enabled
-ENV CMAKE_ARGS="-DVIENNAPS_USE_GPU=ON"
-
 # Install ViennaPS
-RUN pip install .
+RUN python python/scripts/install_ViennaPS.py

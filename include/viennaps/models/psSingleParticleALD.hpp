@@ -215,7 +215,8 @@ public:
 
     // particles
     viennaray::gpu::Particle<NumericType> particle{
-        .name = "SingleParticle", .sticking = params_.stickingProbability};
+        .name = "SingleParticle",
+        .sticking = static_cast<NumericType>(params_.stickingProbability)};
     particle.dataLabels.push_back("ParticleFlux");
 
     std::unordered_map<std::string, unsigned> pMap = {{"SingleParticle", 0}};
@@ -238,10 +239,9 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleALD");
+    this->addProcessMetaData(params_);
     this->isALP = true;
     this->hasGPU = true;
-
-    this->processMetaData = params_.toProcessMetaData();
   }
 };
 } // namespace gpu
@@ -269,10 +269,9 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("SingleParticleALD");
+    this->addProcessMetaData(params_);
     this->isALP = true;
     this->hasGPU = true;
-
-    this->processMetaData = params_.toProcessMetaData();
   }
 
 #ifdef VIENNACORE_COMPILE_GPU

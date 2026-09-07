@@ -1,0 +1,12 @@
+# GENERIC phosphorus implant table (PUBLIC). Crystalline Si(100), dual-Pearson-IV.
+# Source: MCIMPL-II crystalline Monte Carlo (TU Wien; Hossinger/Wittmann), 7 deg tilt / 22 deg twist.
+# Spatial units nm | Energy keV | Dose cm^-2 | Angles deg.
+#
+species,material,substrateType,modelType,energyKeV,tiltDeg,rotationDeg,dosePerCm2,screenThickness,headFraction,headMu,headSigma,headBeta,headGamma,headLateralSigma,headLateralModel,headLateralDeltaSigma,tailMu,tailSigma,tailBeta,tailGamma,tailLateralSigma,tailLateralModel,tailLateralDeltaSigma
+phosphorus,silicon,crystalline,DualPearsonIV,8,7.0,22.0,10000000000000.0,0,0.8387,15.157,13.546,79.942,-0.363,10.16,linear_depth_scale,0,96.657,135.342,66.848,3.878,101.506,linear_depth_scale,0
+phosphorus,silicon,crystalline,DualPearsonIV,10,7.0,22.0,10000000000000.0,0,0.8812,18.089,18.855,0.5,3.346,14.141,linear_depth_scale,0,91.891,147.599,39.291,3.315,110.699,linear_depth_scale,0
+phosphorus,silicon,crystalline,DualPearsonIV,30,7.0,22.0,10000000000000.0,0,0.5512,49.623,21.862,77.265,0.379,16.396,linear_depth_scale,0,65.587,115.439,8.069,-3.891,86.579,linear_depth_scale,0
+phosphorus,silicon,crystalline,DualPearsonIV,50,7.0,22.0,10000000000000.0,0,0.929,73.591,47.52,0.562,7.926,35.64,linear_depth_scale,0,208.25,180.0,79.425,4.047,135.0,linear_depth_scale,0
+phosphorus,silicon,crystalline,DualPearsonIV,100,7.0,22.0,10000000000000.0,0,0.8713,138.401,49.792,9.182,1.235,37.344,linear_depth_scale,0,225.269,179.98,78.983,4.042,134.985,linear_depth_scale,0
+phosphorus,silicon,crystalline,DualPearsonIV,130,7.0,22.0,10000000000000.0,0,0.9304,181.758,82.66,43.873,2.686,61.995,linear_depth_scale,0,328.503,136.744,57.723,7.928,102.558,linear_depth_scale,0
+phosphorus,silicon,crystalline,DualPearsonIV,200,7.0,22.0,10000000000000.0,0,0.8454,275.554,82.343,0.852,7.989,61.757,linear_depth_scale,0,298.62,199.016,32.169,3.092,149.262,linear_depth_scale,0

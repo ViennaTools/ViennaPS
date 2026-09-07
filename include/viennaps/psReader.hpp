@@ -64,9 +64,6 @@ public:
       return;
     }
 
-    // Clear existing domain data
-    domain->clear();
-
     // Check identifier
     char identifier[8];
     fin.read(identifier, 8);
@@ -98,6 +95,9 @@ public:
         return;
       }
     }
+
+    // Clear existing domain data
+    domain->clear();
 
     // Read domain setup
     typename Domain<NumericType, D>::Setup setup;

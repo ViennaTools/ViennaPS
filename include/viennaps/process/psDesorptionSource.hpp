@@ -174,14 +174,19 @@ public:
                 positions, normals, weights, gridDelta, diskRadius),
             raysPerPoint) {}
 
-  std::array<VecType, 2> getOriginAndDirection(size_t idx,
-                                               RNG &rng) const override {
+  VecType getOrigin(size_t idx, RNG &rng) const override {
     const size_t diskIdx = idx / raysPerPoint_;
     const auto &pos = positions_[diskIdx];
     const auto &norm = normals_[diskIdx];
     VecType origin = pos + norm * offset_;
+    return origin;
+  }
+
+  VecType getDirection(size_t idx, RNG &rng) const override {
+    const size_t diskIdx = idx / raysPerPoint_;
+    const auto &norm = normals_[diskIdx];
     auto direction = viennaray::ReflectionDiffuse<NumericType, D>(norm, rng);
-    return {origin, direction};
+    return direction;
   }
 
   [[nodiscard]] size_t getNumPoints() const override {

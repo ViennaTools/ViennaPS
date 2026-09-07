@@ -1,6 +1,7 @@
 // #pragma once
 
 #include "FaradayCage.cuh"
+#include "FluorocarbonEtching.cuh"
 #include "IonBeamEtching.cuh"
 #include "MultiParticle.cuh"
 #include "NeutralTransport.cuh"
@@ -180,4 +181,36 @@ extern "C" __device__ void
 __direct_callable__TEOSPECVDIonReflection(const void *sbtData,
                                           viennaray::gpu::PerRayData *prd) {
   TEOSPECVDIonReflection(sbtData, prd);
+}
+
+//
+// --- FluorocarbonEtching pipeline
+//
+
+extern "C" __device__ void __direct_callable__fluorocarbonNeutralCollision(
+    const void *sbtData, viennaray::gpu::PerRayData *prd) {
+  fluorocarbonNeutralCollision(prd);
+}
+
+extern "C" __device__ void __direct_callable__fluorocarbonNeutralReflection(
+    const void *sbtData, viennaray::gpu::PerRayData *prd) {
+  fluorocarbonNeutralReflection(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__fluorocarbonIonCollision(const void *sbtData,
+                                            viennaray::gpu::PerRayData *prd) {
+  fluorocarbonIonCollision(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__fluorocarbonIonReflection(const void *sbtData,
+                                             viennaray::gpu::PerRayData *prd) {
+  fluorocarbonIonReflection(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__fluorocarbonIonInit(const void *,
+                                       viennaray::gpu::PerRayData *prd) {
+  fluorocarbonIonInit(prd);
 }

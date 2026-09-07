@@ -1,0 +1,115 @@
+# P in Si — 30 keV, 6° tilt, 1×10^14 cm-2
+# All implant/damage moments and anneal physics are taken verbatim from the
+# ViennaPS modeldb tables so the simulation runs without any modeldb lookup.
+#
+# Implant moments:  modeldb/implant/phosphorus_in_silicon_crystalline.csv
+#                   row:  energyKeV=30, tiltDeg=6, rotationDeg=0,
+#                         dosePerCm2=1e14, screenThickness=0
+# Damage moments:   modeldb/damage/phosphorus_damage_in_silicon.csv
+#                   row:  energyKeV=30 (tiltDeg/dose columns are 0 in table;
+#                         lateralDeltaSigma is the average of the two 30-keV rows)
+# Anneal physics:   modeldb/anneal/annealing.csv, species=phosphorus, material=silicon
+#                   Defect diffusivities are pre-averaged over the anneal schedule.
+#
+# Spatial unit: nm
+
+# ── Geometry ──────────────────────────────────────────────────────────────────
+gridDelta=1.0
+xExtent=200.0
+topSpace=15.0
+substrateDepth=250.0
+openingWidth=100.0
+maskHeight=20.0
+oxideThickness=2.0
+
+# ── Implant recipe ────────────────────────────────────────────────────────────
+species=P
+material=Si
+energyKeV=30.0
+rotationDeg=0.0
+angle=6.0
+doseCm2=1.0e14
+doseControl=WaferDose
+substrateType=crystalline
+screenThickness=2.0
+
+# Dual-Pearson IV head component (from table)
+projectedRange=42.6
+depthSigma=27.8
+skewness=5.39
+kurtosis=1.038
+lateralSigma=17.0
+lateralMu=0.0
+
+# Dual-Pearson IV tail component (from table)
+headFraction=0.9644
+tailProjectedRange=119.7
+tailDepthSigma=70.3
+tailSkewness=3.34
+tailKurtosis=0.585
+tailLateralSigma=15.6
+tailLateralMu=0.0
+
+# Damage distribution (from table — energyKeV=30, lateralDeltaSigma averaged)
+damageProjectedRange=26.7
+damageVerticalSigma=19.17
+damageLambda=14.0
+damageDefectsPerIon=505.03
+damageLateralSigma=12.15
+damageLateralDeltaSigma=0.23
+
+# ── Anneal schedule ───────────────────────────────────────────────────────────
+# 3-step ramp:  9 s 600→1050°C  |  5 s soak 1050°C  |  9 s 1050→600°C
+annealMode=implicit
+annealImplicitMaxIterations=400
+annealImplicitTolerance=1.0e-6
+annealImplicitRelaxation=1.0
+annealStepDurations=9.0,5.0,9.0
+annealTemperatures=873.15,1323.15,1323.15,873.15
+annealDefectCoupling=1
+
+# ── Anneal physics (from modeldb/anneal/annealing.csv, unit = nm) ─────────────
+annealParameterSource=manual
+
+# Dopant diffusivity — Arrhenius parameters
+# Source: silicon,dopant,phosphorus,int_d,4e+13,4.1
+annealD0=4.0e13
+annealEa=4.1
+
+# Defect diffusivities — pre-averaged over the anneal schedule above
+# Source: silicon,defect,interstitial,di,5.1e+15,1.77
+#         silicon,defect,vacancy,dv,3e+12,1.8
+annealInterstitialDiffusivity=3.2236776594805111e+08
+annealVacancyDiffusivity=1.4492951398459620e+05
+
+# Defect equilibrium concentrations (cm-3 converted to nm-3: × 1e-21)
+# Source: silicon,defect,interstitial,cstar,3.12e+23,2.932
+#         silicon,defect,vacancy,cstar,1.533e+24,2.34
+annealInterstitialEqC0=3.12e2
+annealInterstitialEqEa=2.932
+annealVacancyEqC0=1.533e3
+annealVacancyEqEa=2.34
+
+annealRecombinationRate=0.0
+annealInterstitialSinkRate=0.0
+annealVacancySinkRate=0.0
+
+# Defect-to-dopant coupling weights (defaults; not overridden in table)
+annealScoreIFactor=0.5
+annealScoreVFactor=0.5
+annealScoreDFactor=1.0
+annealTedFromScoreDFactor=0
+
+# Solid solubility — Arrhenius parameters (cm-3 pre-factor converted to nm-3)
+# Source: silicon,dopant,phosphorus,solubility,4.2e+22,0.45
+annealSolidActivation=1
+annealSolidSolubilityC0=42.0
+annealSolidSolubilityEa=0.45
+
+# Interstitial cluster kinetics — pre-averaged over anneal schedule
+# Source: silicon,defect,icluster,ikfc,7.8e-9,0
+#         silicon,defect,icluster,ikr,6.996e+16,3.935
+#         silicon,defect,icluster,initpercent,1,0
+annealClusterKfc=7.8e-9
+annealClusterKr=2.0062479126282282e+01
+annealClusterInitFraction=0.01

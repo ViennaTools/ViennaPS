@@ -6,7 +6,7 @@
 #include "raygLaunchParams.hpp"
 #include "raygReflection.hpp"
 
-#include "models/psPipelineParameters.hpp"
+#include "models/psIonBeamParameters.hpp"
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
@@ -16,8 +16,8 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
 __forceinline__ __device__ void
 faradayIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
   const bool yieldDefined = abs(params->aSum) > 0.f;
 
   for (int i = 0; i < prd->ISCount; ++i) {

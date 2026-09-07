@@ -1,0 +1,13 @@
+# GENERIC boron damage table (PUBLIC). Hobler damage shape + NRT magnitude.
+# Shape (projectedRange, verticalSigma, lambda) from MCIMPL-II vacancy profile;
+# defectsPerIon from analytic NRT/Kinchin-Pease (Ed=15 eV, amorphous - valid at >=3 deg tilt).
+# Spatial units nm | Energy keV | Dose cm^-2 | Angles deg.
+#
+species,material,energyKeV,tiltDeg,rotationDeg,dosePerCm2,screenThickness,projectedRange,verticalSigma,lambda,defectsPerIon,lateralSigma,lateralModel,lateralDeltaSigma
+boron,silicon,8,7.0,22.0,10000000000000.0,0,25.873,30.002,12.001,140.02,25.002,linear_depth_scale,0
+boron,silicon,10,7.0,22.0,10000000000000.0,0,30.985,23.161,9.264,169.89,19.301,linear_depth_scale,0
+boron,silicon,30,7.0,22.0,10000000000000.0,0,75.98,35.133,14.053,409.94,29.278,linear_depth_scale,0
+boron,silicon,50,7.0,22.0,10000000000000.0,0,120.252,53.159,21.263,583.49,44.299,linear_depth_scale,0
+boron,silicon,100,7.0,22.0,10000000000000.0,0,211.271,72.536,29.015,872.02,60.447,linear_depth_scale,0
+boron,silicon,130,7.0,22.0,10000000000000.0,0,264.46,77.268,30.907,989.74,64.39,linear_depth_scale,0
+boron,silicon,200,7.0,22.0,10000000000000.0,0,355.327,86.747,34.699,1181.88,72.289,linear_depth_scale,0

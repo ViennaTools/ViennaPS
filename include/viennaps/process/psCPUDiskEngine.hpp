@@ -48,6 +48,14 @@ public:
     rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
     if (!context.rayTracingParams.useRandomSeeds)
       rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
+    if (context.rayTracingParams.minRayDistance <
+        context.domain->getGridDelta() * 0.5) {
+      rayTracer_.setTnear(context.rayTracingParams.minRayDistance);
+    } else {
+      VIENNACORE_LOG_WARNING(
+          "Minimum ray distance is too large. Surface hits may be missed. "
+          "Consider reducing the minimum ray distance.");
+    }
 
     if (auto source = model_->getSource()) {
       rayTracer_.setSource(source);
@@ -79,6 +87,7 @@ public:
                              context.rayTracingParams.diskRadius);
     }
     rayTracer_.setMaterialIds(materialIds);
+    rayTracer_.commitGeometry();
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
@@ -144,7 +153,7 @@ public:
         std::move(sourceData), context.rayTracingParams.raysPerPoint);
 
     rayTracer_.setSource(source);
-    runRayTracer(context, fluxes);
+    runRayTracer(context, fluxes, "_surface");
 
     // reset source
     if (auto source = model_->getSource()) {
@@ -160,7 +169,8 @@ public:
 
 private:
   void runRayTracer(ProcessContext<NumericType, D> const &context,
-                    SmartPointer<PointData<NumericType>> &fluxes) {
+                    SmartPointer<PointData<NumericType>> &fluxes,
+                    std::string const &postFix = "") {
     assert(fluxes != nullptr);
     assert(model_ != nullptr);
     fluxes->clear();
@@ -213,7 +223,7 @@ private:
 
       for (int i = 0; i < numFluxes; ++i) {
         fluxes->insertNextScalarData(std::move(particleFluxes[i]),
-                                     particleFluxLabels[i]);
+                                     particleFluxLabels[i] + postFix);
       }
 
       ++particleIdx;

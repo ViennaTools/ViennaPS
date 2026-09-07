@@ -58,6 +58,15 @@ public:
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
       if (!context.rayTracingParams.useRandomSeeds)
         rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
+      if (context.rayTracingParams.minRayDistance <
+          context.domain->getGridDelta() * 0.5) {
+        rayTracer_.setTnear(context.rayTracingParams.minRayDistance);
+      } else {
+        VIENNACORE_LOG_WARNING(
+            "Minimum ray distance is too large. Surface hits may be missed. "
+            "Consider reducing the minimum ray distance.");
+      }
+
       for (auto &particle : model_->getParticleTypes()) {
         rayTracer_.insertNextParticle(particle);
       }
@@ -226,7 +235,7 @@ public:
     auto desorptionResults = rayTracer_.getResults();
 
     copyResultsToPointData(*fluxes, context.rayTracingParams.smoothingNeighbors,
-                           desorptionResults);
+                           desorptionResults, "_surface");
 
     rayTracer_.clearSurfaceSource();
     this->timer_.finish();
@@ -259,7 +268,8 @@ private:
 
   void copyResultsToPointData(
       PointData<NumericType> &pointData, int smoothingNeighbors,
-      std::vector<std::vector<viennaray::gpu::ResultType>> results) {
+      std::vector<std::vector<viennaray::gpu::ResultType>> results,
+      const std::string &postFix = "") {
     const auto numRates = rayTracer_.getNumberOfRates();
     const auto numPoints = rayTracer_.getNumberOfElements();
     assert(numRates > 0);
@@ -276,7 +286,8 @@ private:
 
         std::vector<NumericType> diskFluxCasted(diskFlux.begin(),
                                                 diskFlux.end());
-        pointData.insertReplaceScalarData(std::move(diskFluxCasted), name);
+        pointData.insertReplaceScalarData(std::move(diskFluxCasted),
+                                          name + postFix);
       }
       offset += particles[pIdx].dataLabels.size();
     }

@@ -1,0 +1,12 @@
+# GENERIC boron implant table (PUBLIC). Crystalline Si(100), dual-Pearson-IV.
+# Source: MCIMPL-II crystalline Monte Carlo (TU Wien; Hossinger/Wittmann), 7 deg tilt / 22 deg twist.
+# Spatial units nm | Energy keV | Dose cm^-2 | Angles deg.
+#
+species,material,substrateType,modelType,energyKeV,tiltDeg,rotationDeg,dosePerCm2,screenThickness,headFraction,headMu,headSigma,headBeta,headGamma,headLateralSigma,headLateralModel,headLateralDeltaSigma,tailMu,tailSigma,tailBeta,tailGamma,tailLateralSigma,tailLateralModel,tailLateralDeltaSigma
+boron,silicon,crystalline,DualPearsonIV,8,7.0,22.0,10000000000000.0,0,0.9748,36.961,33.336,0.5,7.999,25.002,linear_depth_scale,0,63.626,60.046,36.578,-3.237,45.035,linear_depth_scale,0
+boron,silicon,crystalline,DualPearsonIV,10,7.0,22.0,10000000000000.0,0,0.7808,44.264,25.734,44.434,2.8,19.301,linear_depth_scale,0,68.786,28.858,12.658,2.045,21.643,linear_depth_scale,0
+boron,silicon,crystalline,DualPearsonIV,30,7.0,22.0,10000000000000.0,0,0.932,108.543,39.037,2.904,0.066,29.278,linear_depth_scale,0,217.742,71.099,68.544,-0.271,53.324,linear_depth_scale,0
+boron,silicon,crystalline,DualPearsonIV,50,7.0,22.0,10000000000000.0,0,0.9933,171.789,59.065,9.399,0.857,44.299,linear_depth_scale,0,282.357,153.531,53.272,-3.644,115.148,linear_depth_scale,0
+boron,silicon,crystalline,DualPearsonIV,100,7.0,22.0,10000000000000.0,0,0.9969,301.815,80.596,6.051,0.589,60.447,linear_depth_scale,0,553.581,220.347,4.621,2.851,165.26,linear_depth_scale,0
+boron,silicon,crystalline,DualPearsonIV,130,7.0,22.0,10000000000000.0,0,0.9905,377.801,85.853,0.5,8.0,64.39,linear_depth_scale,0,713.652,315.343,54.55,5.96,236.507,linear_depth_scale,0
+boron,silicon,crystalline,DualPearsonIV,200,7.0,22.0,10000000000000.0,0,0.9906,507.61,96.385,77.665,-0.168,72.289,linear_depth_scale,0,939.5,443.771,77.441,4.023,332.828,linear_depth_scale,0

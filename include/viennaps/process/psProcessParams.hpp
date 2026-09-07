@@ -27,6 +27,8 @@ struct RayTracingParameters {
   double minNodeDistanceFactor =
       0.05; // factor of grid delta to determine min. node distance for triangle
             // mesh generation
+  float minRayDistance =
+      1e-4f; // minimum distance for ray tracing to avoid self-intersection
   unsigned maxBoundaryHits = 1000;
   unsigned maxReflections = std::numeric_limits<unsigned>::max();
 
@@ -45,6 +47,7 @@ struct RayTracingParameters {
   auto toMetaDataString() const {
     auto metaData = util::metaDataToString(toMetaData());
     return metaData + "\nUseRandomSeeds: " + util::toString(useRandomSeeds) +
+           "\nMinRayDistance: " + util::toString(minRayDistance) +
            "\nIgnoreFluxBoundaries: " + util::toString(ignoreFluxBoundaries);
   }
 };

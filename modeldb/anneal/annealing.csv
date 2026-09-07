@@ -1,0 +1,40 @@
+# ViennaCS annealing parameter table -- GENERIC (public) build.
+# Literature-only. The anneal is intrinsic Arrhenius diffusion D=D0*exp(-Ea/kT),
+# electrical activation limited by the solid solubility C_sol=C0*exp(-Ea/kT), and
+# an INSTANTANEOUS effective TED: a static, bounded diffusivity enhancement
+# driven by the implant-damage field, D_eff = D*(1 + ted_damage*damage/norm).
+# This models the NET TED-enhanced Dt (the transient is short vs. the anneal),
+# not the interstitial dynamics -- stable, no dynamic defect solver.
+# Run with annealSolidActivation=1; defect coupling auto-off (no defect rows).
+#
+# diffusivity D0 in nm^2/s (ViennaPS length unit), Ea in eV (Pichler, Springer 2004):
+#   boron:      4.715e14 / 3.674  (Eq.5.14 intrinsic, p/ni=1)  -> D(1030C)=2.918 nm2/s
+#   phosphorus: 1.03e14  / 3.507  (Eq.5.26)                    -> D(1030C)=2.815 nm2/s
+# Additional dopants: intrinsic Arrhenius diffusion only (no solubility, TED, or
+# implant/damage tables). D0 in nm^2/s / Ea in eV. Al/Ga/In/As/Sb: Pichler
+# (Springer 2004) intrinsic regressions; Bi: Ghoshtagore, J. Appl. Phys. 42 (1971).
+#   aluminum 3.17e13/3.023  gallium 3.81e14/3.552  indium  3.13e14/3.668
+#   arsenic  8.85e14/3.971  antimony 4.09e15/4.158  bismuth 1.08e14/3.85
+# solubility C0 in cm^-3, Ea in eV (Arrhenius fit to Pichler solubility data >=1000 C):
+#   boron:      1.0e24 / 0.91  (Fig.5.4)                     -> C_sol(1030C)~3.0e20
+#   phosphorus: 3.2e23 / 0.72  (Fig.5.23, electrically active) -> ~5.2e20
+# ted_damage = effective TED enhancement factor (dimensionless); ted_damage_norm
+#   = damage normalisation (cm^-3). Together they set the net boron/phosphorus
+#   TED magnitude (effective, literature range ~10-50x: Cowern, Packan, Stolk);
+#   energy/dose dependence comes from the damage field. Tunable per condition.
+#
+material,category,name,parameter,prefactor,Ea
+silicon,dopant,boron,d,4.715e+14,3.674
+silicon,dopant,phosphorus,d,1.03e+14,3.507
+silicon,dopant,aluminum,d,3.17e+13,3.023
+silicon,dopant,gallium,d,3.81e+14,3.552
+silicon,dopant,indium,d,3.13e+14,3.668
+silicon,dopant,arsenic,d,8.85e+14,3.971
+silicon,dopant,antimony,d,4.09e+15,4.158
+silicon,dopant,bismuth,d,1.08e+14,3.85
+silicon,dopant,boron,solubility,1.0e+24,0.91
+silicon,dopant,phosphorus,solubility,3.2e+23,0.72
+silicon,dopant,boron,ted_damage,1.0,0
+silicon,dopant,boron,ted_damage_norm,1.5e+20,0
+silicon,dopant,phosphorus,ted_damage,0.5,0
+silicon,dopant,phosphorus,ted_damage_norm,1.5e+20,0

@@ -18,9 +18,11 @@ using namespace viennacore;
 namespace gpu {
 /// GPU Version of the SF6/O2 plasma etching model
 template <typename NumericType, int D>
-class SF6O2Etching final : public ProcessModelGPU<NumericType, D> {
+class SF6O2Etching final
+    : public viennaps::impl::PlasmaModelGPU<NumericType, D> {
 public:
-  explicit SF6O2Etching(const PlasmaEtchingParameters<NumericType> &pParams)
+  explicit SF6O2Etching(
+      const viennaps::PlasmaEtchingParameters<NumericType> &pParams)
       : params(pParams), deviceParams(pParams) {
     initializeModel();
   }
@@ -90,33 +92,24 @@ private:
     this->setParticleCallableMap(pMap, cMap);
 
     this->setUseMaterialIds(true);
-    precomputeSqrtEnergies();
-    this->processData.alloc(sizeof(PlasmaEtchingParametersGPU));
+    this->processData.alloc(sizeof(viennaps::gpu::PlasmaEtchingParameters));
     this->processData.upload(&deviceParams, 1);
     this->hasGPU = true;
 
-    this->processMetaData = params.toProcessMetaData();
+    this->addProcessMetaData(params);
+    this->addUnitsMetaData();
   }
 
-  void setParameters(const PlasmaEtchingParameters<NumericType> &pParams) {
+  void
+  setParameters(const viennaps::PlasmaEtchingParameters<NumericType> &pParams) {
     params = pParams;
-    deviceParams = PlasmaEtchingParametersGPU(pParams);
-    precomputeSqrtEnergies();
+    deviceParams = viennaps::gpu::PlasmaEtchingParameters(pParams);
     this->processData.upload(&deviceParams, 1);
   }
 
 private:
-  PlasmaEtchingParameters<NumericType> params;
-  PlasmaEtchingParametersGPU deviceParams;
-
-  void precomputeSqrtEnergies() {
-    deviceParams.Substrate.Eth_ie = std::sqrt(deviceParams.Substrate.Eth_ie);
-    deviceParams.Passivation.Eth_ie =
-        std::sqrt(deviceParams.Passivation.Eth_ie);
-    deviceParams.Substrate.Eth_sp = std::sqrt(deviceParams.Substrate.Eth_sp);
-    deviceParams.Mask.Eth_sp = std::sqrt(deviceParams.Mask.Eth_sp);
-    deviceParams.Polymer.Eth_sp = std::sqrt(deviceParams.Polymer.Eth_sp);
-  }
+  viennaps::PlasmaEtchingParameters<NumericType> params;
+  viennaps::gpu::PlasmaEtchingParameters deviceParams;
 };
 } // namespace gpu
 #endif
@@ -125,7 +118,7 @@ private:
 // Belen et al., Vac. Sci. Technol. A 23, 99–113 (2005),
 // DOI: https://doi.org/10.1116/1.1830495
 template <typename NumericType, int D>
-class SF6O2Etching : public ProcessModelCPU<NumericType, D> {
+class SF6O2Etching : public impl::PlasmaModelCPU<NumericType, D> {
 public:
   SF6O2Etching() {
     params = defaultParameters();
@@ -267,12 +260,8 @@ private:
 
     this->setProcessName("SF6O2Etching");
     this->hasGPU = true;
-
-    this->processMetaData = params.toProcessMetaData();
-    // add units
-    this->processMetaData["Units"] =
-        std::vector<double>{static_cast<double>(units::Length::getUnit()),
-                            static_cast<double>(units::Time::getUnit())};
+    this->addProcessMetaData(params);
+    this->addUnitsMetaData();
   }
 
   PlasmaEtchingParameters<NumericType> params;

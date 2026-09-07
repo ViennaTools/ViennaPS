@@ -59,6 +59,14 @@ public:
     rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
     if (!context.rayTracingParams.useRandomSeeds)
       rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
+    if (context.rayTracingParams.minRayDistance <
+        context.domain->getGridDelta() * 0.5) {
+      rayTracer_.setTnear(context.rayTracingParams.minRayDistance);
+    } else {
+      VIENNACORE_LOG_WARNING(
+          "Minimum ray distance is too large. Surface hits may be missed. "
+          "Consider reducing the minimum ray distance.");
+    }
 
     if (auto source = model_->getSource()) {
       rayTracer_.setSource(source);
@@ -147,6 +155,7 @@ public:
         pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
         .apply();
     rayTracer_.setMaterialIds(elementMaterialIds);
+    rayTracer_.commitGeometry();
 
     assert(context.diskMesh->nodes.size() > 0);
     assert(!surfaceMesh_->nodes.empty());
@@ -244,9 +253,11 @@ public:
     fluxes->clear();
     postProcessing_.setPointData(fluxes);
     postProcessing_.setElementDataArrays(std::move(elementFluxes));
+    postProcessing_.setPostFix("_surface");
     postProcessing_.prepare(true); // prepare without building the tree again
     postProcessing_.validate();
     postProcessing_.convert();
+    postProcessing_.setPostFix(""); // clear postfix
 
     // reset source
     if (auto modelSource = model_->getSource()) {

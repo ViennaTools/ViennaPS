@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
-  Logger::setLogLevel(LogLevel::WARNING);
+  Logger::setLogLevel(LogLevel::INFO);
   omp_set_num_threads(8);
 
   // Parse the parameters

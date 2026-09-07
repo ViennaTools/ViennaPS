@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../psDomain.hpp"
+#include "../psPreCompileMacros.hpp"
+#include "../psUnits.hpp"
 #include "psAdvectionCallback.hpp"
 #include "psGeometricModel.hpp"
 #include "psSurfaceModel.hpp"
@@ -40,9 +42,13 @@ public:
   virtual ~ProcessModelBase() = default;
 
   virtual void initialize(SmartPointer<Domain<NumericType, D>> domain,
-                          const NumericType processDuration) {}
+                          const NumericType processDuration) {
+    // called before every advection step
+  }
   virtual void finalize(SmartPointer<Domain<NumericType, D>> domain,
-                        const NumericType processedDuration) {}
+                        const NumericType processedDuration) {
+    // called once after process is finished
+  }
   virtual bool useFluxEngine() { return false; }
   virtual bool managesOwnPhysics() const { return false; }
   virtual void applyModel(SmartPointer<Domain<NumericType, D>>) {}
@@ -80,6 +86,20 @@ public:
   void setVelocityField(
       SmartPointer<VelocityField<NumericType, D>> passedVelocityField) {
     velocityField = passedVelocityField;
+  }
+
+  // util
+  void addUnitsMetaData() {
+    this->processMetaData["Units"] = std::vector<double>{
+        static_cast<double>(units::Length::getInstance().getUnit()),
+        static_cast<double>(units::Time::getInstance().getUnit())};
+  }
+
+  template <class ParamType>
+  REQUIRES_PROCESS_METADATA(ParamType)
+  void addProcessMetaData(const ParamType &params) {
+    auto data = params.toProcessMetaData();
+    this->processMetaData.insert(data.begin(), data.end());
   }
 };
 

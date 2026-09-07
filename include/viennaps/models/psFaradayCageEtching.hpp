@@ -1,7 +1,6 @@
 #pragma once
 
 #include "psIonBeamEtching.hpp"
-#include "psPipelineParameters.hpp"
 
 #include "../materials/psMaterialMap.hpp"
 #include "../process/psProcessModel.hpp"
@@ -68,26 +67,26 @@ public:
     orthoBasis2_ = rayInternal::getOrthonormalBasis(direction2);
   }
 
-  std::array<Vec3D<NumericType>, 2>
-  getOriginAndDirection(const size_t idx,
-                        viennaray::RNG &RngState) const override {
+  Vec3D<NumericType> getDirection(size_t idx,
+                                  viennaray::RNG &rngState) const override {
+    if (idx % 2 == 0) {
+      return getCustomDirection(rngState, orthoBasis1_);
+    } else {
+      return getCustomDirection(rngState, orthoBasis2_);
+    }
+  }
+
+  Vec3D<NumericType> getOrigin(size_t idx,
+                               viennaray::RNG &rngState) const override {
     std::uniform_real_distribution<NumericType> dist(0., 1.);
 
     Vec3D<NumericType> origin;
-    origin[0] = minPoint_[0] + sourceExtent_[0] * dist(RngState);
+    origin[0] = minPoint_[0] + sourceExtent_[0] * dist(rngState);
     if constexpr (D == 3)
-      origin[1] = minPoint_[1] + sourceExtent_[1] * dist(RngState);
+      origin[1] = minPoint_[1] + sourceExtent_[1] * dist(rngState);
     origin[D - 1] = zPos_;
 
-    Vec3D<NumericType> direction;
-    if (idx % 2 == 0) {
-      direction = getCustomDirection(RngState, orthoBasis1_);
-    } else {
-      direction = getCustomDirection(RngState, orthoBasis2_);
-    }
-    Normalize(direction);
-
-    return {origin, direction};
+    return origin;
   }
 
   size_t getNumPoints() const override {
@@ -224,35 +223,8 @@ public:
     this->setParticleCallableMap(pMap, cMap);
 
     // Parameters to upload to device
-    impl::IonParams deviceParams;
-    deviceParams.thetaRMin =
-        static_cast<float>(constants::degToRad(params.ibeParams.thetaRMin));
-    deviceParams.thetaRMax =
-        static_cast<float>(constants::degToRad(params.ibeParams.thetaRMax));
-    deviceParams.meanEnergy = static_cast<float>(params.ibeParams.meanEnergy);
-    deviceParams.sigmaEnergy = static_cast<float>(params.ibeParams.sigmaEnergy);
-    deviceParams.thresholdEnergy = static_cast<float>(
-        std::sqrt(params.ibeParams.thresholdEnergy)); // precompute sqrt
-    deviceParams.minAngle =
-        static_cast<float>(constants::degToRad(params.ibeParams.minAngle));
-    deviceParams.inflectAngle =
-        static_cast<float>(constants::degToRad(params.ibeParams.inflectAngle));
-    deviceParams.n_l = static_cast<float>(params.ibeParams.n_l);
-    deviceParams.B_sp = 0.f; // not used in IBE
-    if (params.ibeParams.cos4Yield.isDefined) {
-      deviceParams.a1 = static_cast<float>(params.ibeParams.cos4Yield.a1);
-      deviceParams.a2 = static_cast<float>(params.ibeParams.cos4Yield.a2);
-      deviceParams.a3 = static_cast<float>(params.ibeParams.cos4Yield.a3);
-      deviceParams.a4 = static_cast<float>(params.ibeParams.cos4Yield.a4);
-      deviceParams.aSum = static_cast<float>(params.ibeParams.cos4Yield.aSum());
-    }
-    deviceParams.redepositionRate =
-        static_cast<float>(params.ibeParams.redepositionRate);
-    deviceParams.redepositionThreshold =
-        static_cast<float>(params.ibeParams.redepositionThreshold);
-
-    // upload process params
-    this->processData.alloc(sizeof(impl::IonParams));
+    IonParams deviceParams(params.ibeParams);
+    this->processData.alloc(sizeof(IonParams));
     this->processData.upload(&deviceParams, 1);
 
     // surface model

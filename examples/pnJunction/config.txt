@@ -1,0 +1,158 @@
+# pnJunction — lateral PN junction by sequential masked implantation
+#
+# All simulation parameters live here.  Neither pnJunction.cpp nor pnJunction.py
+# reads the modeldb tables at runtime; every value below was extracted from the
+# relevant table row(s) and is recorded with its source.
+#
+# Note on rotation (twist) angle: IonImplantation has no setRotationAngle setter.
+# In 2-D the beam direction is fixed in the simulation plane, so rotation has no
+# geometric effect.  Its influence on channeling is captured via the Pearson IV
+# moments we choose from the table at the correct rotation entry.
+#
+# Length unit: nm   |   Concentration: nm⁻³   |   Energy: eV   |   Dose: cm⁻²
+#
+# ── Modeldb sources ──────────────────────────────────────────────────────────────
+#
+#   P implant moments:  ViennaCS/data/ImplData/Tasch/iphut0.s3
+#                    +  ViennaCS/data/ImplData/Default/SiliconP_1e13-6e14.tab (screen scales)
+#     Base: iphut0.s3, energyKeV=30, tiltDeg∈{6,10} → 7° (t=0.25),
+#           rotationDeg∈{22,45} → 23° (t=1/23), dosePerCm2=1e14, screen=0
+#     Screen correction: fractional scale factors from Default P .tab at rot=23°, tilt=7°,
+#       interpolated between ox=14nm and ox=25nm entries at energies 20 and 40 keV.
+#       At 23° rotation the oxide INCREASES headMu (+12%) because the beam scatters
+#       away from the deliberately anti-channelled condition toward channelling planes.
+#       headRp scale=1.1202, headSigma scale=0.8526, tailRp scale=1.2349, tailSigma scale=1.037
+#       headFraction: dose-line suppression ratio (0.553) × B-calibrated correction (1.154)
+#       Shape parameters (gamma/beta) held at zero-screen values; no screen-dep P table.
+#
+#   B implant moments:  ViennaCS/data/ImplData/Tasch/ibout0.s3 (base at screen=0nm)
+#                    +  ViennaCS/data/ImplData/Tasch/ibout1.s3 (screen corrections)
+#     Conditions: energyKeV=10, tiltDeg=7, rotationDeg=22 (~23), dosePerCm2=1e14
+#     ibout1.s3 screen thicknesses: 1.5, 5, 10, 20, 40 nm — 20 nm is exact.
+#     delta = (ibout1.s3 at E=15keV, screen=20nm) − (ibout0.s3 at E=15keV, screen=0)
+#     applied additively to ibout0.s3 at E=10keV.
+#
+#   P anneal physics:   modeldb/anneal/annealing.csv
+#                         species=phosphorus, material=silicon
+#   B anneal physics:   Fahey et al. 1989 (B in Si diffusivity);
+#                         solid-solubility from annealing.csv species=boron
+
+# ── Domain geometry ──────────────────────────────────────────────────────────────
+# x ∈ [-xExtent/2, +xExtent/2],  y ∈ [-substrateDepth, topSpace+padOxideThickness]
+# The P/B junction boundary is at x = 0.
+# Layer stack (bottom to top):
+#   Si substrate  :  y ∈ [-substrateDepth, 0]
+#   SiO2 pad oxide:  y ∈ [0, padOxideThickness]
+#   Air           :  y ∈ [padOxideThickness, padOxideThickness + topSpace]
+#
+# Implant: SiO2 is a screen material (beam passes through; Pearson IV applied from
+# the Si surface at y=0).  Moments below ARE screen-corrected using Tasch ibout0/1.s3
+# for B and the Default SiliconP_1e13-6e14.tab for P (see source block at top).
+gridDelta=0.25
+xExtent=200.0
+topSpace=20.0
+substrateDepth=150.0
+padOxideThickness=20.0
+
+# ── Anneal conditions ─────────────────────────────────────────────────────────────
+# Single-step spike anneal approximated as a constant-temperature soak.
+# Temperature in °C (converted to K internally: T_K = T_C + 273.15).
+annealTemperatureC=1000.0
+annealTimeS=30.0
+
+# ── Analysis ──────────────────────────────────────────────────────────────────────
+# Depth (positive value = distance below surface) at which to scan the lateral
+# net-doping profile to find the metallurgical junction position.
+# P peak ≈ 44.2 nm, B peak ≈ 35.0 nm — midpoint ≈ 39.6 nm (with 20 nm pad oxide).
+junctionScanDepthNm=40.0
+
+# ══════════════════════════════════════════════════════════════════════════════════
+# Phosphorus implant — n-type, left half of domain (x < 0)
+# Base (screen=0): iphut0.s3 bilinear interp — tilt {6,10}°→7° (t=0.25), rot {22,45}°→23° (t=1/23)
+#   tilt=6,  rot=22, dose=1e14:  hf=0.9642 hMu=41.0  hS=25.7  hG=1.138 hB=5.86 tMu=104.8 tS=69.9 tG=0.559 tB=3.35
+#   tilt=6,  rot=45, dose=1e14:  hf=0.9683 hMu=37.8  hS=24.9  hG=0.981 hB=5.64 tMu=96.6  tS=69.9 tG=0.539 tB=3.31
+#   tilt=10, rot=22, dose=1e14:  hf=0.9797 hMu=35.3  hS=23.4  hG=0.940 hB=5.58 tMu=99.7  tS=70.3 tG=0.569 tB=3.32
+#   tilt=10, rot=45, dose=1e14:  hf=0.9797 hMu=35.3  hS=23.4  hG=0.940 hB=5.58 tMu=99.7  tS=70.3 tG=0.569 tB=3.32
+# Screen correction (Default SiliconP_1e13-6e14.tab, ox∈{14,25}nm → 20nm, E∈{20,40}keV → 30keV):
+#   headMu ×1.1202 (oxide scatters beam away from 23° anti-channelled condition → more channelling)
+#   headSigma ×0.8526 (energy loss in oxide)
+#   tailMu ×1.2349  (remaining channellers travel deeper)
+#   tailSigma ×1.0370
+#   headFraction: dose-line ratio 0.553 × B-calibrated correction 1.154 → hf=0.9797
+#   Shape params (hG, hB, tG, tB): no screen-dep P table → held at zero-screen values
+# ══════════════════════════════════════════════════════════════════════════════════
+pDoseCm2=1.0e14
+pTiltDeg=7.0
+pRotationDeg=23.0
+
+# Head Pearson IV — screen-corrected vertical moments (see source block above)
+pProjectedRange=44.21
+pDepthSigma=21.40
+pSkewness=5.7828
+pKurtosis=1.0834
+# Head lateral sigma — constant at 17 nm across all P 30 keV tilt/rotation entries.
+# Lateral straggle is independent of screen thickness.
+pLateralSigmaHead=17.0
+
+# Dual-Pearson IV — tail (channeling) component
+# headFraction: dose-line suppression (less tail) with screen: 0.9682 → 0.9797
+pHeadFraction=0.9797
+pTailProjectedRange=127.52
+pTailDepthSigma=72.59
+pTailSkewness=3.3412
+pTailKurtosis=0.5608
+# Tail lateral sigma also constant at 15.6 nm; unaffected by screen.
+pTailLateralSigma=15.6
+
+# P anneal physics (source: annealing.csv, silicon/phosphorus)
+# Arrhenius dopant diffusivity: D = D0 × exp(−Ea / kT)  [nm²/s]
+pAnnealD0=4.0e13
+pAnnealEa=4.1
+# Solid solubility Arrhenius: C_ss = C0 × exp(−Ea / kT)  [nm⁻³]
+# At 1000 °C: C_ss ≈ 42 × exp(−0.45/0.1097) ≈ 0.074 nm⁻³ = 7.4×10¹⁹ cm⁻³
+pSolidSolubilityC0=42.0
+pSolidSolubilityEa=0.45
+
+# ══════════════════════════════════════════════════════════════════════════════════
+# Boron implant — p-type, right half of domain (x > 0)
+# Base (screen=0): ibout0.s3, E=10 keV, tilt=7°, rot=22°, dose=1e14
+#   hf=0.9382 hMu=36.1nm hS=21.2nm hG=0.509 hB=3.29 tMu=68.3nm tS=46.1nm tG=-0.459 tB=3.57
+# Screen correction: additive delta = (ibout1.s3 at E=15 keV, screen=20nm)
+#                                    − (ibout0.s3 at E=15 keV, screen=0)
+#   ibout1.s3 *15200722, dose=1e14:  hf=0.9430 hMu=56.9nm hS=30.2nm hG=0.216 hB=3.48 tMu=137.1nm tS=38.2nm tG=0.714 tB=3.42
+#   ibout0.s3 *150722,   dose=1e14:  hf=0.9030 hMu=58.0nm hS=29.7nm hG=0.263 hB=2.89 tMu=123.2nm tS=42.0nm tG=0.470 tB=3.19
+#   delta:                            +0.0400     -1.1nm    +0.5nm   -0.047  +0.59   +13.9nm     -3.8nm  +0.244  +0.23
+# Lateral sigma: constant at 24 nm (head) / 27 nm (tail) across all tilt=7° entries.
+# ══════════════════════════════════════════════════════════════════════════════════
+bDoseCm2=1.0e14
+bTiltDeg=7.0
+bRotationDeg=23.0
+
+# Head Pearson IV — vertical moments (linear rotation interpolation)
+bProjectedRange=35.00
+bDepthSigma=21.70
+bSkewness=3.8800
+bKurtosis=0.4620
+# Head lateral sigma — from ViennaPS modeldb BCA (constant at 24 nm for all
+# rotation entries at tilt=7°, energy=10 keV). Unaffected by pad oxide.
+bLateralSigmaHead=24.0
+
+# Dual-Pearson IV — tail (channeling) component
+# 20 nm screen suppresses shallow channeling: headFraction 0.9382 → 0.9782
+# Surviving channelled ions travel deeper: tailMu 68.3 → 82.2 nm
+bHeadFraction=0.9782
+bTailProjectedRange=82.20
+bTailDepthSigma=42.30
+bTailSkewness=3.8000
+bTailKurtosis=-0.2150
+# Tail lateral sigma unaffected by pad oxide.
+bTailLateralSigma=27.0
+
+# B anneal physics (source: Fahey et al. 1989 + annealing.csv boron/silicon)
+# Arrhenius dopant diffusivity
+bAnnealD0=7.57e13
+bAnnealEa=3.46
+# Solid solubility Arrhenius
+# At 1000 °C: C_ss ≈ 65 × exp(−0.59/0.1097) ≈ 0.30 nm⁻³ = 3.0×10²⁰ cm⁻³
+bSolidSolubilityC0=65.0
+bSolidSolubilityEa=0.59
