@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "name": "al2o3_travis_tma",
+  "siteTypes": [
+    {
+      "name": "Ox",
+      "density": 780000000000000.0
+    },
+    {
+      "name": "Al",
+      "density": 780000000000000.0
+    }
+  ],
+  "blocking": {
+    "weights": [
+      {
+        "idx": 5,
+        "weight": 1.0
+      },
+      {
+        "idx": 6,
+        "weight": 2.0
+      }
+    ],
+    "adducts": [
+      {
+        "idx": 2,
+        "weight": 3.0
+      }
+    ],
+    "capacity": 1.0
+  },
+  "coverages": [
+    {
+      "name": "Xp",
+      "site": 0
+    },
+    {
+      "name": "X",
+      "site": 0
+    },
+    {
+      "name": "Ob",
+      "site": 0
+    },
+    {
+      "name": "Oc",
+      "site": 0
+    },
+    {
+      "name": "Al",
+      "site": 1
+    },
+    {
+      "name": "AlCH3",
+      "site": 1
+    },
+    {
+      "name": "AlC2H6",
+      "site": 1
+    }
+  ],
+  "gas": [
+    {
+      "name": "AlC3H9",
+      "traced": true,
+      "label": "AlC3H9_flux",
+      "flux": 2925.514276308217,
+      "sticking": null
+    },
+    {
+      "name": "CH4",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    }
+  ],
+  "solids": [
+    {
+      "name": "Al2O3",
+      "rho": 1.77,
+      "rhoMaterials": {}
+    }
+  ],
+  "solid": {
+    "name": "Al2O3",
+    "rho": 1.77,
+    "rhoMaterials": {}
+  },
+  "ionSource": null,
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "AlC3H9 + 2Xp + *Al -> AlC2H6 + X + Ob + CH4",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 20840000000.0,
+        "Ea": 0.52,
+        "beta": 1.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0,
+        1
+      ],
+      "nu": [
+        -2.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "blocked": true
+    },
+    {
+      "id": "R2",
+      "eq": "AlC2H6 + Xp + X -> AlCH3 + Ob + CH4 + X",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 20840000000.0,
+        "Ea": 1.09,
+        "beta": 1.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        },
+        {
+          "idx": 1,
+          "exp": 1
+        },
+        {
+          "idx": 6,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0,
+        0
+      ],
+      "nu": [
+        -1.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "blocked": false
+    },
+    {
+      "id": "R3",
+      "eq": "AlCH3 + X -> Al + Ob + CH4",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 20840000000.0,
+        "Ea": 1.21,
+        "beta": 1.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        },
+        {
+          "idx": 5,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0,
+        0
+      ],
+      "nu": [
+        0.0,
+        -1.0,
+        1.0,
+        0.0,
+        1.0,
+        -1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "blocked": false
+    },
+    {
+      "id": "R4",
+      "eq": "AlC3H9 + Ob + 2Al + *Al -> 3AlCH3 + Oc",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 20840000000.0,
+        "Ea": 0.5,
+        "beta": 1.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 2,
+          "exp": 1
+        },
+        {
+          "idx": 4,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0,
+        1
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        -1.0,
+        1.0,
+        -2.0,
+        3.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "blocked": true
+    }
+  ],
+  "constants": {
+    "temperature": 450.0
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

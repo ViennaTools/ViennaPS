@@ -11,6 +11,7 @@
       "density": null
     }
   ],
+  "blocking": null,
   "coverages": [
     {
       "name": "Ga*",
@@ -91,7 +92,8 @@
       ],
       "solidAtoms": [
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R2",
@@ -119,7 +121,8 @@
       ],
       "solidAtoms": [
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R3",
@@ -151,7 +154,8 @@
       ],
       "solidAtoms": [
         1.0
-      ]
+      ],
+      "blocked": false
     }
   ],
   "constants": {

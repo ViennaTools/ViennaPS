@@ -164,7 +164,13 @@ template <typename NumericType> struct ChemicalMechanism {
   NumericType temperature = 300.;
   NumericType rhoSolid = 1.; // the density of solid 0 when none was declared
   std::vector<SolidPhase> solids;
-  NumericType siteDensity = 0.; // optional; unused by the steady-state solve
+  NumericType siteDensity = 0.; // the first type's; unused by the steady state
+  // One density per site type. Each type closes on its own, so each coverage's
+  // balance is divided by the density of ITS type. Using one density for all of
+  // them scales every type but the first against the wrong monolayer, which the
+  // steady state hides, since the density cancels there, and the transient does
+  // not.
+  std::vector<NumericType> siteDensities;
 
   int numSiteTypes = 1;
   bool materialDependent = false; // true once any per-material factor is set
@@ -596,6 +602,15 @@ template <typename NumericType> struct ChemicalMechanism {
     return siteDensity > 0. ? NumericType(1e15) / siteDensity : NumericType(1.);
   }
 
+  // The same, for the site type carrying coverage i.
+  NumericType coverageScale(size_t i) const {
+    const int t = i < coverageSite.size() ? coverageSite[i] : 0;
+    if (t >= 0 && static_cast<size_t>(t) < siteDensities.size() &&
+        siteDensities[t] > 0.)
+      return NumericType(1e15) / siteDensities[t];
+    return coverageScale();
+  }
+
   // Transient coverage step, for an atomic layer process.
   //
   // The residual that solveCoverages drives to zero IS the time derivative, up
@@ -646,7 +661,9 @@ template <typename NumericType> struct ChemicalMechanism {
     if (n == 0 || dt <= 0.)
       return;
 
-    const NumericType scale = coverageScale();
+    std::vector<NumericType> scale(n);
+    for (size_t i = 0; i < n; ++i)
+      scale[i] = coverageScale(i);
     // the smallest coverage a loss rate is divided by: r_j carries theta_i as
     // a factor, so the quotient is finite, and this only guards the division
     constexpr NumericType floor = std::numeric_limits<NumericType>::min();
@@ -660,14 +677,14 @@ template <typename NumericType> struct ChemicalMechanism {
       std::fill(L.begin(), L.end(), NumericType(0.));
       for (size_t j = 0; j < reactions.size(); ++j) {
         const auto &r = reactions[j];
-        const NumericType rj = rate(r, k[j], gamma, theta, free) * scale;
+        const NumericType rj = rate(r, k[j], gamma, theta, free);
         if (rj == 0.)
           continue;
         for (size_t i = 0; i < n; ++i) {
           if (r.nu[i] > 0.)
-            P[i] += r.nu[i] * rj;
+            P[i] += r.nu[i] * rj * scale[i];
           else if (r.nu[i] < 0.)
-            L[i] += -r.nu[i] * rj / std::max(theta[i], floor);
+            L[i] += -r.nu[i] * rj * scale[i] / std::max(theta[i], floor);
         }
       }
 
@@ -925,14 +942,31 @@ public:
     grown_.assign(numGeometryPoints, 0.);
   }
 
+  // The surface a cyclic process starts on is rarely bare. An atomic layer
+  // process begins on a terminated substrate, and a mechanism whose first step
+  // consumes that termination deposits nothing without it. The starting
+  // coverage of any species may therefore be declared, and the rest begin at
+  // zero as before.
+  void setInitialCoverage(const std::string &name, NumericType value) {
+    initial_[name] = value;
+  }
+
   void initializeZero(unsigned numGeometryPoints) {
     if (coverages == nullptr)
       coverages = PointData<NumericType>::New();
     else
       coverages->clear();
     std::vector<NumericType> zero(numGeometryPoints, 0.);
-    for (const auto &name : mech.coverageNames)
-      coverages->insertNextScalarData(zero, name);
+    for (const auto &name : mech.coverageNames) {
+      auto it = initial_.find(name);
+      if (it == initial_.end()) {
+        coverages->insertNextScalarData(zero, name);
+        continue;
+      }
+      coverages->insertNextScalarData(
+          std::vector<NumericType>(numGeometryPoints, it->second), name);
+    }
+
   }
 
   // Interpolate every coverage from the previous mesh onto the new one.
@@ -1214,6 +1248,7 @@ public:
 
 private:
   NumericType timeStep_ = 0.;       // 0 = steady state, > 0 = integrate
+  std::unordered_map<std::string, NumericType> initialCoverage_;
   NumericType maxCoverageChange_ = 1e-3; // sub-step accuracy of stepCoverages
   bool preserveCoverages_ = false;  // carry coverages across process steps
   bool atomicLayer_ = false;        // advect once per cycle, by what it grew
@@ -1221,6 +1256,7 @@ private:
   NumericType fieldGrowth_ = 0.;    // total on the open field, over all cycles
   unsigned cyclesRun_ = 0;
   std::vector<Vec3D<NumericType>> coveragePoints_; // mesh the coverages live on
+  std::unordered_map<std::string, NumericType> initial_;
 
 public:
   // Blanket film grown so far, and over how many cycles: their ratio is the
@@ -1473,6 +1509,7 @@ class SurfaceChemistry : public ProcessModelGPU<NumericType, D> {
   ::viennaps::ChemicalMechanism<NumericType> mech_; // the current phase
   std::vector<std::pair<std::string, ::viennaps::ChemicalMechanism<NumericType>>>
       phaseMechanisms_;
+  std::unordered_map<std::string, NumericType> initialCoverage_;
   NumericType maxCoverageChange_ = 1e-3;
   SurfaceChemistryParamsGPU deviceParams_;
   SmartPointer<impl::ChemicalSurfaceModel<NumericType, D>> surfModel_ = nullptr;
@@ -1537,6 +1574,14 @@ public:
     this->isALP = enable;
     if (surfModel_)
       surfModel_->setPreserveCoverages(enable);
+  }
+
+  // The termination the surface carries before the first pulse; see
+  // ChemicalSurfaceModel::setInitialCoverage.
+  void setInitialCoverage(const std::string &name, NumericType value) {
+    if (surfModel_)
+      surfModel_->setInitialCoverage(name, value);
+    initialCoverage_[name] = value;
   }
 
   // Accuracy of the transient coverage integration; see
@@ -1746,6 +1791,8 @@ private:
     // its accuracy setting.
     surfModel_->setPreserveCoverages(this->isALP);
     surfModel_->setMaxCoverageChange(maxCoverageChange_);
+    for (const auto &[n, v] : initialCoverage_)
+      surfModel_->setInitialCoverage(n, v);
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
 
     this->setSurfaceModel(surfModel_);
@@ -1866,6 +1913,14 @@ public:
                              "' in mechanism '" + mech.name + "'.");
   }
 
+  // The termination the surface carries before the first pulse; see
+  // ChemicalSurfaceModel::setInitialCoverage.
+  void setInitialCoverage(const std::string &name, NumericType value) {
+    if (surfModel_)
+      surfModel_->setInitialCoverage(name, value);
+    initialCoverage_[name] = value;
+  }
+
   // Accuracy of the transient coverage integration; see
   // ChemicalSurfaceModel::setMaxCoverageChange.
   void setMaxCoverageChange(NumericType maxChange) {
@@ -1886,6 +1941,8 @@ public:
       model = SmartPointer<gpu::SurfaceChemistry<NumericType, D>>::New();
       model->setAtomicLayerProcess(this->isALP);
       model->setMaxCoverageChange(maxCoverageChange_);
+      for (const auto &[n, v] : initialCoverage_)
+        model->setInitialCoverage(n, v);
       for (const auto &entry : phaseMechanisms_)
         model->addMechanism(entry.first, entry.second);
     }
@@ -1921,6 +1978,8 @@ private:
     // integrator keeps its accuracy setting.
     surfModel_->setPreserveCoverages(this->isALP);
     surfModel_->setMaxCoverageChange(maxCoverageChange_);
+    for (const auto &[n, v] : initialCoverage_)
+      surfModel_->setInitialCoverage(n, v);
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
 
     this->setSurfaceModel(surfModel_);
@@ -1990,6 +2049,7 @@ private:
   ChemicalMechanism<NumericType> mech; // the chemistry of the current phase
   std::vector<std::pair<std::string, ChemicalMechanism<NumericType>>>
       phaseMechanisms_;
+  std::unordered_map<std::string, NumericType> initialCoverage_;
   NumericType maxCoverageChange_ = 1e-3;
   SmartPointer<impl::ChemicalSurfaceModel<NumericType, D>> surfModel_ = nullptr;
 #ifdef VIENNACORE_COMPILE_GPU

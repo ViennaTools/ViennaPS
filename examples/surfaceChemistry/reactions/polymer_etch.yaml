@@ -1,71 +1,96 @@
-name: polymer_passivated_etch
+name: fluorocarbon_sio2_etch
 temperature: 300.0        # K
 
-# CAPABILITY DEMONSTRATION: a passivating polymer competing with the etch, the
-# last piece of a plasma etch. This is the Bosch/fluorocarbon idea, where a
-# fluorocarbon film deposits everywhere and the ions must sputter through it
-# before the substrate is etched. Sidewalls, which the directional ions barely
-# reach, keep their film and stop etching; the trench floor, which the ions
-# strike head on, is cleared and etches.
+# TRANSCRIPTION of the FluorocarbonEtching model of ViennaPS, whose parameters
+# are those of
 #
-# WHAT IS NEW HERE: two solids. Until now a mechanism deposited or etched ONE
-# solid, so its density was a single number. Here the polymer is deposited and
-# the silicon is removed in the same mechanism, and the two have different
-# densities (2.2 vs 5.02), so every step divides by the density of the solid IT
-# moves:
+#   A. LaMagna and G. Garozzo, "Factors affecting profile evolution in plasma
+#   etching of SiO2: Modeling and experimental verification", J. Electrochem.
+#   Soc. 150 (2003) 1896-1902.
+#
+# This is a fluorocarbon plasma etching SiO2 through a mask while a polymer
+# film deposits on every surface. The ions clear the film where they strike
+# head on and the sidewalls keep theirs, which is what makes the etch
+# directional.
+#
+# WHAT IS NEW HERE: two solids. Every earlier mechanism moved ONE solid, so its
+# density was a single number. Here the polymer is deposited and the oxide is
+# removed by the same mechanism, at densities of 2.0 and 2.2, so each step
+# divides by the density of the solid IT moves,
 #
 #     v_n = sum_j n_(S,j) r_j / rho_(solid of j)
 #
-# The competition is a sum of ordinary mass-action terms, not a case switch:
-# where the polymer flux wins, v is positive and the film grows; where the ion
-# flux wins, v is negative and the surface etches.
+# and the competition is a sum of ordinary mass-action terms rather than a case
+# switch. Where the precursor flux wins the sum is positive and film grows,
+# where the ion flux wins it is negative and the oxide etches.
 #
-# The per-material blocks are what stop the substrate etching through the film:
-# the silicon steps are declared on Si (and PolySi) only, so a point covered by
-# polymer runs the polymer chemistry alone.
+# TWO SITE TYPES. The class keeps one etchant coverage on the substrate and a
+# second on the polymer, with different sticking on each, so the two are
+# declared here as separate site types. The substrate free fraction is then
+# 1 - theta_F, which is the factor the class puts on its sputter term.
 #
-# The rate constants are illustrative, not from a paper. The forms are the
-# standard ones: a threshold sputter yield, and the ion-enhanced angular
-# dependence for the polymer removal.
+# The class carries k_ie = k_ev = 2, the number of adsorbed fluorine each etch
+# event consumes. That is the stoichiometry of the equations below, so both
+# steps are written to consume two and to release SiF2, which balances.
 species:
-  CF2:    {phase: gas, flux: 3.0e2}        # the polymer precursor
-  F:      {phase: gas, flux: 1.0e3}        # the etchant
-  Ar_ion: {phase: ion, flux: 2.0e1,
-           meanEnergy: 150.0, sigmaEnergy: 15.0, exponent: 500.0}
-  SiF4:   {phase: gas, reemit_only: true}
+  CF2:    {phase: gas, flux: 5.0e0}        # polyFlux,    1e15 /cm2 /s
+  F:      {phase: gas, flux: 1.5e2}        # etchantFlux, 1e15 /cm2 /s
+  Ar_ion: {phase: ion, flux: 5.6e1,        # ionFlux,     1e15 /cm2 /s
+           meanEnergy: 100.0, sigmaEnergy: 10.0, exponent: 100.0,
+           inflectAngle: 89.0, n_l: 10.0, minAngle: 80.0}
+  SiF2:   {phase: gas, reemit_only: true}
+  O2:     {phase: gas, reemit_only: true}
   CF4:    {phase: gas, reemit_only: true}
-  C_s:    {phase: gas, reemit_only: true, atoms: {C: 1}}  # sputtered film
-  CF2*:   {phase: surface}                 # an adsorbed polymer fragment
-  F*:     {phase: surface}                 # an adsorbed fluorine
-  C:      {phase: solid, rho: 2.2}         # the polymer film
-  Si:     {phase: solid, rho: 5.02}        # the substrate
+  SiO2_s: {phase: gas, reemit_only: true, atoms: {Si: 1, O: 2}}
+  F*:     {phase: surface, site: sub}      # etchant on the substrate
+  CF2*:   {phase: surface, site: poly}     # adsorbed polymer fragment
+  C:      {phase: solid, rho: 2.0}         # the polymer film
+  SiO2:   {phase: solid, rho: {default: 2.2, Mask: 500.0}}
+
+siteTypes:
+  - {name: sub}
+  - {name: poly}
 
 surface:
-  # --- the polymer: a fragment sticks, then it is built into the film
-  - {eq: "CF2 -> CF2*", type: adsorption, s0: 0.26, Ea: 0.0}
+  # --- the polymer film. The precursor sticks with beta_p and the adsorbed
+  #     fragment is what builds into the film.
+  - {eq: "CF2 -> CF2*", type: adsorption, s0: 0.26, Ea: 0.0,
+     materials: {default: 0.26, Mask: 0.01}}
   - {eq: "2CF2* -> C + CF4", type: surface, k0: 2.0e2, Ea: 0.0}
 
-  # --- ions sputter the polymer fragments back off, which is what clears the
-  #     floor of the trench while the sidewalls keep their film
+  # --- ions remove the adsorbed fragment, which keeps the floor of a feature
+  #     clear while the sidewalls hold their film. The class subtracts the
+  #     same term from the film itself and clamps the result so it cannot
+  #     consume what lies beneath. Acting on the fragment needs no clamp,
+  #     since a step requiring CF2* stops when the film stops.
   - {eq: "Ar_ion + CF2* -> CF2", type: ion_enhanced,
      order: {CF2*: 1},
-     yield: {A: 0.9, Eth: 10.0}}
+     yield: {A: 0.0722, Eth: 4.0}}
 
-  # --- ions sputter the FILM itself, which is the competition that matters:
-  #     the trench floor faces the ion source and loses its film, the sidewalls
-  #     see almost no ion flux and keep theirs. A = 0 everywhere but on the
-  #     film, since only a film can be sputtered away.
-  - {eq: "Ar_ion + C -> C_s", type: sputtering,
-     yield: {A: 0.0, Eth: 5.0, B: 9.3,
-             materials: {Polymer: {A: 0.08, Eth: 5.0}}}}
+  # --- the etchant on the substrate, beta_e per material
+  - {eq: "F -> F*", type: adsorption, s0: 0.9, Ea: 0.0,
+     materials: {default: 0.0, SiO2: 0.9, Mask: 0.1}}
 
-  # --- the etchant, and the ion-enhanced silicon etch, on the substrate only
-  # fluorine only reaches the silicon where the film has been cleared, so its
-  # adsorption is declared on the substrate; on the film it reflects away
-  - {eq: "F -> F*", type: adsorption, s0: 0.3, Ea: 0.0,
-     materials: {default: 0.0, Si: 1.0, PolySi: 1.0}}
-  - {eq: "Ar_ion + 4F* + Si -> SiF4", type: ion_enhanced,
+  # --- the chemical etch, K * etchantFlux with the barrier of the class
+  - {eq: "2F* + SiO2 -> SiF2 + O2", type: surface,
+     k0: 1.3947458522724885, Ea: 0.168,
      order: {F*: 1},
-     yield: {A: 2.5, Eth: 15.0,
-             materials: {Mask: {A: 0.0, Eth: 15.0},
-                         Polymer: {A: 0.0, Eth: 15.0}}}}
+     materials: {default: 0.0, SiO2: 1.0}}
+
+  # --- the ion-enhanced etch, first order in the etchant coverage
+  - {eq: "Ar_ion + 2F* + SiO2 -> SiF2 + O2", type: ion_enhanced,
+     order: {F*: 1},
+     yield: {A: 0.0361, Eth: 4.0,
+             materials: {Mask: {A: 0.0, Eth: 4.0}}}}
+
+  # --- physical sputtering, which the class takes on the bare fraction of the
+  #     substrate, so the rate carries the free-site factor of that type
+  # The class sputters the substrate in its substrate branch and the mask in
+  # its mask branch, and never the film, so the step names those two only.
+  - {eq: "Ar_ion + SiO2 -> SiO2_s", type: sputtering,
+     order: {"*sub": 1},
+     # the base value is the substrate's, so that a solve at a point sees the
+     # same step the traced run does, and the film is named to switch it off
+     yield: {A: 0.0139, Eth: 18.0, B: 9.3,
+             materials: {Mask: {A: 0.0139, Eth: 20.0},
+                         Polymer: {A: 0.0, Eth: 18.0}}}}

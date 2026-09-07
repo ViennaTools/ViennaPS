@@ -1,0 +1,57 @@
+name: al2o3_travis_tma
+temperature: 450.0        # K, 177 C
+energyUnit: eV
+
+# The TMA half-cycle of alumina ALD, transcribed from the surface species
+# dynamics of Travis and Adomaitis, Theor Chem Acc 133 (2014) 1414, Eqs. (11)
+# to (17), with their species kept as species.
+#
+#   R1  A + 2 X'      -> Me2 + X + O' + CH4     ligand exchange on a hydroxyl
+#   R2  Me2 + X'      -> Me1 + O' + CH4         second exchange
+#   R3  Me1 + X       -> S + O' + CH4           third exchange
+#   R4  A + O' + 2 S  -> 3 Me1 + O              dissociation on a bare bridge
+#
+# X' is a hydroxyl, X a hydroxyl capped by an adsorbed AlMe2, O' a bare oxygen
+# bridge and O one that R4 has consumed. S is a bare surface aluminium, Me1 an
+# AlMe and Me2 an AlMe2. The oxygen positions are conserved, which their
+# equations bear out, and the aluminium ones are not, since S + Me1 + Me2 grows
+# as the film does, so that type is given ample capacity and the blocking pool
+# is what limits the exposure.
+#
+# Their rate laws are first order in [X'] and in [O'] and [S] where the
+# stoichiometry consumes two, and v2 depends on [X] without consuming it, so X
+# is written on both sides of R2 and the orders are stated explicitly.
+#
+# The blocking pool is their (1 - theta_Me): a chemisorbed methyl takes one
+# place, an AlMe2 two, and the adduct on a bare bridge three, that last scaled
+# by the free fraction itself, which is what makes their definition implicit.
+blocking:
+  pool:    {AlCH3: 1, AlC2H6: 2}
+  adducts: {Ob: 3}
+  capacity: 1.00
+
+siteTypes:
+  - {name: Ox, density: 7.8e14}     # /cm2, oxygen positions
+  - {name: Al, density: 7.8e14}     # /cm2, aluminium positions, not conserved
+
+species:
+  AlC3H9: {phase: gas, pressure: 1.5e1}    # TMA monomer, mTorr, their 2 Pa
+  CH4:    {phase: gas, reemit_only: true}
+  Xp:     {phase: surface, site: Ox, atoms: {O: 1, H: 1}}   # X', a hydroxyl
+  X:      {phase: surface, site: Ox, atoms: {O: 1, H: 1}}   # X, capped
+  Ob:     {phase: surface, site: Ox, atoms: {O: 1}}         # O', a bare bridge
+  Oc:     {phase: surface, site: Ox, atoms: {O: 1}}         # O, spent by R4
+  Al:     {phase: surface, site: Al}                        # S
+  AlCH3:  {phase: surface, site: Al}                        # Me1
+  AlC2H6: {phase: surface, site: Al}                        # Me2
+  Al2O3:  {phase: solid, rho: 1.77}        # 1e22 formula units /cm3
+
+surface:
+  - {eq: "AlC3H9 + 2 Xp -> AlC2H6 + X + Ob + CH4", type: surface,
+     k0: 2.084e10, Ea: 0.52, beta: 1.0, order: {Xp: 1}, blocked: true}
+  - {eq: "AlC2H6 + Xp + X -> AlCH3 + Ob + CH4 + X", type: surface,
+     k0: 2.084e10, Ea: 1.09, beta: 1.0, order: {AlC2H6: 1, X: 1}}
+  - {eq: "AlCH3 + X -> Al + Ob + CH4", type: surface,
+     k0: 2.084e10, Ea: 1.21, beta: 1.0}
+  - {eq: "AlC3H9 + Ob + 2 Al -> 3 AlCH3 + Oc", type: surface,
+     k0: 2.084e10, Ea: 0.50, beta: 1.0, order: {Ob: 1, Al: 1}, blocked: true}

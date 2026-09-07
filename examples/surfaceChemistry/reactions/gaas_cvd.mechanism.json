@@ -11,6 +11,7 @@
       "density": 221250000000000.0
     }
   ],
+  "blocking": null,
   "coverages": [
     {
       "name": "H_G*",
@@ -276,7 +277,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R2",
@@ -310,7 +312,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R3",
@@ -344,7 +347,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R3r",
@@ -379,6 +383,7 @@
         0.0,
         0.0
       ],
+      "blocked": false,
       "reverseOf": "R3"
     },
     {
@@ -413,7 +418,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R4r",
@@ -448,6 +454,7 @@
         0.0,
         0.0
       ],
+      "blocked": false,
       "reverseOf": "R4"
     },
     {
@@ -482,7 +489,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R5r",
@@ -517,6 +525,7 @@
         0.0,
         0.0
       ],
+      "blocked": false,
       "reverseOf": "R5"
     },
     {
@@ -551,7 +560,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R7",
@@ -585,7 +595,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R8",
@@ -619,7 +630,8 @@
       "solidAtoms": [
         0.0,
         1.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R9",
@@ -653,7 +665,8 @@
       "solidAtoms": [
         0.0,
         1.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R10",
@@ -687,7 +700,8 @@
       "solidAtoms": [
         0.0,
         1.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R11",
@@ -721,7 +735,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R11r",
@@ -756,6 +771,7 @@
         0.0,
         0.0
       ],
+      "blocked": false,
       "reverseOf": "R11"
     },
     {
@@ -790,7 +806,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R13",
@@ -824,7 +841,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R14",
@@ -863,7 +881,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R15",
@@ -902,7 +921,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R16",
@@ -941,7 +961,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R17",
@@ -980,7 +1001,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R18",
@@ -1019,7 +1041,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R19",
@@ -1057,7 +1080,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R20",
@@ -1095,7 +1119,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R21",
@@ -1133,7 +1158,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R22",
@@ -1171,7 +1197,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R23",
@@ -1209,7 +1236,8 @@
       "solidAtoms": [
         1.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R24",
@@ -1243,7 +1271,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R25",
@@ -1277,7 +1306,8 @@
       "solidAtoms": [
         0.0,
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R26",
@@ -1315,7 +1345,8 @@
       "solidAtoms": [
         1.0,
         0.0
-      ]
+      ],
+      "blocked": false
     }
   ],
   "constants": {

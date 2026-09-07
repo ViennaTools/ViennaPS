@@ -1,4 +1,19 @@
 # simulation output: the drivers and demos write these where they are run
 *.vtp
 *.vtu
+*_profile.txt
 __pycache__/
+
+# results of benchmark.py, which are machine specific and are turned into the
+# manuscript's tables separately
+benchmark_results.txt
+benchmark_table.tex
+benchmark_numbers.tex
+
+# a run log, if one is teed beside the driver
+*.log
+
+# notes on how the manuscript's timing table was produced and pasted in, which
+# are authoring scaffolding rather than part of the example. The procedure
+# itself is in the README.
+BENCHMARK.md

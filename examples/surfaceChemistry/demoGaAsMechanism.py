@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The full GaAs MOVPE mechanism against its three-reaction reduction.
 
-`gaas_full.yaml` is all 26 surface reactions of Mountziaris & Jensen,
+`gaas_cvd.yaml` is all 26 surface reactions of Mountziaris & Jensen,
 J. Electrochem. Soc. 138, 2426 (1991), Table II, for the (110) surface.
 `gaas_reversible.yaml` is the same mechanism cut to the three reactions their
 sensitivity analysis calls dominant: [S5], [S11] and [S22].
@@ -10,7 +10,7 @@ Reducing a mechanism is a judgement call, and the judgement is only good over
 some range of conditions. This runs both on the same gas phase and finds where
 they part company:
 
-  1. at the paper's conditions, how close are they?
+  1. at the conditions of Mountziaris and Jensen, how close are they?
   2. across temperature, where does the reduction start to drift?
   3. the reduced model drops the methyl chemistry entirely. Feed the surface
      methyl radicals and watch a second growth channel open.
@@ -26,7 +26,7 @@ import copy
 
 import viennachem as vc
 
-FULL = "gaas_full.yaml"
+FULL = "gaas_cvd.yaml"
 REDUCED = "gaas_reversible.yaml"
 
 
@@ -75,7 +75,7 @@ def main():
               f"{len(d['coverages'])} coverages   "
               f"{len(d['solids'])} solid(s)   supplied: {gas}")
 
-    # --- 1. the paper's conditions -----------------------------------------
+    # --- 1. the published conditions ----------------------------------------
     print(f"\n1) at {full['constants']['temperature']:.0f} K, on the same gas phase")
     th_f, v_f = solve(full)
     th_r, v_r = solve(reduced)

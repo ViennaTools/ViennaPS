@@ -26,8 +26,10 @@ temperature: 300.0        # K, the model has no thermal barrier
 # rate moves the two surfaces at very different speeds. That is the `rho`
 # mapping on the solid.
 species:
-  F:      {phase: gas, flux: 1.8e3}      # etchantFlux, 1e15 /cm2 /s
-  O:      {phase: gas, flux: 1.0e2}      # passivationFlux
+  # The class states a sticking-weighted flux, gamma*Gamma, where this file
+  # states the two separately, so its etchantFlux of 1.8e3 is 1.8e3/0.7 here.
+  F:      {phase: gas, flux: 2.5714286e3}   # etchantFlux / s0, 1e15 /cm2 /s
+  O:      {phase: gas, flux: 1.0e2}         # passivationFlux / s0, s0 = 1
   Ar_ion: {phase: ion, flux: 1.2e1,      # ionFlux
            meanEnergy: 100.0, sigmaEnergy: 10.0, exponent: 500.0,
            inflectAngle: 89.0, n_l: 10.0, minAngle: 80.0,

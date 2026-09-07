@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "name": "toy_ald_coreactant",
+  "siteTypes": [
+    {
+      "name": "default",
+      "density": 496000000000000.0
+    }
+  ],
+  "blocking": null,
+  "coverages": [
+    {
+      "name": "R*",
+      "site": 0
+    },
+    {
+      "name": "L*",
+      "site": 0
+    }
+  ],
+  "gas": [
+    {
+      "name": "C",
+      "traced": true,
+      "label": "C_flux",
+      "flux": 100.0,
+      "sticking": {
+        "reaction": "R1",
+        "s0": 0.1,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 0
+      }
+    }
+  ],
+  "solids": [
+    {
+      "name": "S",
+      "rho": 2.0,
+      "rhoMaterials": {}
+    }
+  ],
+  "solid": {
+    "name": "S",
+    "rho": 2.0,
+    "rhoMaterials": {}
+  },
+  "ionSource": null,
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "C + L* -> S + R*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.1,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        1.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        1.0
+      ],
+      "blocked": false
+    }
+  ],
+  "constants": {
+    "temperature": 400.0
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

@@ -1,0 +1,29 @@
+name: toy_ald_dose
+temperature: 400.0        # K
+
+# The precursor half-cycle of a two-mechanism cyclic process, reduced
+# to the structure a cyclic process needs and nothing else. A precursor P
+# consumes the reactive termination R* and leaves a fragment L* in its place,
+#
+#   [1] P + R* -> L*
+#
+# so the dose is self-limiting: it stops when the termination is gone. The
+# co-reactant file converts L* back to R* and deposits the solid, so the two
+# half-cycles feed one another and the cycle closes. Both files declare the
+# same two surface species, which is what lets their coverages carry across.
+#
+# The species are abstract, so each declares a composition, chosen only so
+# that the reaction set conserves atoms and the balance check has something
+# to check. Illustrative constants, chosen so that each pulse saturates well inside its
+# own duration and the growth per cycle is one site layer.
+siteTypes:
+  - {name: default, density: 4.96e14}     # /cm2, one site layer
+
+species:
+  P:   {phase: gas, flux: 1.0e2, atoms: {N: 1}}          # 1e15 /cm2 /s
+  R*:  {phase: surface, atoms: {H: 1}}                   # the reactive termination
+  L*:  {phase: surface, atoms: {N: 1, H: 1}}                   # the fragment the precursor leaves
+  S:   {phase: solid, rho: 2.0, atoms: {N: 1, O: 1}}           # 1e22 /cm3, deposited by the co-reactant
+
+surface:
+  - {eq: "P + R* -> L*", type: adsorption, s0: 0.1, Ea: 0.0}

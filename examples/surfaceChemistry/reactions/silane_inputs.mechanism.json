@@ -1,12 +1,13 @@
 {
   "schemaVersion": 1,
-  "name": "silane_polySi_LPCVD_pressure",
+  "name": "silane_polySi_LPCVD_inputs",
   "siteTypes": [
     {
       "name": "default",
       "density": null
     }
   ],
+  "blocking": null,
   "coverages": [
     {
       "name": "SiH3*",
@@ -25,9 +26,9 @@
       "flux": 1000.0673183198222,
       "sticking": {
         "reaction": "R1",
-        "s0": 1.0,
+        "s0": 30.00053212247908,
         "Ea": 0.6,
-        "beta": 0.0,
+        "beta": -0.5,
         "site": 0,
         "freeSiteExp": 2
       }
@@ -59,9 +60,9 @@
       "eq": "SiH4 + 2* -> SiH3* + H*",
       "constant": {
         "kind": "sticking",
-        "s0": 1.0,
+        "s0": 30.00053212247908,
         "Ea": 0.6,
-        "beta": 0.0
+        "beta": -0.5
       },
       "gasFactors": [
         {
@@ -79,7 +80,8 @@
       ],
       "solidAtoms": [
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R2",
@@ -106,7 +108,8 @@
       ],
       "solidAtoms": [
         1.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R3",
@@ -133,7 +136,8 @@
       ],
       "solidAtoms": [
         0.0
-      ]
+      ],
+      "blocked": false
     }
   ],
   "constants": {

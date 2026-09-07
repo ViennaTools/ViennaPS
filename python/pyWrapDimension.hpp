@@ -977,6 +977,12 @@ template <int D> void bindApi(py::module &module) {
            &SurfaceChemistry<T, D>::setMaxCoverageChange,
            py::arg("maxChange"),
            "Largest coverage change permitted in one integration sub-step.")
+      .def("setInitialCoverage", &SurfaceChemistry<T, D>::setInitialCoverage,
+           py::arg("name"), py::arg("value"),
+           "The fraction of its site type a surface species occupies before "
+           "the first cycle. Species not named start empty. A cyclic process "
+           "settles onto a limit cycle, so this sets where that settling "
+           "starts from.")
       .def("growthPerCycle", &SurfaceChemistry<T, D>::growthPerCycle,
            "Growth per cycle on the open field, in the process length unit.");
 

@@ -1,0 +1,23 @@
+name: toy_ald_coreactant
+temperature: 400.0        # K
+
+# The co-reactant half-cycle of that same process. The co-reactant C
+# strips the fragment the dose left, restores the reactive termination and
+# builds one unit of solid,
+#
+#   [1] C + L* -> S + R*
+#
+# which is where all of the growth happens. It saturates for the same reason
+# the dose does, since it consumes a surface species the other half-cycle
+# supplies. The surface species list matches toy_dose.yaml exactly.
+siteTypes:
+  - {name: default, density: 4.96e14}     # /cm2, one site layer
+
+species:
+  C:   {phase: gas, flux: 1.0e2, atoms: {O: 1}}          # 1e15 /cm2 /s
+  R*:  {phase: surface, atoms: {H: 1}}
+  L*:  {phase: surface, atoms: {N: 1, H: 1}}
+  S:   {phase: solid, rho: 2.0, atoms: {N: 1, O: 1}}           # 1e22 /cm3
+
+surface:
+  - {eq: "C + L* -> S + R*", type: adsorption, s0: 0.1, Ea: 0.0}

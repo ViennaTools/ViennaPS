@@ -1,0 +1,55 @@
+name: al2o3_ald_tma_dose
+temperature: 450.0        # K, 177 C
+energyUnit: eV
+
+# Al2O3 ALD from trimethylaluminium and water: the TMA half-cycle.
+#
+# A site here is a lattice POSITION rather than an atom, which lets the lattice
+# oxygen be a species. An `A` position is an anion position in the top layer,
+# holding a bare bridging oxygen, a hydroxyl, or the aluminium bonded to that
+# oxygen. A `C` position is a cation position, holding a bare surface
+# aluminium, a methylated one or a hydroxylated one. Every species carries the
+# oxygen it owns, so every equation conserves atoms and both position types.
+#
+# Chemistry from Puurunen's review of the AlMe3/H2O process, J. Appl. Phys. 97
+# (2005) 121301: Eq. (15), the ligand exchange with a surface hydroxyl, and
+# Eq. (18), the dissociative reaction on a bare oxygen bridge, which needs both
+# a bare bridge and a bare lattice aluminium and so is open only before the
+# first water pulse. Travis and Adomaitis, Theor Chem Acc 133 (2014) 1414,
+# write the same two as R1 and R4; their Table 1 gives 0.52 eV for the R1
+# elimination and 0.5 eV for the R4 dissociation.
+#
+# A fuller transcription of their surface species dynamics, which resolves the
+# aluminium groups from the oxygen positions, is in al2o3_travis_tma.yaml.
+#
+# The prefactor is the transition-state value k_B T / h, written through the
+# modified Arrhenius form as k0 = k_B/h with beta = 1.
+siteTypes:
+  - {name: A, density: 4.0e14}      # /cm2, anion positions in the top layer
+  - {name: C, density: 4.0e14}      # /cm2, cation positions
+
+species:
+  Al2C6H18: {phase: gas, pressure: 1.0e2}    # TMA, dimeric in the gas, mTorr
+  CH4:      {phase: gas, reemit_only: true}
+  H2O:      {phase: gas, reemit_only: true}  # released by the condensation
+  OH:       {phase: surface, site: A}        # ||O-H
+  O:        {phase: surface, site: A}        # ||O||, a bare bridging oxygen
+  AlC3H10O: {phase: surface, site: A}        # ||O-H . Al(CH3)3, the R1 adduct
+  AlC3H9O:  {phase: surface, site: A}        # ||O . Al(CH3)3, the R4 adduct
+  AlC2H6O:  {phase: surface, site: A}        # ||O-Al(CH3)2
+  AlCH4O2:  {phase: surface, site: A}        # ||O-Al(CH3)(OH)
+  AlH2O3:   {phase: surface, site: A}        # ||O-Al(OH)2
+  Al:       {phase: surface, site: C}        # a bare lattice aluminium
+  AlCH3:    {phase: surface, site: C}        # ||Al-CH3
+  AlHO:     {phase: surface, site: C}        # ||Al-OH
+  Al2O3:    {phase: solid, rho: 1.77}        # 1e22 formula units /cm3
+
+surface:
+  - {eq: "Al2C6H18 + 2 OH -> 2 AlC3H10O", type: adsorption, s0: 1.0, Ea: 0.0,
+     order: {OH: 1}}
+  - {eq: "AlC3H10O -> AlC2H6O + CH4", type: surface,
+     k0: 2.084e10, Ea: 0.52, beta: 1.0}
+  - {eq: "Al2C6H18 + 2 O -> 2 AlC3H9O", type: adsorption, s0: 1.0, Ea: 0.0,
+     order: {O: 1}}
+  - {eq: "AlC3H9O + Al -> AlC2H6O + AlCH3", type: surface,
+     k0: 2.084e10, Ea: 0.5, beta: 1.0}

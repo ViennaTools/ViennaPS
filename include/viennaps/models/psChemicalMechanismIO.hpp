@@ -315,11 +315,14 @@ parseChemicalMechanism(const std::string &text) {
 
   const auto &siteTypes = root->at("siteTypes");
   mech.setSiteTypeCount(static_cast<int>(siteTypes.array.size()));
-  if (!siteTypes.array.empty()) {
-    const auto density = siteTypes.array.front()->get("density");
+  mech.siteDensities.assign(siteTypes.array.size(), NumericType(0.));
+  for (size_t t = 0; t < siteTypes.array.size(); ++t) {
+    const auto density = siteTypes.array[t]->get("density");
     if (density && !density->isNull())
-      mech.siteDensity = static_cast<NumericType>(density->number);
+      mech.siteDensities[t] = static_cast<NumericType>(density->number);
   }
+  if (!mech.siteDensities.empty())
+    mech.siteDensity = mech.siteDensities.front();
 
   for (const auto &c : root->at("coverages").array)
     mech.addCoverage(c->str("name"), 0., static_cast<int>(c->num("site", 0.)));

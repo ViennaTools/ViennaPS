@@ -7,6 +7,7 @@
       "density": null
     }
   ],
+  "blocking": null,
   "coverages": [
     {
       "name": "SiH3*",
@@ -79,7 +80,8 @@
       ],
       "solidAtoms": [
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R2",
@@ -106,7 +108,8 @@
       ],
       "solidAtoms": [
         1.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R3",
@@ -133,7 +136,8 @@
       ],
       "solidAtoms": [
         0.0
-      ]
+      ],
+      "blocked": false
     }
   ],
   "constants": {

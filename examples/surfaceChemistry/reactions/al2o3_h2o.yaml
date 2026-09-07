@@ -1,0 +1,38 @@
+name: al2o3_ald_h2o_dose
+temperature: 450.0        # K, 177 C
+energyUnit: eV
+
+# The water half-cycle, Puurunen Eq. (16),
+#
+#   ||Al-CH3 + H2O(g) -> ||Al-OH + CH4(g)
+#
+# applied to every methyl the TMA half-cycle left. The barrier is the
+# 18 kJ/mol that Sperling et al. measure by infrared spectroscopy. Two
+# hydroxylated aluminiums then condense into one formula unit of the film,
+# which returns the anion positions to hydroxyl termination.
+siteTypes:
+  - {name: A, density: 4.0e14}      # /cm2
+  - {name: C, density: 4.0e14}      # /cm2
+
+species:
+  H2O:      {phase: gas, pressure: 1.0e2}    # mTorr
+  CH4:      {phase: gas, reemit_only: true}
+  Al2C6H18: {phase: gas, reemit_only: true}  # shared with the dose
+  OH:       {phase: surface, site: A}
+  O:        {phase: surface, site: A}
+  AlC3H10O: {phase: surface, site: A}
+  AlC3H9O:  {phase: surface, site: A}
+  AlC2H6O:  {phase: surface, site: A}
+  AlCH4O2:  {phase: surface, site: A}
+  AlH2O3:   {phase: surface, site: A}
+  Al:       {phase: surface, site: C}
+  AlCH3:    {phase: surface, site: C}
+  AlHO:     {phase: surface, site: C}
+  Al2O3:    {phase: solid, rho: 1.77}        # 1e22 formula units /cm3
+
+surface:
+  - {eq: "H2O + AlC2H6O -> AlCH4O2 + CH4", type: adsorption, s0: 1.0, Ea: 0.187}
+  - {eq: "H2O + AlCH4O2 -> AlH2O3 + CH4", type: adsorption, s0: 1.0, Ea: 0.187}
+  - {eq: "H2O + AlCH3 -> AlHO + CH4", type: adsorption, s0: 1.0, Ea: 0.187}
+  - {eq: "2 AlH2O3 -> Al2O3 + 2 OH + H2O", type: surface,
+     k0: 2.084e10, Ea: 0.20, beta: 1.0}

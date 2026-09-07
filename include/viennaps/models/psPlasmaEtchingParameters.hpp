@@ -8,12 +8,25 @@
 namespace viennaps {
 
 template <typename NumericType> struct PlasmaEtchingParameters {
-  // fluxes in (1e15 /cm² /s)
+  // Fluxes in (1e15 /cm² /s).
+  //
+  // The two neutral fluxes are STICKING-WEIGHTED: each is the product of the
+  // incident flux and its sticking probability, gamma * Gamma, and that is
+  // what the surface-site balance of updateCoverages() reads. The published
+  // balance, e.g. Eq. (4) of Belen et al., J. Vac. Sci. Technol. A 23 (2005)
+  // 99, writes the two factors separately as gamma_E * Gamma_E, so a flux
+  // quoted there has to be multiplied by its sticking before it is set here.
+  // The models are calibrated against a top surface that receives the full
+  // flux, so the sticking is absorbed into these numbers by the calibration
+  // and applying it a second time in the balance would shift the operating
+  // point rather than correct anything.
   NumericType ionFlux = 12.;
   NumericType etchantFlux = 1.8e3;
   NumericType passivationFlux = 1.0e2;
 
-  // sticking probabilities
+  // Sticking probabilities. These act on the re-emission of a traced particle,
+  // which is what redistributes a neutral inside a feature; the magnitude of
+  // the adsorption is already carried by the fluxes above.
   MaterialValueMap<NumericType> beta_E =
       MaterialValueMap<NumericType>::fromDefault(1.0);
   MaterialValueMap<NumericType> beta_P =

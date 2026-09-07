@@ -7,6 +7,7 @@
       "density": null
     }
   ],
+  "blocking": null,
   "coverages": [
     {
       "name": "H*",
@@ -93,7 +94,8 @@
       ],
       "solidAtoms": [
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R1r",
@@ -120,6 +122,7 @@
       "solidAtoms": [
         0.0
       ],
+      "blocked": false,
       "reverseOf": "R1"
     },
     {
@@ -146,7 +149,8 @@
       ],
       "solidAtoms": [
         0.0
-      ]
+      ],
+      "blocked": false
     },
     {
       "id": "R3",
@@ -172,7 +176,8 @@
       ],
       "solidAtoms": [
         1.0
-      ]
+      ],
+      "blocked": false
     }
   ],
   "constants": {
