@@ -15,7 +15,7 @@ decides whether the surface grows or is etched, which particles are traced, how
 many coverages there are, what the rate laws are, and how the chemistry differs
 from one material to the next.
 
-## What is in this directory
+## Contents
 
 | | |
 |---|---|
@@ -108,10 +108,10 @@ python -m viennachem reactions/x.yaml reactions/x.mechanism.json
 ViennaPS reads the compiled form in C++ (`psChemicalMechanismIO.hpp`), and that
 is the *only* reader: the Python driver hands the same data to the same reader
 through `ps.ChemicalMechanism.fromJSON`, so there is one implementation of the
-format, not one per language. Every file carries a `schemaVersion`, and a reader
-that does not know the version refuses the file rather than guessing.
+format, one shared by both languages. Every file carries a `schemaVersion`, and
+a reader refuses any version it recognises as later than its own.
 
-## What each reaction file demonstrates
+## The capability each reaction file demonstrates
 
 | file | what it shows | where the numbers come from |
 |---|---|---|
@@ -276,24 +276,23 @@ Solves the diamond mechanism over 900–1400 K and compares the radical fraction
 against the published closed form (0.26 % worst case). It runs no simulation: it
 is a check of the framework rather than a demonstration of it.
 
-## What this directory does and does not contain
+## Running a mechanism, and writing a new one
 
-**Running any of the fifteen mechanisms needs nothing but this directory** and a
-ViennaPS install. That holds for the C++ driver, the Python driver, both demos
-and the validation script.
+**Running any of the nineteen mechanisms needs this directory and a ViennaPS
+install.** That holds for the C++ driver, the Python driver, both demos and the
+validation script.
 
-**Writing a sixteenth needs one install** (as does `reactions/sin_peald_cycle.py`,
-which reads the `.yaml` files directly). Compiling a reaction file -- parsing the
-equations, checking the atom balance, inferring the free sites, deriving the
+**Writing a twentieth needs one install.** Compiling a reaction file -- parsing
+the equations, checking the atom balance, inferring the free sites, deriving the
 stoichiometry -- is ViennaChem's job:
 
 ```bash
 pip install git+https://github.com/ViennaTools/ViennaChem@main
 ```
 
-Then the `.yaml` path works directly. Without it the driver still runs every
-mechanism from its compiled form, says so rather than falling back silently, and
-refuses outright if the `.yaml` is newer than the data beside it:
+Then the `.yaml` path works directly. With ViennaChem absent the driver runs
+every mechanism from its compiled form and announces that it has done so, and it
+refuses outright where the `.yaml` is newer than the data beside it:
 
 ```
 note: ViennaChem is not installed, so 'silane.mechanism.json' is used
