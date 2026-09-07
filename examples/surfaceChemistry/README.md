@@ -27,11 +27,8 @@ from one material to the next.
 | `reactions/sin_peald_cycle.py` | the same cycle integrated in time with no geometry: the place to fit the ALD rate constants |
 | `demoMultiMaterial.py` | selective growth on a SiGe/Si superlattice |
 | `demoPassivation.py` | a polymer film competing with an etch in a masked trench |
-<<<<<<< HEAD
-=======
 | `validation/testsuite.py` | the reference test run: every mechanism solved at a point, against stored output |
 | `validation/diamondRadicalFraction.py` | the diamond mechanism against its published closed form |
->>>>>>> 272481e (Document the reference test run and timing script)
 
 ## Running it
 
@@ -268,8 +265,6 @@ to 13.1 um as the dose grows. The film reaches zero at 13.5 um, so the
 remaining 86 um of the cavity stays bare at the unity sticking the file
 declares.
 
-<<<<<<< HEAD
-=======
 ## Timing
 
 What is worth measuring is the cost of deriving the coverage balance from a
@@ -362,7 +357,6 @@ Solves the diamond mechanism over 900–1400 K and compares the radical fraction
 against the published closed form (0.26 % worst case). It runs no simulation: it
 is a check of the framework rather than a demonstration of it.
 
->>>>>>> 272481e (Document the reference test run and timing script)
 ## Running a mechanism, and writing a new one
 
 **Running any of the nineteen mechanisms needs this directory and a ViennaPS
