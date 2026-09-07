@@ -27,6 +27,11 @@ from one material to the next.
 | `reactions/sin_peald_cycle.py` | the same cycle integrated in time with no geometry: the place to fit the ALD rate constants |
 | `demoMultiMaterial.py` | selective growth on a SiGe/Si superlattice |
 | `demoPassivation.py` | a polymer film competing with an etch in a masked trench |
+<<<<<<< HEAD
+=======
+| `validation/testsuite.py` | the reference test run: every mechanism solved at a point, against stored output |
+| `validation/diamondRadicalFraction.py` | the diamond mechanism against its published closed form |
+>>>>>>> 272481e (Document the reference test run and timing script)
 
 ## Running it
 
@@ -263,6 +268,101 @@ to 13.1 um as the dose grows. The film reaches zero at 13.5 um, so the
 remaining 86 um of the cavity stays bare at the unity sticking the file
 declares.
 
+<<<<<<< HEAD
+=======
+## Timing
+
+What is worth measuring is the cost of deriving the coverage balance from a
+reaction file and solving it by Newton's method at every surface point,
+against evaluating a closed form derived once by hand. The figure that matters
+is the share of a run the solve accounts for, since a feature-scale step
+spends most of its time tracing rays, and it is the robust quantity because
+its numerator and denominator come from the same run.
+
+```bash
+# pin the machine first, on a quiet system
+sudo cpupower frequency-set -g performance     # if available
+export OMP_NUM_THREADS=<cores>
+
+cd <build>/examples/surfaceChemistry
+python3 benchmark.py --repeats 7
+```
+
+Four rows of one geometry, a trench 80 nm wide and 120 nm deep on a 1.5 nm
+grid at 2000 rays per surface point, advanced by 5 nm, so the rows differ only
+in the mechanism: `silane_inputs` (3 reactions over 2 coverages), `sf6o2` (7
+over 2), `sf6o2` again through `--handwritten` so the same chemistry is solved
+from the closed form of the ViennaPS class, and `gaas_cvd` (30 over 7). For
+each it runs `--profile`, which times the coverage solve against the wall time
+of the run containing it, and `--bench 200000`, which times the solve alone
+with the transport left out. Both flux engines are measured where a device is
+present. Expect the device shares to be several times the host shares, since
+the transport gets faster and the solve does not.
+
+Wall times scatter, by around 40 % run to run on a laptop, which is why the
+script reports medians. It needs only Python 3 from the standard library.
+
+To check a single figure by hand:
+
+```bash
+./surfaceChemistry -r reactions/sf6o2.mechanism.json --profile \
+    --width 80 --depth 120 --grid 1.5 --thickness 5 --rays 2000 --out /tmp/p
+./surfaceChemistry -r reactions/sf6o2.mechanism.json --bench 200000
+./surfaceChemistry -r reactions/sf6o2.mechanism.json --handwritten --bench 200000
+```
+
+## Validation
+
+### Reference test run
+
+```bash
+python3 validation/testsuite.py            # check against the stored reference
+python3 validation/testsuite.py --update   # rewrite the reference
+```
+
+This is the comprehensive test run for the package. It solves every
+non-cyclic reaction file of `reactions/` at a single surface point, under
+unobstructed fluxes and one ray, and checks each coverage and the resulting
+surface velocity against `validation/reference.txt`. The point solve carries
+no Monte Carlo sampling, so it is deterministic to the digits the driver
+prints and a mismatch is a real change in the model rather than noise. It
+exercises the whole chain: the mechanism data is read, the free-site
+exponents and mass-action rate laws are rebuilt from the reactions, the
+coverage balance is solved by the damped Newton iteration, and the velocity
+is formed from the reactions that move a solid.
+
+A cyclic mechanism has no steady state by construction, since half its
+reactions have no reactant flowing at any one time, so those files are driven
+instead through `cyclicProcess` and checked on their growth per cycle.
+
+The two are held to different tolerances, for a measured reason. The
+steady-state solve is a Newton root and repeats bit for bit on one build, so
+it is checked to 1e-5, which is the last digit the driver prints. The growth
+per cycle is integrated over many adaptive sub-steps whose order is not fixed,
+and repeated runs of the same binary spread by about 1.6e-5, so it is checked
+to 1e-3. A failure at that tolerance is a real change, not run-to-run noise.
+
+Expected output, which takes well under a minute:
+
+```
+38 values checked over 12 steady-state mechanisms and the cyclic case, 0 failures
+```
+
+The rates in `reference.txt` are the "single point" column of the table of
+eight mechanisms in the accompanying article, and the cyclic value is its
+2.48 A/cycle.
+
+### Diamond radical fraction
+
+```bash
+python validation/diamondRadicalFraction.py
+```
+
+Solves the diamond mechanism over 900–1400 K and compares the radical fraction
+against the published closed form (0.26 % worst case). It runs no simulation: it
+is a check of the framework rather than a demonstration of it.
+
+>>>>>>> 272481e (Document the reference test run and timing script)
 ## Running a mechanism, and writing a new one
 
 **Running any of the nineteen mechanisms needs this directory and a ViennaPS
