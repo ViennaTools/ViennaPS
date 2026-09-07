@@ -14,7 +14,7 @@
 
 </div>
 
-ViennaPS is a header-only C++ library for process and topography simulation in microelectronic fabrication. It models the evolution of 2D and 3D surfaces during etching, deposition, oxidation, and related steps, combining advanced level-set methods for surface evolution with Monte Carlo ray tracing for flux calculation and physics-based solvers for coupled processes. The oxidation model simulates LOCOS and trench oxidation through a fully coupled diffusion–viscous flow solver with nitride mask deformation, capturing bird's beak formation and stress-driven oxide redistribution.
+ViennaPS is a header-only C++ library for process and topography simulation in microelectronic fabrication. It models the evolution of 2D and 3D surfaces during etching, deposition, oxidation, and related steps, combining advanced level-set methods for surface evolution with Monte Carlo ray tracing for flux calculation and physics-based solvers for coupled processes. The oxidation model couples oxidant diffusion and viscous flow with nitride mask deformation.
 
 ViennaPS supports both physics-based process models and fast emulation approaches, enabling flexible and efficient development of semiconductor processes. It can be easily integrated into existing C++ projects and also provides Python bindings for use in Python-based workflows. The library is actively developed and continuously improved to address the needs of process and topography simulation in microelectronics.
 
@@ -30,10 +30,16 @@ To use ViennaPS in C++ follow the CMake instructions below. A ready-to-use CMake
 
 For full documentation, visit [ViennaPS Documentation](https://viennatools.github.io/ViennaPS/).
 
+## Citation
+
+If you use ViennaPS, please cite the following paper:
+
+T. Reiter and L. Filipovic, [ViennaPS: A flexible framework for semiconductor process simulation](https://doi.org/10.1016/j.softx.2025.102453), *SoftwareX*, **32**, 102453 (2025).
+
 ## Releases
 
 > [!NOTE]  
-> ViennaPS is under heavy development and improved daily. If you do have suggestions or find bugs, please let us know!
+> ViennaPS is under active development. If you do have suggestions or find bugs, please let us know!
 
 Releases are tagged on the master branch and available in the [releases section](https://github.com/ViennaTools/ViennaPS/releases).
 
@@ -131,6 +137,8 @@ We recommend using [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) to consum
 * Installation with CPM
   ```cmake
   CPMAddPackage("gh:viennatools/viennaps@4.7.0")
+
+  target_link_libraries(${PROJECT_NAME} PUBLIC ViennaTools::ViennaPS)
   ```
 
 * With a local installation
@@ -161,120 +169,36 @@ ViennaPS supports GPU acceleration for the ray tracing part of the library (sinc
 
 ## Basic Examples
 
-### Building
+See the [examples README](examples/README.md) for build and run instructions, detailed descriptions, and images.
 
-The examples can be built using CMake:
+| Example | Description | Preview |
+| --- | --- | --- |
+| [Trench Deposition](examples/README.md#trench-deposition) | Particle deposition in a trench with varying sticking probabilities. | <img src="assets/deposition.png" alt="Trench Deposition" width="200" height="120"> |
+| [SF₆/O₂ Hole Etching](examples/README.md#sf6o2-hole-etching) | Plasma etching with ion bombardment and varying particle fluxes. | <img src="assets/sf6o2_results.png" alt="SF₆/O₂ Hole Etching" width="200" height="120"> |
+| [Bosch Process](examples/README.md#bosch-process) | Comparison of emulation and physical models for deep reactive ion etching. | <img src="assets/bosch_process.png" alt="Bosch Process" width="200" height="120"> |
+| [Wet Etching](examples/README.md#wet-etching) | Crystallographic wet etching of a cantilever structure. | <img src="assets/wet_etching.png" alt="Wet Etching" width="200" height="120"> |
+| [Selective Epitaxy](examples/README.md#selective-epitaxy) | Crystallographic SiGe growth on a silicon substrate. | <img src="assets/epitaxy.png" alt="Selective Epitaxy" width="200" height="120"> |
+| [Redeposition During Selective Etching](examples/README.md#redeposition-during-selective-etching) | Byproduct transport and oxide regrowth in a Si₃N₄/SiO₂ stack. | <img src="assets/redeposition.gif" alt="Redeposition During Selective Etching" width="200" height="120"> |
+| [GDS Mask Import](examples/README.md#gds-mask-import-example) | GDS mask transformations and conversion to level sets. | <img src="assets/masks.png" alt="GDS Mask Import" width="200" height="120"> |
+| [Fin Oxidation](examples/README.md#fin-oxidation) | Thermal oxidation of a silicon fin with anisotropic growth. | <img src="assets/fin_oxidation.png" alt="Fin Oxidation" width="200" height="120"> |
+| [LOCOS Oxidation](examples/README.md#locos-oxidation) | Local oxidation beneath a nitride mask with bird's beak formation. | <img src="assets/locos.png" alt="LOCOS Oxidation" width="200" height="120"> |
 
-```bash
-git clone https://github.com/ViennaTools/ViennaPS.git
-cd ViennaPS
+## Publications Using ViennaPS
 
-cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON
-cmake --build build
-```
+The following publications use ViennaPS for semiconductor process simulation:
 
-The examples can then be executed in their respective build folders with the config files, e.g.:
-```bash
-cd build/examples/exampleName
-./exampleName.bat config.txt # (Windows)
-./exampleName config.txt # (Other)
-```
-
-Individual examples can also be build by calling `make` in their respective build folder. An equivalent Python script, using the ViennaPS Python bindings, is also given for each example. 
-
-### Trench Deposition
-
-This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/trenchDeposition) focuses on a particle deposition process within a trench geometry. By default, the simulation presents a 2D representation of the trench. Nevertheless, users have the flexibility to conduct 3D simulations by adjusting the value of the constant _D_ in __trenchDeposition.cpp__ to 3. Customization of process and geometry parameters is achieved through the __config.txt__ file. The accompanying image illustrates instances of the trench deposition process, showcasing variations in the particle sticking probability _s_.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/deposition.png" width=700 style="background-color:white;">
-</div>
-
-### SF<sub>6</sub>/O<sub>2</sub> Hole Etching
-
-This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/holeEtching) demonstrates a hole etching process with a SF<sub>6</sub>/O<sub>2</sub> plasma etching chemistry with ion bombardment. The process is controlled by various parameters, including geometry and plasma conditions, which can be adjusted in the __config.txt__ file.
-
-The image presents the results of different flux configurations, as tested in _testFluxes.py_. Each structure represents a variation in flux conditions, leading to differences in hole shape, depth, and profile characteristics. The variations highlight the influence of ion and neutral fluxes on the etching process.
-
-> [!NOTE] 
-> The underlying model may change in future releases, so running this example in newer versions of ViennaPS might not always reproduce exactly the same results.  
-> The images shown here were generated using **ViennaPS v3.6.0**.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/sf6o2_results.png" width=700 style="background-color:white;">
-</div>
-
-### Bosch Process
-
-This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/boschProcess) compares different approaches to simulating the Bosch process, a deep reactive ion etching (DRIE) technique. The three structures illustrate how different modeling methods influence the predicted etch profile.
-
-- Left: The structure generated through process emulation, which captures the characteristic scalloping effect of the Bosch process in a simplified yet effective way.
-- Middle: The result of a simple simulation model, which approximates the etching dynamics but may lack finer physical details.
-- Right: The outcome of a more physical simulation model, leading to a more realistic etch profile.
-  
-This comparison highlights the trade-offs between computational efficiency and physical accuracy in DRIE simulations.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/bosch_process.png" width=700 style="background-color:white;">
-</div>
-
-### Wet Etching
-
-This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/cantileverWetEtching) demonstrates the wet etching process, specifically focusing on the cantilever structure. The simulation captures the etching dynamics and the influence of crystallographic directions on the etch profile.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/wet_etching.png" width=700 style="background-color:white;">
-</div>
-
-### Selective Epitaxy
-
-This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/selectiveEpitaxy) demonstrates the selective epitaxy process, focusing on the growth of SiGe on a Si substrate. Similar to wet etching, the process is influenced by crystallographic directions, which can be adjusted in the __config.txt__ file. The simulation captures the growth dynamics and the resulting SiGe structure.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/epitaxy.png" width=700 style="background-color:white;">
-</div>
-
-### Redeposition During Selective Etching
-
-This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/oxideRegrowth) demonstrates capturing etching byproducts and the subsequent redeposition during a selective etching process in a Si<sub>3</sub>N<sub>4</sub>/SiO<sub>2</sub> stack. The etching byproducts are captured in a cell set description of the etching plasma. To model the dynamics of these etching byproducts, a convection-diffusion equation is solved on the cell set using finite differences. The redeposition is then captured by adding up the byproducts in every step and using this information to generate a velocity field on the etched surface. 
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/redeposition.gif" width=700 style="background-color:white;">
-</div>
-
-### GDS Mask Import Example
-
-This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/GDSReader) tests the full GDS mask import, blurring, rotation, scaling, and flipping as well as the level set conversion pipeline. Shown below is the result after applying proximity correction and extrusion on a simple test.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/masks.png" width=1200 style="background-color:white;">
-</div>
-
-### Fin Oxidation
-
-This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/finOxidation) simulates thermal oxidation of a silicon fin structure. Oxide grows simultaneously on the fin top, both sidewalls, and the surrounding substrate. The image shows the initial bare Si fin on the left and the oxidized structure on the right (together with the pressure field) after thermal oxidation, with the grown SiO<sub>2</sub> shell visible around the fin. Anisotropic oxidation rates produce a non-uniform oxide shell: the (110)-oriented sidewalls oxidize about 1.45x faster than the (100) top surface. The fin corners progressively round as the oxide thickens.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/fin_oxidation.png" width=700 style="background-color:white;">
-</div>
-
-### LOCOS Oxidation
-
-This [example](https://github.com/ViennaTools/ViennaPS/tree/master/examples/locosOxidation) simulates Local Oxidation of Silicon (LOCOS), the classical process for field-oxide isolation in CMOS technology. A silicon nitride (Si<sub>3</sub>N<sub>4</sub>) pad mask blocks oxidation on the protected side; the open window oxidizes freely. At the mask edge, lateral diffusion of oxidant beneath the nitride produces the characteristic **bird's beak**: a wedge-shaped oxide intrusion that tapers from the full field-oxide thickness to nothing under the mask center. The model fully couples a Deal-Grove diffusion solve, a viscous Stokes deformation solver, and a nitride mask bending solver, all iterated to self-consistency at each time step. The image shows the  Si<sub>3</sub>N<sub>4</sub>/SiO<sub>2</sub> material stack on the left half and the corresponding compressive stress in the nitride mask and pressure field in the oxide on the right half, after thermal oxidation.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/ViennaTools/ViennaPS/master/assets/locos.png" width=700 style="background-color:white;">
-</div>
-
+* [Physics-Based Multi-Scale Modeling of Angled Reactive Ion Etching](https://doi.org/10.1109/SISPAD66650.2025.11186317). *SISPAD* (2025).
+* [Simulation of a Polymer-Free DRIE Process Using SF₆/O₂ Plasma Etching](https://doi.org/10.1109/SISPAD66650.2025.11186394). *SISPAD* (2025).
+* [Equipment-Informed Machine Learning-Assisted Feature-Scale Plasma Etching Model](https://doi.org/10.1109/SISPAD62626.2024.10733099). *SISPAD* (2024).
+* [Loading Effect during SiGe/Si Stack Selective Isotropic Etching for Gate-All-Around Transistors](https://doi.org/10.1021/acsaelm.4c01462). *ACS Applied Electronic Materials* (2024).
+* [Effect of Mask Geometry Variation on Plasma Etching Profiles](https://doi.org/10.3390/mi14030665). *Micromachines* (2023).
+* [Modeling Oxide Regrowth During Selective Etching in Vertical 3D NAND Structures](https://doi.org/10.23919/SISPAD57422.2023.10319506). *SISPAD* (2023).
+* [Impact of Plasma Induced Damage on the Fabrication of 3D NAND Flash Memory](https://doi.org/10.1016/j.sse.2022.108261). *Solid-State Electronics* (2022).
 
 ## Tests
 
 ViennaPS uses CTest to run its tests. In order to check whether ViennaPS runs without issues on your system, you can run:
-
 ```bash
-git clone https://github.com/ViennaTools/ViennaPS.git
-cd ViennaPS
-
 cmake -B build -DVIENNAPS_BUILD_TESTS=ON
 cmake --build build
 ctest -E "Benchmark|Performance" --test-dir build
