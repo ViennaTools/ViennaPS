@@ -20,7 +20,7 @@ void testDealGroveEstimateWet1000C() {
   auto model = ps::SmartPointer<ps::Oxidation<T, D>>::New();
   model->setTemperature(1000.);
   model->setTime(0.1);
-  model->setOxidant(ps::OxidantType::Wet);
+  model->setOxidant(ps::OxidantType::WET);
   model->setPressure(1.);
   model->setOrientation(ps::SiliconOrientation::Si100);
 
@@ -46,7 +46,7 @@ void testOxidationCallbackCreatesNativeOxide() {
   auto model = ps::SmartPointer<ps::Oxidation<T, D>>::New();
   model->setTemperature(1000.);
   model->setTime(0.);
-  model->setOxidant(ps::OxidantType::Dry);
+  model->setOxidant(ps::OxidantType::DRY);
   model->setInitialOxideThickness(0.1);
 
   ps::Process<T, D>(domain, model, T(0)).apply();
@@ -108,7 +108,7 @@ void testLocosOxidationPreservesLayers() {
   auto model = ps::SmartPointer<ps::Oxidation<T, D>>::New();
   model->setTemperature(1000.);
   model->setTime(0.02);
-  model->setOxidant(ps::OxidantType::Wet);
+  model->setOxidant(ps::OxidantType::WET);
   model->setTimeStep(0.02);
   model->setMaxGridPoints(200000);
 
@@ -129,7 +129,7 @@ void testDealGroveEstimateDryHighT() {
   auto model = ps::SmartPointer<ps::Oxidation<T, D>>::New();
   model->setTemperature(1000.);
   model->setTime(0.5);
-  model->setOxidant(ps::OxidantType::Dry);
+  model->setOxidant(ps::OxidantType::DRY);
   model->setPressure(1.);
   model->setOrientation(ps::SiliconOrientation::Si100);
   const T thickness = model->estimatePlanarOxideThickness();
@@ -150,7 +150,7 @@ void testDealGroveEstimateDryLowT() {
   auto model = ps::SmartPointer<ps::Oxidation<T, D>>::New();
   model->setTemperature(900.);
   model->setTime(0.5);
-  model->setOxidant(ps::OxidantType::Dry);
+  model->setOxidant(ps::OxidantType::DRY);
   model->setPressure(1.);
   model->setOrientation(ps::SiliconOrientation::Si100);
   const T thickness = model->estimatePlanarOxideThickness();
@@ -177,7 +177,7 @@ void testOrientationRatios() {
     auto m = ps::SmartPointer<ps::Oxidation<T, D>>::New();
     m->setTemperature(1000.);
     m->setTime(t);
-    m->setOxidant(ps::OxidantType::Wet);
+    m->setOxidant(ps::OxidantType::WET);
     m->setPressure(1.);
     m->setOrientation(orientation);
     return m->estimatePlanarOxideThickness();
