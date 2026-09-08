@@ -47,40 +47,32 @@ def build_substrate(cfg) -> ps.Domain:
       SiO2: y ∈ [0, pad_oxide]          ← pad oxide (screen for implant)
       Air : y ∈ [pad_oxide, pad_oxide + top_space]
     """
-    x_extent = cfg["xExtent"]
-    substrate_depth = cfg["substrateDepth"]
-    top_space = cfg["topSpace"]
-    pad_oxide = cfg["padOxideThickness"]
-    grid_delta = cfg["gridDelta"]
 
-    domain_top = top_space + pad_oxide
-    bounds = [-0.5 * x_extent, 0.5 * x_extent, -substrate_depth, domain_top]
-    bc = [
-        ps.BoundaryType.REFLECTIVE_BOUNDARY,
-        ps.BoundaryType.INFINITE_BOUNDARY,
-    ]
-
-    domain = ps.Domain(bounds, bc, grid_delta)
-
-    def _ls():
-        return ps.LevelSet(bounds, bc, grid_delta)
+    domain = ps.Domain(
+        gridDelta=cfg["gridDelta"],
+        xExtent=cfg["xExtent"],
+        boundary=ps.BoundaryType.REFLECTIVE_BOUNDARY,
+    )
 
     # Si bottom half-space
-    ls = _ls()
-    ps.MakeGeometry(ls, ps.Plane([0.0, -substrate_depth], [0.0, 1.0])).apply()
-    domain.insertNextLevelSetAsMaterial(ls, ps.Material.Si)
+    ps.MakePlane(domain, height=-cfg["substrateDepth"], material=ps.Material.Si).apply()
 
     # Si surface at y = 0
-    ls = _ls()
-    ps.MakeGeometry(ls, ps.Plane([0.0, 0.0], [0.0, 1.0])).apply()
-    domain.insertNextLevelSetAsMaterial(ls, ps.Material.Si)
+    ps.MakePlane(
+        domain, height=0.0, material=ps.Material.Si, addToExisting=True
+    ).apply()
 
     # SiO2 pad oxide top at y = pad_oxide
-    ls = _ls()
-    ps.MakeGeometry(ls, ps.Plane([0.0, pad_oxide], [0.0, 1.0])).apply()
-    domain.insertNextLevelSetAsMaterial(ls, ps.Material.SiO2)
+    ps.MakePlane(
+        domain,
+        height=cfg["padOxideThickness"],
+        material=ps.Material.SiO2,
+        addToExisting=True,
+    ).apply()
 
-    domain.generateCellSet(domain_top, ps.Material.Air, True)
+    domain.generateCellSet(
+        cfg["topSpace"] + cfg["padOxideThickness"], ps.Material.Air, True
+    )
     domain.getCellSet().buildNeighborhood()
     return domain
 

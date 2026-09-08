@@ -253,18 +253,17 @@ def run(cfg_path: str) -> None:
     )
 
     # ── Geometry ──────────────────────────────────────────────────────────────
-    grid_delta = cfg.get("gridDelta")
-    x_extent = cfg.get("xExtent")
-    top_space = cfg.get("topSpace")
-    substrate_depth = cfg.get("substrateDepth")
-    opening_width = cfg.get("openingWidth")
-    mask_height = cfg.get("maskHeight")
-    oxide_thickness = cfg.get("screenOxideThickness", cfg.get("oxideThickness", "2.0"))
+    grid_delta = cfg["gridDelta"]
+    top_space = cfg["topSpace"]
+    substrate_depth = cfg["substrateDepth"]
+    opening_width = cfg["openingWidth"]
+    mask_height = cfg["maskHeight"]
+    oxide_thickness = cfg["oxideThickness"]
     screen_thickness = cfg.get("screenThickness", oxide_thickness)
 
     bounds = [
-        -0.5 * x_extent,
-        0.5 * x_extent,
+        -0.5 * cfg["xExtent"],
+        0.5 * cfg["xExtent"],
         -substrate_depth,
         top_space + oxide_thickness + mask_height,
     ]
@@ -276,32 +275,28 @@ def run(cfg_path: str) -> None:
 
     domain = ps.Domain(bounds, bc, grid_delta)
 
-    def makels():
-        return ps.LevelSet(bounds, bc, grid_delta)
-
     # Si substrate bottom
-    level_set = makels()
-    ps.MakeGeometry(level_set, ps.Plane([0.0, -substrate_depth], [0.0, 1.0])).apply()
-    domain.insertNextLevelSetAsMaterial(level_set, ps.Material.Si)
+    ps.MakePlane(domain, height=-substrate_depth, material=ps.Material.Si).apply()
 
     # Si substrate top (surface at y = 0)
-    level_set = makels()
-    ps.MakeGeometry(level_set, ps.Plane([0.0, 0.0], [0.0, 1.0])).apply()
-    domain.insertNextLevelSetAsMaterial(level_set, ps.Material.Si)
-
-    # Screen oxide (y = 0 to y = oxide_thickness)
-    level_set = makels()
-    ps.MakeGeometry(level_set, ps.Plane([0.0, oxide_thickness], [0.0, 1.0])).apply()
-    domain.insertNextLevelSetAsMaterial(level_set, ps.Material.SiO2)
-
-    # Hard mask with opening
-    level_set = makels()
-    ps.MakeGeometry(
-        level_set, ps.Plane([0.0, oxide_thickness + mask_height], [0.0, 1.0])
+    ps.MakePlane(
+        domain, height=0.0, material=ps.Material.Si, addToExisting=True
     ).apply()
-    domain.insertNextLevelSetAsMaterial(level_set, ps.Material.Mask)
 
-    window = makels()
+    # Screen oxide (y = oxide_thickness)
+    ps.MakePlane(
+        domain, height=oxide_thickness, material=ps.Material.SiO2, addToExisting=True
+    ).apply()
+
+    # Hard mask with opening (cut via Boolean RELATIVE_COMPLEMENT)
+    ps.MakePlane(
+        domain,
+        height=oxide_thickness + mask_height,
+        material=ps.Material.Mask,
+        addToExisting=True,
+    ).apply()
+
+    window = ps.LevelSet(bounds, bc, grid_delta)
     ps.MakeGeometry(
         window,
         ps.Box(

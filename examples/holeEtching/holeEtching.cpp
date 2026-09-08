@@ -63,14 +63,14 @@ int main(int argc, char *argv[]) {
 
     AdvectionParameters advectionParams;
     advectionParams.spatialScheme =
-        util::convertSpatialScheme(params.get<std::string>("spatialScheme"));
-    advectionParams.temporalScheme =
-        util::convertTemporalScheme(params.get<std::string>("temporalScheme"));
+        util::convert<SpatialScheme>(params.get<std::string>("spatialScheme"));
+    advectionParams.temporalScheme = util::convert<TemporalScheme>(
+        params.get<std::string>("temporalScheme"));
     advectionParams.calculateIntermediateVelocities = intermediateVelocities;
 
     // process setup
     const std::string fluxEngineStr = params.get<std::string>("fluxEngine");
-    const auto fluxEngine = util::convertFluxEngineType(fluxEngineStr);
+    const auto fluxEngine = util::convert<FluxEngineType>(fluxEngineStr);
 
     Process<NumericType, D> process(geometry, model);
     process.setProcessDuration(params.get("processTime"));

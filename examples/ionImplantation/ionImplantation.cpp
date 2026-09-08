@@ -17,18 +17,9 @@
 //   post_anneal.vtu  — dopant total/active concentration + I/V fields
 
 #include "exampleConfig.hpp"
+#include <geometries/psMakePlane.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
-
-#include <lsBooleanOperation.hpp>
-#include <lsGeometries.hpp>
-#include <lsMakeGeometry.hpp>
-
-#include <vcUtil.hpp>
-
-#include <algorithm>
-#include <iostream>
-#include <string>
 
 using namespace viennaps;
 
@@ -40,7 +31,6 @@ static int runIonImplantation(int argc, char *argv[]) {
 
   util::Parameters params;
   params.readConfigFile(cfgPath);
-  const auto rawParams = ionimpl::readRawParameters(cfgPath);
   if (params.m.empty()) {
     std::cerr << "Config not found: " << cfgPath << "\n";
     std::cerr << "Usage: " << argv[0] << " [config.txt]\n";
@@ -49,10 +39,10 @@ static int runIonImplantation(int argc, char *argv[]) {
 
   // Determine mode: if 'projectedRange' is omitted, use the table-driven DB
   // defaults.
-  const bool useTable = params.m.count("projectedRange") == 0;
+  const bool useTable = params.contains("projectedRange");
 
   if (useTable) {
-    viennaps::initModelDbRoot();
+    initModelDbRoot();
   }
 
   std::cout << "--- ViennaPS " << (useTable ? "Table-Driven" : "Explicit")
@@ -83,54 +73,19 @@ static int runIonImplantation(int argc, char *argv[]) {
 
   auto domain = Domain<T, D>::New(bounds, bc, gridDelta);
 
-  // Helper: new ViennaLS level set sharing the same grid
-  auto makels = [&]() {
-    return SmartPointer<viennals::Domain<T, D>>::New(bounds, bc, gridDelta);
-  };
-
   // Level set 0: Si substrate bottom
-  {
-    auto ls = makels();
-    T origin[D] = {}, normal[D] = {};
-    origin[D - 1] = -substrateDepth;
-    normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
-        .apply();
-    domain->insertNextLevelSetAsMaterial(ls, Material::Si);
-  }
+  MakePlane<T, D>(domain, -substrateDepth, Material::Si).apply();
   // Level set 1: Si substrate top (surface at y = 0)
-  {
-    auto ls = makels();
-    T origin[D] = {}, normal[D] = {};
-    normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
-        .apply();
-    domain->insertNextLevelSetAsMaterial(ls, Material::Si);
-  }
-  // Level set 2: screen oxide (y = 0 to y = oxideThickness)
-  {
-    auto ls = makels();
-    T origin[D] = {}, normal[D] = {};
-    origin[D - 1] = oxideThickness;
-    normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
-        .apply();
-    domain->insertNextLevelSetAsMaterial(ls, Material::SiO2);
-  }
-  // Level set 3: hard mask (y = oxideThickness to y = oxideThickness +
-  // maskHeight)
+  MakePlane<T, D>(domain, 0.0, Material::Si, true).apply();
+  // Level set 2: screen oxide (y = oxideThickness)
+  MakePlane<T, D>(domain, oxideThickness, Material::SiO2, true).apply();
+  // Level set 3: hard mask (y = oxideThickness + maskHeight)
   //              with a window of width openingWidth centred at x = 0
+  MakePlane<T, D>(domain, oxideThickness + maskHeight, Material::Mask, true)
+      .apply();
   {
-    auto ls = makels();
-    T origin[D] = {}, normal[D] = {};
-    origin[D - 1] = oxideThickness + maskHeight;
-    normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
-        .apply();
-    domain->insertNextLevelSetAsMaterial(ls, Material::Mask);
-
     // Cut the mask opening
-    auto window = makels();
+    auto window = viennals::Domain<T, D>::New(bounds, bc, gridDelta);
     T wMin[D] = {-0.5 * openingWidth, oxideThickness - gridDelta};
     T wMax[D] = {0.5 * openingWidth, oxideThickness + maskHeight + gridDelta};
     viennals::MakeGeometry<T, D>(window, viennals::Box<T, D>::New(wMin, wMax))
@@ -151,8 +106,8 @@ static int runIonImplantation(int argc, char *argv[]) {
   auto implant = SmartPointer<IonImplantation<T, D>>::New();
   auto anneal = SmartPointer<Anneal<T, D>>::New();
 
-  const auto annealSchedule = ionimpl::readAnnealSchedule<T>(rawParams);
-  const T peakT = viennaps::peakAnnealTemperature(annealSchedule);
+  const auto annealSchedule = ionimpl::readAnnealSchedule<T>(params);
+  const T peakT = peakAnnealTemperature(annealSchedule);
 
   std::string labelTotal, labelActive, labelDamage, labelInterstitial,
       labelVacancy;
@@ -161,16 +116,16 @@ static int runIonImplantation(int argc, char *argv[]) {
     const auto implantConfig =
         ionimpl::makeTableImplantSetup<T, D>(params, screenThickness);
     std::cout << "Implanting " << implantConfig.description << " ...\n";
-    viennaps::applyImplantSetup(*implant, implantConfig);
+    applyImplantSetup(*implant, implantConfig);
 
     std::cout << "Annealing: peak T = " << (peakT - T(273.15)) << " C ...\n";
     const auto annealConfig = ionimpl::makeAnnealSetup<T>(
-        params, annealSchedule, implantConfig, peakT, {viennaps::Material::Si},
-        {viennaps::Material::Mask, viennaps::Material::SiO2},
+        params, annealSchedule, implantConfig, peakT, {Material::Si},
+        {Material::Mask, Material::SiO2},
         /*defaultUseModelDb=*/true);
     std::cout << "Anneal parameter source: " << annealConfig.model.source
               << "\n";
-    viennaps::applyAnnealSetup(*anneal, annealConfig);
+    applyAnnealSetup(*anneal, annealConfig);
 
     labelTotal = implantConfig.labels.total;
     labelActive = implantConfig.labels.active;
@@ -181,16 +136,16 @@ static int runIonImplantation(int argc, char *argv[]) {
     const auto implantConfig =
         ionimpl::makeAnalyticImplantSetup<T, D>(params, screenThickness);
     std::cout << "Implanting " << implantConfig.description << " ...\n";
-    viennaps::applyImplantSetup(*implant, implantConfig);
+    applyImplantSetup(*implant, implantConfig);
 
     std::cout << "Annealing: peak T = " << (peakT - T(273.15)) << " C ...\n";
     const auto annealConfig = ionimpl::makeAnnealSetup<T>(
-        params, annealSchedule, implantConfig, peakT, {viennaps::Material::Si},
-        {viennaps::Material::Mask, viennaps::Material::SiO2},
+        params, annealSchedule, implantConfig, peakT, {Material::Si},
+        {Material::Mask, Material::SiO2},
         /*defaultUseModelDb=*/false);
     std::cout << "Anneal parameter source: " << annealConfig.model.source
               << "\n";
-    viennaps::applyAnnealSetup(*anneal, annealConfig);
+    applyAnnealSetup(*anneal, annealConfig);
 
     labelTotal = implantConfig.labels.total;
     labelActive = implantConfig.labels.active;

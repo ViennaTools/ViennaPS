@@ -125,7 +125,6 @@ def run(cfg_path: str) -> None:
 
     # ── Geometry ──────────────────────────────────────────────────────────────
     grid_delta = cfg["gridDelta"]
-    x_extent = cfg["xExtent"]
     top_space = cfg["topSpace"]
     substrate_depth = cfg["substrateDepth"]
     opening_width = cfg["openingWidth"]
@@ -133,8 +132,8 @@ def run(cfg_path: str) -> None:
     oxide_thickness = cfg["oxideThickness"]
 
     bounds = [
-        -0.5 * x_extent,
-        0.5 * x_extent,
+        -0.5 * cfg["xExtent"],
+        0.5 * cfg["xExtent"],
         -substrate_depth,
         top_space + oxide_thickness + mask_height,
     ]
@@ -145,32 +144,28 @@ def run(cfg_path: str) -> None:
 
     domain = ps.Domain(bounds, bc, grid_delta)
 
-    def makels():
-        return ps.LevelSet(bounds, bc, grid_delta)
-
     # Si substrate bottom
-    ls = makels()
-    ps.MakeGeometry(ls, ps.Plane([0.0, -substrate_depth], [0.0, 1.0])).apply()
-    domain.insertNextLevelSetAsMaterial(ls, ps.Material.Si)
+    ps.MakePlane(domain, height=-substrate_depth, material=ps.Material.Si).apply()
 
     # Si substrate top (surface at y = 0)
-    ls = makels()
-    ps.MakeGeometry(ls, ps.Plane([0.0, 0.0], [0.0, 1.0])).apply()
-    domain.insertNextLevelSetAsMaterial(ls, ps.Material.Si)
+    ps.MakePlane(
+        domain, height=0.0, material=ps.Material.Si, addToExisting=True
+    ).apply()
 
-    # Screen oxide (y = 0 → y = oxide_thickness)
-    ls = makels()
-    ps.MakeGeometry(ls, ps.Plane([0.0, oxide_thickness], [0.0, 1.0])).apply()
-    domain.insertNextLevelSetAsMaterial(ls, ps.Material.SiO2)
+    # Screen oxide (y = oxide_thickness)
+    ps.MakePlane(
+        domain, height=oxide_thickness, material=ps.Material.SiO2, addToExisting=True
+    ).apply()
 
     # Hard mask with opening (cut via Boolean RELATIVE_COMPLEMENT)
-    ls = makels()
-    ps.MakeGeometry(
-        ls, ps.Plane([0.0, oxide_thickness + mask_height], [0.0, 1.0])
+    ps.MakePlane(
+        domain,
+        height=oxide_thickness + mask_height,
+        material=ps.Material.Mask,
+        addToExisting=True,
     ).apply()
-    domain.insertNextLevelSetAsMaterial(ls, ps.Material.Mask)
 
-    window = makels()
+    window = ps.LevelSet(bounds, bc, grid_delta)
     ps.MakeGeometry(
         window,
         ps.Box(

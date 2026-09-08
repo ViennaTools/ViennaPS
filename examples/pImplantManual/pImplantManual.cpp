@@ -17,22 +17,9 @@
 //   profile_post_anneal.csv  — dopant total/active + I/V vs depth
 
 #include "../ionImplantation/exampleConfig.hpp"
+#include <geometries/psMakePlane.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
-
-#include <lsBooleanOperation.hpp>
-#include <lsGeometries.hpp>
-#include <lsMakeGeometry.hpp>
-
-#include <vcUtil.hpp>
-
-#include <algorithm>
-#include <cmath>
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <string>
-#include <vector>
 
 using namespace viennaps;
 
@@ -121,7 +108,6 @@ int main(int argc, char *argv[]) {
 
   util::Parameters params;
   params.readConfigFile(cfgPath);
-  const auto rawParams = ionimpl::readRawParameters(cfgPath);
   if (params.m.empty()) {
     std::cerr << "Config not found: " << cfgPath << "\n";
     std::cerr << "Usage: " << argv[0] << " [config.txt]\n";
@@ -155,44 +141,15 @@ int main(int argc, char *argv[]) {
   };
 
   // Si substrate bottom
-  {
-    auto ls = makels();
-    T origin[D] = {}, normal[D] = {};
-    origin[D - 1] = -substrateDepth;
-    normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
-        .apply();
-    domain->insertNextLevelSetAsMaterial(ls, Material::Si);
-  }
+  MakePlane<T, D>(domain, -substrateDepth, Material::Si).apply();
   // Si substrate top (surface at y = 0)
-  {
-    auto ls = makels();
-    T origin[D] = {}, normal[D] = {};
-    normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
-        .apply();
-    domain->insertNextLevelSetAsMaterial(ls, Material::Si);
-  }
+  MakePlane<T, D>(domain, 0., Material::Si, true).apply();
   // Screen oxide (y = 0 to y = oxideThickness)
-  {
-    auto ls = makels();
-    T origin[D] = {}, normal[D] = {};
-    origin[D - 1] = oxideThickness;
-    normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
-        .apply();
-    domain->insertNextLevelSetAsMaterial(ls, Material::SiO2);
-  }
+  MakePlane<T, D>(domain, oxideThickness, Material::SiO2, true).apply();
   // Hard mask with opening
+  MakePlane<T, D>(domain, oxideThickness + maskHeight, Material::Mask, true)
+      .apply();
   {
-    auto ls = makels();
-    T origin[D] = {}, normal[D] = {};
-    origin[D - 1] = oxideThickness + maskHeight;
-    normal[D - 1] = 1.;
-    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
-        .apply();
-    domain->insertNextLevelSetAsMaterial(ls, Material::Mask);
-
     auto window = makels();
     T wMin[D] = {-0.5 * openingWidth, oxideThickness - gridDelta};
     T wMax[D] = {0.5 * openingWidth, oxideThickness + maskHeight + gridDelta};
@@ -210,7 +167,7 @@ int main(int argc, char *argv[]) {
   auto implant = SmartPointer<IonImplantation<T, D>>::New();
   auto anneal = SmartPointer<Anneal<T, D>>::New();
 
-  const auto annealSchedule = ionimpl::readAnnealSchedule<T>(rawParams);
+  const auto annealSchedule = ionimpl::readAnnealSchedule<T>(params);
   const T peakT = viennaps::peakAnnealTemperature(annealSchedule);
 
   const auto implantConfig =

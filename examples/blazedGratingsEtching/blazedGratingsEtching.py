@@ -47,7 +47,7 @@ for i in range(numBumps):
         transform=ps.ls.TransformEnum.TRANSLATION,
         transformVector=[bumpSpacing + bumpWidth, 0, 0],
     ).apply()
-    ps.BooleanOperation(mask, tip, ps.BooleanOperationEnum.UNION).apply()
+    ps.BooleanOperation(mask, tip, ps.BooleanOperationType.UNION).apply()
 
 geometry.insertNextLevelSetAsMaterial(mask, ps.Material.Mask)
 geometry.saveSurfaceMesh("initial", True)

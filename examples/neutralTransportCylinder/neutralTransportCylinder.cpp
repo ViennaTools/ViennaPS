@@ -203,9 +203,9 @@ int main(int argc, char *argv[]) {
   }
 
   ps::AdvectionParameters advectionParams;
-  advectionParams.spatialScheme =
-      ps::util::convertSpatialScheme(params.get<std::string>("spatialScheme"));
-  advectionParams.temporalScheme = ps::util::convertTemporalScheme(
+  advectionParams.spatialScheme = ps::util::convert<ps::SpatialScheme>(
+      params.get<std::string>("spatialScheme"));
+  advectionParams.temporalScheme = ps::util::convert<ps::TemporalScheme>(
       params.get<std::string>("temporalScheme"));
   advectionParams.calculateIntermediateVelocities =
       params.get<bool>("calculateIntermediateVelocities");
@@ -213,8 +213,8 @@ int main(int argc, char *argv[]) {
   ps::Process<NumericType, D> diagnosticProcess(geometry, model);
   diagnosticProcess.setParameters(coverageParams);
   diagnosticProcess.setParameters(rayTracingParams);
-  diagnosticProcess.setFluxEngineType(
-      ps::util::convertFluxEngineType(params.get<std::string>("fluxEngine")));
+  diagnosticProcess.setFluxEngineType(ps::util::convert<ps::FluxEngineType>(
+      params.get<std::string>("fluxEngine")));
   diagnosticProcess.calculateFlux();
   const auto topRadius =
       params.get<NumericType>("holeRadius") +
