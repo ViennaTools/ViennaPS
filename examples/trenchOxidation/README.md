@@ -19,74 +19,6 @@ The REFLECTIVE boundary at x = 0 mirrors the domain, so the simulation represent
 a half-trench; output meshes show the full symmetric structure. In 3D the trench
 is extruded uniformly along Z (slot geometry).
 
-## Setup (from scratch)
-
-Clone both libraries on their respective branches and run the install script from
-inside the ViennaPS directory. The script creates a virtual environment, installs
-ViennaLS, and installs ViennaPS. GPU support (requires CUDA 12+) is **enabled by
-default**; pass `--no-gpu` to disable it.
-
-**Option A — local clones of both libraries:**
-
-```bash
-git clone -b oxidation  https://github.com/ViennaTools/ViennaLS.git
-git clone -b oxide-growth https://github.com/ViennaTools/ViennaPS.git
-cd ViennaPS
-python3 python/scripts/install_ViennaPS.py --viennals-dir=../ViennaLS
-source .venv/bin/activate
-```
-
-**Option B — only clone ViennaPS; let the script pull ViennaLS automatically:**
-
-```bash
-git clone -b oxide-growth https://github.com/ViennaTools/ViennaPS.git
-cd ViennaPS
-python3 python/scripts/install_ViennaPS.py --viennals-branch=oxidation
-source .venv/bin/activate
-```
-
-The install step compiles and installs the C++ extension modules; a C++17 compiler
-and CMake ≥ 3.20 are required. Build time is a few minutes per package.
-
-## Building (C++ executable)
-
-```bash
-# From the ViennaPS repository root
-cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON
-cmake --build build --target trenchOxidation
-```
-
-To enable the GPU-accelerated BiCGSTAB solver (requires CUDA), ViennaLS must be
-built with `VIENNALS_USE_GPU=ON` and its build tree made visible to ViennaPS:
-
-```bash
-# Build ViennaLS with GPU support
-cmake -B ViennaLS/build -S ViennaLS -DVIENNALS_USE_GPU=ON
-cmake --build ViennaLS/build
-
-# Build ViennaPS pointing at that ViennaLS build
-cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON \
-      -DViennaLS_DIR=ViennaLS/build
-cmake --build build --target trenchOxidation
-```
-
-## Running
-
-```bash
-# C++ executable (from the build directory)
-./build/examples/trenchOxidation/trenchOxidation
-
-# Explicit config file
-./build/examples/trenchOxidation/trenchOxidation my_config.txt
-```
-
-The Python version works identically (activate the venv first):
-
-```bash
-python trenchOxidation.py            # reads config.txt
-python trenchOxidation.py my_config.txt
-```
-
 ## Configuration Parameters
 
 All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **atm**.
@@ -97,8 +29,6 @@ All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **
 | `numThreads` | `16` | OpenMP thread count |
 | `gridDelta` | `0.005` | Cartesian grid spacing (µm) |
 | `xExtent` | `0.6` | Half-width of the domain in X (µm) |
-| `yMin` | `-1.5` | Bottom of the domain in Y (µm); must be below `−trenchDepth` |
-| `yMax` | `1.5` | Top of the domain in Y (µm) |
 | `zExtent` | *(= xExtent)* | 3D only: half-depth in Z (µm) |
 | `trenchWidth` | `0.3` | Width of the trench opening (µm) |
 | `trenchDepth` | `0.5` | Depth of the trench below y = 0 (µm) |
@@ -158,8 +88,6 @@ Open `.vtp` files in ParaView to visualize the surface geometry and per-point fi
 
 ## Tips
 
-- Set `yMin` deep enough that `yMin < −trenchDepth − a few × gridDelta`; the domain
-  boundary clips the level set if the trench floor is too close to `yMin`.
 - For narrow, deep trenches (`depth/width > 3`) reduce `timeStep` or increase
   `pressure` to avoid premature pinch-off artifacts. The CFL limiter handles most
   cases automatically, but very thin oxide shells in a pinched trench can cause the

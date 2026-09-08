@@ -1,68 +1,15 @@
 #include <geometries/psMakeFin.hpp>
+#include <models/psGeometricDistributionModels.hpp>
 #include <models/psOxidation.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
 #include <psUtil.hpp>
 
-#include <lsGeometricAdvect.hpp>
-
-#include <algorithm>
-#include <array>
-#include <cctype>
-#include <chrono>
-#include <iostream>
-#include <omp.h>
-#include <stdexcept>
-#include <string>
-
 namespace ps = viennaps;
-namespace ls = viennals;
 
 using NumericType = double;
 
 // ---------------------------------------------------------------------------
-// Utility helpers
-// ---------------------------------------------------------------------------
-
-std::string lower(std::string value) {
-  std::transform(value.begin(), value.end(), value.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
-  return value;
-}
-
-std::string getString(const ps::util::Parameters &params, const char *key,
-                      const std::string &fallback) {
-  const auto it = params.m.find(key);
-  return it == params.m.end() ? fallback : it->second;
-}
-
-ps::OxidantType parseOxidant(const std::string &value) {
-  const auto n = lower(value);
-  if (n == "wet" || n == "h2o")
-    return ps::OxidantType::Wet;
-  if (n == "dry" || n == "o2")
-    return ps::OxidantType::Dry;
-  throw std::invalid_argument("Unknown oxidant '" + value +
-                              "'. Use wet/H2O or dry/O2.");
-}
-
-ps::SiliconOrientation parseOrientation(const std::string &value) {
-  const auto n = lower(value);
-  if (n == "100" || n == "<100>" || n == "si100")
-    return ps::SiliconOrientation::Si100;
-  if (n == "110" || n == "<110>" || n == "si110")
-    return ps::SiliconOrientation::Si110;
-  if (n == "111" || n == "<111>" || n == "si111")
-    return ps::SiliconOrientation::Si111;
-  if (n == "poly" || n == "polysi" || n == "poly-silicon")
-    return ps::SiliconOrientation::PolySi;
-  throw std::invalid_argument("Unknown orientation '" + value +
-                              "'. Use 100, 110, 111, or poly.");
-}
-
-// ---------------------------------------------------------------------------
-// Simulation driver
-//
 // Geometry: a rectangular Si fin (half-fin) centred at the reflective boundary
 // x = 0, with the step wall at x = finWidth / 2.  In the visible simulation
 // domain [0, xExtent] the raised platform occupies [0, finWidth/2] and the
@@ -81,68 +28,26 @@ template <int D> void run(const ps::util::Parameters &params) {
   ps::Logger::setLogLevel(ps::LogLevel::ERROR);
 
   const NumericType gridDelta = params.get("gridDelta");
-  const NumericType xExtent = params.get("xExtent");
+  const NumericType xExtent = 2 * params.get("xExtent");
+  const NumericType yExtent = 2 * params.get("zExtent", xExtent / 2);
   const NumericType finWidth = params.get("finWidth");
   const NumericType finHeight = params.get("finHeight");
-  // yMin/yMax set the growth-direction bounds for the HRLE domain.  With an
-  // INFINITE boundary the level set extends correctly regardless, so these are
-  // only needed when the surface might reach the boundary during simulation.
-  const NumericType yMin = [&]() {
-    const auto it = params.m.find("yMin");
-    return (it != params.m.end()) ? params.get("yMin") : NumericType(-2.0);
-  }();
-  const NumericType yMax = [&]() {
-    const auto it = params.m.find("yMax");
-    return (it != params.m.end()) ? params.get("yMax")
-                                  : NumericType(finHeight + NumericType(2.0));
-  }();
-  const auto oxIt = params.m.find("oxideThickness");
   const NumericType oxideThickness =
-      (oxIt != params.m.end()) ? params.get("oxideThickness") : NumericType(0);
+      params.get("oxideThickness", NumericType(0));
   const NumericType oxidationTime = params.get("oxidationTime");
   const NumericType temperature = params.get("temperature");
   const NumericType pressure = params.get("pressure");
 
-  const NumericType zExtent = [&]() -> NumericType {
-    if constexpr (D != 3)
-      return NumericType(0);
-    const auto it = params.m.find("zExtent");
-    return (it == params.m.end()) ? xExtent : params.get("zExtent");
-  }();
-
-  const auto oxidant = parseOxidant(getString(params, "oxidant", "wet"));
-  const auto orientation =
-      parseOrientation(getString(params, "orientation", "100"));
+  const auto oxidant = params.get<std::string>("oxidant", "wet");
+  const auto orientation = params.get<std::string>("orientation", "100");
   const auto outputPrefix =
-      getString(params, "outputPrefix", "ps_step_oxidation");
-
-  using BoundaryType = typename ls::Domain<NumericType, D>::BoundaryType;
-  double bounds[2 * D];
-  BoundaryType boundaryCons[D];
-
-  bounds[0] = -xExtent;
-  bounds[1] = xExtent;
-  if constexpr (D == 2) {
-    bounds[2] = yMin;
-    bounds[3] = yMax;
-    boundaryCons[0] = BoundaryType::REFLECTIVE_BOUNDARY;
-    boundaryCons[1] = BoundaryType::INFINITE_BOUNDARY;
-  } else {
-    // Y = step extrusion (REFLECTIVE), Z = growth (INFINITE)
-    bounds[2] = -zExtent;
-    bounds[3] = zExtent;
-    bounds[4] = yMin;
-    bounds[5] = yMax;
-    boundaryCons[0] = BoundaryType::REFLECTIVE_BOUNDARY;
-    boundaryCons[1] = BoundaryType::REFLECTIVE_BOUNDARY;
-    boundaryCons[2] = BoundaryType::INFINITE_BOUNDARY;
-  }
+      params.get<std::string>("outputPrefix", "ps_step_oxidation");
 
   // MakeFin with halfFin=true calls halveXAxis() on the setup, clipping the
   // domain to [0, xExtent].  The fin (raised platform) occupies x in
   // [0, finWidth/2] and the step wall sits at x = finWidth/2.
-  auto domain =
-      ps::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
+  auto domain = ps::Domain<NumericType, D>::New(
+      gridDelta, xExtent, yExtent, ps::BoundaryType::REFLECTIVE_BOUNDARY);
   ps::MakeFin<NumericType, D>(domain, finWidth, finHeight,
                               /*taperAngle=*/NumericType(0),
                               /*maskHeight=*/NumericType(0),
@@ -153,16 +58,11 @@ template <int D> void run(const ps::util::Parameters &params) {
   // The deformation solver needs the oxide to be at least gridDelta thick so
   // that Cartesian solve nodes exist between the two surfaces.
   const NumericType seedThickness = std::max(oxideThickness, gridDelta);
-  {
-    auto ambientInterface =
-        ls::Domain<NumericType, D>::New(domain->getLevelSets().back());
-    auto initialOxide =
-        ps::SmartPointer<ls::SphereDistribution<viennahrle::CoordType, D>>::New(
-            seedThickness);
-    ls::GeometricAdvect<NumericType, D>(ambientInterface, initialOxide).apply();
-    domain->insertNextLevelSetAsMaterial(ambientInterface, ps::Material::SiO2,
-                                         false);
-  }
+  domain->duplicateTopLevelSet(ps::Material::SiO2);
+  ps::Process<NumericType, D>(
+      domain, ps::SmartPointer<ps::SphereDistribution<NumericType, D>>::New(
+                  seedThickness))
+      .apply();
 
   auto model = ps::SmartPointer<ps::Oxidation<NumericType, D>>::New();
   model->setTemperature(temperature);
@@ -172,23 +72,12 @@ template <int D> void run(const ps::util::Parameters &params) {
   model->setOrientation(orientation);
   model->setInitialOxideThickness(seedThickness);
 
-  {
-    const auto useGpu = lower(getString(params, "useGpu", "cpu"));
-    if (useGpu == "gpu")
-      model->setGpuMode(ps::GpuMode::Gpu);
-    else if (useGpu == "cpu")
-      model->setGpuMode(ps::GpuMode::Cpu);
-    const auto prec = lower(getString(params, "gpuPreconditioner", "jacobi"));
-    if (prec == "ilu0")
-      model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
-  }
+  model->setGpuMode(params.get<std::string>("useGpu", "cpu"));
+  model->setGpuPreconditioner(
+      params.get<std::string>("gpuPreconditioner", "jacobi"));
 
-  {
-    const auto it = params.m.find("maxGridPoints");
-    if (it != params.m.end())
-      model->setMaxGridPoints(
-          static_cast<std::size_t>(std::stoull(it->second)));
-  }
+  if (params.contains("maxGridPoints"))
+    model->setMaxGridPoints(params.get<unsigned>("maxGridPoints"));
 
   model->saveSurfaceMesh(domain, outputPrefix + "_stack_initial.vtp");
   model->saveVolumeMesh(domain, outputPrefix + "_stack_initial");
@@ -230,7 +119,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  const int dimensions = std::stoi(getString(params, "dimensions", "2"));
+  const int dimensions = params.get<int>("dimensions", 2);
   if (dimensions == 3)
     run<3>(params);
   else

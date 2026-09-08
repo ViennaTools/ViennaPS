@@ -27,10 +27,10 @@ ps.MakePlane(domain, 70.0, ps.Material.Si).apply()
 writeSurface(domain)
 
 # Add double patterning mask
-box = ps.ls.Domain(domain.getGrid())
+box = ps.LevelSet(domain.getGrid())
 minPoints = [30.0, -10.0, 69.9]
 maxPoints = [60.0, 110.0, 90.0]
-geo = ps.ls.MakeGeometry(box, ps.ls.Box(minPoints, maxPoints)).apply()
+geo = ps.MakeGeometry(box, ps.Box(minPoints, maxPoints)).apply()
 domain.insertNextLevelSetAsMaterial(box, ps.Material.Mask)
 writeSurface(domain)
 
@@ -114,10 +114,10 @@ ps.Planarize(domain, 150.0).apply()
 writeSurface(domain)
 
 # dummy gate mask addition
-box = ps.ls.Domain(domain.getGrid())
+box = ps.LevelSet(domain.getGrid())
 minPoint = [-10.0, 30.0, 145.0]
 maxPoint = [100.0, 70.0, 175.0]
-geo = ps.ls.MakeGeometry(box, ps.ls.Box(minPoint, maxPoint)).apply()
+geo = ps.MakeGeometry(box, ps.Box(minPoint, maxPoint)).apply()
 domain.insertNextLevelSetAsMaterial(box, ps.Material.Mask)
 writeSurface(domain)
 

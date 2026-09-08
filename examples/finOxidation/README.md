@@ -20,74 +20,6 @@ a half-fin; the output meshes show the full symmetric structure. In 3D the fin
 is extruded uniformly along Z (uniform cross-section; no Z variation in geometry or
 oxidation rate).
 
-## Setup (from scratch)
-
-Clone both libraries on their respective branches and run the install script from
-inside the ViennaPS directory. The script creates a virtual environment, installs
-ViennaLS, and installs ViennaPS. GPU support (requires CUDA 12+) is **enabled by
-default**; pass `--no-gpu` to disable it.
-
-**Option A — local clones of both libraries:**
-
-```bash
-git clone -b oxidation  https://github.com/ViennaTools/ViennaLS.git
-git clone -b oxide-growth https://github.com/ViennaTools/ViennaPS.git
-cd ViennaPS
-python3 python/scripts/install_ViennaPS.py --viennals-dir=../ViennaLS
-source .venv/bin/activate
-```
-
-**Option B — only clone ViennaPS; let the script pull ViennaLS automatically:**
-
-```bash
-git clone -b oxide-growth https://github.com/ViennaTools/ViennaPS.git
-cd ViennaPS
-python3 python/scripts/install_ViennaPS.py --viennals-branch=oxidation
-source .venv/bin/activate
-```
-
-The install step compiles and installs the C++ extension modules; a C++17 compiler
-and CMake ≥ 3.20 are required. Build time is a few minutes per package.
-
-## Building (C++ executable)
-
-```bash
-# From the ViennaPS repository root
-cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON
-cmake --build build --target finOxidation
-```
-
-To enable the GPU-accelerated BiCGSTAB solver (requires CUDA), ViennaLS must be
-built with `VIENNALS_USE_GPU=ON` and its build tree made visible to ViennaPS:
-
-```bash
-# Build ViennaLS with GPU support
-cmake -B ViennaLS/build -S ViennaLS -DVIENNALS_USE_GPU=ON
-cmake --build ViennaLS/build
-
-# Build ViennaPS pointing at that ViennaLS build
-cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON \
-      -DViennaLS_DIR=ViennaLS/build
-cmake --build build --target finOxidation
-```
-
-## Running
-
-```bash
-# C++ executable (from the build directory)
-./build/examples/finOxidation/finOxidation
-
-# Explicit config file
-./build/examples/finOxidation/finOxidation my_config.txt
-```
-
-The Python version works identically (activate the venv first):
-
-```bash
-python finOxidation.py            # reads config.txt
-python finOxidation.py my_config.txt
-```
-
 ## Configuration Parameters
 
 All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **atm**.
@@ -98,8 +30,6 @@ All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **
 | `numThreads` | `16` | OpenMP thread count |
 | `gridDelta` | `0.01` | Cartesian grid spacing (µm) |
 | `xExtent` | `0.6` | Half-width of the domain in X (µm) |
-| `yMin` | `-1.0` | Bottom of the domain in Y (µm) |
-| `yMax` | `2.0` | Top of the domain in Y (µm) |
 | `zExtent` | *(= xExtent)* | 3D only: half-depth in Z (µm) |
 | `finWidth` | `0.2` | Width of the Si fin (µm) |
 | `finHeight` | `0.5` | Height of the Si fin above the substrate (µm) |

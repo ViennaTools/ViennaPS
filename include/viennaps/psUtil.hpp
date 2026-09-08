@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include "materials/psMaterialMap.hpp"
+#include "psDomainSetup.hpp"
 
 namespace viennaps {
 enum class FluxEngineType {
@@ -21,10 +22,21 @@ enum class FluxEngineType {
   GPU_TRIANGLE, // GPU, Triangle-based
   GPU_LINE      // GPU, Line-based
 };
-}
+
+enum class OxidantType { DRY, WET };
+enum class SiliconOrientation { Si100, Si110, Si111, PolySi };
+} // namespace viennaps
 
 // Use viennacore here to avoid conflicts with other namespaces
 namespace viennacore::util {
+
+namespace detail {
+std::string lower(std::string value) {
+  std::transform(value.begin(), value.end(), value.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  return value;
+}
+
 [[nodiscard]] inline viennals::SpatialSchemeEnum
 convertSpatialScheme(const std::string &s) {
   if (s == "ENGQUIST_OSHER_1ST_ORDER" || s == "EO_1")
@@ -107,6 +119,66 @@ convertTemporalScheme(const std::string &s) {
                               "RUNGE_KUTTA_3RD_ORDER");
 }
 
+[[nodiscard]] inline viennahrle::BoundaryType
+convertBoundaryType(const std::string &s) {
+  const auto n = lower(s);
+  if (n == "reflective_boundary" || n == "reflective")
+    return viennahrle::BoundaryType::REFLECTIVE_BOUNDARY;
+  if (n == "infinite_boundary" || n == "infinite")
+    return viennahrle::BoundaryType::INFINITE_BOUNDARY;
+  if (n == "periodic_boundary" || n == "periodic")
+    return viennahrle::BoundaryType::PERIODIC_BOUNDARY;
+  throw std::invalid_argument("The value must be one of the following: "
+                              "REFLECTIVE_BOUNDARY, INFINITE_BOUNDARY, "
+                              "PERIODIC_BOUNDARY");
+}
+
+[[nodiscard]] inline viennaps::OxidantType
+convertOxidantType(const std::string &value) {
+  const auto n = lower(value);
+  if (n == "wet" || n == "h2o")
+    return viennaps::OxidantType::WET;
+  if (n == "dry" || n == "o2")
+    return viennaps::OxidantType::DRY;
+  throw std::invalid_argument("Unknown oxidant '" + value +
+                              "'. Use wet/H2O or dry/O2.");
+}
+
+[[nodiscard]] inline viennaps::SiliconOrientation
+convertSiliconOrientation(const std::string &value) {
+  const auto n = lower(value);
+  if (n == "100" || n == "<100>" || n == "si100")
+    return viennaps::SiliconOrientation::Si100;
+  if (n == "110" || n == "<110>" || n == "si110")
+    return viennaps::SiliconOrientation::Si110;
+  if (n == "111" || n == "<111>" || n == "si111")
+    return viennaps::SiliconOrientation::Si111;
+  if (n == "poly" || n == "polysi" || n == "poly-silicon")
+    return viennaps::SiliconOrientation::PolySi;
+  throw std::invalid_argument("Unknown orientation '" + value +
+                              "'. Use 100, 110, 111, or poly.");
+}
+} // namespace detail
+
+template <typename T> [[nodiscard]] T convert(const std::string &s) {
+  if constexpr (std::is_same_v<T, viennals::SpatialSchemeEnum>) {
+    return detail::convertSpatialScheme(s);
+  } else if constexpr (std::is_same_v<T, viennals::TemporalSchemeEnum>) {
+    return detail::convertTemporalScheme(s);
+  } else if constexpr (std::is_same_v<T, viennaps::FluxEngineType>) {
+    return detail::convertFluxEngineType(s);
+  } else if constexpr (std::is_same_v<T, viennahrle::BoundaryType>) {
+    return detail::convertBoundaryType(s);
+  } else if constexpr (std::is_same_v<T, viennaps::OxidantType>) {
+    return detail::convertOxidantType(s);
+  } else if constexpr (std::is_same_v<T, viennaps::SiliconOrientation>) {
+    return detail::convertSiliconOrientation(s);
+  } else {
+    throw std::invalid_argument("Unsupported type for conversion.");
+  }
+}
+
+namespace detail {
 [[nodiscard]] inline std::string
 convertSpatialSchemeToString(viennals::SpatialSchemeEnum scheme) {
   switch (scheme) {
@@ -192,17 +264,72 @@ convertTemporalSchemeToString(viennals::TemporalSchemeEnum scheme) {
   return viennaray::BoundaryCondition::IGNORE_BOUNDARY;
 }
 
+[[nodiscard]] inline std::string
+convertBoundaryConditionToString(viennals::BoundaryConditionEnum scheme) {
+  switch (scheme) {
+  case viennals::BoundaryConditionEnum::REFLECTIVE_BOUNDARY:
+    return "REFLECTIVE_BOUNDARY";
+  case viennals::BoundaryConditionEnum::INFINITE_BOUNDARY:
+    return "INFINITE_BOUNDARY";
+  case viennals::BoundaryConditionEnum::PERIODIC_BOUNDARY:
+    return "PERIODIC_BOUNDARY";
+  case viennals::BoundaryConditionEnum::POS_INFINITE_BOUNDARY:
+    return "POS_INFINITE_BOUNDARY";
+  case viennals::BoundaryConditionEnum::NEG_INFINITE_BOUNDARY:
+    return "NEG_INFINITE_BOUNDARY";
+  default:
+    throw std::invalid_argument("Unknown boundary condition.");
+  }
+}
+
+[[nodiscard]] inline std::string
+convertOxidantTypeToString(viennaps::OxidantType type) {
+  switch (type) {
+  case viennaps::OxidantType::DRY:
+    return "DRY";
+  case viennaps::OxidantType::WET:
+    return "WET";
+  default:
+    throw std::invalid_argument("Unknown oxidant type.");
+  }
+}
+
+[[nodiscard]] inline std::string
+convertSiliconOrientationToString(viennaps::SiliconOrientation orientation) {
+  switch (orientation) {
+  case viennaps::SiliconOrientation::Si100:
+    return "Si100";
+  case viennaps::SiliconOrientation::Si110:
+    return "Si110";
+  case viennaps::SiliconOrientation::Si111:
+    return "Si111";
+  case viennaps::SiliconOrientation::PolySi:
+    return "PolySi";
+  default:
+    throw std::invalid_argument("Unknown silicon orientation.");
+  }
+}
+
+} // namespace detail
+
 template <typename T> [[nodiscard]] std::string toString(const T &value) {
   if constexpr (std::is_same_v<T, bool>)
     return value ? "true" : "false";
   else if constexpr (std::is_same_v<T, viennals::SpatialSchemeEnum>)
-    return convertSpatialSchemeToString(value);
+    return detail::convertSpatialSchemeToString(value);
   else if constexpr (std::is_same_v<T, viennals::TemporalSchemeEnum>)
-    return convertTemporalSchemeToString(value);
+    return detail::convertTemporalSchemeToString(value);
   else if constexpr (std::is_same_v<T, viennaps::Material>) {
     return viennaps::MaterialMap::toString(value);
   } else if constexpr (std::is_same_v<T, viennaps::FluxEngineType>) {
-    return convertFluxEngineTypeToString(value);
+    return detail::convertFluxEngineTypeToString(value);
+  } else if constexpr (std::is_same_v<T, viennahrle::BoundaryType>) {
+    return detail::convertBoundaryConditionToString(
+        static_cast<viennals::BoundaryConditionEnum>(value));
+  } else if constexpr (std::is_same_v<T, viennaps::OxidantType>) {
+    return detail::convertOxidantTypeToString(value);
+  } else if constexpr (std::is_same_v<T, viennaps::SiliconOrientation>) {
+    return detail::convertSiliconOrientationToString(value);
   } else if constexpr (std::is_same_v<T, std::string>)
     return value;
   else
@@ -229,4 +356,4 @@ hexToRGBArray(const uint32_t hexColor) {
   rgb[2] = static_cast<double>(hexColor & 0xFF) / 255.0;
   return rgb;
 }
-}; // namespace viennacore::util
+} // namespace viennacore::util

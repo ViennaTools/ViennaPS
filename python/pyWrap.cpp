@@ -32,8 +32,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
              "or VIENNAPS_MODELDB_DIR.");
 
   py::native_enum<OxidantType>(module, "OxidantType", "enum.IntEnum")
-      .value("Dry", OxidantType::Dry)
-      .value("Wet", OxidantType::Wet)
+      .value("DRY", OxidantType::DRY)
+      .value("WET", OxidantType::WET)
       .finalize();
 
   py::native_enum<SiliconOrientation>(module, "SiliconOrientation",
@@ -58,7 +58,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Logger
   py::class_<Logger, SmartPointer<Logger>>(module, "Logger", py::module_local())
-      .def_static("setLogLevel", &Logger::setLogLevel)
+      .def_static("setLogLevel",
+                  py::overload_cast<LogLevel>(&Logger::setLogLevel))
+      .def_static("setLogLevel",
+                  py::overload_cast<const std::string &>(&Logger::setLogLevel))
       .def_static("getLogLevel", &Logger::getLogLevel)
       .def_static("setLogFile", &Logger::setLogFile)
       .def_static("appendToLogFile", &Logger::appendToLogFile)
@@ -668,6 +671,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &RayTracingParameters::smoothingNeighbors)
       .def_readwrite("minNodeDistanceFactor",
                      &RayTracingParameters::minNodeDistanceFactor)
+      .def_readwrite("minRayDistance", &RayTracingParameters::minRayDistance)
       .def_readwrite("maxReflections", &RayTracingParameters::maxReflections)
       .def_readwrite("maxBoundaryHits", &RayTracingParameters::maxBoundaryHits)
       .def("toMetaData", &RayTracingParameters::toMetaData,
@@ -783,14 +787,21 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Utility functions
   auto m_util = module.def_submodule("util", "Utility functions.");
-  m_util.def("convertSpatialScheme", &util::convertSpatialScheme,
+  m_util.def("convertSpatialScheme", &util::detail::convertSpatialScheme,
              "Convert a string to an discretization scheme.");
   // convertIntegrationScheme is deprecated
   m_util.attr("convertIntegrationScheme") = m_util.attr("convertSpatialScheme");
-  m_util.def("convertFluxEngineType", &util::convertFluxEngineType,
+  m_util.def("convertFluxEngineType", &util::detail::convertFluxEngineType,
              "Convert a string to a flux engine type.");
-  m_util.def("convertTemporalScheme", &util::convertTemporalScheme,
+  m_util.def("convertTemporalScheme", &util::detail::convertTemporalScheme,
              "Convert a string to a time integration scheme.");
+  m_util.def("convertBoundaryType", &util::detail::convertBoundaryType,
+             "Convert a string to a boundary type.");
+  m_util.def("convertOxidantType", &util::detail::convertOxidantType,
+             "Convert a string to an oxidant type.");
+  m_util.def("convertSiliconOrientation",
+             &util::detail::convertSiliconOrientation,
+             "Convert a string to a silicon orientation.");
 
   // ***************************************************************************
   //                         ION IMPLANTATION & ANNEALING
