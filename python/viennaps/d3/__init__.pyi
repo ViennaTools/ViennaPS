@@ -1098,13 +1098,25 @@ class Oxidation(ProcessModel):
         """
         Stress-coupling activation volume for oxide diffusivity (m³).
         """
+    @typing.overload
     def setGpuMode(self, mode: viennaps._core.GpuMode) -> None:
         """
         BiCGSTAB solver back-end: GpuMode.Cpu (default) or GpuMode.Gpu.
         """
+    @typing.overload
+    def setGpuMode(self, mode: str) -> None:
+        """
+        BiCGSTAB solver back-end: 'cpu' (default) or 'gpu'.
+        """
+    @typing.overload
     def setGpuPreconditioner(self, preconditioner: viennaps._core.GpuPreconditioner) -> None:
         """
         GPU BiCGSTAB preconditioner (GpuPreconditioner.Jacobi matches CPU).
+        """
+    @typing.overload
+    def setGpuPreconditioner(self, preconditioner: str) -> None:
+        """
+        GPU BiCGSTAB preconditioner: 'jacobi' (matches CPU), 'ilu0', or 'ilu'.
         """
     def setInitialOxideThickness(self, thicknessUm: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
@@ -1116,11 +1128,11 @@ class Oxidation(ProcessModel):
         """
     def setMaskContactLoadRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        Under-relaxation for the unilateral contact active-set load (0.02–1).
+        Under-relaxation for the unilateral contact active-set load (0.02-1).
         """
     def setMaskContactReleaseFraction(self, fraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        Relative traction floor for releasing a relaxed contact face (0–0.25).
+        Relative traction floor for releasing a relaxed contact face (0-0.25).
         """
     def setMaskCouplingIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
@@ -1136,7 +1148,7 @@ class Oxidation(ProcessModel):
         """
     def setMaskSmootherOmega(self, omega: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        SOR omega for the mask multigrid smoother (0.2–1.4; 1.0 = Gauss-Seidel).
+        SOR omega for the mask multigrid smoother (0.2-1.4; 1.0 = Gauss-Seidel).
         """
     def setMaskTractionIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
@@ -1144,7 +1156,7 @@ class Oxidation(ProcessModel):
         """
     def setMaskTractionRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        Outer Aitken relaxation factor for the mask/oxide coupling (0.01–1).
+        Outer Aitken relaxation factor for the mask/oxide coupling (0.01-1).
         """
     def setMaskTractionTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
@@ -1166,13 +1178,25 @@ class Oxidation(ProcessModel):
         """
         Convergence tolerance for the mechanics solve.
         """
+    @typing.overload
     def setOrientation(self, orientation: viennaps._core.SiliconOrientation) -> None:
         """
-        Crystal orientation: Si100, Si111, or PolySi.
+        Crystal orientation: SiliconOrientation.Si100, SiliconOrientation.Si111, or SiliconOrientation.PolySi.
         """
+    @typing.overload
+    def setOrientation(self, orientation: str) -> None:
+        """
+        Crystal orientation: '100', '111', or 'poly'.
+        """
+    @typing.overload
     def setOxidant(self, oxidant: viennaps._core.OxidantType) -> None:
         """
-        Oxidant species: OxidantType.Dry (O₂) or OxidantType.Wet (H₂O).
+        Oxidant species: OxidantType.DRY (O₂) or OxidantType.WET (H₂O).
+        """
+    @typing.overload
+    def setOxidant(self, oxidant: str) -> None:
+        """
+        Oxidant species: 'dry' (O₂) or 'wet' (H₂O).
         """
     def setOxideMaterial(self, mat: viennaps._core.Material) -> None:
         """
@@ -1220,7 +1244,7 @@ class Oxidation(ProcessModel):
         """
     def setTemperature(self, temperatureC: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        Oxidation temperature in °C (800–1200 °C).
+        Oxidation temperature in °C (800-1200 °C).
         """
     def setTime(self, timeHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """

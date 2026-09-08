@@ -6,8 +6,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-import viennaps.d2
 from viennaps import d2
+import viennaps.d2
 import viennaps.d3
 from viennaps import d3
 from . import constants
@@ -901,7 +901,12 @@ class Logger:
     def setLogFile(arg0: str) -> bool:
         ...
     @staticmethod
+    @typing.overload
     def setLogLevel(arg0: ...) -> None:
+        ...
+    @staticmethod
+    @typing.overload
+    def setLogLevel(arg0: str) -> None:
         ...
     def addDebug(self, arg0: str) -> Logger:
         ...
@@ -1256,8 +1261,8 @@ class NormalizationType(enum.IntEnum):
         Convert to a string according to format_spec.
         """
 class OxidantType(enum.IntEnum):
-    Dry: typing.ClassVar[OxidantType]  # value = <OxidantType.Dry: 0>
-    Wet: typing.ClassVar[OxidantType]  # value = <OxidantType.Wet: 1>
+    DRY: typing.ClassVar[OxidantType]  # value = <OxidantType.DRY: 0>
+    WET: typing.ClassVar[OxidantType]  # value = <OxidantType.WET: 1>
     @classmethod
     def __new__(cls, value):
         ...

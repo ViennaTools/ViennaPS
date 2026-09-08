@@ -157,19 +157,24 @@ def _module_ptx_path():
     ...
 def _windows_dll_path():
     ...
-def readConfigFile(fileName: str):
+def readConfigFile(fileName: str) -> dict:
     """
     Read a config file in the ViennaPS standard config file format.
     
         Parameters
         ----------
-        fileName: str
-                    Name of the config file.
+        fileName : str
+            Name of the config file.
     
         Returns
         -------
         dict
             A dictionary containing the parameters from the config file.
+            Numeric values are returned as floats, and comma-separated numeric
+            values as lists of floats. Other values are returned as strings or
+            lists of strings, with surrounding whitespace removed. If any list
+            item is nonnumeric, all items in that list are returned as strings.
+            Comments starting with '#' and lines without '=' are ignored.
         
     """
 def setDimension(d: int):

@@ -1540,16 +1540,29 @@ template <int D> void bindApi(py::module &module) {
       .def(py::init(&SmartPointer<Oxidation<T, D>>::template New<>))
       .def("setTemperature", &Oxidation<T, D>::setTemperature,
            py::arg("temperatureC"),
-           "Oxidation temperature in °C (800–1200 °C).")
+           "Oxidation temperature in °C (800-1200 °C).")
       .def("setTime", &Oxidation<T, D>::setTime, py::arg("timeHr"),
            "Total oxidation time in hours.")
-      .def("setOxidant", &Oxidation<T, D>::setOxidant, py::arg("oxidant"),
-           "Oxidant species: OxidantType.Dry (O₂) or OxidantType.Wet (H₂O).")
+      .def("setOxidant",
+           py::overload_cast<OxidantType>(&Oxidation<T, D>::setOxidant),
+           py::arg("oxidant"),
+           "Oxidant species: OxidantType.DRY (O₂) or OxidantType.WET (H₂O).")
+      .def("setOxidant",
+           py::overload_cast<const std::string &>(&Oxidation<T, D>::setOxidant),
+           py::arg("oxidant"), "Oxidant species: 'dry' (O₂) or 'wet' (H₂O).")
       .def("setPressure", &Oxidation<T, D>::setPressure, py::arg("pressureAtm"),
            "Ambient pressure in atm (scales B and B/A linearly).")
-      .def("setOrientation", &Oxidation<T, D>::setOrientation,
+      .def("setOrientation",
+           py::overload_cast<SiliconOrientation>(
+               &Oxidation<T, D>::setOrientation),
            py::arg("orientation"),
-           "Crystal orientation: Si100, Si111, or PolySi.")
+           "Crystal orientation: SiliconOrientation.Si100, "
+           "SiliconOrientation.Si111, or SiliconOrientation.PolySi.")
+      .def("setOrientation",
+           py::overload_cast<const std::string &>(
+               &Oxidation<T, D>::setOrientation),
+           py::arg("orientation"),
+           "Crystal orientation: '100', '111', or 'poly'.")
       .def("setTimeStep", &Oxidation<T, D>::setTimeStep, py::arg("dtHr"),
            "Duration of each explicit time step in hours. Default: time/20.")
       .def("setCFLFactor", &Oxidation<T, D>::setCFLFactor, py::arg("factor"),
@@ -1650,30 +1663,44 @@ template <int D> void bindApi(py::module &module) {
       .def("setMaskTractionRelaxation",
            &Oxidation<T, D>::setMaskTractionRelaxation, py::arg("relaxation"),
            "Outer Aitken relaxation factor for the mask/oxide coupling "
-           "(0.01–1).")
+           "(0.01-1).")
       .def("setMaskContactLoadRelaxation",
            &Oxidation<T, D>::setMaskContactLoadRelaxation,
            py::arg("relaxation"),
            "Under-relaxation for the unilateral contact active-set load "
-           "(0.02–1).")
+           "(0.02-1).")
       .def("setMaskContactReleaseFraction",
            &Oxidation<T, D>::setMaskContactReleaseFraction, py::arg("fraction"),
            "Relative traction floor for releasing a relaxed contact face "
-           "(0–0.25).")
+           "(0-0.25).")
       .def("setMaskUnilateralContact",
            &Oxidation<T, D>::setMaskUnilateralContact, py::arg("enabled"),
            "Enable unilateral (compression-only) contact at the mask/oxide "
            "interface.")
       .def("setMaskSmootherOmega", &Oxidation<T, D>::setMaskSmootherOmega,
            py::arg("omega"),
-           "SOR omega for the mask multigrid smoother (0.2–1.4; 1.0 = "
+           "SOR omega for the mask multigrid smoother (0.2-1.4; 1.0 = "
            "Gauss-Seidel).")
-      .def("setGpuMode", &Oxidation<T, D>::setGpuMode, py::arg("mode"),
+      .def("setGpuMode",
+           py::overload_cast<GpuMode>(&Oxidation<T, D>::setGpuMode),
+           py::arg("mode"),
            "BiCGSTAB solver back-end: GpuMode.Cpu (default) or GpuMode.Gpu.")
+      .def("setGpuMode",
+           py::overload_cast<std::string>(&Oxidation<T, D>::setGpuMode),
+           py::arg("mode"),
+           "BiCGSTAB solver back-end: 'cpu' (default) or 'gpu'.")
       .def(
-          "setGpuPreconditioner", &Oxidation<T, D>::setGpuPreconditioner,
+          "setGpuPreconditioner",
+          py::overload_cast<GpuPreconditioner>(
+              &Oxidation<T, D>::setGpuPreconditioner),
           py::arg("preconditioner"),
           "GPU BiCGSTAB preconditioner (GpuPreconditioner.Jacobi matches CPU).")
+      .def("setGpuPreconditioner",
+           py::overload_cast<std::string>(
+               &Oxidation<T, D>::setGpuPreconditioner),
+           py::arg("preconditioner"),
+           "GPU BiCGSTAB preconditioner: 'jacobi' (matches CPU), "
+           "'ilu0', or 'ilu'.")
       .def("estimatePlanarOxideThickness",
            &Oxidation<T, D>::estimatePlanarOxideThickness,
            py::arg("initialOxideThickness") = T(0),

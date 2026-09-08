@@ -1,28 +1,15 @@
 #include <geometries/psMakeFin.hpp>
+#include <models/psGeometricDistributionModels.hpp>
 #include <models/psOxidation.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
 #include <psUtil.hpp>
 
-#include <lsGeometricAdvect.hpp>
-
-#include <algorithm>
-#include <array>
-#include <cctype>
-#include <chrono>
-#include <iostream>
-#include <omp.h>
-#include <stdexcept>
-#include <string>
-
 namespace ps = viennaps;
-namespace ls = viennals;
 
 using NumericType = double;
 
 // ---------------------------------------------------------------------------
-// Simulation driver
-//
 // Geometry: a rectangular Si fin (half-fin) centred at the reflective boundary
 // x = 0, with the step wall at x = finWidth / 2.  In the visible simulation
 // domain [0, xExtent] the raised platform occupies [0, finWidth/2] and the
@@ -41,14 +28,10 @@ template <int D> void run(const ps::util::Parameters &params) {
   ps::Logger::setLogLevel(ps::LogLevel::ERROR);
 
   const NumericType gridDelta = params.get("gridDelta");
-  const NumericType xExtent = params.get("xExtent");
+  const NumericType xExtent = 2 * params.get("xExtent");
+  const NumericType yExtent = 2 * params.get("zExtent", xExtent / 2);
   const NumericType finWidth = params.get("finWidth");
   const NumericType finHeight = params.get("finHeight");
-  // yMin/yMax set the growth-direction bounds for the HRLE domain.  With an
-  // INFINITE boundary the level set extends correctly regardless, so these are
-  // only needed when the surface might reach the boundary during simulation.
-  const NumericType yMin = params.get("yMin", NumericType(-2.0));
-  const NumericType yMax = params.get("yMax", finHeight + NumericType(2.0));
   const NumericType oxideThickness =
       params.get("oxideThickness", NumericType(0));
   const NumericType oxidationTime = params.get("oxidationTime");
@@ -60,34 +43,11 @@ template <int D> void run(const ps::util::Parameters &params) {
   const auto outputPrefix =
       params.get<std::string>("outputPrefix", "ps_step_oxidation");
 
-  double bounds[2 * D];
-  ps::BoundaryType boundaryCons[D];
-
-  bounds[0] = -xExtent;
-  bounds[1] = xExtent;
-  if constexpr (D == 2) {
-    bounds[2] = yMin;
-    bounds[3] = yMax;
-    boundaryCons[0] = ps::BoundaryType::REFLECTIVE_BOUNDARY;
-    boundaryCons[1] = ps::BoundaryType::INFINITE_BOUNDARY;
-  } else {
-    const NumericType zExtent = params.get("zExtent", xExtent);
-
-    // Y = step extrusion (REFLECTIVE), Z = growth (INFINITE)
-    bounds[2] = -zExtent;
-    bounds[3] = zExtent;
-    bounds[4] = yMin;
-    bounds[5] = yMax;
-    boundaryCons[0] = ps::BoundaryType::REFLECTIVE_BOUNDARY;
-    boundaryCons[1] = ps::BoundaryType::REFLECTIVE_BOUNDARY;
-    boundaryCons[2] = ps::BoundaryType::INFINITE_BOUNDARY;
-  }
-
   // MakeFin with halfFin=true calls halveXAxis() on the setup, clipping the
   // domain to [0, xExtent].  The fin (raised platform) occupies x in
   // [0, finWidth/2] and the step wall sits at x = finWidth/2.
-  auto domain =
-      ps::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
+  auto domain = ps::Domain<NumericType, D>::New(
+      gridDelta, xExtent, yExtent, ps::BoundaryType::REFLECTIVE_BOUNDARY);
   ps::MakeFin<NumericType, D>(domain, finWidth, finHeight,
                               /*taperAngle=*/NumericType(0),
                               /*maskHeight=*/NumericType(0),
@@ -98,16 +58,11 @@ template <int D> void run(const ps::util::Parameters &params) {
   // The deformation solver needs the oxide to be at least gridDelta thick so
   // that Cartesian solve nodes exist between the two surfaces.
   const NumericType seedThickness = std::max(oxideThickness, gridDelta);
-  {
-    auto ambientInterface =
-        ls::Domain<NumericType, D>::New(domain->getLevelSets().back());
-    auto initialOxide =
-        ps::SmartPointer<ls::SphereDistribution<viennahrle::CoordType, D>>::New(
-            seedThickness);
-    ls::GeometricAdvect<NumericType, D>(ambientInterface, initialOxide).apply();
-    domain->insertNextLevelSetAsMaterial(ambientInterface, ps::Material::SiO2,
-                                         false);
-  }
+  domain->duplicateTopLevelSet(ps::Material::SiO2);
+  ps::Process<NumericType, D>(
+      domain, ps::SmartPointer<ps::SphereDistribution<NumericType, D>>::New(
+                  seedThickness))
+      .apply();
 
   auto model = ps::SmartPointer<ps::Oxidation<NumericType, D>>::New();
   model->setTemperature(temperature);

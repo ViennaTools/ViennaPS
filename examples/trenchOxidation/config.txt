@@ -19,8 +19,6 @@ dimensions=2
 
 gridDelta=0.005
 xExtent=0.6
-yMin=-1.5
-yMax=1.5
 # zExtent=0.6  # 3D only; defaults to xExtent if omitted
 # maxGridPoints=10000000
 

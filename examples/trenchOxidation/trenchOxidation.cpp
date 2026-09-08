@@ -1,34 +1,20 @@
 #include <geometries/psMakeTrench.hpp>
+#include <models/psGeometricDistributionModels.hpp>
 #include <models/psOxidation.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
 #include <psUtil.hpp>
 
-#include <lsGeometricAdvect.hpp>
-
-#include <algorithm>
-#include <array>
-#include <cctype>
-#include <chrono>
-#include <iostream>
-#include <omp.h>
-#include <stdexcept>
-#include <string>
-
 namespace ps = viennaps;
-namespace ls = viennals;
 
 using NumericType = double;
 
 // ---------------------------------------------------------------------------
-// Simulation driver
-//
 // Coordinate convention:
 //   2D: X = lateral (REFLECTIVE), Y = growth (INFINITE)
 //   3D: X = lateral (REFLECTIVE), Y = trench extrusion (REFLECTIVE), Z = growth
 //   (INFINITE)
-//       yMin/yMax refer to the growth axis (Z in 3D); zExtent is the Y
-//       extrusion range.
+//      zExtent is the Y extrusion range.
 // ---------------------------------------------------------------------------
 
 template <int D> void run(const ps::util::Parameters &params) {
@@ -36,9 +22,8 @@ template <int D> void run(const ps::util::Parameters &params) {
   ps::Logger::setLogLevel(ps::LogLevel::ERROR);
 
   const NumericType gridDelta = params.get("gridDelta");
-  const NumericType xExtent = params.get("xExtent");
-  const NumericType yMin = params.get("yMin");
-  const NumericType yMax = params.get("yMax");
+  const NumericType xExtent = 2 * params.get("xExtent");
+  const NumericType yExtent = 2 * params.get("zExtent", xExtent / 2);
   const NumericType trenchWidth = params.get("trenchWidth");
   const NumericType trenchDepth = params.get("trenchDepth");
   const NumericType oxideThickness =
@@ -52,47 +37,18 @@ template <int D> void run(const ps::util::Parameters &params) {
   const auto outputPrefix =
       params.get<std::string>("outputPrefix", "ps_trench_oxidation");
 
-  double bounds[2 * D];
-  ps::BoundaryType boundaryCons[D];
-
-  bounds[0] = -xExtent;
-  bounds[1] = xExtent;
-  if constexpr (D == 2) {
-    bounds[2] = yMin;
-    bounds[3] = yMax;
-    boundaryCons[0] = ps::BoundaryType::REFLECTIVE_BOUNDARY;
-    boundaryCons[1] = ps::BoundaryType::INFINITE_BOUNDARY;
-  } else {
-    const NumericType zExtent =
-        params.get("zExtent", xExtent); // Default to xExtent if not specified
-
-    // Y = trench extrusion (REFLECTIVE), Z = growth (INFINITE)
-    bounds[2] = -zExtent;
-    bounds[3] = zExtent;
-    bounds[4] = yMin;
-    bounds[5] = yMax;
-    boundaryCons[0] = ps::BoundaryType::REFLECTIVE_BOUNDARY;
-    boundaryCons[1] = ps::BoundaryType::REFLECTIVE_BOUNDARY;
-    boundaryCons[2] = ps::BoundaryType::INFINITE_BOUNDARY;
-  }
-
-  auto domain =
-      ps::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
+  auto domain = ps::Domain<NumericType, D>::New(
+      gridDelta, xExtent, yExtent, ps::BoundaryType::REFLECTIVE_BOUNDARY);
   ps::MakeTrench<NumericType, D>(domain, trenchWidth, trenchDepth).apply();
 
   // Clamp the oxide seed to at least gridDelta so the Cartesian solve always
   // has resolvable nodes between the Si and SiO2 level sets.
   const NumericType seedThickness = std::max(oxideThickness, gridDelta);
-  {
-    auto ambientInterface =
-        ls::Domain<NumericType, D>::New(domain->getLevelSets().back());
-    auto initialOxide =
-        ps::SmartPointer<ls::SphereDistribution<viennahrle::CoordType, D>>::New(
-            seedThickness);
-    ls::GeometricAdvect<NumericType, D>(ambientInterface, initialOxide).apply();
-    domain->insertNextLevelSetAsMaterial(ambientInterface, ps::Material::SiO2,
-                                         false);
-  }
+  domain->duplicateTopLevelSet(ps::Material::SiO2);
+  ps::Process<NumericType, D>(
+      domain, ps::SmartPointer<ps::SphereDistribution<NumericType, D>>::New(
+                  seedThickness))
+      .apply();
 
   auto model = ps::SmartPointer<ps::Oxidation<NumericType, D>>::New();
   model->setTemperature(temperature);
