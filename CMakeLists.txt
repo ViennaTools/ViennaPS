@@ -144,8 +144,7 @@ include("cmake/vtk.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 2.2.1
-  GIT_TAG util
+  VERSION 2.3.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_FORMAT_EXCLUDE build/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -178,7 +177,7 @@ endif()
 CPMAddPackage(
   NAME ViennaLS
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-  GIT_TAG v5.8.5
+  GIT_TAG v5.9.0
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}"
           "VIENNALS_VTK_RENDERING ${VIENNAPS_VTK_RENDERING}" "VIENNALS_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -191,27 +190,11 @@ endif()
 unset(_VIENNAPS_HAD_CMAKE_SKIP_INSTALL_RULES)
 unset(_VIENNAPS_PREVIOUS_CMAKE_SKIP_INSTALL_RULES)
 
-set(VIENNAPS_VIENNACS_SOURCE
-    ""
-    CACHE
-      PATH
-      "Local ViennaCS source directory override (use a development branch instead of the published release)"
-)
-
-if(VIENNAPS_VIENNACS_SOURCE)
-  message(STATUS "[ViennaPS] Using local ViennaCS from: ${VIENNAPS_VIENNACS_SOURCE}")
-  CPMAddPackage(
-    NAME ViennaCS
-    SOURCE_DIR "${VIENNAPS_VIENNACS_SOURCE}"
-    EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
-else()
-  CPMAddPackage(
-    NAME ViennaCS
-    GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
-    # ViennaCS v2.1.2 release (ion implantation + annealing process models).
-    GIT_TAG v2.1.2
-    EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
-endif()
+CPMAddPackage(
+  NAME ViennaCS
+  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
+  GIT_TAG v2.1.2
+  EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaCore ViennaLS ViennaRay ViennaCS)
 
