@@ -6,8 +6,8 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
+from viennaps import d2
 import viennaps.d3
 from viennaps import d3
 from . import constants
@@ -1630,6 +1630,12 @@ class RayTracingParameters:
         ...
     @minNodeDistanceFactor.setter
     def minNodeDistanceFactor(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def minRayDistance(self) -> float:
+        ...
+    @minRayDistance.setter
+    def minRayDistance(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def raysPerPoint(self) -> int:

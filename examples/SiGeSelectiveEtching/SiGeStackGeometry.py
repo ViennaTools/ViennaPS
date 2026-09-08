@@ -24,8 +24,8 @@ def CreateGeometry(paramDict: dict) -> ps.Domain:
     origin = [0, 0]
 
     # substrate plane
-    plane = ps.ls.Domain(bounds, boundaryConds, paramDict["gridDelta"])
-    ps.ls.MakeGeometry(plane, ps.ls.Plane(origin, normal)).apply()
+    plane = ps.LevelSet(bounds, boundaryConds, paramDict["gridDelta"])
+    ps.MakeGeometry(plane, ps.Plane(origin, normal)).apply()
     domain.insertNextLevelSetAsMaterial(
         levelSet=plane, material=ps.Material.Si, wrapLowerLevelSet=True
     )
@@ -33,8 +33,8 @@ def CreateGeometry(paramDict: dict) -> ps.Domain:
     # alternating layers
     for i in range(paramDict["numLayers"]):
         origin[1] += paramDict["layerHeight"]
-        plane = ps.ls.Domain(bounds, boundaryConds, paramDict["gridDelta"])
-        ps.ls.MakeGeometry(plane, ps.ls.Plane(origin, normal)).apply()
+        plane = ps.LevelSet(bounds, boundaryConds, paramDict["gridDelta"])
+        ps.MakeGeometry(plane, ps.Plane(origin, normal)).apply()
         if i % 2 == 0:
             domain.insertNextLevelSetAsMaterial(plane, ps.Material.SiGe)
         else:
@@ -43,15 +43,15 @@ def CreateGeometry(paramDict: dict) -> ps.Domain:
     # SiO2 mask
     maskPosY = totalHeight + paramDict["maskHeight"]
     origin[1] = maskPosY
-    mask = ps.ls.Domain(bounds, boundaryConds, paramDict["gridDelta"])
-    ps.ls.MakeGeometry(mask, ps.ls.Plane(origin, normal)).apply()
+    mask = ps.LevelSet(bounds, boundaryConds, paramDict["gridDelta"])
+    ps.MakeGeometry(mask, ps.Plane(origin, normal)).apply()
     domain.insertNextLevelSetAsMaterial(mask, ps.Material.SiO2)
 
     # mask
     maskPosY = totalHeight + paramDict["maskHeight"] + 5 * paramDict["gridDelta"]
     origin[1] = maskPosY
-    etchMask = ps.ls.Domain(bounds, boundaryConds, paramDict["gridDelta"])
-    ps.ls.MakeGeometry(etchMask, ps.ls.Plane(origin, normal)).apply()
+    etchMask = ps.LevelSet(bounds, boundaryConds, paramDict["gridDelta"])
+    ps.MakeGeometry(etchMask, ps.Plane(origin, normal)).apply()
     domain.insertNextLevelSetAsMaterial(etchMask, ps.Material.Mask)
 
     # left right space
@@ -63,20 +63,20 @@ def CreateGeometry(paramDict: dict) -> ps.Domain:
         -extent / 2 + paramDict["lateralSpacing"],
         maskPosY + paramDict["gridDelta"],
     ]
-    box = ps.ls.Domain(bounds, boundaryConds, paramDict["gridDelta"])
-    ps.ls.MakeGeometry(box, ps.ls.Box(minPoint, maxPoint)).apply()
+    box = ps.LevelSet(bounds, boundaryConds, paramDict["gridDelta"])
+    ps.MakeGeometry(box, ps.Box(minPoint, maxPoint)).apply()
     domain.applyBooleanOperation(box, BooleanOperationEnum.RELATIVE_COMPLEMENT)
 
     minPoint[0] = extent / 2 - paramDict["lateralSpacing"]
     maxPoint[0] = extent / 2 + paramDict["gridDelta"]
-    ps.ls.MakeGeometry(box, ps.ls.Box(minPoint, maxPoint)).apply()
+    ps.MakeGeometry(box, ps.Box(minPoint, maxPoint)).apply()
     domain.applyBooleanOperation(box, BooleanOperationEnum.RELATIVE_COMPLEMENT)
 
     xpos = -extent / 2 + paramDict["lateralSpacing"] + paramDict["maskWidth"]
     for i in range(paramDict["numPillars"]):
         minPoint[0] = xpos
         maxPoint[0] = xpos + paramDict["trenchWidthTop"]
-        ps.ls.MakeGeometry(box, ps.ls.Box(minPoint, maxPoint)).apply()
+        ps.MakeGeometry(box, ps.Box(minPoint, maxPoint)).apply()
         domain.applyBooleanOperation(box, BooleanOperationEnum.RELATIVE_COMPLEMENT)
         xpos += paramDict["maskWidth"] + paramDict["trenchWidthTop"]
 

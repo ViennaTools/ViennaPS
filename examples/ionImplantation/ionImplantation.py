@@ -31,46 +31,13 @@ import math
 import sys
 from pathlib import Path
 
-try:
-    import viennaps as ps
-    import viennals as ls
-except ImportError as exc:
-    raise SystemExit(
-        "Could not import viennaps.  Build ViennaPS with "
-        "-DVIENNAPS_BUILD_PYTHON=ON and install the package first.\n"
-        f"Original error: {exc}"
-    )
+import viennaps as ps
 
 ps.setDimension(2)
-ls.setDimension(2)
-vps = ps.d2
-vls = ls
 
-
-def read_config(path: str) -> dict[str, str]:
-    """Parse a simple key=value config file (lines starting with # ignored)."""
-    params: dict[str, str] = {}
-    with open(path) as f:
-        for line in f:
-            line = line.split("#")[0].strip()
-            if "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            params[k.strip()] = v.strip()
-    return params
-
-
-def get(p: dict, key: str, default=None):
-    """Get a float from the config dict with an optional default."""
-    if key in p:
-        return float(p[key])
-    if default is not None:
-        return float(default)
-    raise KeyError(f"Required config key '{key}' not found.")
-
-
-def parse_list(s: str) -> list[float]:
-    return [float(x) for x in s.split(",")]
+# This examples requires ViennaPS >= 4.7.0 for the Python bindings.
+if ps.__version__ < "4.7.0":
+    raise RuntimeError("viennaps version is not >= 4.7.0")
 
 
 def canonical_species_name(species: str) -> str:
@@ -100,13 +67,18 @@ def canonical_material_name(material: str) -> str:
 
 def arrhenius(prefactor: float, ea_ev: float, temperature_k: float) -> float:
     kb_ev = 8.617333262145e-5
-    return max(prefactor, 0.0) * math.exp(-max(ea_ev, 0.0) / (kb_ev * max(temperature_k, 1.0)))
+    return max(prefactor, 0.0) * math.exp(
+        -max(ea_ev, 0.0) / (kb_ev * max(temperature_k, 1.0))
+    )
 
 
-def thermal_average_arrhenius(prefactor: float, ea_ev: float,
-                              durations: list[float],
-                              temperatures: list[float],
-                              fallback_temperature_k: float) -> float:
+def thermal_average_arrhenius(
+    prefactor: float,
+    ea_ev: float,
+    durations: list[float],
+    temperatures: list[float],
+    fallback_temperature_k: float,
+) -> float:
     if not durations or not temperatures:
         return arrhenius(prefactor, ea_ev, fallback_temperature_k)
 
@@ -131,13 +103,20 @@ def thermal_average_arrhenius(prefactor: float, ea_ev: float,
     else:
         return arrhenius(prefactor, ea_ev, fallback_temperature_k)
 
-    return weighted / total if total > 0.0 else arrhenius(prefactor, ea_ev, fallback_temperature_k)
+    return (
+        weighted / total
+        if total > 0.0
+        else arrhenius(prefactor, ea_ev, fallback_temperature_k)
+    )
 
 
-def load_anneal_modeldb(cfg: dict[str, str], modeldb_root: Path,
-                        durations: list[float],
-                        temperatures: list[float],
-                        peak_temperature_k: float) -> dict[str, float]:
+def load_anneal_modeldb(
+    cfg: dict[str, str],
+    modeldb_root: Path,
+    durations: list[float],
+    temperatures: list[float],
+    peak_temperature_k: float,
+) -> dict[str, float]:
     """Read the small subset of modeldb/anneal used by this example."""
     species_name = canonical_species_name(cfg.get("species", "P"))
     material_name = canonical_material_name(cfg.get("material", "Si"))
@@ -209,9 +188,15 @@ def load_anneal_modeldb(cfg: dict[str, str], modeldb_root: Path,
 
     selected = d_total
     if selected is None and (d_int is not None or d_vac is not None):
-        selected = d_int if d_vac is None or (d_int is not None and d_int[0] >= d_vac[0]) else d_vac
+        selected = (
+            d_int
+            if d_vac is None or (d_int is not None and d_int[0] >= d_vac[0])
+            else d_vac
+        )
     if selected is None:
-        raise RuntimeError(f"No anneal diffusivity entry for {species_name} in {material_name}: {table}")
+        raise RuntimeError(
+            f"No anneal diffusivity entry for {species_name} in {material_name}: {table}"
+        )
 
     values["annealD0"] = selected[0]
     values["annealEa"] = selected[1]
@@ -251,76 +236,80 @@ def print_implant_material_summary(domain, label: str) -> None:
 
 
 def run(cfg_path: str) -> None:
-    cfg = read_config(cfg_path)
+    cfg = ps.readConfigFile(cfg_path)
     if not cfg:
         sys.exit(f"Config not found: {cfg_path}")
 
     # The table-backed implant path is currently only reliable when the Python
     # example runs single-threaded. Keep that as the default for smoke tests and
     # allow configs to opt into more threads once the backend is thread-clean.
-    if hasattr(ps, "setNumThreads"):
-        ps.setNumThreads(max(1, int(get(cfg, "numThreads", 1))))
+    ps.setNumThreads(1)
 
     use_table = "projectedRange" not in cfg
     modeldb_root = Path(__file__).resolve().parents[2] / "modeldb"
-    print(f"--- ViennaPS {'Table-Driven' if use_table else 'Explicit'} "
-          f"Implant & Anneal (config: {cfg_path}) ---")
+    print(
+        f"--- ViennaPS {'Table-Driven' if use_table else 'Explicit'} "
+        f"Implant & Anneal (config: {cfg_path}) ---"
+    )
 
     # ── Geometry ──────────────────────────────────────────────────────────────
-    grid_delta       = get(cfg, "gridDelta")
-    x_extent         = get(cfg, "xExtent")
-    top_space        = get(cfg, "topSpace")
-    substrate_depth  = get(cfg, "substrateDepth")
-    opening_width    = get(cfg, "openingWidth")
-    mask_height      = get(cfg, "maskHeight")
-    oxide_thickness  = get(cfg, "screenOxideThickness",
-                           cfg.get("oxideThickness", "2.0"))
-    screen_thickness = get(cfg, "screenThickness", oxide_thickness)
+    grid_delta = cfg.get("gridDelta")
+    x_extent = cfg.get("xExtent")
+    top_space = cfg.get("topSpace")
+    substrate_depth = cfg.get("substrateDepth")
+    opening_width = cfg.get("openingWidth")
+    mask_height = cfg.get("maskHeight")
+    oxide_thickness = cfg.get("screenOxideThickness", cfg.get("oxideThickness", "2.0"))
+    screen_thickness = cfg.get("screenThickness", oxide_thickness)
 
-    bounds = [-0.5 * x_extent, 0.5 * x_extent,
-              -substrate_depth,
-              top_space + oxide_thickness + mask_height]
+    bounds = [
+        -0.5 * x_extent,
+        0.5 * x_extent,
+        -substrate_depth,
+        top_space + oxide_thickness + mask_height,
+    ]
 
-    bc = [ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-          ls.BoundaryConditionEnum.INFINITE_BOUNDARY]
+    bc = [
+        ps.BoundaryType.REFLECTIVE_BOUNDARY,
+        ps.BoundaryType.INFINITE_BOUNDARY,
+    ]
 
-    domain = vps.Domain(bounds, bc, grid_delta)
+    domain = ps.Domain(bounds, bc, grid_delta)
 
     def makels():
-        return vls.Domain(bounds, bc, grid_delta)
+        return ps.LevelSet(bounds, bc, grid_delta)
 
     # Si substrate bottom
     level_set = makels()
-    vls.MakeGeometry(level_set, vls.Plane([0., -substrate_depth], [0., 1.])).apply()
+    ps.MakeGeometry(level_set, ps.Plane([0.0, -substrate_depth], [0.0, 1.0])).apply()
     domain.insertNextLevelSetAsMaterial(level_set, ps.Material.Si)
 
     # Si substrate top (surface at y = 0)
     level_set = makels()
-    vls.MakeGeometry(level_set, vls.Plane([0., 0.], [0., 1.])).apply()
+    ps.MakeGeometry(level_set, ps.Plane([0.0, 0.0], [0.0, 1.0])).apply()
     domain.insertNextLevelSetAsMaterial(level_set, ps.Material.Si)
 
     # Screen oxide (y = 0 to y = oxide_thickness)
     level_set = makels()
-    vls.MakeGeometry(level_set, vls.Plane([0., oxide_thickness], [0., 1.])).apply()
+    ps.MakeGeometry(level_set, ps.Plane([0.0, oxide_thickness], [0.0, 1.0])).apply()
     domain.insertNextLevelSetAsMaterial(level_set, ps.Material.SiO2)
 
     # Hard mask with opening
     level_set = makels()
-    vls.MakeGeometry(
-        level_set, vls.Plane([0., oxide_thickness + mask_height], [0., 1.])
+    ps.MakeGeometry(
+        level_set, ps.Plane([0.0, oxide_thickness + mask_height], [0.0, 1.0])
     ).apply()
     domain.insertNextLevelSetAsMaterial(level_set, ps.Material.Mask)
 
     window = makels()
-    vls.MakeGeometry(
+    ps.MakeGeometry(
         window,
-        vls.Box(
+        ps.Box(
             [-0.5 * opening_width, oxide_thickness - grid_delta],
             [0.5 * opening_width, oxide_thickness + mask_height + grid_delta],
         ),
     ).apply()
-    domain.applyBooleanOperation(
-        window, ls.BooleanOperationEnum.RELATIVE_COMPLEMENT)
+    domain.applyBooleanOperation(window, ps.BooleanOperationType.RELATIVE_COMPLEMENT)
 
     # Cell set
     domain.generateCellSet(top_space, ps.Material.Air, True)
@@ -329,9 +318,9 @@ def run(cfg_path: str) -> None:
     out_suffix = "_preset.vtu" if use_table else "_manual.vtu"
     domain.getCellSet().writeVTU("initial" + out_suffix)
 
-    dose       = get(cfg, "doseCm2")
-    tilt_angle = get(cfg, "angle", 7.)
-    species    = cfg.get("species", "P")
+    dose = cfg.get("doseCm2")
+    tilt_angle = cfg.get("angle", 7.0)
+    species = cfg.get("species", "P")
 
     # ── Implant model ─────────────────────────────────────────────────────────
     if use_table:
@@ -339,92 +328,108 @@ def run(cfg_path: str) -> None:
         material_name = canonical_material_name(cfg.get("material", "Si"))
         substrate = cfg.get("substrateType", "crystalline").lower()
         implant_table = (
-            modeldb_root / "implant" /
-            f"{species_name}_in_{material_name}_{substrate}.csv"
+            modeldb_root
+            / "implant"
+            / f"{species_name}_in_{material_name}_{substrate}.csv"
         )
         damage_table = (
-            modeldb_root / "damage" /
-            f"{species_name}_damage_in_{material_name}.csv"
+            modeldb_root / "damage" / f"{species_name}_damage_in_{material_name}.csv"
         )
-        implant_model = vps.ImplantTableModel(
-            str(implant_table), species_name, material_name, substrate,
-            get(cfg, "energyKeV"), tilt_angle, get(cfg, "rotationDeg", 0.),
-            dose, screen_thickness, get(cfg, "damageLevel", 0.),
+        implant_model = ps.ImplantTableModel(
+            str(implant_table),
+            species_name,
+            material_name,
+            substrate,
+            cfg.get("energyKeV"),
+            tilt_angle,
+            cfg.get("rotationDeg", 0.0),
+            dose,
+            screen_thickness,
+            cfg.get("damageLevel", 0.0),
         )
-        damage_model = vps.DamageTableModel(
-            str(damage_table), species_name, material_name,
-            get(cfg, "energyKeV"), tilt_angle, get(cfg, "rotationDeg", 0.),
-            dose, screen_thickness,
+        damage_model = ps.DamageTableModel(
+            str(damage_table),
+            species_name,
+            material_name,
+            cfg.get("energyKeV"),
+            tilt_angle,
+            cfg.get("rotationDeg", 0.0),
+            dose,
+            screen_thickness,
         )
         description = (
             f"{species} into {cfg.get('material','Si')} at "
-            f"{get(cfg,'energyKeV'):.0f} keV, {tilt_angle:.0f} deg tilt "
+            f"{cfg.get('energyKeV'):.0f} keV, {tilt_angle:.0f} deg tilt "
             f"(table model)"
         )
     else:
         # Build PearsonIVParameters from config (manual mode). These moments are
         # substrate-depth moments; do not subtract screen oxide thickness.
         head_params = ps.PearsonIVParameters()
-        head_params.mu    = get(cfg, "projectedRange")
-        head_params.sigma = get(cfg, "depthSigma")
-        head_params.beta  = get(cfg, "skewness")    # → C++ params.beta (β₂ position)
-        head_params.gamma = get(cfg, "kurtosis")    # → C++ params.gamma (γ₁ position)
-        lateral_mu        = get(cfg, "lateralMu", 0.)
-        lateral_sigma     = get(cfg, "lateralSigma", 5.)
+        head_params.mu = cfg.get("projectedRange")
+        head_params.sigma = cfg.get("depthSigma")
+        head_params.beta = cfg.get("skewness")  # → C++ params.beta (β₂ position)
+        head_params.gamma = cfg.get("kurtosis")  # → C++ params.gamma (γ₁ position)
+        lateral_mu = cfg.get("lateralMu", 0.0)
+        lateral_sigma = cfg.get("lateralSigma", 5.0)
 
-        head_fraction = get(cfg, "headFraction", -1.)
-        if head_fraction > 0.:
+        head_fraction = cfg.get("headFraction", -1.0)
+        if head_fraction > 0.0:
             # Dual Pearson IV (crystalline Si with channeling tail)
             tail_params = ps.PearsonIVParameters()
-            tail_params.mu    = get(cfg, "tailProjectedRange")
-            tail_params.sigma = get(cfg, "tailDepthSigma")
-            tail_params.beta  = get(cfg, "tailSkewness")
-            tail_params.gamma = get(cfg, "tailKurtosis")
-            tail_lateral_mu    = get(cfg, "tailLateralMu", 0.)
-            tail_lateral_sigma = get(cfg, "tailLateralSigma", lateral_sigma)
+            tail_params.mu = cfg.get("tailProjectedRange")
+            tail_params.sigma = cfg.get("tailDepthSigma")
+            tail_params.beta = cfg.get("tailSkewness")
+            tail_params.gamma = cfg.get("tailKurtosis")
+            tail_lateral_mu = cfg.get("tailLateralMu", 0.0)
+            tail_lateral_sigma = cfg.get("tailLateralSigma", lateral_sigma)
 
-            implant_model = vps.ImplantDualPearsonIV(
-                head_params, tail_params, head_fraction,
-                lateral_mu, lateral_sigma,
-                tail_lateral_mu, tail_lateral_sigma,
+            implant_model = ps.ImplantDualPearsonIV(
+                head_params,
+                tail_params,
+                head_fraction,
+                lateral_mu,
+                lateral_sigma,
+                tail_lateral_mu,
+                tail_lateral_sigma,
             )
             description = (
                 f"{species} into {cfg.get('material','Si')} at "
-                f"{get(cfg,'energyKeV'):.0f} keV, "
+                f"{cfg.get('energyKeV'):.0f} keV, "
                 f"{tilt_angle:.0f} deg tilt "
                 f"(dual-Pearson IV, head fraction {head_fraction:.4f})"
             )
         else:
             # Single Pearson IV
-            implant_model = vps.ImplantPearsonIV(head_params, lateral_mu, lateral_sigma)
+            implant_model = ps.ImplantPearsonIV(head_params, lateral_mu, lateral_sigma)
             description = (
                 f"{species} into {cfg.get('material','Si')} at "
-                f"{get(cfg,'energyKeV'):.0f} keV, "
+                f"{cfg.get('energyKeV'):.0f} keV, "
                 f"{tilt_angle:.0f} deg tilt (single Pearson IV)"
             )
 
         # Damage model (Hobler)
-        damage_model = vps.ImplantDamageHobler(
-            get(cfg, "damageProjectedRange"),
-            get(cfg, "damageVerticalSigma"),
-            get(cfg, "damageLambda"),
-            get(cfg, "damageDefectsPerIon"),
-            get(cfg, "damageLateralSigma"),
-            get(cfg, "damageLateralDeltaSigma", 0.),
+        damage_model = ps.ImplantDamageHobler(
+            cfg.get("damageProjectedRange"),
+            cfg.get("damageVerticalSigma"),
+            cfg.get("damageLambda"),
+            cfg.get("damageDefectsPerIon"),
+            cfg.get("damageLateralSigma"),
+            cfg.get("damageLateralDeltaSigma", 0.0),
         )
 
-    label_total        = f"{species}_total"
-    label_active       = f"{species}_active"
-    label_damage       = f"{species}_damage"
+    label_total = f"{species}_total"
+    label_active = f"{species}_active"
+    label_damage = f"{species}_damage"
     label_interstitial = f"{species}_interstitial"
-    label_vacancy      = f"{species}_vacancy"
+    label_vacancy = f"{species}_vacancy"
 
-    implant = vps.IonImplantation()
+    implant = ps.IonImplantation()
     implant.setImplantModel(implant_model)
     implant.setDamageModel(damage_model)
     implant.setDose(dose)
     implant.setTiltAngle(tilt_angle)
-    implant.setLengthUnit(1e-7)   # nm → cm
+    implant.setLengthUnit(1e-7)  # nm → cm
     implant.setDoseControl(ps.ImplantDoseControl.WaferDose)
     implant.setMaskMaterials([ps.Material.Mask])
     implant.setScreenMaterials([ps.Material.SiO2])
@@ -435,9 +440,10 @@ def run(cfg_path: str) -> None:
     print(f"Implanting {description} ...")
 
     # ── Anneal model ──────────────────────────────────────────────────────────
-    durations    = parse_list(cfg.get("annealStepDurations", "9,5,9"))
-    temperatures = parse_list(cfg.get("annealTemperatures", "873.15,1323.15,1323.15,873.15"))
-    peak_T       = max(temperatures)
+    durations = cfg.get("annealStepDurations")
+    temperatures = cfg.get("annealTemperatures")
+
+    peak_T = max(temperatures)
     anneal_source = cfg.get(
         "annealParameterSource", "modeldb" if use_table else "manual"
     ).lower()
@@ -449,25 +455,27 @@ def run(cfg_path: str) -> None:
         "annealSolidSolubilityC0",
         "annealSolidSolubilityEa",
     }
-    use_anneal_modeldb = (
-        anneal_source not in {"manual", "config", "user"}
-        or not required_anneal_keys.issubset(cfg)
-    )
+    use_anneal_modeldb = anneal_source not in {
+        "manual",
+        "config",
+        "user",
+    } or not required_anneal_keys.issubset(cfg)
     anneal_defaults = (
         load_anneal_modeldb(cfg, modeldb_root, durations, temperatures, peak_T)
-        if use_anneal_modeldb else {}
+        if use_anneal_modeldb
+        else {}
     )
 
     def aget(key: str, default=None) -> float:
         if key in cfg:
-            return get(cfg, key)
+            return cfg[key]
         if key in anneal_defaults:
             return anneal_defaults[key]
         if default is not None:
             return float(default)
         raise KeyError(f"Required anneal key '{key}' not found.")
 
-    anneal = vps.Anneal()
+    anneal = ps.Anneal()
     anneal.setTemperatureSchedule(durations, temperatures)
     anneal.setArrheniusParameters(aget("annealD0"), aget("annealEa"))
     anneal.setMode(ps.AnnealMode.GaussSeidel)
@@ -482,7 +490,7 @@ def run(cfg_path: str) -> None:
     anneal.setActiveLabel(label_active)
 
     # Defect coupling
-    if int(get(cfg, "annealDefectCoupling", 1)):
+    if int(cfg.get("annealDefectCoupling", 1)):
         anneal.enableDefectCoupling(True)
         anneal.setDamageLabels(label_damage, label_damage + "_last")
         anneal.setDefectLabels(label_interstitial, label_vacancy)
@@ -491,9 +499,9 @@ def run(cfg_path: str) -> None:
             aget("annealVacancyDiffusivity"),
         )
         anneal.setDefectReactionRates(
-            aget("annealRecombinationRate", 0.),
-            aget("annealInterstitialSinkRate", 0.),
-            aget("annealVacancySinkRate", 0.),
+            aget("annealRecombinationRate", 0.0),
+            aget("annealInterstitialSinkRate", 0.0),
+            aget("annealVacancySinkRate", 0.0),
         )
         score_i = aget("annealScoreIFactor", 0.5)
         score_v = aget("annealScoreVFactor", 0.5)
@@ -504,7 +512,7 @@ def run(cfg_path: str) -> None:
             )
 
     # Solid activation
-    if int(get(cfg, "annealSolidActivation", 1)):
+    if int(cfg.get("annealSolidActivation", 1)):
         anneal.enableSolidActivation(True)
         anneal.setSolidSolubilityArrhenius(
             aget("annealSolidSolubilityC0"),
@@ -522,38 +530,44 @@ def run(cfg_path: str) -> None:
         )
 
     # Defect clustering (optional)
-    if any(k in cfg or k in anneal_defaults for k in ("annealClusterKfc", "annealClusterKr")):
+    if any(
+        k in cfg or k in anneal_defaults
+        for k in ("annealClusterKfc", "annealClusterKr")
+    ):
         anneal.enableDefectClustering(True)
         anneal.setDefectClusterKinetics(
-            aget("annealClusterKfi", 0.),
-            aget("annealClusterKfc", 0.),
-            aget("annealClusterKr", 0.),
+            aget("annealClusterKfi", 0.0),
+            aget("annealClusterKfc", 0.0),
+            aget("annealClusterKr", 0.0),
         )
-        anneal.setDefectClusterInitFraction(
-            aget("annealClusterInitFraction", 0.01)
-        )
+        anneal.setDefectClusterInitFraction(aget("annealClusterInitFraction", 0.01))
 
     print(f"Annealing: peak T = {peak_T - 273.15:.0f} C ...")
 
     # ── Run ───────────────────────────────────────────────────────────────────
-    vps.Process(domain, implant, 0.).apply()
-    if int(get(cfg, "debugMaterialSummary", 0)):
+    ps.Process(domain, implant, 0.0).apply()
+    if int(cfg.get("debugMaterialSummary", 0)):
         print_implant_material_summary(domain, label_total)
     domain.getCellSet().writeVTU("post_implant" + out_suffix)
 
-    vps.Process(domain, anneal, 0.).apply()
+    ps.Process(domain, anneal, 0.0).apply()
     # Refresh the active dopant field after the full thermal step so downstream
     # sheet-resistance/net-doping tools see the post-anneal concentration.
     anneal.applyActivation(domain)
-    if int(get(cfg, "debugMaterialSummary", 0)):
+    if int(cfg.get("debugMaterialSummary", 0)):
         print_implant_material_summary(domain, label_total)
     domain.getCellSet().writeVTU("post_anneal" + out_suffix)
 
     # ── Stats ─────────────────────────────────────────────────────────────────
     print("\n--- POST-ANNEAL STATS (Python) ---")
     cs = domain.getCellSet()
-    for label in [label_total, label_active, label_damage,
-                  label_interstitial, label_vacancy]:
+    for label in [
+        label_total,
+        label_active,
+        label_damage,
+        label_interstitial,
+        label_vacancy,
+    ]:
         field = cs.getScalarData(label)
         if field is None:
             print(f"  {label}: <missing>")

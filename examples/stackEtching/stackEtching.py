@@ -104,9 +104,9 @@ print("Extruding to 3D ...")
 extruded = vps.d3.Domain()
 extrudeExtent = [-20.0, 20.0]
 boundaryConds = [
-    vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vps.ls.BoundaryConditionEnum.REFLECTIVE_BOUNDARY,
-    vps.ls.BoundaryConditionEnum.INFINITE_BOUNDARY,
+    vps.BoundaryType.REFLECTIVE_BOUNDARY,
+    vps.BoundaryType.REFLECTIVE_BOUNDARY,
+    vps.BoundaryType.INFINITE_BOUNDARY,
 ]
 
 vps.Extrude(geometry, extruded, extrudeExtent, 1, boundaryConds).apply()

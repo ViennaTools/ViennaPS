@@ -668,6 +668,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &RayTracingParameters::smoothingNeighbors)
       .def_readwrite("minNodeDistanceFactor",
                      &RayTracingParameters::minNodeDistanceFactor)
+      .def_readwrite("minRayDistance", &RayTracingParameters::minRayDistance)
       .def_readwrite("maxReflections", &RayTracingParameters::maxReflections)
       .def_readwrite("maxBoundaryHits", &RayTracingParameters::maxBoundaryHits)
       .def("toMetaData", &RayTracingParameters::toMetaData,

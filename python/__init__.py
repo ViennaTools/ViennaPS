@@ -45,6 +45,18 @@ import viennals as ls
 from viennals import SpatialSchemeEnum as SpatialScheme
 from viennals import TemporalSchemeEnum as TemporalScheme
 from viennals import BoundaryConditionEnum as BoundaryType
+from viennals import Domain as LevelSet
+
+from viennals import MakeGeometry as MakeGeometry
+from viennals import Plane as Plane
+from viennals import Sphere as Sphere
+from viennals import Cylinder as Cylinder
+from viennals import Box as Box
+
+from viennals import BooleanOperationEnum as BooleanOperationType
+from viennals import BooleanOperation as BooleanOperation
+
+from viennals import VTKWriter as VTKWriter
 from viennals import LogLevel as LogLevel
 from . import _core as _C  # the binary inside the package
 
@@ -54,7 +66,12 @@ d3 = _C.d3
 _sys.modules[__name__ + ".d2"] = d2
 _sys.modules[__name__ + ".d3"] = d3
 
-_SHARED_OXIDATION_TYPES = ("OxidantType", "SiliconOrientation", "GpuMode", "GpuPreconditioner")
+_SHARED_OXIDATION_TYPES = (
+    "OxidantType",
+    "SiliconOrientation",
+    "GpuMode",
+    "GpuPreconditioner",
+)
 for _name in _SHARED_OXIDATION_TYPES:
     if hasattr(_C, _name):
         setattr(d2, _name, getattr(_C, _name))
@@ -79,38 +96,48 @@ def setDimension(d: int):
         raise ValueError("Dimension must be 2 or 3.")
 
 
-# Config file reader helper function
-def readConfigFile(fileName: str):
+def readConfigFile(fileName: str) -> dict:
     """Read a config file in the ViennaPS standard config file format.
 
     Parameters
     ----------
-    fileName: str
-                Name of the config file.
+    fileName : str
+        Name of the config file.
 
     Returns
     -------
     dict
         A dictionary containing the parameters from the config file.
+        Numeric values are returned as floats, and comma-separated numeric
+        values as lists of floats. Other values are returned as strings or
+        lists of strings, with surrounding whitespace removed. If any list
+        item is nonnumeric, all items in that list are returned as strings.
+        Comments starting with '#' and lines without '=' are ignored.
     """
     par_dict = {}
 
-    with open(fileName, "r") as file:
-        lines = file.readlines()
-        for line in lines:
+    with open(fileName, "r", encoding="utf-8") as file:
+        for line in file:
+            line = line.split("#", 1)[0]
+            if "=" not in line:
+                continue
 
-            line = line[: line.find("#")]  # remove comments
+            par_name, par_value = line.split("=", 1)
+            par_name = par_name.strip()
+            par_value = par_value.strip()
 
-            if len(line) > 0:
-                par_name = line[: line.find("=")].strip(" ")
-                par_value = line[line.find("=") + 1 :]
-
-                try:
+            try:
+                if "," in par_value:
+                    val = [float(value) for value in par_value.split(",")]
+                else:
                     val = float(par_value)
-                except:
+            except ValueError:
+                if "," in par_value:
+                    val = [value.strip() for value in par_value.split(",")]
+                else:
                     val = par_value
 
-                par_dict[par_name] = val
+            par_dict[par_name] = val
 
     return par_dict
 
