@@ -124,7 +124,8 @@ int main(int argc, char **argv) {
   model->setPressure(pressure);
   model->setOrientation(params.get<std::string>("orientation"));
   model->setTimeStep(timeStep);
-  model->setMaxGridPoints(params.get<unsigned>("maxGridPoints"));
+  if (params.contains("maxGridPoints"))
+    model->setMaxGridPoints(params.get<unsigned>("maxGridPoints"));
   model->setMechanicsIterations(params.get<unsigned>("mechanicsIterations"));
   model->setMechanicsTolerance(params.get("mechanicsTolerance"));
   model->setPressureIterations(params.get<unsigned>("pressureIterations"));
@@ -149,9 +150,9 @@ int main(int argc, char **argv) {
   maskParams.contactMode =
       parseMaskContactMode(params.get<std::string>("maskContactMode"));
   maskParams.anchorBoundaryDirection =
-      params.get("maskAnchorBoundaryDirection");
-  maskParams.anchorBoundarySide = params.get("maskAnchorBoundarySide");
-  maskParams.anchorBoundaryLayers = params.get("maskAnchorBoundaryLayers");
+      params.get<int>("maskAnchorBoundaryDirection");
+  maskParams.anchorBoundarySide = params.get<int>("maskAnchorBoundarySide");
+  maskParams.anchorBoundaryLayers = params.get<int>("maskAnchorBoundaryLayers");
   model->setMaskParameters(maskParams);
   model->setMaskTractionIterations(static_cast<unsigned>(
       std::max(1, params.get<int>("maskTractionIterations"))));
@@ -160,7 +161,7 @@ int main(int argc, char **argv) {
   model->setMaskContactLoadRelaxation(params.get("maskContactLoadRelaxation"));
   model->setMaskContactReleaseFraction(
       params.get("maskContactReleaseFraction"));
-  model->setMaskUnilateralContact(params.get("maskUnilateralContact"));
+  model->setMaskUnilateralContact(params.get<bool>("maskUnilateralContact"));
   model->setMaskSmootherOmega(params.get("maskSmootherOmega"));
 
   model->saveSurfaceMesh(domain, outputPrefix + "_stack_step_000.vtp");
