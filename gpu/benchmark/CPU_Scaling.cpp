@@ -6,22 +6,36 @@
 
 #include "Benchmark.hpp"
 
-int main() {
+int main(int argc, char **argv) {
   using NumericType = float;
   constexpr int D = DIM;
 
+  bool fixedRays = false;
+  int particleType = 0;
+
+  auto args = parseArgs(argc, argv);
+  particleType = std::get<0>(args);
+  fixedRays = std::get<1>(args);
+
+  auto filePostFix = [&]() {
+    std::string suffix = "";
+    suffix += fixedRays ? "_fixedNumRays" : "_raysPerPoint";
+    suffix += particleType == 0 ? "_Neutral" : "_Ion";
+    return suffix;
+  };
+
   const std::vector<int> numThreadsList = {1, 2, 4, 8, 16};
   std::string fluxLabel = particleType == 0 ? "flux" : "ionFlux";
-  auto particle = makeCPUParticle<NumericType, D>();
+  auto particle = makeCPUParticle<NumericType, D>(particleType);
 
   if constexpr (runDisk) { // Disk
-    std::ofstream file(std::string("CPU_Scaling_Disk_") +
-                       std::to_string(particleType) + ".txt");
+    std::ofstream file(std::string("CPU_Scaling_Disk_") + filePostFix() +
+                       ".txt");
     file << "Meshing;Tracing;Postprocessing;RayTraced;NumThreads\n";
 
     viennaray::TraceDisk<NumericType, D> tracer;
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
-    if (FIXED_RAYS)
+    if (fixedRays)
       tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setParticleType(particle);
@@ -77,15 +91,15 @@ int main() {
   }
 
   if constexpr (runTriangle) { // Triangle
-    std::ofstream file(std::string("CPU_Scaling_Triangle_") +
-                       std::to_string(particleType) + ".txt");
+    std::ofstream file(std::string("CPU_Scaling_Triangle_") + filePostFix() +
+                       ".txt");
     file << "Meshing;Tracing;Postprocessing;RayTraced;NumThreads\n";
 
     std::cout << "Starting Triangle Benchmark\n";
 
     viennaray::TraceTriangle<NumericType, D> tracer;
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
-    if (FIXED_RAYS)
+    if (fixedRays)
       tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setParticleType(particle);
@@ -142,7 +156,7 @@ int main() {
         tracer.normalizeFlux(fluxResult);
         std::vector<std::vector<NumericType>> fluxResultVec;
         fluxResultVec.push_back(std::move(fluxResult));
-        if constexpr (particleType == 1) {
+        if (particleType == 1) {
           fluxResult = std::move(*tracer.getLocalData().getScalarData(1));
           tracer.normalizeFlux(fluxResult);
           fluxResultVec.push_back(std::move(fluxResult));

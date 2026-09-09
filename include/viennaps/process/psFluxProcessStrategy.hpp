@@ -159,8 +159,8 @@ private:
     meshGenerator_.apply();
     // Always reinitialize coverages to handle geometry changes between cycles
     if (coverageManager_.initializeCoverages(context)) {
+      context.flags.useCoverages = true;
       if (!context.coverageParams.initialized) {
-        context.flags.useCoverages = true;
         VIENNACORE_LOG_INFO("Using coverages.");
 
         // Translator is needed to map coverage values to level set points
