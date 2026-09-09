@@ -13,11 +13,12 @@ namespace viennaps {
 using namespace viennacore;
 
 template <class NumericType, class MeshNT, class ResultType, bool d2 = true,
-          bool d4 = true>
+          bool d4 = true,
+          class TreeType = KDTree<NumericType, Vec3D<NumericType>>>
 class ElementToPointData {
   std::vector<std::string> dataLabels_;
   SmartPointer<PointData<NumericType>> pointData_;
-  SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree_;
+  SmartPointer<TreeType> elementKdTree_;
   SmartPointer<viennals::Mesh<NumericType>> diskMesh_;
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
   NumericType conversionRadius_;
@@ -40,7 +41,7 @@ public:
   ElementToPointData(
       const std::vector<std::string> &dataLabels,
       SmartPointer<PointData<NumericType>> pointData, // target point data
-      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree,
+      SmartPointer<TreeType> elementKdTree,
       SmartPointer<viennals::Mesh<NumericType>> diskMesh,
       SmartPointer<viennals::Mesh<MeshNT>> surfMesh,
       const NumericType conversionRadius)
@@ -71,8 +72,7 @@ public:
     surfaceMesh_ = surfaceMesh;
   }
 
-  void setElementKdTree(
-      SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> elementKdTree) {
+  void setElementKdTree(SmartPointer<TreeType> elementKdTree) {
     elementKdTree_ = elementKdTree;
   }
 

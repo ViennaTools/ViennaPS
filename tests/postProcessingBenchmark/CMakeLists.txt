@@ -1,4 +1,4 @@
-project(translationFieldBenchmark LANGUAGES CXX)
+project(postProcessingBenchmark LANGUAGES CXX)
 
 CPMAddPackage(
   NAME nanoflann
