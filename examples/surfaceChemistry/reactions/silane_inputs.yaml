@@ -13,6 +13,6 @@ species:
   Si:    {phase: solid,   rho: 5.02}            # 1e22 atoms/cm^3
 
 surface:
-  - {eq: "SiH4 -> SiH3* + H*",    type: adsorption, k_ads: 1.9257e4, Ea: 0.6}
+  - {eq: "SiH4 -> SiH3* + H*",    type: adsorption, k_ads: 1.9256e4, Ea: 0.6}
   - {eq: "SiH3* -> Si + H* + H2", type: surface,    k0: 6.8e12,      Ea: 1.5}
   - {eq: "2H* -> H2",             type: desorption, k0: 6.8e12,      Ea: 2.0}
