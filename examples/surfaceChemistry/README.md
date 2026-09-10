@@ -104,6 +104,11 @@ mechanism compiled by [ViennaChem](https://github.com/ViennaTools/ViennaChem):
 python -m viennachem reactions/x.yaml reactions/x.mechanism.json
 ```
 
+CMake copies `reactions/` into the build directory when it configures, so a
+driver run from there reads that copy. Edit a mechanism in the source tree and
+the change reaches a run only after the copy is refreshed, either by
+re-running CMake or by copying the two files across by hand.
+
 ViennaPS reads the compiled form in C++ (`psChemicalMechanismIO.hpp`), and that
 is the *only* reader: the Python driver hands the same data to the same reader
 through `ps.ChemicalMechanism.fromJSON`, so there is one implementation of the
