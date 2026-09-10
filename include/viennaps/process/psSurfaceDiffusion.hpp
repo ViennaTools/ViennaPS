@@ -2,7 +2,7 @@
 
 #include "psProcessContext.hpp"
 
-#include <vcKDTree.hpp>
+#include <vcNeighborSearch.hpp>
 #include <vcVectorType.hpp>
 
 #include <algorithm>

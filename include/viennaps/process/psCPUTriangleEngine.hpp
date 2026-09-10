@@ -20,7 +20,8 @@ class CPUTriangleEngine final : public FluxEngine<NumericType, D> {
       SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
   using MeshType = SmartPointer<viennals::Mesh<float>>;
   using PostProcessingType =
-      ElementToPointData<NumericType, float, NumericType, true, D == 3>;
+      ElementToPointData<NumericType, float, NumericType, true, D == 3,
+                         typename KDTreeType::element_type>;
 
 public:
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {

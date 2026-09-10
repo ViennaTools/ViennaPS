@@ -25,7 +25,7 @@ class GPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using MeshType = SmartPointer<viennals::Mesh<float>>;
   using PostProcessingType =
       ElementToPointData<NumericType, float, viennaray::gpu::ResultType, true,
-                         D == 3>;
+                         D == 3, typename KDTreeType::element_type>;
 
 public:
   explicit GPUTriangleEngine(std::shared_ptr<DeviceContext> deviceContext)

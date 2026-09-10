@@ -145,6 +145,7 @@ include("cmake/vtk.cmake")
 CPMAddPackage(
   NAME ViennaCore
   VERSION 2.3.0
+  GIT_TAG nanoflann
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_FORMAT_EXCLUDE build/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")

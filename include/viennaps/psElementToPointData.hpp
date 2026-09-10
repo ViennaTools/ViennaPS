@@ -2,6 +2,7 @@
 
 #include <lsMesh.hpp>
 #include <vcKDTree.hpp>
+#include <vcNFKDTree.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -14,7 +15,7 @@ using namespace viennacore;
 
 template <class NumericType, class MeshNT, class ResultType, bool d2 = true,
           bool d4 = true,
-          class TreeType = KDTree<NumericType, Vec3D<NumericType>>>
+          class TreeType = NFKDTree<NumericType, Vec3D<NumericType>, 3>>
 class ElementToPointData {
   std::vector<std::string> dataLabels_;
   SmartPointer<PointData<NumericType>> pointData_;
@@ -100,14 +101,15 @@ public:
 
     closeElements_.clear();
     closeElements_.resize(numPoints);
-    const auto lookupRadius_ = conversionRadius_;
+    const auto lookupRadiusSquared_ = conversionRadius_ * conversionRadius_;
 
 #pragma omp parallel for schedule(static)
     for (unsigned i = 0; i < numPoints; i++) {
 
       // we have to use the squared distance here
       auto closeElements =
-          elementKdTree_->findNearestWithinRadius(points[i], lookupRadius_)
+          elementKdTree_
+              ->findNearestWithinRadius(points[i], lookupRadiusSquared_)
               .value();
 
       std::vector<double> weights(closeElements.size(), 0.);

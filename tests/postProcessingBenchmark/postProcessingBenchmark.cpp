@@ -86,9 +86,10 @@ int main() {
     for (size_t i = 0; i < elementCenters.size(); ++i)
       elementDataArrays[0].push_back(static_cast<double>(rand()) / RAND_MAX);
 
-    ElementToPointData<double, double, double> converter(
-        dataLabels, pointData, elementKdTree, diskMesh, surfaceMesh,
-        gridDelta * 2.0);
+    ElementToPointData<double, double, double, true, true,
+                       KDTree<double, Vec3D<double>>>
+        converter(dataLabels, pointData, elementKdTree, diskMesh, surfaceMesh,
+                  gridDelta * 2.0);
     converter.setElementDataArrays(elementDataArrays);
 
     timer.start();
@@ -114,11 +115,13 @@ int main() {
     cloud.positions = elementCenters;
 
     timer.start();
-    auto elementKdTree = SmartPointer<NFKDTree<double>>::New(cloud);
+    auto elementKdTree =
+        SmartPointer<NFKDTree<double, Vec3D<double>, 3>>::New(cloud);
     elementKdTree->build();
     timer.finish();
 
-    ElementToPointData<double, double, double, true, true, NFKDTree<double>>
+    ElementToPointData<double, double, double, true, true,
+                       NFKDTree<double, Vec3D<double>, 3>>
         converter(dataLabels, pointData, elementKdTree, diskMesh, surfaceMesh,
                   gridDelta * 2.0);
     converter.setElementDataArrays(elementDataArrays);
