@@ -40,7 +40,7 @@ auto makeGeometry(int i) {
   const NumericType gridDelta = 1. / NumericType(i);
   auto domain = Domain<NumericType, D>::New(gridDelta, 100., 100.,
                                             BoundaryType::REFLECTIVE_BOUNDARY);
-  MakeStack<NumericType, D>(domain, 15, 10., 10.0, 0.0, 50.0, 0.0).apply();
+  MakeStack<NumericType, D>(domain, 20, 10., 10.0, 0.0, 50.0, 0.0).apply();
 
   auto etch = SmartPointer<IsotropicProcess<NumericType, D>>::New(
       -1.0, Material::Si3N4);
@@ -54,23 +54,24 @@ auto makeGeometry(int i) {
 int main() {
   Timer<> timer;
 
-  int i = 2;
-  auto domain = makeGeometry(i);
-  const double gridDelta = 1. / double(i);
-  const double searchRadius = gridDelta * 2.0;
+  for (int i = 1; i <= 3; ++i) {
+    auto domain = makeGeometry(i);
+    const double gridDelta = 1. / (double(i) * 0.5);
+    const double searchRadius = gridDelta * 2.0;
 
-  std::vector<std::string> dataLabels = {"data"};
-  auto pointData = PointData<double>::New();
-  auto diskMesh = domain->getDiskMesh();
-  auto surfaceMesh = viennals::Mesh<double>::New();
-  std::vector<Vec3D<double>> elementCenters;
-  std::vector<std::vector<double>> elementDataArrays(1);
+    std::vector<std::string> dataLabels = {"data"};
+    auto pointData = PointData<double>::New();
+    auto diskMesh = domain->getDiskMesh();
+    auto surfaceMesh = viennals::Mesh<double>::New();
+    std::vector<Vec3D<double>> elementCenters;
+    std::vector<std::vector<double>> elementDataArrays(1);
 
-  // ViennaCore KDTree
-  {
+    const int numRuns = 5;
+    std::vector<double> vcBuildTimes, vcConversionTimes, nfBuildTimes,
+        nfConversionTimes;
+
     CreateSurfaceMesh<double, double, D>(domain->getSurface(), surfaceMesh)
         .apply();
-
     for (const auto &cell : surfaceMesh->triangles) {
       Vec3D<double> center =
           (surfaceMesh->nodes[cell[0]] + surfaceMesh->nodes[cell[1]] +
@@ -79,92 +80,101 @@ int main() {
       elementCenters.push_back(center);
     }
 
-    timer.start();
-    auto elementKdTree =
-        SmartPointer<KDTree<double, Vec3D<double>>>::New(elementCenters);
-    elementKdTree->build();
-    timer.finish();
-
-    std::cout << "ViennaCore KDTree build took " << timer.currentDuration * 1e-6
-              << " ms" << std::endl;
-
     // generate random data for each element
     elementDataArrays[0].reserve(elementCenters.size());
     for (size_t i = 0; i < elementCenters.size(); ++i)
       elementDataArrays[0].push_back(static_cast<double>(rand()) / RAND_MAX);
 
-    ElementToPointData<double, double, double, true, true,
-                       KDTree<double, Vec3D<double>>>
-        converter(dataLabels, pointData, elementKdTree, diskMesh, surfaceMesh,
-                  gridDelta * 2.0);
-    converter.setElementDataArrays(elementDataArrays);
+    // ViennaCore KDTree
+    for (int run = 0; run < numRuns; ++run) {
 
-    timer.start();
-    converter.apply();
-    timer.finish();
+      timer.start();
+      auto elementKdTree =
+          SmartPointer<KDTree<double, Vec3D<double>>>::New(elementCenters);
+      elementKdTree->build();
+      timer.finish();
 
-    auto conversionTime = timer.currentDuration * 1e-6;
-    std::cout << "ViennaCore ElementToPointData conversion took "
-              << conversionTime << " ms" << std::endl;
-  }
+      vcBuildTimes.push_back(timer.currentDuration * 1e-6);
 
-  diskMesh->getCellData() = *pointData;
-  viennals::VTKWriter<double>(diskMesh, "result_VC").apply();
+      ElementToPointData<double, double, double, true, true,
+                         KDTree<double, Vec3D<double>>>
+          converter(dataLabels, pointData, elementKdTree, diskMesh, surfaceMesh,
+                    gridDelta * 2.0);
+      converter.setElementDataArrays(elementDataArrays);
 
-  auto vc_result = *pointData;
+      timer.start();
+      converter.apply();
+      timer.finish();
 
-  // nanoflann
-  {
-    pointData->clear();
-    diskMesh = domain->getDiskMesh();
+      vcConversionTimes.push_back(timer.currentDuration * 1e-6);
+      pointData->clear();
+    }
 
-    PointCloud<double> cloud;
-    cloud.positions = elementCenters;
+    // diskMesh->getCellData() = *pointData;
+    // viennals::VTKWriter<double>(diskMesh, "result_VC").apply();
 
-    timer.start();
-    auto elementKdTree =
-        SmartPointer<NFKDTree<double, Vec3D<double>, 3>>::New(cloud);
-    elementKdTree->build();
-    timer.finish();
+    // auto vc_result = *pointData;
 
-    std::cout << "NFKDTree build took " << timer.currentDuration * 1e-6 << " ms"
-              << std::endl;
+    // nanoflann
+    for (int run = 0; run < numRuns; ++run) {
 
-    ElementToPointData<double, double, double, true, true,
-                       NFKDTree<double, Vec3D<double>, 3>>
-        converter(dataLabels, pointData, elementKdTree, diskMesh, surfaceMesh,
-                  gridDelta * 2.0);
-    converter.setElementDataArrays(elementDataArrays);
+      timer.start();
+      auto elementKdTree =
+          SmartPointer<NFKDTree<double, Vec3D<double>, 3>>::New(elementCenters);
+      elementKdTree->build();
+      timer.finish();
 
-    timer.start();
-    converter.apply();
-    timer.finish();
+      nfBuildTimes.push_back(timer.currentDuration * 1e-6);
 
-    auto conversionTime = timer.currentDuration * 1e-6;
-    std::cout << "NF ElementToPointData conversion took " << conversionTime
+      ElementToPointData<double, double, double, true, true,
+                         NFKDTree<double, Vec3D<double>, 3>>
+          converter(dataLabels, pointData, elementKdTree, diskMesh, surfaceMesh,
+                    gridDelta * 2.0);
+      converter.setElementDataArrays(elementDataArrays);
+
+      timer.start();
+      converter.apply();
+      timer.finish();
+
+      nfConversionTimes.push_back(timer.currentDuration * 1e-6);
+      pointData->clear();
+    }
+
+    auto vcBuildMedian = median(vcBuildTimes);
+    auto vcConversionMedian = median(vcConversionTimes);
+    auto nfBuildMedian = median(nfBuildTimes);
+    auto nfConversionMedian = median(nfConversionTimes);
+
+    std::cout << "ViennaCore KDTree build median time: " << vcBuildMedian
               << " ms" << std::endl;
+    std::cout << "ViennaCore ElementToPointData conversion median time: "
+              << vcConversionMedian << " ms" << std::endl;
+    std::cout << "NFKDTree build median time: " << nfBuildMedian << " ms"
+              << std::endl;
+    std::cout << "NF ElementToPointData conversion median time: "
+              << nfConversionMedian << " ms" << std::endl;
+
+    // std::vector<double> differences;
+    // auto data = pointData->getScalarData(0);
+    // auto data_vc = vc_result.getScalarData(0);
+    // for (size_t i = 0; i < data_vc->size(); ++i)
+    //   differences.push_back(std::abs(data_vc->at(i) - data->at(i)));
+    // pointData->insertNextScalarData(std::move(differences), "differences");
+
+    // diskMesh->getCellData() = *pointData;
+    // viennals::VTKWriter<double>(diskMesh, "result_NF").apply();
+
+    // auto centerMesh = viennals::Mesh<double>::New();
+    // centerMesh->nodes = elementCenters;
+    // unsigned id = 0;
+    // for (const auto &c : elementCenters) {
+    //   id = centerMesh->insertNextVertex({id});
+    // }
+
+    // viennals::VTKWriter<double>(diskMesh, "diskMesh").apply();
+    // viennals::VTKWriter<double>(surfaceMesh, "surfaceMesh").apply();
+    // viennals::VTKWriter<double>(centerMesh, "centerMesh").apply();
   }
-
-  std::vector<double> differences;
-  auto data = pointData->getScalarData(0);
-  auto data_vc = vc_result.getScalarData(0);
-  for (size_t i = 0; i < data_vc->size(); ++i)
-    differences.push_back(std::abs(data_vc->at(i) - data->at(i)));
-  pointData->insertNextScalarData(std::move(differences), "differences");
-
-  diskMesh->getCellData() = *pointData;
-  viennals::VTKWriter<double>(diskMesh, "result_NF").apply();
-
-  auto centerMesh = viennals::Mesh<double>::New();
-  centerMesh->nodes = elementCenters;
-  unsigned id = 0;
-  for (const auto &c : elementCenters) {
-    id = centerMesh->insertNextVertex({id});
-  }
-
-  viennals::VTKWriter<double>(diskMesh, "diskMesh").apply();
-  viennals::VTKWriter<double>(surfaceMesh, "surfaceMesh").apply();
-  viennals::VTKWriter<double>(centerMesh, "centerMesh").apply();
 
   return 0;
 }
