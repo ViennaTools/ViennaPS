@@ -62,7 +62,7 @@
       "flux": 13791.006554903972,
       "sticking": {
         "reaction": "R3",
-        "s0": 1.0,
+        "s0": 0.004,
         "Ea": 0.0,
         "beta": 0.0,
         "site": 0,
@@ -103,7 +103,7 @@
       "eq": "Al2C6H18 + 2OH -> 2AlC3H10O",
       "constant": {
         "kind": "sticking",
-        "s0": 1.0,
+        "s0": 0.004,
         "Ea": 0.0,
         "beta": 0.0
       },
@@ -182,7 +182,7 @@
       "eq": "Al2C6H18 + 2O -> 2AlC3H9O",
       "constant": {
         "kind": "sticking",
-        "s0": 1.0,
+        "s0": 0.004,
         "Ea": 0.0,
         "beta": 0.0
       },

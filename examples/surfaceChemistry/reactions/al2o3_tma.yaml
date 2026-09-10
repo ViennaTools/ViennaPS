@@ -45,11 +45,14 @@ species:
   Al2O3:    {phase: solid, rho: 1.77}        # 1e22 formula units /cm3
 
 surface:
-  - {eq: "Al2C6H18 + 2 OH -> 2 AlC3H10O", type: adsorption, s0: 1.0, Ea: 0.0,
+  # Reactive sticking of TMA on hydroxylated alumina, 4e-3, which Arts et al.
+  # and Ylilammi et al. both extract from saturation profiles in lateral high
+  # aspect ratio channels and molecular dynamics puts at 4.26e-3.
+  - {eq: "Al2C6H18 + 2 OH -> 2 AlC3H10O", type: adsorption, s0: 4.0e-3, Ea: 0.0,
      order: {OH: 1}}
   - {eq: "AlC3H10O -> AlC2H6O + CH4", type: surface,
      k0: 2.084e10, Ea: 0.52, beta: 1.0}
-  - {eq: "Al2C6H18 + 2 O -> 2 AlC3H9O", type: adsorption, s0: 1.0, Ea: 0.0,
+  - {eq: "Al2C6H18 + 2 O -> 2 AlC3H9O", type: adsorption, s0: 4.0e-3, Ea: 0.0,
      order: {O: 1}}
   - {eq: "AlC3H9O + Al -> AlC2H6O + AlCH3", type: surface,
      k0: 2.084e10, Ea: 0.5, beta: 1.0}
