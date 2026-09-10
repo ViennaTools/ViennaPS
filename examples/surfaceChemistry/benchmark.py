@@ -239,8 +239,17 @@ def main():
         macro('costShareLargestGPU', results.get(('gaas_cvd', 'gpu')), '%.2f')
         macro('costEngineSpeedup', speedup, '%.1f')
 
-    print('\nwrote benchmark_results.txt, benchmark_table.tex '
-          'and benchmark_numbers.tex')
+    # the machine is recorded by the same run that produced the timings, so
+    # the host the paper names is the host the paper measured
+    try:
+        import machine
+        machine.main()
+    except Exception as exc:
+        print('could not record the machine (%s); run machine.py by hand'
+              % type(exc).__name__)
+
+    print('\nwrote benchmark_results.txt, benchmark_table.tex, '
+          'benchmark_numbers.tex and machine.tex')
 
 
 if __name__ == '__main__':
