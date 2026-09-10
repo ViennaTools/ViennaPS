@@ -71,6 +71,9 @@ template <class NumericType, int D> class VoxelChemistry {
   mutable std::unique_ptr<VoxelFluxGPU<NumericType, D>> gpuFlux_;
 #endif
   NumericType minimumArea_ = 0; // set from the grid spacing in the constructor
+  NumericType facetGate_ = 0;   // 0: no gate, the behaviour before it existed
+  NumericType uniformVelocity_ = 0;  // diagnostic; 0 = run the real chemistry
+  mutable std::vector<NumericType> lastVelocity_, lastArea_, lastFlux_;
   /// Angular width of the NEUTRAL source, as a cosine power. 1 is the
   /// physical diffuse source; raising it collimates the beam, which is a
   /// diagnostic knob: grazing trajectories are what the interaction rule
@@ -137,6 +140,20 @@ public:
   const std::vector<int> &materials() const { return material_; }
   void setNormalEstimator(viennacs::NormalEstimator e) { estimator_ = e; }
   void setTraversalEngine(viennacs::TraversalEngine e) { engine_ = e; }
+  /// Smallest cosine between two cells' interface normals for a ray's deposit
+  /// to be shared between them. 0 spreads over the whole neighbourhood, which
+  /// leaks flux across a convex corner.
+  void setFacetGate(NumericType c) { facetGate_ = c; }
+  /// Spread a cell's surplus over its outward faces by the normal's
+  /// components instead of pushing all of it along the dominant axis.
+  void setSurplusSpreading(int mode) { advance_.setSurplusSpreading(mode); }
+  int surplusSpreading() const { return advance_.surplusSpreading(); }
+  /// Diagnostic: give every surface cell this normal velocity and skip the
+  /// trace entirely. A uniform velocity on a trench must produce a film of
+  /// uniform thickness, so whatever it produces instead is the advance's
+  /// own doing and nothing to do with transport. 0 disables it.
+  void setUniformVelocity(NumericType v) { uniformVelocity_ = v; }
+  NumericType facetGate() const { return facetGate_; }
 
   /// Trace the NEUTRAL transport on the GPU: the band as OptiX cell
   /// primitives, per-cell sticking uploaded beside it. The ion channel stays
@@ -378,6 +395,7 @@ public:
     // one, which a wall-time comparison would have read as method cost.
     viennacs::VoxelFlux<NumericType, D> flux(lattice_, fill_, estimator_);
     flux.setTraversalEngine(engine_);
+    flux.setFacetGate(facetGate_);
 
     for (size_t g = 0; g < nGas; ++g) {
       const auto &species = mech_.gas[g];
@@ -531,12 +549,18 @@ public:
   StepReport step(NumericType dt, std::vector<std::vector<NumericType>> &theta,
                   unsigned seed = 1) {
     const auto tTransport0 = std::chrono::steady_clock::now();
-    const auto gamma = traceFluxes(seed, theta);
+    const auto gamma = uniformVelocity_ != NumericType(0)
+                           ? std::vector<std::vector<NumericType>>(
+                                 mech_.gas.size())
+                           : traceFluxes(seed, theta);
     const auto tTransport1 = std::chrono::steady_clock::now();
     const size_t nCov = mech_.coverageNames.size();
     const size_t nGas = mech_.gas.size();
 
     std::vector<NumericType> velocity(fill_.size(), NumericType(0));
+    lastVelocity_.assign(fill_.size(), NumericType(0));
+    lastArea_.assign(fill_.size(), NumericType(0));
+    lastFlux_.assign(fill_.size(), NumericType(0));
     // the material each cell's velocity is computed FOR -- the advance may
     // only place a share into that material
     std::vector<int> velMat(fill_.size(), static_cast<int>(Material::GAS));
@@ -598,7 +622,12 @@ public:
         mech_.solveCoverages(cellGamma, k, theta[id], coverageIterations_,
                              coverageTolerance_);
       }
-      velocity[id] = mech_.growthRate(cellGamma, k, theta[id], material);
+      velocity[id] = uniformVelocity_ != NumericType(0)
+                         ? uniformVelocity_
+                         : mech_.growthRate(cellGamma, k, theta[id], material);
+      lastVelocity_[id] = velocity[id];
+      lastArea_[id] = area;
+      lastFlux_[id] = cellGamma.empty() ? NumericType(0) : cellGamma[0];
 
 #pragma omp critical
       {
@@ -750,6 +779,15 @@ public:
     report.volumeLost = moved.volumeLost;
     return report;
   }
+
+  /// The last step's per-cell velocity, interface area and first traced flux,
+  /// for looking at where a run goes wrong.
+  const std::vector<NumericType> &lastVelocity() const { return lastVelocity_; }
+  const std::vector<NumericType> &lastArea() const { return lastArea_; }
+  const std::vector<NumericType> &lastFlux() const { return lastFlux_; }
+  /// A cell holding less interface than this is not treated as surface.
+  void setMinimumArea(NumericType a) { minimumArea_ = a; }
+  NumericType minimumArea() const { return minimumArea_; }
 
   /// Coverages for every cell, starting from a bare surface.
   std::vector<std::vector<NumericType>> makeCoverages() const {
