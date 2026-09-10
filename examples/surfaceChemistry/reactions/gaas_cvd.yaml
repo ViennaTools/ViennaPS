@@ -49,7 +49,7 @@ species:
   CH3:     {phase: gas, flux: 0.0}          # [S3],[S4],[S14],[S15],[S24]
   GaCH3:   {phase: gas, flux: 1.653e4}      # [S5], from p(TMG) = 0.137 torr
   GaC2H6:  {phase: gas, flux: 0.0}          # [S6]  Ga(CH3)2
-  GaC3H9:  {phase: gas, flux: 0.0}          # [S7]  Ga(CH3)3, trimethylgallium
+  GaC3H9:  {phase: gas, flux: 0.0}          # [S7]  Ga(CH3)3, TMG
   GaCH2:   {phase: gas, flux: 0.0}          # [S8]  gallium carbene
   GaC2H5:  {phase: gas, flux: 0.0}          # [S9]  Ga(CH3)CH2
   GaC3H8:  {phase: gas, flux: 0.0}          # [S10] Ga(CH3)2CH2
