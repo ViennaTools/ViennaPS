@@ -15,22 +15,22 @@ namespace viennaps {
 
 using namespace viennacore;
 
-template <class NumericType, class MeshNT = NumericType>
+template <class NumericType, class MeshNT = NumericType,
+          class TreeType = KDTree<NumericType, Vec3D<NumericType>>>
 class PointToElementDataBase {
 protected:
   PointData<NumericType> &pointData_;
-  KDTree<NumericType, Vec3D<NumericType>> const &pointKdTree_;
+  TreeType const &pointKdTree_;
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
 
   const bool insertToMesh_ = false;
 
 public:
   virtual ~PointToElementDataBase() = default;
-  PointToElementDataBase(
-      PointData<NumericType> &pointData,
-      KDTree<NumericType, Vec3D<NumericType>> const &pointKdTree,
-      SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh,
-      bool insertToMesh = false)
+  PointToElementDataBase(PointData<NumericType> &pointData,
+                         TreeType const &pointKdTree,
+                         SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh,
+                         bool insertToMesh = false)
       : pointData_(pointData), pointKdTree_(pointKdTree),
         surfaceMesh_(surfaceMesh), insertToMesh_(insertToMesh) {}
 
@@ -112,13 +112,15 @@ private:
   }
 };
 
-template <class NumericType, class MeshNT = NumericType>
-class PointToElementData : public PointToElementDataBase<NumericType, MeshNT> {
+template <class NumericType, class MeshNT = NumericType,
+          class TreeType = KDTree<NumericType, Vec3D<NumericType>>>
+class PointToElementData
+    : public PointToElementDataBase<NumericType, MeshNT, TreeType> {
 
 public:
   PointToElementData(PointData<NumericType> &elementData,
                      SmartPointer<PointData<NumericType>> pointData,
-                     KDTree<NumericType, Vec3D<NumericType>> const &pointKdTree,
+                     TreeType const &pointKdTree,
                      SmartPointer<viennals::Mesh<MeshNT>> &surfaceMesh,
                      bool insertToMesh = false)
       : PointToElementDataBase<NumericType, MeshNT>(*pointData, pointKdTree,
@@ -127,7 +129,7 @@ public:
 
   PointToElementData(PointData<NumericType> &elementData,
                      PointData<NumericType> &pointData,
-                     KDTree<NumericType, Vec3D<NumericType>> const &pointKdTree,
+                     TreeType const &pointKdTree,
                      SmartPointer<viennals::Mesh<MeshNT>> &surfaceMesh,
                      bool insertToMesh = false)
       : PointToElementDataBase<NumericType, MeshNT>(pointData, pointKdTree,
@@ -159,18 +161,19 @@ private:
   PointData<NumericType> &elementData_;
 };
 
-template <class NumericType, class PointNT, class ElemNT, class MeshNT>
+template <class NumericType, class PointNT, class ElemNT, class MeshNT,
+          class TreeType = KDTree<NumericType, Vec3D<NumericType>>>
 class PointToElementDataSingle {
   const std::vector<PointNT> &pointData_;
   std::vector<ElemNT> &elementData_;
-  const KDTree<NumericType, Vec3D<NumericType>> &pointKdTree_;
+  const TreeType &pointKdTree_;
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
 
 public:
-  PointToElementDataSingle(
-      const std::vector<PointNT> &pointData, std::vector<ElemNT> &elementData,
-      const KDTree<NumericType, Vec3D<NumericType>> &pointKdTree,
-      SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh)
+  PointToElementDataSingle(const std::vector<PointNT> &pointData,
+                           std::vector<ElemNT> &elementData,
+                           const TreeType &pointKdTree,
+                           SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh)
       : pointData_(pointData), elementData_(elementData),
         pointKdTree_(pointKdTree), surfaceMesh_(surfaceMesh) {}
 
@@ -212,9 +215,10 @@ private:
 #ifdef VIENNACORE_COMPILE_GPU
 namespace gpu {
 // Same as PointToElementData but stores data in a CudaBuffer
-template <class NumericType, class MeshNT = NumericType>
+template <class NumericType, class MeshNT = NumericType,
+          class TreeType = KDTree<NumericType, Vec3D<NumericType>>>
 class PointToElementData
-    : public ::viennaps::PointToElementDataBase<NumericType, MeshNT> {
+    : public ::viennaps::PointToElementDataBase<NumericType, MeshNT, TreeType> {
 
   CudaBuffer &d_elementData_;
   std::vector<MeshNT> elementData_;
@@ -223,7 +227,7 @@ class PointToElementData
 public:
   PointToElementData(CudaBuffer &d_elementData,
                      SmartPointer<PointData<NumericType>> pointData,
-                     KDTree<NumericType, Vec3D<NumericType>> const &pointKdTree,
+                     TreeType const &pointKdTree,
                      SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh,
                      bool insertToMesh = false)
       : ::viennaps::PointToElementDataBase<NumericType, MeshNT>(
@@ -231,8 +235,7 @@ public:
         d_elementData_(d_elementData) {}
 
   PointToElementData(CudaBuffer &d_elementData,
-                     PointData<NumericType> &pointData,
-                     KDTree<NumericType, Vec3D<NumericType>> &pointKdTree,
+                     PointData<NumericType> &pointData, TreeType &pointKdTree,
                      SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh,
                      bool insertToMesh = false)
       : ::viennaps::PointToElementDataBase<NumericType, MeshNT>(

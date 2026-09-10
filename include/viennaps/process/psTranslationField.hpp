@@ -14,7 +14,9 @@ namespace viennaps {
 
 using namespace viennacore;
 
-VIENNAPS_TEMPLATE_ND(NumericType, D)
+template <Numeric NumericType, int D,
+          class TreeType = KDTree<NumericType, Vec3D<NumericType>>>
+  requires Dimension<D>
 class TranslationField final : public viennals::VelocityField<NumericType> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 
@@ -64,16 +66,13 @@ public:
     translator_ = translator;
   }
 
-  void setKdTree(
-      const SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> &kdTree) {
-    kdTree_ = kdTree;
-  }
+  void setKdTree(const SmartPointer<TreeType> &kdTree) { kdTree_ = kdTree; }
 
   auto &getKdTree() { return kdTree_; }
 
   void buildKdTree(const std::vector<std::array<NumericType, 3>> &points) {
     if (!kdTree_)
-      kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
+      kdTree_ = SmartPointer<TreeType>::New();
     kdTree_->setPoints(points);
     kdTree_->build();
   }
@@ -108,7 +107,7 @@ public:
 
 private:
   SmartPointer<TranslatorType> translator_;
-  SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> kdTree_;
+  SmartPointer<TreeType> kdTree_;
 
   const SmartPointer<::viennaps::VelocityField<NumericType, D>>
       modelVelocityField_;

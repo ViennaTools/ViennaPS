@@ -113,14 +113,13 @@ int main(int argc, char **argv) {
                                                       diskMesh);
       diskMesher.setTranslator(translator);
 
-      auto elementKdTree =
-          SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
+      auto elementKdTree = SmartPointer<KDTreeType>::New();
       auto surfMesh = viennals::Mesh<NumericType>::New();
 
       auto velocityField =
           SmartPointer<DefaultVelocityField<NumericType, D>>::New();
       auto translationField =
-          SmartPointer<TranslationField<NumericType, D>>::New(
+          SmartPointer<TranslationField<NumericType, D, KDTreeType>>::New(
               velocityField, domain->getMaterialMap(), 1);
       translationField->setTranslator(translator);
 
@@ -156,9 +155,9 @@ int main(int argc, char **argv) {
           tracer.normalizeFlux(fluxResult);
           fluxResultVec.push_back(std::move(fluxResult));
         }
-        ElementToPointData<NumericType, float, float> post(
-            dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
-            domain->getGridDelta() * 2.0f);
+        ElementToPointData<NumericType, float, float, true, D == 3, KDTreeType>
+            post(dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
+                 domain->getGridDelta() * 2.0f);
         post.setElementDataArrays(std::move(fluxResultVec));
         post.apply();
         timer.finish();

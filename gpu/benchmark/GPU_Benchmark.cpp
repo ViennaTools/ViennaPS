@@ -8,7 +8,6 @@
 
 int main(int argc, char **argv) {
   omp_set_num_threads(16);
-  using NumericType = float;
   constexpr int D = DIM;
   auto context = DeviceContext::createContext();
 
@@ -68,8 +67,7 @@ int main(int argc, char **argv) {
                                                       diskMesh);
       diskMesher.setTranslator(translator);
 
-      auto elementKdTree =
-          SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
+      auto elementKdTree = SmartPointer<KDTreeType>::New();
       auto surfMesh = viennals::Mesh<float>::New();
 
       viennals::Advect<NumericType, D> advectionKernel;
@@ -77,7 +75,7 @@ int main(int argc, char **argv) {
       auto velocityField =
           SmartPointer<DefaultVelocityField<NumericType, D>>::New();
       auto translationField =
-          SmartPointer<TranslationField<NumericType, D>>::New(
+          SmartPointer<TranslationField<NumericType, D, KDTreeType>>::New(
               velocityField, domain->getMaterialMap(), 1);
       translationField->setTranslator(translator);
 
@@ -99,9 +97,10 @@ int main(int argc, char **argv) {
         timer.start();
         tracer.apply();
         auto pointData = PointData<NumericType>::New();
-        ElementToPointData<NumericType, float, viennaray::gpu::ResultType> post(
-            dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
-            domain->getGridDelta() * 2.0f);
+        ElementToPointData<NumericType, float, viennaray::gpu::ResultType, true,
+                           D == 3, KDTreeType>
+            post(dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
+                 domain->getGridDelta() * 2.0f);
         if (preparePost)
           post.prepare();
         tracer.syncStreams();

@@ -12,8 +12,15 @@
 #define DEFAULT_STICKING 0.1
 #define DIM 3
 
+using NumericType = float;
 using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 using namespace viennaps;
+
+#ifdef NFKDTREE
+using KDTreeType = NFKDTree<NumericType, Vec3D<NumericType>, D>;
+#else
+using KDTreeType = KDTree<NumericType, Vec3D<NumericType>>;
+#endif
 
 template <class NumericType, int N>
 consteval std::array<NumericType, N> linspace(NumericType start,
@@ -50,6 +57,7 @@ constexpr bool runDisk = true;
 constexpr bool runTriangle = true;
 
 constexpr auto gridDeltaValues = linspace<float, 10>(0.095f, 0.5f);
+// constexpr auto gridDeltaValues = linspace<float, 5>(0.2f, 0.5f); //
 constexpr int numRuns = 10;
 constexpr int raysPerPoint = 1000;
 constexpr int numRays = int(1e8);

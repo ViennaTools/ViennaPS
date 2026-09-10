@@ -40,7 +40,7 @@ auto makeGeometry(int i) {
   const NumericType gridDelta = 1. / NumericType(i);
   auto domain = Domain<NumericType, D>::New(gridDelta, 100., 100.,
                                             BoundaryType::REFLECTIVE_BOUNDARY);
-  MakeStack<NumericType, D>(domain, 5, 10., 10.0, 0.0, 50.0, 0.0).apply();
+  MakeStack<NumericType, D>(domain, 15, 10., 10.0, 0.0, 50.0, 0.0).apply();
 
   auto etch = SmartPointer<IsotropicProcess<NumericType, D>>::New(
       -1.0, Material::Si3N4);
@@ -68,9 +68,7 @@ int main() {
 
   // ViennaCore KDTree
   {
-    auto elementKdTree = SmartPointer<KDTree<double, Vec3D<double>>>::New();
-    CreateSurfaceMesh<double, double, D>(domain->getSurface(), surfaceMesh,
-                                         elementKdTree)
+    CreateSurfaceMesh<double, double, D>(domain->getSurface(), surfaceMesh)
         .apply();
 
     for (const auto &cell : surfaceMesh->triangles) {
@@ -80,6 +78,15 @@ int main() {
           3.0;
       elementCenters.push_back(center);
     }
+
+    timer.start();
+    auto elementKdTree =
+        SmartPointer<KDTree<double, Vec3D<double>>>::New(elementCenters);
+    elementKdTree->build();
+    timer.finish();
+
+    std::cout << "ViennaCore KDTree build took " << timer.currentDuration * 1e-6
+              << " ms" << std::endl;
 
     // generate random data for each element
     elementDataArrays[0].reserve(elementCenters.size());
@@ -119,6 +126,9 @@ int main() {
         SmartPointer<NFKDTree<double, Vec3D<double>, 3>>::New(cloud);
     elementKdTree->build();
     timer.finish();
+
+    std::cout << "NFKDTree build took " << timer.currentDuration * 1e-6 << " ms"
+              << std::endl;
 
     ElementToPointData<double, double, double, true, true,
                        NFKDTree<double, Vec3D<double>, 3>>
