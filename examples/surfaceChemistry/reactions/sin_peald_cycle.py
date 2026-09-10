@@ -23,6 +23,7 @@ import argparse, math, os, sys
 
 sys.path.insert(0, os.environ.get("VIENNACHEM", ""))
 import viennachem as vc
+from viennachem.evaluate import step_coverages as ev_step
 from viennachem.evaluate import (rate_constants, rate, free_fractions,
                                  solid_density)
 
@@ -60,44 +61,10 @@ def gammas(ir, flowing, scale=None):
 
 
 def step_coverages(ir, gam, theta, dt, max_change=5e-4, max_sub=1000000):
-    """Port of ChemicalMechanism::stepCoverages -- exponential Euler."""
-    k = K[id(ir)]
-    n = len(theta)
-    s = coverage_scale(ir)
-    elapsed = 0.0
-    for _ in range(max_sub):
-        if elapsed >= dt:
-            break
-        frees = free_fractions(ir, theta)
-        P = [0.0] * n
-        L = [0.0] * n
-        for j, rx in enumerate(ir["reactions"]):
-            rj = rate(rx, k[j], gam, theta, frees) * s
-            if rj == 0.0:
-                continue
-            for i in range(n):
-                nu = rx["nu"][i]
-                if nu > 0.0:
-                    P[i] += nu * rj
-                elif nu < 0.0:
-                    L[i] += -nu * rj / max(theta[i], TINY)
-
-        fastest = max((abs(P[i] - L[i] * theta[i]) for i in range(n)), default=0.0)
-        h = dt - elapsed
-        if fastest > 0.0:
-            h = min(h, max_change / fastest)
-
-        for i in range(n):
-            if L[i] * h > 1e-8:
-                steady = P[i] / L[i]
-                nxt = steady + (theta[i] - steady) * math.exp(-L[i] * h)
-            else:
-                nxt = theta[i] + h * (P[i] - L[i] * theta[i])
-            theta[i] = min(1.0, max(0.0, nxt))
-        total = sum(theta)
-        if total > 1.0:                       # one site type here
-            theta = [t / total for t in theta]
-        elapsed += h
+    """The transient rule of the model, applied here through the evaluator so
+    that this script and the C++ integrate the same way."""
+    theta, _ = ev_step(ir, theta, gam, dt, max_change=max_change,
+                       ks=K[id(ir)], max_sub_steps=max_sub)
     return theta
 
 

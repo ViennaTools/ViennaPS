@@ -624,19 +624,36 @@ template <typename NumericType> struct ChemicalMechanism {
   // integrates this instead of solving the balance, and the same mechanism,
   // the same rate laws and the same nu serve both paths.
   //
-  // EXPONENTIAL EULER, not plain Euler. An ALD mechanism carries fast
+  // LINEAR-IMPLICIT PATANKAR, not plain Euler. An ALD mechanism carries fast
   // intermediates that sit near zero -- here the iodine-bearing fragment the
   // dose puts down and the plasma strips within microseconds -- so the system
   // is stiff. Plain Euler oscillates such a species around zero and the clamp
   // at zero then injects coverage once per step, which makes the answer drift
-  // FURTHER as the step is refined rather than converging. Splitting each
-  // species into production and linear loss,
+  // FURTHER as the step is refined rather than converging.
   //
-  //     dtheta_i/dt = P_i - L_i theta_i,   theta_i(t+h) = P/L + (theta_i - P/L) e^{-L h}
+  // A cyclic process integrates thousands of pulses in sequence, so a rule
+  // that is merely convergent is not enough: an error that does not cancel
+  // between the species a reaction consumes and the species it produces
+  // accumulates over the cycles, and the site occupancy of a partially
+  // saturated region walks away from one. The rule here transfers occupancy
+  // rather than updating each species on its own. Writing the transfer as a
+  // rate coefficient
   //
-  // is exact where the loss is first order, unconditionally positive, and
-  // converges cleanly at first order. L_i is formed as r_j/theta_i, which is
-  // finite for a mass-action loss because r_j carries theta_i as a factor.
+  //     q_ik = (occupancy of state k moving into state i, per unit of k)
+  //
+  // formed by splitting each reaction's flow from the states it consumes into
+  // the states it produces, the sub-step solves
+  //
+  //     (I + h diag(L) - h q) theta(t+h) = theta(t),   L_k = sum_i q_ik
+  //
+  // The columns of that matrix sum to one, so the occupancy of every site type
+  // is conserved EXACTLY, whatever the sub-step; the matrix is a strictly
+  // diagonally dominant M-matrix, so the result is non-negative for any
+  // sub-step; and the rule converges at first order. The free fraction of each
+  // site type is carried as an extra unknown, so a reaction that adsorbs onto
+  // a free site or that frees one moves occupancy to and from a tracked state
+  // and the conservation still holds. L_k is formed as r_j/theta_k, which is
+  // finite for a mass-action loss because r_j carries theta_k as a factor.
   //
   // `maxChange` is the accuracy knob: the net change allowed in one sub-step,
   // with the sub-step count scaling as its inverse. On the SiN PE-ALD
@@ -661,40 +678,96 @@ template <typename NumericType> struct ChemicalMechanism {
     if (n == 0 || dt <= 0.)
       return;
 
+    // the unknowns are the coverages followed by the free fraction of each
+    // site type, so that every reaction moves occupancy between two of them
+    const size_t nt = static_cast<size_t>(numSiteTypes);
+    const size_t N = n + nt;
+
     std::vector<NumericType> scale(n);
     for (size_t i = 0; i < n; ++i)
       scale[i] = coverageScale(i);
     // the smallest coverage a loss rate is divided by: r_j carries theta_i as
     // a factor, so the quotient is finite, and this only guards the division
     constexpr NumericType floor = std::numeric_limits<NumericType>::min();
-    std::vector<NumericType> P(n), L(n);
+
+    std::vector<NumericType> q(N * N), L(N), x(N), gain(N), lose(N),
+        A(N * N), rhs(N);
 
     NumericType elapsed = 0.;
     for (int sub = 0; sub < maxSubSteps && elapsed < dt; ++sub) {
       const std::vector<NumericType> free = freeFractions(theta);
+      for (size_t i = 0; i < n; ++i)
+        x[i] = theta[i];
+      for (size_t t = 0; t < nt; ++t)
+        x[n + t] = free[t];
 
-      std::fill(P.begin(), P.end(), NumericType(0.));
-      std::fill(L.begin(), L.end(), NumericType(0.));
+      std::fill(q.begin(), q.end(), NumericType(0.));
       for (size_t j = 0; j < reactions.size(); ++j) {
         const auto &r = reactions[j];
         const NumericType rj = rate(r, k[j], gamma, theta, free);
         if (rj == 0.)
           continue;
-        for (size_t i = 0; i < n; ++i) {
-          if (r.nu[i] > 0.)
-            P[i] += r.nu[i] * rj * scale[i];
-          else if (r.nu[i] < 0.)
-            L[i] += -r.nu[i] * rj * scale[i] / std::max(theta[i], floor);
+        // one site type at a time: the occupancy of a type is conserved on its
+        // own, and a reaction that touches two types moves each separately
+        for (size_t t = 0; t < nt; ++t) {
+          std::fill(gain.begin(), gain.end(), NumericType(0.));
+          std::fill(lose.begin(), lose.end(), NumericType(0.));
+          NumericType gv = 0., lv = 0.;
+          for (size_t i = 0; i < n; ++i) {
+            if (static_cast<size_t>(coverageSite[i]) != t || r.nu[i] == 0.)
+              continue;
+            const NumericType w = r.nu[i] * scale[i];
+            if (w > 0.) {
+              gain[i] = w;
+              gv += w;
+            } else {
+              lose[i] = -w;
+              lv += -w;
+            }
+          }
+          // what the tracked states of this type do not balance comes from, or
+          // returns to, the free fraction of the type
+          if (gv > lv) {
+            lose[n + t] += gv - lv;
+            lv = gv;
+          } else if (lv > gv) {
+            gain[n + t] += lv - gv;
+            gv = lv;
+          }
+          if (gv <= 0.)
+            continue;
+          const NumericType w = rj / gv;
+          for (size_t c = 0; c < N; ++c) {
+            if (lose[c] == 0.)
+              continue;
+            const NumericType col = w * lose[c] / std::max(x[c], floor);
+            for (size_t i = 0; i < N; ++i)
+              if (gain[i] != 0.)
+                q[i * N + c] += gain[i] * col;
+          }
         }
       }
 
-      // the sub-step follows the NET rate. Limiting on the loss rate alone
-      // would refuse to take a step wherever a fast intermediate sits at its
-      // quasi-steady value, which is exactly where the exponential form is
-      // already exact and a long step is safe.
+      // the loss rate coefficient of each state is the column sum, which is
+      // what makes the columns of the sub-step matrix sum to one
+      for (size_t c = 0; c < N; ++c) {
+        NumericType s = 0.;
+        for (size_t i = 0; i < N; ++i)
+          s += q[i * N + c];
+        L[c] = s;
+      }
+
+      // the sub-step follows the NET rate of the tracked coverages. Limiting
+      // on the loss rate alone would refuse to take a step wherever a fast
+      // intermediate sits at its quasi-steady value, which is exactly where a
+      // long step is safe.
       NumericType fastest = 0.;
-      for (size_t i = 0; i < n; ++i)
-        fastest = std::max(fastest, std::abs(P[i] - L[i] * theta[i]));
+      for (size_t i = 0; i < n; ++i) {
+        NumericType net = -L[i] * x[i];
+        for (size_t c = 0; c < N; ++c)
+          net += q[i * N + c] * x[c];
+        fastest = std::max(fastest, std::abs(net));
+      }
 
       NumericType h = dt - elapsed;
       if (fastest > 0.)
@@ -703,19 +776,62 @@ template <typename NumericType> struct ChemicalMechanism {
       if (grown)
         *grown += growthRate(gamma, k, theta, material) * h;
 
-      for (size_t i = 0; i < n; ++i) {
-        NumericType next;
-        if (L[i] * h > 1e-8) {
-          const NumericType steady = P[i] / L[i];
-          next = steady + (theta[i] - steady) * std::exp(-L[i] * h);
-        } else {
-          next = theta[i] + h * (P[i] - L[i] * theta[i]);
-        }
-        theta[i] = std::min(NumericType(1.), std::max(NumericType(0.), next));
+      for (size_t i = 0; i < N; ++i) {
+        for (size_t c = 0; c < N; ++c)
+          A[i * N + c] = -h * q[i * N + c];
+        A[i * N + i] += NumericType(1.) + h * L[i];
+        rhs[i] = x[i];
+      }
+      if (solveDense(A, rhs, N)) {
+        for (size_t i = 0; i < n; ++i)
+          theta[i] = std::min(NumericType(1.),
+                              std::max(NumericType(0.), rhs[i]));
       }
       clampToSimplex(theta);
       elapsed += h;
     }
+  }
+
+  // Gaussian elimination with partial pivoting, in place, for the sub-step
+  // matrix. N is the number of coverages plus the number of site types, so a
+  // dense solve at this size costs less than the rate evaluation that built
+  // it. Returns false, leaving b untouched, if the matrix is singular.
+  static bool solveDense(std::vector<NumericType> &a,
+                         std::vector<NumericType> &b, size_t N) {
+    for (size_t c = 0; c < N; ++c) {
+      size_t piv = c;
+      NumericType best = std::abs(a[c * N + c]);
+      for (size_t i = c + 1; i < N; ++i) {
+        const NumericType v = std::abs(a[i * N + c]);
+        if (v > best) {
+          best = v;
+          piv = i;
+        }
+      }
+      if (best == 0.)
+        return false;
+      if (piv != c) {
+        for (size_t j = c; j < N; ++j)
+          std::swap(a[c * N + j], a[piv * N + j]);
+        std::swap(b[c], b[piv]);
+      }
+      const NumericType d = a[c * N + c];
+      for (size_t i = c + 1; i < N; ++i) {
+        const NumericType f = a[i * N + c] / d;
+        if (f == 0.)
+          continue;
+        for (size_t j = c; j < N; ++j)
+          a[i * N + j] -= f * a[c * N + j];
+        b[i] -= f * b[c];
+      }
+    }
+    for (size_t i = N; i-- > 0;) {
+      NumericType s = b[i];
+      for (size_t j = i + 1; j < N; ++j)
+        s -= a[i * N + j] * b[j];
+      b[i] = s / a[i * N + i];
+    }
+    return true;
   }
 
   // Hold each site type's occupancy at or below one. Euler can overshoot the
