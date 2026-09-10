@@ -1,0 +1,19 @@
+# The deposition counterpart of the flux-only etch: ONE decision per impact.
+#
+# A precursor arrives, and with probability s0 it sticks and becomes solid;
+# otherwise it re-emits diffusively and carries on into the feature. There is
+# no coverage, no thermal channel and no ion, so the three surface
+# representations run identically and only the transport can differ.
+#
+# s0 is the conformality knob. At s0 = 1 the film is shadow-limited and the
+# trench closes at its mouth; as s0 falls a molecule gets many chances further
+# down and the step coverage rises toward one.
+name: conformal_deposition
+temperature: 300.0        # K
+
+species:
+  A:  {phase: gas,   flux: 1.0e3}    # Gamma in 1e15 /cm^2 /s
+  Si: {phase: solid, rho: 5.02}      # 1e22 atoms/cm^3
+
+surface:
+  - {eq: "A -> Si", type: adsorption, s0: 0.1, Ea: 0.0}
