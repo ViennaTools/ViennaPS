@@ -11,13 +11,14 @@
 #define DEFAULT_GRID_DELTA 0.25
 #define DEFAULT_STICKING 0.1
 #define DIM 3
+#define NFKDTREE 1
 
 using NumericType = float;
 using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 using namespace viennaps;
 
 #ifdef NFKDTREE
-using KDTreeType = NFKDTree<NumericType, Vec3D<NumericType>, D>;
+using KDTreeType = NFKDTree<NumericType, Vec3D<NumericType>, DIM>;
 #else
 using KDTreeType = KDTree<NumericType, Vec3D<NumericType>>;
 #endif
@@ -197,12 +198,11 @@ auto getDeviceParams(int particleType) {
 }
 
 template <class NumericType, int D, class TracerType>
-void setupTriangleGeometry(
-    SmartPointer<Domain<NumericType, D>> &domain,
-    SmartPointer<viennals::Mesh<float>> &surfaceMesh_,
-    SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> &elementKdTree_,
-    TracerType &rayTracer_) {
-  CreateSurfaceMesh<NumericType, float, D>(
+void setupTriangleGeometry(SmartPointer<Domain<NumericType, D>> &domain,
+                           SmartPointer<viennals::Mesh<float>> &surfaceMesh_,
+                           SmartPointer<KDTreeType> &elementKdTree_,
+                           TracerType &rayTracer_) {
+  CreateSurfaceMesh<NumericType, float, D, KDTreeType>(
       domain->getLevelSets().back(), surfaceMesh_, elementKdTree_, 1e-12, 0.05)
       .apply();
 
@@ -252,12 +252,11 @@ void setupTriangleGeometry(
 }
 
 template <class NumericType, int D, class TracerType>
-void setupLineGeometry(
-    SmartPointer<Domain<NumericType, D>> &domain,
-    SmartPointer<viennals::Mesh<float>> &surfaceMesh_,
-    SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> &elementKdTree_,
-    TracerType &rayTracer_) {
-  CreateSurfaceMesh<NumericType, float, D>(
+void setupLineGeometry(SmartPointer<Domain<NumericType, D>> &domain,
+                       SmartPointer<viennals::Mesh<float>> &surfaceMesh_,
+                       SmartPointer<KDTreeType> &elementKdTree_,
+                       TracerType &rayTracer_) {
+  CreateSurfaceMesh<NumericType, float, D, KDTreeType>(
       domain->getLevelSets().back(), surfaceMesh_, elementKdTree_, 1e-12, 0.05)
       .apply();
 

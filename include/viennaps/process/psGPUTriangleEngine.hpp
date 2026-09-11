@@ -21,7 +21,7 @@ using namespace viennacore;
 VIENNAPS_TEMPLATE_ND(NumericType, D)
 class GPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
-      SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
+      SmartPointer<NFKDTree<NumericType, std::array<NumericType, 3>>>;
   using MeshType = SmartPointer<viennals::Mesh<float>>;
   using PostProcessingType =
       ElementToPointData<NumericType, float, viennaray::gpu::ResultType, true,
@@ -107,7 +107,7 @@ public:
 
     assert(surfaceMesh_ && "Surface mesh not initialized.");
     assert(elementKdTree_ && "Element KDTree not initialized.");
-    CreateSurfaceMesh<NumericType, float, D>(
+    CreateSurfaceMesh<NumericType, float, D, typename KDTreeType::element_type>(
         context.domain->getSurface(), surfaceMesh_, elementKdTree_, 1e-12,
         context.rayTracingParams.minNodeDistanceFactor)
         .apply();
