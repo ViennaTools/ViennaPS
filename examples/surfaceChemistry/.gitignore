@@ -4,6 +4,7 @@
 *_profile.txt
 *.log
 __pycache__/
+
 # written by benchmark.py on the host that runs it
 benchmark_results.txt
 benchmark_table.tex
