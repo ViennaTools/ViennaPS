@@ -1,0 +1,1141 @@
+{
+  "schemaVersion": 1,
+  "name": "c2f6_sio2_kushner2001",
+  "siteTypes": [
+    {
+      "name": "default",
+      "density": null
+    }
+  ],
+  "coverages": [
+    {
+      "name": "SiFCO2*",
+      "site": 0
+    },
+    {
+      "name": "SiF2CO2*",
+      "site": 0
+    },
+    {
+      "name": "SiF*",
+      "site": 0
+    },
+    {
+      "name": "SiF2*",
+      "site": 0
+    },
+    {
+      "name": "SiF3*",
+      "site": 0
+    },
+    {
+      "name": "Pstar*",
+      "site": 0
+    }
+  ],
+  "gas": [
+    {
+      "name": "CF2",
+      "traced": true,
+      "label": "CF2_flux",
+      "flux": 558.0,
+      "sticking": {
+        "reaction": "R12",
+        "s0": 0.0085,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 1,
+        "materialConstants": {
+          "SiO2": {
+            "prefactor": 0.0085,
+            "Ea": 0.0,
+            "beta": 0.0
+          }
+        },
+        "materialDefault": {
+          "prefactor": 0.0,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      }
+    },
+    {
+      "name": "CF",
+      "traced": true,
+      "label": "CF_flux",
+      "flux": 228.0,
+      "sticking": {
+        "reaction": "R13",
+        "s0": 0.0085,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 1,
+        "materialConstants": {
+          "SiO2": {
+            "prefactor": 0.0085,
+            "Ea": 0.0,
+            "beta": 0.0
+          }
+        },
+        "materialDefault": {
+          "prefactor": 0.0,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      }
+    },
+    {
+      "name": "C2F3",
+      "traced": true,
+      "label": "C2F3_flux",
+      "flux": 0.95,
+      "sticking": {
+        "reaction": "R7",
+        "s0": 0.08,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 0
+      }
+    },
+    {
+      "name": "C2F4",
+      "traced": true,
+      "label": "C2F4_flux",
+      "flux": 1.02,
+      "sticking": {
+        "reaction": "R8",
+        "s0": 0.08,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 0
+      }
+    },
+    {
+      "name": "F",
+      "traced": true,
+      "label": "F_flux",
+      "flux": 1210.0,
+      "sticking": null
+    },
+    {
+      "name": "CF4",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    },
+    {
+      "name": "CO2",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    },
+    {
+      "name": "SiF2g",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    },
+    {
+      "name": "SiF3g",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    },
+    {
+      "name": "SiF4g",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    }
+  ],
+  "solids": [
+    {
+      "name": "C",
+      "rho": 1.667,
+      "rhoMaterials": {}
+    },
+    {
+      "name": "SiO2",
+      "rho": 2.205,
+      "rhoMaterials": {
+        "Si": 5.0,
+        "Mask": 500.0
+      }
+    }
+  ],
+  "solid": {
+    "name": "C",
+    "rho": 1.667,
+    "rhoMaterials": {}
+  },
+  "ionSource": {
+    "name": "FC_ion",
+    "flux": 65.5,
+    "meanEnergy": 98.0,
+    "sigmaEnergy": 10.0,
+    "exponent": 500.0,
+    "inflectAngle": 89.0,
+    "n_l": 10.0,
+    "minAngle": 80.0,
+    "thetaRMin": 70.0,
+    "thetaRMax": 90.0
+  },
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "CF2 -> C",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.005,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R2",
+      "eq": "CF -> C",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.005,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R3",
+      "eq": "C2F3 -> 2C",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.005,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 2,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R4",
+      "eq": "C2F4 -> 2C",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.005,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 3,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R5",
+      "eq": "CF2 + Pstar* -> C + *",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.08,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 5,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R6",
+      "eq": "CF + Pstar* -> C + *",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.08,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 5,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R7",
+      "eq": "C2F3 + Pstar* -> 2C + *",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.08,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 2,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 5,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R8",
+      "eq": "C2F4 + Pstar* -> 2C + *",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.08,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 3,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 5,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R9",
+      "eq": "FC_ion + * -> Pstar*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.011,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [],
+      "freeSiteExp": [
+        1
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R10",
+      "eq": "F + C -> CF4",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 0.00057,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 4,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        -1.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R11",
+      "eq": "FC_ion + C -> CF2",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        -1.0,
+        0.0
+      ],
+      "ionYield": {
+        "ion": "FC_ion",
+        "label": "R11_yieldFlux",
+        "flux": 65.5,
+        "meanEnergy": 98.0,
+        "A": 0.00339,
+        "Eth": 3.0,
+        "B": 0.0,
+        "enhanced": false,
+        "materials": {}
+      }
+    },
+    {
+      "id": "R12",
+      "eq": "CF2 + * -> SiF2CO2*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.0085,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        1
+      ],
+      "nu": [
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ],
+      "materialConstants": {
+        "SiO2": {
+          "prefactor": 0.0085,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      },
+      "materialDefault": {
+        "prefactor": 0.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      }
+    },
+    {
+      "id": "R13",
+      "eq": "CF + * -> SiFCO2*",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.0085,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        1
+      ],
+      "nu": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ],
+      "materialConstants": {
+        "SiO2": {
+          "prefactor": 0.0085,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      },
+      "materialDefault": {
+        "prefactor": 0.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      }
+    },
+    {
+      "id": "R14",
+      "eq": "FC_ion + SiF2CO2* -> SiF2* + CO2",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        -1.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ],
+      "ionYield": {
+        "ion": "FC_ion",
+        "label": "R14_yieldFlux",
+        "flux": 65.5,
+        "meanEnergy": 98.0,
+        "A": 0.01507,
+        "Eth": 3.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {}
+      }
+    },
+    {
+      "id": "R15",
+      "eq": "FC_ion + SiFCO2* -> SiF* + CO2",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -1.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ],
+      "ionYield": {
+        "ion": "FC_ion",
+        "label": "R15_yieldFlux",
+        "flux": 65.5,
+        "meanEnergy": 98.0,
+        "A": 0.01507,
+        "Eth": 3.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {}
+      }
+    },
+    {
+      "id": "R16",
+      "eq": "F + SiF2CO2* -> SiF3* + CO2",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 0.0085,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 4,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R17",
+      "eq": "F + SiFCO2* -> SiF2* + CO2",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 0.0085,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 4,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R18",
+      "eq": "F + SiF* -> SiF2*",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 0.008,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 4,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 2,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        -1.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R19",
+      "eq": "F + SiF2* -> SiF3*",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 0.0085,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 4,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 3,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "R20",
+      "eq": "F + SiF3* + SiO2 -> SiF4g + *",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 0.0085,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 4,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 4,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        -1.0
+      ]
+    },
+    {
+      "id": "R21",
+      "eq": "FC_ion + SiF* + SiO2 -> SiF2g + *",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 2,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        -1.0
+      ],
+      "ionYield": {
+        "ion": "FC_ion",
+        "label": "R21_yieldFlux",
+        "flux": 65.5,
+        "meanEnergy": 98.0,
+        "A": 0.01658,
+        "Eth": 3.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {}
+      }
+    },
+    {
+      "id": "R22",
+      "eq": "FC_ion + SiF2* + SiO2 -> SiF3g + *",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 3,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        -1.0
+      ],
+      "ionYield": {
+        "ion": "FC_ion",
+        "label": "R22_yieldFlux",
+        "flux": 65.5,
+        "meanEnergy": 98.0,
+        "A": 0.01658,
+        "Eth": 3.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {}
+      }
+    },
+    {
+      "id": "R23",
+      "eq": "FC_ion + SiF3* + SiO2 -> SiF4g + *",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 4,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0,
+        -1.0
+      ],
+      "ionYield": {
+        "ion": "FC_ion",
+        "label": "R23_yieldFlux",
+        "flux": 65.5,
+        "meanEnergy": 98.0,
+        "A": 0.01658,
+        "Eth": 3.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {}
+      }
+    },
+    {
+      "id": "R24",
+      "eq": "FC_ion + C + SiO2 -> SiF2g + CO2",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        -1.0,
+        -1.0
+      ],
+      "ionYield": {
+        "ion": "FC_ion",
+        "label": "R24_yieldFlux",
+        "flux": 65.5,
+        "meanEnergy": 98.0,
+        "A": 0.003466,
+        "Eth": 3.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {}
+      }
+    },
+    {
+      "id": "R25",
+      "eq": "FC_ion + C -> CO2",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        -1.0,
+        0.0
+      ],
+      "ionYield": {
+        "ion": "FC_ion",
+        "label": "R25_yieldFlux",
+        "flux": 65.5,
+        "meanEnergy": 98.0,
+        "A": 0.003466,
+        "Eth": 3.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {}
+      }
+    }
+  ],
+  "constants": {
+    "temperature": 300.0
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

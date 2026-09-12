@@ -314,7 +314,7 @@
       "eq": "O* -> O + *",
       "constant": {
         "kind": "arrhenius",
-        "k0": 0.04,
+        "k0": 0.01,
         "Ea": 0.0,
         "beta": 0.0
       },

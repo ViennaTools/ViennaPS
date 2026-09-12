@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
 
@@ -482,11 +483,19 @@ template <typename NumericType> struct ChemicalMechanism {
   // exits the moment the step falls below `tolerance`, so a generous cap costs
   // nothing where convergence is quick, and is the difference between a
   // converged answer and a stopped one where it is not.
+  /// dt > 0 takes ONE backward-Euler step of dtheta/dt = F(theta) instead of
+  /// driving F to zero: solve (I/dt - J) dx = F, theta += dx. The residual the
+  /// Newton solver already forms IS dtheta/dt, and the Jacobian is already
+  /// assembled, so the transient costs one linear solve. Implicit, so it is
+  /// stable for dt >> tau, and it reduces to the steady state as dt -> inf.
+  /// This is the same treatment psSingleParticleALD uses for its dose/purge
+  /// cycles, where the quasi-steady-state assumption is obviously invalid.
   void solveCoverages(const std::vector<NumericType> &gamma,
                       const std::vector<NumericType> &k,
                       std::vector<NumericType> &theta,
                       int maxIterations = 500,
-                      NumericType tolerance = 1e-13) const {
+                      NumericType tolerance = 1e-13,
+                      NumericType dt = 0) const {
     const size_t n = coverageNames.size();
     if (n == 0)
       return;
@@ -531,6 +540,16 @@ template <typename NumericType> struct ChemicalMechanism {
         }
       }
 
+      // Backward Euler: (I/dt - J) dx = F, one step, then done.
+      if (dt > NumericType(0)) {
+        for (size_t i = 0; i < n; ++i) J[i][i] -= NumericType(1) / dt;
+        for (size_t i = 0; i < n; ++i) F[i] = -F[i];
+        if (denseSolve(J, F, dx))
+          for (size_t i = 0; i < n; ++i)
+            theta[i] = std::min(NumericType(1),
+                                std::max(NumericType(0), theta[i] + dx[i]));
+        return;
+      }
       for (size_t i = 0; i < n; ++i)
         F[i] = -F[i];
       if (!denseSolve(J, F, dx))
@@ -716,6 +735,141 @@ public:
   explicit ChemicalSurfaceModel(const ChemicalMechanism<NumericType> &m)
       : mech(m) {}
 
+  /// THICKNESS REGULATION, Eq. (5) of Zhang & Kushner, JVST A 19, 524 (2001):
+  ///
+  ///     lambda = 1 / (1 + alpha*[P] + gamma*[P]^2)
+  ///
+  /// with [P] the thickness of an overlying film in monolayers. Every rate
+  /// that needs a species or an energy to cross that film is multiplied by it.
+  ///
+  /// A continuum surface cannot carry this by itself. The film is a MATERIAL
+  /// there, so a point either has it or does not: with the film present every
+  /// reaction gated to the substrate is off and nothing etches, and without it
+  /// the film chemistry is off and nothing passivates. Measured on a masked
+  /// SiO2 trench, the first case seals the opening shut in 21 s. lambda is
+  /// what supplies the in-between, and a cell method does not need it because
+  /// the film is cells and the shielding is geometric.
+  ///
+  /// [P] is measured by whatever owns the geometry -- the distance between two
+  /// level sets, or the filling fractions summed along the normal -- so it is
+  /// supplied as a callback on the surface point's coordinate. Unset, lambda
+  /// is 1 everywhere and nothing changes.
+  void setFilmThickness(std::function<NumericType(const Vec3D<NumericType> &)> f,
+                        NumericType alpha, NumericType gamma) {
+    thickness_ = std::move(f);
+    alpha_ = alpha;
+    gamma_ = gamma;
+  }
+  /// Reactions that BUILD this solid are not regulated: the film grows on its
+  /// own outer surface, which nothing shields. Everything else is.
+  void setRegulatorSolid(int solidIndex) { regulatorSolid_ = solidIndex; }
+
+  /// The film as a THICKNESS, not as a material.
+  ///
+  /// A continuum surface can carry a fluorocarbon film as a real layer -- the
+  /// LaMagna model in psFluorocarbonEtching.hpp does, with a dimensionless
+  /// deposition-to-removal ratio deciding whether a point grows or etches, and
+  /// no thickness anywhere. That works because its film always has a removal
+  /// term that can beat deposition where the ions land.
+  ///
+  /// Table I of Zhang & Kushner does not: its only strong film sink,
+  /// F + P -> CF4, is a BULK process (footnote h), so its rate is proportional
+  /// to how much film is there. Written as an ordinary surface reaction with a
+  /// constant rate it cannot balance growth, and on a masked trench the film
+  /// runs away on the sidewalls, where no ion reaches, and seals the opening
+  /// in 21 s.
+  ///
+  /// So [P] is carried explicitly, solved at each surface point from that
+  /// point's own fluxes -- exactly the balance the paper's equipment-scale
+  /// model solves:
+  ///
+  ///     growth = top-layer sinks + bulk sink * [P] + lambda([P]) * regulated
+  ///
+  /// one root, found by bisection. It then does double duty: the bulk sink
+  /// scales with it, which stops the runaway, and Eq. (5) reads off it, which
+  /// regulates everything that has to cross the film.
+  ///
+  /// The film's own reactions are then removed from the surface velocity: the
+  /// layer sits ON the surface rather than moving it.
+  struct FilmRegulation {
+    int solidIndex = -1;          ///< the film's solid; <0 disables all of this
+    NumericType alpha = 0.6, gamma = 0.1;      ///< Eq. (5)
+    NumericType monolayer = 10.0; ///< film atoms per nm^2 in one monolayer
+    int bulkSink = -1;            ///< reaction index of the thickness-proportional sink
+  };
+  void setFilmRegulation(const FilmRegulation &r) { film_ = r; }
+  const FilmRegulation &filmRegulation() const { return film_; }
+
+private:
+  std::function<NumericType(const Vec3D<NumericType> &)> thickness_;
+  NumericType alpha_ = 0, gamma_ = 0;
+  int regulatorSolid_ = -1;
+  FilmRegulation film_;
+
+  static NumericType lambdaOf(NumericType P, NumericType a, NumericType g) {
+    P = std::max(NumericType(0), P);
+    return NumericType(1) / (NumericType(1) + a * P + g * P * P);
+  }
+
+  /// Film thickness in monolayers at one point, from its own fluxes.
+  NumericType solveThickness(const std::vector<NumericType> &k,
+                             const std::vector<NumericType> &gamma,
+                             const std::vector<NumericType> &theta) const {
+    const auto free = mech.freeFractions(theta);
+    NumericType grow = 0, top = 0, bulk = 0, reg = 0;
+    for (size_t j = 0; j < mech.reactions.size(); ++j) {
+      const auto &r = mech.reactions[j];
+      if (r.solidIndex != film_.solidIndex || r.solidAtoms == 0)
+        continue;
+      const NumericType v = mech.rate(r, k[j], gamma, theta, free) *
+                            std::abs(r.solidAtoms) / film_.monolayer;
+      if (r.solidAtoms > 0)
+        grow += v;
+      else if (static_cast<int>(j) == film_.bulkSink)
+        bulk += v;                        // per monolayer present
+      else if (r.gasFactors.size() && mech.gas[r.gasFactors[0].index].isIonChannel)
+        reg += v;                         // needs to reach the wafer: regulated
+      else
+        top += v;                         // the film's own outer surface
+    }
+    if (grow <= top)
+      return 0;                            // consumption wins outright
+    auto residual = [&](NumericType P) {
+      return grow - top - bulk * P -
+             lambdaOf(P, film_.alpha, film_.gamma) * reg;
+    };
+    NumericType lo = 0, hi = 1;
+    for (int i = 0; i < 60 && residual(hi) > 0; ++i)
+      hi *= 2;                             // bracket it
+    for (int i = 0; i < 80; ++i) {
+      const NumericType mid = NumericType(0.5) * (lo + hi);
+      if (residual(mid) > 0) lo = mid; else hi = mid;
+    }
+    return NumericType(0.5) * (lo + hi);
+  }
+
+  NumericType lambdaAt(const Vec3D<NumericType> &x) const {
+    if (!thickness_)
+      return NumericType(1);
+    const NumericType P = std::max(NumericType(0), thickness_(x));
+    return NumericType(1) / (NumericType(1) + alpha_ * P + gamma_ * P * P);
+  }
+
+  /// k scaled by lambda, leaving the film's own growth steps alone.
+  std::vector<NumericType> regulate(const std::vector<NumericType> &k,
+                                    NumericType lambda) const {
+    if (lambda >= NumericType(1) || !thickness_)
+      return k;
+    std::vector<NumericType> out = k;
+    for (size_t j = 0; j < mech.reactions.size() && j < out.size(); ++j)
+      if (!(mech.reactions[j].solidAtoms > 0 &&
+            mech.reactions[j].solidIndex == regulatorSolid_))
+        out[j] *= lambda;
+    return out;
+  }
+
+public:
+
   void initializeCoverages(unsigned numGeometryPoints) override {
     // A mechanism without surface intermediates (pure sputtering, say) has no
     // coverage loop to run. Leaving the container null tells the strategy so;
@@ -741,7 +895,16 @@ public:
       surfaceData->clear();
     std::vector<NumericType> zero(numGeometryPoints, 0.);
     surfaceData->insertNextScalarData(zero, "growthRate");
+    if (film_.solidIndex >= 0)
+      surfaceData->insertNextScalarData(zero, "filmMonolayers");
   }
+
+  /// Set by the process strategy each step; >0 switches the coverage update
+  /// from a steady-state solve to one transient step.
+  void setTimeStep(NumericType dt) override { dt_ = dt; }
+  NumericType dt_ = 0;
+  bool transient_ = false;
+  void setTransientCoverages(bool on) { transient_ = on; }
 
   void updateCoverages(SmartPointer<PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
@@ -775,9 +938,17 @@ public:
         for (size_t i = 0; i < nCov; ++i)
           theta[i] = cov[i]->at(p);
         // a chemistry that differs between materials uses the constants of the
-        // material under this point
+        // material under this point.
+        //
+        // No lambda here, and it is not an omission: every reaction that feeds
+        // or drains a regulated coverage is itself regulated, so a common
+        // factor cancels out of the balance and the steady state is the same
+        // with or without it. It survives only in the VELOCITY, which is a
+        // rate rather than a ratio -- and that is the one place the surface
+        // point's coordinate is available to measure the film with.
         mech.solveCoverages(gamma, ratesAt(kByMaterial, k, materialIds[p]),
-                            theta);
+                            theta, 500, NumericType(1e-13),
+                            transient_ ? dt_ : NumericType(0));
         for (size_t i = 0; i < nCov; ++i)
           cov[i]->at(p) = theta[i];
       }
@@ -829,9 +1000,14 @@ public:
       cov[i] = coverages->getScalarData(mech.coverageNames[i]);
 
     std::vector<NumericType> *growth = nullptr;
+    std::vector<NumericType> *filmField = nullptr;
     if (Logger::hasIntermediate()) {
       growth = surfaceData->getScalarData("growthRate");
       growth->resize(numPoints);
+      if (film_.solidIndex >= 0) {
+        filmField = surfaceData->getScalarData("filmMonolayers");
+        if (filmField) filmField->resize(numPoints);
+      }
     }
 
     const double unitConversion =
@@ -849,11 +1025,34 @@ public:
           theta[i] = cov[i]->at(p);
         // the growth rate follows the material under each point, both in the
         // rate constants and in the density the removal is divided by
-        velocity[p] =
-            mech.growthRate(gamma, ratesAt(kByMaterial, k, materialIds[p]),
-                            theta,
-                            MaterialMap::mapToMaterial(materialIds[p])) *
-            unitConversion;
+        const auto &kp = ratesAt(kByMaterial, k, materialIds[p]);
+        const auto mat = MaterialMap::mapToMaterial(materialIds[p]);
+        if (film_.solidIndex >= 0) {
+          // the film is a thickness here, not a moving boundary: solve it,
+          // regulate everything that must cross it, and leave the film's own
+          // reactions out of the surface velocity
+          const NumericType P = solveThickness(kp, gamma, theta);
+          const NumericType lam = lambdaOf(P, film_.alpha, film_.gamma);
+          const auto free = mech.freeFractions(theta);
+          NumericType v = 0;
+          for (size_t j = 0; j < mech.reactions.size(); ++j) {
+            const auto &r = mech.reactions[j];
+            if (r.solidAtoms == 0 || r.solidIndex == film_.solidIndex)
+              continue;
+            v += r.solidAtoms * mech.rate(r, kp[j] * lam, gamma, theta, free) /
+                 mech.densityOf(r.solidIndex, mat);
+          }
+          velocity[p] = v * unitConversion;
+          if (filmField)
+            filmField->at(p) = P;
+        } else {
+          velocity[p] =
+              mech.growthRate(gamma,
+                              thickness_ ? regulate(kp, lambdaAt(coordinates[p]))
+                                         : kp,
+                              theta, mat) *
+              unitConversion;
+        }
         if (growth)
           growth->at(p) = velocity[p];
       }
@@ -1277,6 +1476,13 @@ public:
 template <typename NumericType, int D>
 class SurfaceChemistry final : public ProcessModelCPU<NumericType, D> {
 public:
+  /// Integrate the coverages in time instead of solving the steady state.
+  void setTransientCoverages(bool on) {
+    auto sm = std::dynamic_pointer_cast<impl::ChemicalSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    if (sm) sm->setTransientCoverages(on);
+  }
+
   SurfaceChemistry() = default;
 
   explicit SurfaceChemistry(const ChemicalMechanism<NumericType> &m)
@@ -1290,6 +1496,31 @@ public:
   }
 
   ChemicalMechanism<NumericType> &getMechanism() { return mech; }
+
+  /// Regulate every rate that must cross an overlying film by Eq. (5),
+  /// lambda = 1/(1 + alpha*[P] + gamma*[P]^2). `thickness` returns [P] in
+  /// monolayers at a surface point, measured from the geometry by the caller;
+  /// `regulatorSolid` is the index of the film's own solid, whose growth steps
+  /// are left alone. See ChemicalSurfaceModel::setFilmThickness.
+  void setFilmRegulation(
+      std::function<NumericType(const Vec3D<NumericType> &)> thickness,
+      NumericType alpha, NumericType gamma, int regulatorSolid) {
+    auto sm = SmartPointer<impl::ChemicalSurfaceModel<NumericType, D>>::New(mech);
+    sm->setFilmThickness(std::move(thickness), alpha, gamma);
+    sm->setRegulatorSolid(regulatorSolid);
+    this->setSurfaceModel(sm);
+  }
+
+  /// Carry the film as a per-point THICKNESS solved from the local fluxes,
+  /// rather than as a material layer. See
+  /// ChemicalSurfaceModel::FilmRegulation.
+  void setFilmRegulation(
+      const typename impl::ChemicalSurfaceModel<NumericType, D>::FilmRegulation
+          &r) {
+    auto sm = SmartPointer<impl::ChemicalSurfaceModel<NumericType, D>>::New(mech);
+    sm->setFilmRegulation(r);
+    this->setSurfaceModel(sm);
+  }
 
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {

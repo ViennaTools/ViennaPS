@@ -1,0 +1,152 @@
+# C2F6 plasma etching of SiO2 -- Table I of
+#   D. Zhang and M. J. Kushner, J. Vac. Sci. Technol. A 19, 524 (2001).
+#
+# Every probability below is from Table I and every flux from Table II (the
+# base case: 6 mTorr, 1400 W ICP, 40 sccm, 100 V bias). Nothing is invented.
+#
+# THE PHYSICS. A fluorocarbon film grows on the wafer and regulates the etch
+# beneath it. SiO2 has no reaction with F at all: the only way into the etch
+# chain is a CF_x chemisorption that puts a carbon on the oxide as SiF2CO2_s,
+# which then dissociates -- shedding the oxygen as CO2 -- to leave SiF_x_s.
+# F and ions carry that up the ladder to volatile SiF4. So SiO2 etching IS a
+# polymer-wafer interaction, and the film is both the mask and the precursor.
+#
+# FOUR THINGS THIS FORMAT CANNOT SAY, all of them real parts of Table I. They
+# are listed here rather than hidden in code:
+#
+#  1. Eq. (5), the transfer coefficient, lambda = 1/(1 + 0.6[P] + 0.1[P]^2),
+#     where [P] is the polymer THICKNESS in monolayers. Every reaction marked
+#     (d) in Table I is multiplied by it. A thickness is not a coverage, so it
+#     has no place in this schema. It stands for two transport processes
+#     through the film -- ion energy transfer, and species diffusion -- which a
+#     cell method represents geometrically instead.
+#  2. Eq. (4), k = k0 * max(0, 1 - E/Ec) with Ec = 65 eV: low-energy ion
+#     activation of a polymerisation site. The yield forms here all INCREASE
+#     with energy; this one decreases.
+#  3. The bulk/top-layer distinction. F + P -> CF4 is a bulk process (footnote
+#     h), so its rate scales with the film's thickness; ion sputtering of the
+#     film is limited to its top layer (footnote e).
+#  4. Four distinct ion species (CF3+, CF2+, C2F4+, C2F5+) with different
+#     products. Only one ion source is representable, so they are lumped into
+#     FC_ion with the summed Table II flux, 6.55e1. Their products differ only
+#     in which fluorocarbon returns to the gas, which no rate depends on.
+#
+# Ion probabilities carry Eq. (3), p(E) = p0*(sqrt(E)-sqrt(Eth))/(sqrt(Er)-
+# sqrt(Eth)) with Er = 70 eV and Eth = 3 eV. That is A*(sqrt(E)-sqrt(Eth)) with
+# A = p0/6.6345, which is this schema's yield form exactly, so the A values
+# below are p0/6.6345 and Eth is 3 throughout.
+
+name: c2f6_sio2_kushner2001
+temperature: 300.0        # K
+
+species:
+  # --- polymerising neutrals. CF2 and CF carry one carbon, C2F3 and C2F4 two.
+  CF2:    {phase: gas, flux: 5.58e2}     # Table II, 1e15 /cm2 /s
+  CF:     {phase: gas, flux: 2.28e2}
+  C2F3:   {phase: gas, flux: 9.50e-1}
+  C2F4:   {phase: gas, flux: 1.02e0}
+  F:      {phase: gas, flux: 1.21e3}
+  # --- the four fluorocarbon ions of Table II, lumped (see note 4)
+  FC_ion: {phase: ion, flux: 6.55e1,
+           meanEnergy: 98.0, sigmaEnergy: 10.0, exponent: 500.0,
+           inflectAngle: 89.0, n_l: 10.0, minAngle: 80.0,
+           thetaRMin: 70.0, thetaRMax: 90.0}
+  # --- volatile products
+  CF4:    {phase: gas, reemit_only: true}
+  CO2:    {phase: gas, reemit_only: true}
+  SiF2g:  {phase: gas, reemit_only: true}
+  SiF3g:  {phase: gas, reemit_only: true}
+  SiF4g:  {phase: gas, reemit_only: true}
+  # --- surface species. The free site IS the bare SiO2_s / Si_s site, so it
+  #     is not declared: site conservation supplies it.
+  SiFCO2*:  {phase: surface}
+  SiF2CO2*: {phase: surface}
+  SiF*:     {phase: surface}
+  SiF2*:    {phase: surface}
+  SiF3*:    {phase: surface}
+  Pstar*:   {phase: surface}      # P*, an ion-activated polymerisation site
+  # --- solids. The polymer is 1e15 carbon atoms per 6 A monolayer.
+  C:      {phase: solid, rho: 1.667}
+  SiO2:   {phase: solid, rho: {default: 2.205, Si: 5.00, Mask: 500.0}}
+
+surface:
+  # ---------------------------------------------------------------- polymer
+  # NO material gate on any film reaction. The film is carried as a THICKNESS,
+  # not as a material, so no surface point is ever labelled with the film's
+  # material: gated that way its sinks are all zero while growth still runs,
+  # [P] runs away, lambda goes to zero, and the wafer stops etching entirely --
+  # the trench simply stands still. Table I's 0.0033-on-bare / 0.005-on-film
+  # distinction is itself a function of [P], which the film balance carries.
+  # Formation, at the film's own 0.005 (Table I also gives 0.0033 on a bare
+  # wafer site, footnote c). 0.08 on an ion-activated site. C2F3 and C2F4
+  # deposit two carbons for one arrival.
+  - {eq: "CF2 -> C", type: adsorption, s0: 0.005, Ea: 0.0}
+  - {eq: "CF -> C", type: adsorption, s0: 0.005, Ea: 0.0}
+  - {eq: "C2F3 -> 2C", type: adsorption, s0: 0.005, Ea: 0.0}
+  - {eq: "C2F4 -> 2C", type: adsorption, s0: 0.005, Ea: 0.0}
+  # ... and the same four onto an ion-activated site, which is consumed
+  - {eq: "CF2 + Pstar* -> C", type: adsorption, s0: 0.08, Ea: 0.0}
+  - {eq: "CF + Pstar* -> C", type: adsorption, s0: 0.08, Ea: 0.0}
+  - {eq: "C2F3 + Pstar* -> 2C", type: adsorption, s0: 0.08, Ea: 0.0}
+  - {eq: "C2F4 + Pstar* -> 2C", type: adsorption, s0: 0.08, Ea: 0.0}
+
+  # Low-energy ion activation of a polymerisation site. NOTE 2: the real rate
+  # is k0*max(0, 1 - E/Ec), which FALLS with energy; written here as a plain
+  # constant so the file compiles, and applied properly in the model.
+  - {eq: "FC_ion -> Pstar*", type: adsorption, s0: 0.011, Ea: 0.0}
+
+  # Consumption. F + P -> CF4 is a BULK process (note 3): its rate is
+  # proportional to the film thickness, which this schema cannot express, so
+  # the constant here is per monolayer.
+  - {eq: "F + C -> CF4", type: surface, k0: 5.7e-4, Ea: 0.0}
+  # Ion sputtering of the film, p0 = 0.0225, top layer only (note 3).
+  - {eq: "FC_ion + C -> CF2", type: sputtering,
+     yield: {A: 3.39e-3, Eth: 3.0, B: 0.0}}
+
+  # ------------------------------------------------------------ the wafer
+  # Neutral passivation, p0 = 0.0085. This is the ONLY entry to the etch
+  # chain on oxide -- there is no F + SiO2_s step anywhere in Table I.
+  - {eq: "CF2 -> SiF2CO2*", type: adsorption, s0: 0.0085, Ea: 0.0,
+     materials: {default: 0.0, SiO2: 1.0}}
+  - {eq: "CF -> SiFCO2*", type: adsorption, s0: 0.0085, Ea: 0.0,
+     materials: {default: 0.0, SiO2: 1.0}}
+
+  # Ion activated dissociation of the carbonyl complexes, p0 = 0.1: the
+  # oxygen leaves as CO2 and a fluorinated silicon site is left behind.
+  - {eq: "FC_ion + SiF2CO2* -> SiF2* + CO2", type: ion_enhanced,
+     order: {SiF2CO2*: 1}, yield: {A: 1.507e-2, Eth: 3.0}}
+  - {eq: "FC_ion + SiFCO2* -> SiF* + CO2", type: ion_enhanced,
+     order: {SiFCO2*: 1}, yield: {A: 1.507e-2, Eth: 3.0}}
+
+  # Fluorination, p0 = 0.008 for the first steps and 0.0085 for the rest.
+  # The LAST step removes silicon with no ion involved.
+  - {eq: "F + SiF2CO2* -> SiF3* + CO2", type: surface, k0: 8.5e-3, Ea: 0.0}
+  - {eq: "F + SiFCO2* -> SiF2* + CO2", type: surface, k0: 8.5e-3, Ea: 0.0}
+  - {eq: "F + SiF* -> SiF2*", type: surface, k0: 8.0e-3, Ea: 0.0}
+  - {eq: "F + SiF2* -> SiF3*", type: surface, k0: 8.5e-3, Ea: 0.0}
+  - {eq: "F + SiF3* + SiO2 -> SiF4g", type: surface, k0: 8.5e-3, Ea: 0.0,
+     order: {SiF3*: 1}}
+
+  # Ion chemical sputtering of a fluorinated site, p0 = 0.11: the silicon
+  # leaves and a fresh SiO2_s site is exposed.
+  - {eq: "FC_ion + SiF* + SiO2 -> SiF2g", type: ion_enhanced,
+     order: {SiF*: 1}, yield: {A: 1.658e-2, Eth: 3.0}}
+  - {eq: "FC_ion + SiF2* + SiO2 -> SiF3g", type: ion_enhanced,
+     order: {SiF2*: 1}, yield: {A: 1.658e-2, Eth: 3.0}}
+  - {eq: "FC_ion + SiF3* + SiO2 -> SiF4g", type: ion_enhanced,
+     order: {SiF3*: 1}, yield: {A: 1.658e-2, Eth: 3.0}}
+
+  # Ion assisted polymer-SiO2 interaction, p0 = 0.023: the carbon in contact
+  # with the oxide abstracts its oxygen, taking a silicon with it. This is the
+  # channel that works through a thick film, and the one Eq. (5) governs most
+  # strongly.
+  - {eq: "FC_ion + C + SiO2 -> SiF2g + CO2", type: ion_enhanced,
+     yield: {A: 3.466e-3, Eth: 3.0}}
+  # ONE EVENT, TWO SOLIDS. The line above takes a silicon out of the wafer and
+  # a carbon out of the film, but a reaction records only one solid: the loader
+  # keeps solidAtoms[0] and then overwrites it with any later non-zero entry,
+  # so written once it registers the SiO2 and drops the carbon, leaving the
+  # film short of a sink. The carbon side is therefore written as its twin,
+  # with the same rate law, so each solid gets the loss the single event causes.
+  - {eq: "FC_ion + C -> CO2", type: ion_enhanced,
+     yield: {A: 3.466e-3, Eth: 3.0}}

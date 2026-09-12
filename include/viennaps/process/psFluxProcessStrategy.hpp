@@ -334,6 +334,10 @@ private:
 
     // Update coverages in surface model
     if (context.flags.useCoverages) {
+      // Hand the advection step to the surface model, so a model that can
+      // integrate its coverages in time knows how long the step is. Models
+      // that solve a steady state ignore it (the base setTimeStep is a no-op).
+      context.model->getSurfaceModel()->setTimeStep(context.timeStep);
       PROCESS_CHECK(updateCoverages(context, fluxes));
     }
 
