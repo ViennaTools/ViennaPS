@@ -202,6 +202,24 @@ int main(int argc, char **argv) {
     std::cout << "level set:\n";
     proc.apply();
     writeSurface(dom, "cmp_ls_final.vtp");
+    // The continuum's OWN per-channel removal split, integrated over its
+    // surface and the process time. The PMC prints "cells removed by channel";
+    // the blanket split printed elsewhere is NOT comparable to a trench, since
+    // the walls are ion-shadowed, so this is the like-for-like number.
+    {
+      const auto rem = model->removedByChannel();
+      double tot = 0;
+      for (double v : rem) tot += v;
+      if (tot > 0) {
+        std::cout << "    LS removal by channel (trench-integrated): ";
+        for (size_t j = 0; j < rem.size(); ++j)
+          if (rem[j] > 0)
+            std::cout << mech.reactions[j].equation << " "
+                      << std::fixed << std::setprecision(1)
+                      << 100.0 * rem[j] / tot << " %   ";
+        std::cout << "\n";
+      }
+    }
   }
 
   // --------------------------------------------------- filling-fraction voxel
@@ -329,6 +347,8 @@ int main(int argc, char **argv) {
     if (std::getenv("PMC_NOIONREFL")) pmc.setIonReflection(false);
     if (std::getenv("PMC_OXPROTECT")) pmc.setProtectOxide(true);
     if (std::getenv("PMC_THERMLOCAL")) pmc.setThermalLocal(true);
+    if (std::getenv("PMC_THERMAREAL")) pmc.setThermalAreal(true);
+    if (const char *e = std::getenv("PMC_THERMCOARSE")) pmc.setThermalCoarse(std::atoi(e));
     if (std::getenv("PMC_IONSPLIT")) pmc.setIonSplitRadius(true);
     if (const char *e = std::getenv("PMC_IONNORMR")) pmc.setIonNormalRadius(std::atoi(e));
     if (const char *e = std::getenv("PMC_DMGSCALE"))

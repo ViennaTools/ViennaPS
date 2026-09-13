@@ -64,9 +64,8 @@ surface:
   - {eq: "Ar_ion + O* -> O", type: ion_enhanced,
      order: {O*: 1},
      yield: {A: 3.0, Eth: 10.0}}
-  # beta_sigma. Belen 2005 Table III gives 1e13 cm^-2 s^-1, and with
-  # sigma0 = 1e15 cm^-2 that is 1.0e-2 /s. This had been 4.0e-2, four times
-  # the reference value; Belen's own sensitivity study states that raising
-  # beta_sigma produces "significant mask undercutting and reduced vertical
-  # etching", i.e. it inflates the mask-edge flare specifically.
-  - {eq: "O* -> O", type: surface, k0: 1.0e-2, Ea: 0.0}
+  # beta_sigma. Belen 2005 Table III lists the O recombination constant
+  # beta_sigma,Si = 4e13 cm^-2 s^-1 for EVERY O2 fraction, and with
+  # sigma0 = 1e15 cm^-2 that is 4.0e-2 /s. (This was briefly set to 1.0e-2 on
+  # a misreading of that table; the table says 4e13, not 1e13.)
+  - {eq: "O* -> O", type: surface, k0: 4.0e-2, Ea: 0.0}

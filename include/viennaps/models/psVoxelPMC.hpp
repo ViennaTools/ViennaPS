@@ -168,12 +168,11 @@ public:
   struct Parameters {
     NumericType fluxF = 1800, fluxO = 100, fluxIon = 12;
     NumericType stickF = 0.7, stickO = 1.0;
-    /// beta_sigma from Belen 2005 Table III: 1e13 cm^-2 s^-1 over
-    /// sigma0 = 1e15 cm^-2 = 0.01 /s. It had been 0.04, four times the
-    /// reference value, and Belen's own sensitivity study states that
-    /// raising beta_sigma gives "significant mask undercutting and
-    /// reduced vertical etching" -- i.e. it inflates exactly the flare.
-    NumericType kSigma = 75, betaSigma = 0.01;
+    /// beta_sigma: Table III lists the O recombination constant
+    /// beta_sigma,Si = 4e13 cm^-2 s^-1 for every O2 fraction, i.e. 0.04 /s
+    /// over sigma0 = 1e15 cm^-2. (Briefly set to 0.01 on a misreading of
+    /// that table; it says 4e13, not 1e13.)
+    NumericType kSigma = 75, betaSigma = 0.04;
     NumericType rho = 50.2;   ///< silicon atoms per nm^3
     NumericType meanEnergy = 100, sigmaEnergy = 10;
     NumericType cosinePowerNeutral = 1, cosinePowerIon = 500;
@@ -330,6 +329,36 @@ private:
   /// sites instead makes the acceptance (nu-nF-nO)/nu, which is what the
   /// site balance actually asks for. The GEOMETRY stays binary: a cell is
   /// solid or gas and one event still removes a whole cell.
+  /// THERMAL BOOKKEEPING. The default form fires once per exposed CELL at the
+  /// bare per-site rate and removes an AREAL volume w*nu/4. Total removal is
+  /// then correct (sum w = true area), but F*/O* are CONSUMED per cell, so on
+  /// a rough surface -- which carries kappa ~ 2.7x more exposed cells than
+  /// true sites -- the adsorbate turns over kappa times too fast. That is what
+  /// leaves a sidewall fluorinated (theta_F 0.079 against a continuum ~0.002)
+  /// and lets the isotropic channel etch it.
+  ///
+  /// The consistent form fires at 4*k_sigma*w and consumes ONE cell, removing
+  /// nu/4. The total removal rate per cell is identical, 4*k_sigma*w * nu/4 =
+  /// k_sigma*w*nu, so the blanket is unchanged -- but the adsorbate is now
+  /// consumed areally too.
+  /// COARSE-GRAINED AREA. k_sigma is a rate per unit of MACROSCOPIC area: it
+  /// was calibrated against measured etch rates on surfaces whose real
+  /// microscopic roughness is already inside the constant. A PMC front carries
+  /// numerical roughness on top of that -- sigma = sqrt(depth*dx), which at
+  /// 20 nm and dx = 0.1 nm is 1.3 nm -- and the resulting surface is 2.5x
+  /// longer than the level set's inside the feature (floor 24.6 vs 9.6 nm,
+  /// wall 75.4 vs 34.7 nm). Thermal etching is areal, so it runs 2.5x over.
+  ///
+  /// thermCoarse_ > 0 divides the per-cell weight by the LOCAL roughness
+  /// factor: fit a line to the surface cells within that radius, and compare
+  /// the summed raw weight against the length of that line. Flat surface ->
+  /// factor 1 and nothing changes, which is what keeps the blanket fixed.
+  ///
+  /// The radius is a claim about which scale is numerical. Sweep it: if the
+  /// correction plateaus it is a resolution cutoff, if it does not it is a
+  /// fitted roughness factor and should be reported as one.
+  int thermCoarse_ = 0;
+  bool thermAreal_ = false;
   bool siteCounts_ = false;
   std::vector<std::uint8_t> nF_, nO_;
   /// FLUX-DRIVEN spontaneous etch: no coverage state at all.
@@ -1822,6 +1851,8 @@ public:
   /// undercut it carries. Neutral re-emission is unaffected.
   void setIonReflection(bool on) { ionReflect_ = on; }
   void setThermalArea(int mode) { thermArea_ = mode; }
+  void setThermalAreal(bool on) { thermAreal_ = on; }
+  void setThermalCoarse(int r) { thermCoarse_ = r; }
   void setProtectOxide(bool on) { protectOxide_ = on; }
   void setDamageScale(NumericType f) { damageScale_ = f; }
   void setThermalLocal(bool on) { thermLocal_ = on; }
@@ -3163,6 +3194,69 @@ public:
         return w;
       }
     };
+    // Local roughness factor: how much longer the cell-by-cell surface is than
+    // the straight line that best fits it over `thermCoarse_` cells. Returns 1
+    // on anything flat, so the blanket is untouched by construction.
+    auto kappaLocal = [&](const std::array<int, D> &idx) -> NumericType {
+      const int R = thermCoarse_;
+      if (R <= 0)
+        return NumericType(1);
+      const auto &dims = lattice_->dims();
+      std::array<int, D> lo{}, hi{}, at{};
+      for (int d = 0; d < D; ++d) {
+        lo[d] = std::max(0, idx[d] - R);
+        hi[d] = std::min(dims[d] - 1, idx[d] + R);
+        at[d] = lo[d];
+      }
+      // gather the exposed cells in the window: their summed raw weight, and
+      // their centroid / second moments for a total-least-squares line
+      NumericType sw = 0, n = 0;
+      std::array<NumericType, D> mu{};
+      std::vector<std::array<NumericType, D>> pts;
+      while (true) {
+        if (isSurface(at)) {
+          sw += areaWeight(at);
+          n += 1;
+          std::array<NumericType, D> q{};
+          for (int d = 0; d < D; ++d) {
+            q[d] = static_cast<NumericType>(at[d]);
+            mu[d] += q[d];
+          }
+          pts.push_back(q);
+        }
+        int d = 0;
+        for (; d < D; ++d) {
+          if (++at[d] <= hi[d]) break;
+          at[d] = lo[d];
+        }
+        if (d == D) break;
+      }
+      if (n < 3 || sw <= 0)
+        return NumericType(1);
+      for (int d = 0; d < D; ++d) mu[d] /= n;
+      // principal direction of the point cloud, and the extent along it
+      NumericType sxx = 0, sxy = 0, syy = 0;
+      for (const auto &q : pts) {
+        const NumericType a = q[0] - mu[0], b = q[D - 1] - mu[D - 1];
+        sxx += a * a; sxy += a * b; syy += b * b;
+      }
+      const NumericType tr = sxx + syy;
+      const NumericType det = sxx * syy - sxy * sxy;
+      const NumericType disc = std::max(NumericType(0), tr * tr / 4 - det);
+      const NumericType l1 = tr / 2 + std::sqrt(disc);
+      NumericType ux = sxy, uz = l1 - sxx;
+      const NumericType un = std::sqrt(ux * ux + uz * uz);
+      if (un < NumericType(1e-9)) return NumericType(1);
+      ux /= un; uz /= un;
+      NumericType tmin = 1e30, tmax = -1e30;
+      for (const auto &q : pts) {
+        const NumericType t = (q[0] - mu[0]) * ux + (q[D - 1] - mu[D - 1]) * uz;
+        tmin = std::min(tmin, t); tmax = std::max(tmax, t);
+      }
+      const NumericType Lc = std::max(NumericType(1), tmax - tmin + 1);
+      const NumericType k = sw / Lc;
+      return k > NumericType(1) ? k : NumericType(1);
+    };
     // per F cell the removal rate is k_sigma*sigma0/(rho*dx) against a firing
     // rate of 4*k_sigma, so a firing removes the cell this often
     const NumericType pRemove = p_.sigma0 / (4 * p_.rho * delta());
@@ -3179,7 +3273,7 @@ public:
       if (!isSurface(idx))
         continue;
       const int id = lattice_->cellId(idx);
-      const NumericType w = areaWeight(idx);
+      const NumericType w = areaWeight(idx) / kappaLocal(idx);
       // NOTE: the weight is applied to the FIRING RATE here, not to the
       // volume each firing takes. Deriving it the other way round -- a
       // per-site firing rate and an areal volume -- is what the bookkeeping
@@ -3216,17 +3310,26 @@ public:
           if (uni() < pO) ++m;
         if (m) nO_[id] -= static_cast<std::uint8_t>(m);
         syncState(id);
-      } else if (state_[id] == Fluorinated && uni() < pF) {
+      } else if (state_[id] == Fluorinated &&
+                 uni() < (thermAreal_
+                              ? 1 - std::exp(-4 * p_.kSigma * w * dt)
+                              : pF)) {
         state_[id] = Bare;
         ++nThermF;
         if (!fBalance_) {
           removalTally_ = &remTh;
           if (fractional_)
-            removeAtoms(idx, w * nu / 4); // 1 Si per 4 F, over nu*w sites
+            // areal form: the rate already carries w, so one firing takes one
+            // cell's worth of sites. Default form: the rate does not, so the
+            // volume carries it instead. Both give k_sigma*w*nu per cell.
+            removeAtoms(idx, (thermAreal_ ? nu : w * nu) / 4);
           else if (uni() < w * pRemove)
             removeCells(idx, 1);
         }
-      } else if (state_[id] == Oxidised && uni() < pO) {
+      } else if (state_[id] == Oxidised &&
+                 uni() < (thermAreal_
+                              ? 1 - std::exp(-p_.betaSigma * w * dt)
+                              : pO)) {
         state_[id] = Bare;
         ++nThermO;
       }

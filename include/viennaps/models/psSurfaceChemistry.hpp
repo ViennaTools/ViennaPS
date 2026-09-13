@@ -899,6 +899,14 @@ public:
       surfaceData->insertNextScalarData(zero, "filmMonolayers");
   }
 
+  /// Removed solid per reaction, integrated over the surface points and the
+  /// process time. The PMC reports "cells removed by channel"; this is the
+  /// continuum's own equivalent, so the two splits can be compared on the SAME
+  /// geometry. Points are near-uniformly spaced along the surface, so summing
+  /// over points approximates an arc-length integral.
+  mutable std::vector<double> channelRemoved;
+  const std::vector<double> &removedByChannel() const { return channelRemoved; }
+
   /// Set by the process strategy each step; >0 switches the coverage update
   /// from a steady-state solve to one transient step.
   void setTimeStep(NumericType dt) override { dt_ = dt; }
@@ -1052,6 +1060,21 @@ public:
                                          : kp,
                               theta, mat) *
               unitConversion;
+          // per-reaction split of that same velocity, for comparison with the
+          // cell method's per-channel removal counts
+          if (channelRemoved.size() < mech.reactions.size())
+            channelRemoved.assign(mech.reactions.size(), 0.0);
+          const auto free = mech.freeFractions(theta);
+          const double w = dt_ > NumericType(0) ? double(dt_) : 1.0;
+          for (size_t j = 0; j < mech.reactions.size(); ++j) {
+            const auto &r = mech.reactions[j];
+            if (r.solidAtoms >= 0)
+              continue;   // removal only
+            channelRemoved[j] +=
+                w * double(-r.solidAtoms) *
+                double(mech.rate(r, kp[j], gamma, theta, free)) /
+                double(mech.densityOf(r.solidIndex, mat));
+          }
         }
         if (growth)
           growth->at(p) = velocity[p];
@@ -1476,6 +1499,13 @@ public:
 template <typename NumericType, int D>
 class SurfaceChemistry final : public ProcessModelCPU<NumericType, D> {
 public:
+  /// Removed solid per reaction, integrated over surface points and time.
+  std::vector<double> removedByChannel() const {
+    auto sm = std::dynamic_pointer_cast<impl::ChemicalSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    return sm ? sm->removedByChannel() : std::vector<double>{};
+  }
+
   /// Integrate the coverages in time instead of solving the steady state.
   void setTransientCoverages(bool on) {
     auto sm = std::dynamic_pointer_cast<impl::ChemicalSurfaceModel<NumericType, D>>(
