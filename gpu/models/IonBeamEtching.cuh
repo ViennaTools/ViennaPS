@@ -16,48 +16,46 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 //
 
 __forceinline__ __device__ void IBECollision(const void *sbtData,
-                                             viennaray::gpu::PerRayData *prd) {
+                                             viennaray::gpu::PerRayData *prd,
+                                             unsigned int primID) {
   viennaps::gpu::IonParams *params =
       (viennaps::gpu::IonParams *)launchParams.customData;
   const bool yieldDefined = abs(params->aSum) > 1e-6f;
   const bool redepositionEnabled = params->redepositionRate > 0.f;
 
-  for (int i = 0; i < prd->ISCount; ++i) {
-    auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
-    auto cosTheta = __saturatef(
-        -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
+  auto geomNormal = viennaray::gpu::getNormal(sbtData, primID);
+  auto cosTheta = __saturatef(
+      -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
 
-    float yield = 1.f;
-    if (yieldDefined) {
-      float cosTheta2 = cosTheta * cosTheta;
-      yield = (params->a1 * cosTheta + params->a2 * cosTheta2 +
-               params->a3 * cosTheta2 * cosTheta +
-               params->a4 * cosTheta2 * cosTheta2) /
-              params->aSum;
-    }
+  float yield = 1.f;
+  if (yieldDefined) {
+    float cosTheta2 = cosTheta * cosTheta;
+    yield = (params->a1 * cosTheta + params->a2 * cosTheta2 +
+             params->a3 * cosTheta2 * cosTheta +
+             params->a4 * cosTheta2 * cosTheta2) /
+            params->aSum;
+  }
 
-    // threshold energy is in sqrt scale
-    yield *= max(sqrtf(prd->energy) - params->thresholdEnergy, 0.f);
+  // threshold energy is in sqrt scale
+  yield *= max(sqrtf(prd->energy) - params->thresholdEnergy, 0.f);
 
-    // flux array
-    atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->primIDs[i]],
-              (viennaray::gpu::ResultType)prd->rayWeight * yield);
+  // flux array
+  atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams, primID)],
+            (viennaray::gpu::ResultType)prd->rayWeight * yield);
 
-    if (redepositionEnabled) {
-      // redeposition array
-      atomicAdd(&launchParams.resultBuffer[getIdxOffset(1, launchParams) +
-                                           prd->primIDs[i]],
-                (viennaray::gpu::ResultType)prd->load);
-    }
+  if (redepositionEnabled) {
+    // redeposition array
+    atomicAdd(&launchParams.resultBuffer[getIdxOffset(1, launchParams, primID)],
+              (viennaray::gpu::ResultType)prd->load);
   }
 }
 
 __forceinline__ __device__ void IBEReflection(const void *sbtData,
-                                              viennaray::gpu::PerRayData *prd) {
+                                              viennaray::gpu::PerRayData *prd,
+                                              unsigned int primID) {
   viennaps::gpu::IonParams *params =
       (viennaps::gpu::IonParams *)launchParams.customData;
-  auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+  auto geomNormal = viennaray::gpu::getNormal(sbtData, primID);
   auto cosTheta = __saturatef(
       -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
   float theta = acosf(cosTheta);
