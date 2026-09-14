@@ -69,7 +69,7 @@ public:
     translator_ = translator;
   }
 
-  void setKdTree(const SmartPointer<KDTreeType> &kdTree) { kdTree_ = kdTree; }
+  void setKdTree(const SmartPointer<KDTreeType> kdTree) { kdTree_ = kdTree; }
 
   auto &getKdTree() { return kdTree_; }
 

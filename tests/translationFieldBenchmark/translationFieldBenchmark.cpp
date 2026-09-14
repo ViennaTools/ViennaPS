@@ -1,9 +1,8 @@
 #include <geometries/psMakeTrench.hpp>
 #include <process/psTranslationField.hpp>
 #include <psDomain.hpp>
+#include <vcNFKDTree.hpp>
 #include <vcTimer.hpp>
-
-#include <nanoflann.hpp>
 
 using namespace viennaps;
 
@@ -63,7 +62,8 @@ int main() {
 
     auto translator =
         SmartPointer<std::unordered_map<unsigned long, unsigned long>>::New();
-    auto kdTree = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
+    auto kdTree = SmartPointer<
+        typename TranslationField<NumericType, D>::KDTreeType>::New();
 
     meshConverter.setMesh(mesh);
     meshConverter.setMaterialMap(domain->getMaterialMap()->getMaterialMap());
@@ -93,26 +93,6 @@ int main() {
     auto tfMap = SmartPointer<TranslationField<NumericType, D>>::New(
         nullptr, domain->getMaterialMap(), 1);
     tfMap->setTranslator(translator);
-
-    // nanoflann
-    PointCloud cloud;
-    for (const auto &node : mesh->getNodes()) {
-      cloud.pts.push_back(Vec3D<double>{node[0], node[1], node[2]});
-    }
-    nanoflann::KDTreeSingleIndexAdaptor<
-        nanoflann::L2_Simple_Adaptor<double, PointCloud>, PointCloud, 3>
-        nf_kdtree(3, cloud,
-                  nanoflann::KDTreeSingleIndexAdaptorParams(
-                      10, nanoflann::KDTreeSingleIndexAdaptorFlags::None,
-                      omp_get_max_threads()));
-
-    timer.start();
-    nf_kdtree.buildIndex();
-    timer.finish();
-    auto nfTreeBuildTime = timer.currentDuration * 1e-6;
-
-    std::cout << "nanoflann KdTree build took " << nfTreeBuildTime << " ms"
-              << std::endl;
 
     auto &hrleDomain = domain->getSurface()->getDomain();
     auto const &grid = domain->getGrid();
@@ -175,46 +155,6 @@ int main() {
     std::cout << "TranslationField with kdTree took " << timeTree << " ms"
               << std::endl;
     std::cout << "total: " << timeTree + treeBuildTime << " ms" << std::endl;
-
-    times.clear();
-    for (int j = 0; j < numRuns; ++j) {
-      timer.start();
-      for (ConstSparseIterator it(hrleDomain, startVector);
-           it.getStartIndices() < endVector; ++it) {
-
-        if (!it.isDefined() || std::abs(it.getValue()) > 0.5)
-          continue;
-
-        const auto indices = it.getStartIndices();
-        auto id = it.getPointId();
-
-        Vec3D<NumericType> coords;
-        for (unsigned i = 0; i < D; ++i) {
-          coords[i] = indices[i] * gridDelta;
-        }
-
-        std::vector<unsigned> ret_index(1);
-        std::vector<double> out_dist_sqr(1);
-        auto n =
-            nf_kdtree.knnSearch(&coords[0], 1, &ret_index[0], &out_dist_sqr[0]);
-        if (n != 1) {
-          std::cerr << "Error: nanoflann knnSearch did not return 1 neighbor."
-                    << std::endl;
-        }
-      }
-      timer.finish();
-      times.push_back(timer.currentDuration * 1e-6);
-    }
-
-    auto timeNanoflann = median(times);
-    std::cout << "nanoflann KdTree took " << timeNanoflann << " ms"
-              << std::endl;
-    std::cout << "total: " << timeNanoflann + nfTreeBuildTime << " ms"
-              << std::endl;
-    std::cout << "Ratio (tree/nanoflann): "
-              << static_cast<double>(timeTree + treeBuildTime) /
-                     static_cast<double>(timeNanoflann + nfTreeBuildTime)
-              << std::endl;
 
     std::cout << "Ratio (tree/map): "
               << static_cast<double>(timeTree + treeBuildTime) /
