@@ -45,19 +45,21 @@ import viennals as ls
 from viennals import SpatialSchemeEnum as SpatialScheme
 from viennals import TemporalSchemeEnum as TemporalScheme
 from viennals import BoundaryConditionEnum as BoundaryType
-from viennals import Domain as LevelSet
-
-from viennals import MakeGeometry as MakeGeometry
-from viennals import Plane as Plane
-from viennals import Sphere as Sphere
-from viennals import Cylinder as Cylinder
-from viennals import Box as Box
-
 from viennals import BooleanOperationEnum as BooleanOperationType
-from viennals import BooleanOperation as BooleanOperation
-
 from viennals import VTKWriter as VTKWriter
 from viennals import LogLevel as LogLevel
+
+# Resolve dimension-bound aliases lazily so they follow PROXY_DIM.
+_LS_DIMENSION_ALIASES = {
+    "LevelSet": "Domain",
+    "MakeGeometry": "MakeGeometry",
+    "Plane": "Plane",
+    "Sphere": "Sphere",
+    "Cylinder": "Cylinder",
+    "Box": "Box",
+    "BooleanOperation": "BooleanOperation",
+}
+
 from . import _core as _C  # the binary inside the package
 
 # bring d2 and d3 into the top-level namespace
@@ -65,17 +67,6 @@ d2 = _C.d2
 d3 = _C.d3
 _sys.modules[__name__ + ".d2"] = d2
 _sys.modules[__name__ + ".d3"] = d3
-
-_SHARED_OXIDATION_TYPES = (
-    "OxidantType",
-    "SiliconOrientation",
-    "GpuMode",
-    "GpuPreconditioner",
-)
-for _name in _SHARED_OXIDATION_TYPES:
-    if hasattr(_C, _name):
-        setattr(d2, _name, getattr(_C, _name))
-        setattr(d3, _name, getattr(_C, _name))
 
 PROXY_DIM = 2  # default dimension is 2D
 
@@ -143,6 +134,10 @@ def readConfigFile(fileName: str) -> dict:
 
 
 def __getattr__(name):
+    if name in _LS_DIMENSION_ALIASES:
+        m = ls.d2 if PROXY_DIM == 2 else ls.d3
+        return getattr(m, _LS_DIMENSION_ALIASES[name])
+
     # 1) common/top-level from _core
     e_core = None
     try:
@@ -160,4 +155,10 @@ def __getattr__(name):
 
 
 def __dir__():
-    return sorted(set(globals()) | set(dir(_C)) | set(dir(d2)) | set(dir(d3)))
+    return sorted(
+        set(globals())
+        | set(_LS_DIMENSION_ALIASES)
+        | set(dir(_C))
+        | set(dir(d2))
+        | set(dir(d3))
+    )

@@ -26,3 +26,5 @@ add_executable(holeComparisonGrid ${CMAKE_CURRENT_SOURCE_DIR}/holeCompareGrid.cp
 target_link_libraries(holeComparisonGrid PRIVATE ViennaPS)
 add_dependencies(holeComparisonGrid ${VIENNAPS_GPU_DEPENDENCIES})
 add_dependencies(ViennaPS-GPU_Benchmark holeComparisonGrid)
+
+configure_file(run.sh ${CMAKE_CURRENT_BINARY_DIR}/run.sh COPYONLY)

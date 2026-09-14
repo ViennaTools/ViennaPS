@@ -17,10 +17,11 @@ using namespace viennacore;
 VIENNAPS_TEMPLATE_ND(NumericType, D)
 class CPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
-      SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
+      SmartPointer<NFKDTree<NumericType, std::array<NumericType, 3>>>;
   using MeshType = SmartPointer<viennals::Mesh<float>>;
   using PostProcessingType =
-      ElementToPointData<NumericType, float, NumericType, true, D == 3>;
+      ElementToPointData<NumericType, float, NumericType, true, D == 3,
+                         typename KDTreeType::element_type>;
 
 public:
   ProcessResult checkInput(ProcessContext<NumericType, D> &context) override {
@@ -100,7 +101,7 @@ public:
     assert(surfaceMesh_ != nullptr);
     assert(elementKdTree_ != nullptr);
 
-    CreateSurfaceMesh<NumericType, float, D>(
+    CreateSurfaceMesh<NumericType, float, D, typename KDTreeType::element_type>(
         context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
         1e-12, context.rayTracingParams.minNodeDistanceFactor)
         .apply();
@@ -151,7 +152,8 @@ public:
     auto const &pointMaterialIds = *context.diskMesh->getMaterialIds();
     std::vector<int> elementMaterialIds;
     auto pointKdTree = context.getPointKdTree();
-    PointToElementDataSingle<NumericType, NumericType, int, float>(
+    PointToElementDataSingle<NumericType, NumericType, int, float,
+                             decltype(*pointKdTree)>(
         pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
         .apply();
     rayTracer_.setMaterialIds(elementMaterialIds);
@@ -174,7 +176,7 @@ public:
     if (context.flags.useCoverages) {
       auto globalTracingData = PointData<NumericType>::New();
       auto pointKdTree = context.getPointKdTree();
-      PointToElementData<NumericType, float>(
+      PointToElementData<NumericType, float, decltype(*pointKdTree)>(
           *globalTracingData, surfaceModel->getCoverages(), *pointKdTree,
           surfaceMesh_, Logger::hasIntermediate())
           .apply();
@@ -224,7 +226,8 @@ public:
     auto pointKdTree = context.getPointKdTree();
     assert(surfaceMesh_ && "Surface mesh not initialized.");
     std::vector<NumericType> elementWeights;
-    PointToElementDataSingle<NumericType, NumericType, NumericType, float>(
+    PointToElementDataSingle<NumericType, NumericType, NumericType, float,
+                             decltype(*pointKdTree)>(
         desorptionWeights, elementWeights, *pointKdTree, surfaceMesh_)
         .apply();
 

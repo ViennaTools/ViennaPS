@@ -11,10 +11,17 @@
 #define DEFAULT_GRID_DELTA 0.25
 #define DEFAULT_STICKING 0.1
 #define DIM 3
-#define FIXED_RAYS false
+#define NFKDTREE 1
 
+using NumericType = float;
 using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
 using namespace viennaps;
+
+#ifdef NFKDTREE
+using KDTreeType = NFKDTree<NumericType, Vec3D<NumericType>, DIM>;
+#else
+using KDTreeType = KDTree<NumericType, Vec3D<NumericType>>;
+#endif
 
 template <class NumericType, int N>
 consteval std::array<NumericType, N> linspace(NumericType start,
@@ -27,12 +34,31 @@ consteval std::array<NumericType, N> linspace(NumericType start,
   return arr;
 }
 
-constexpr int particleType = 0;
+auto parseArgs(int argc, char **argv) {
+  std::tuple<int, bool, bool> args{
+      false, true, 0}; // fixed rays, prepare postprocessing, particle type
+  if (argc < 2) {
+    std::cout << "Usage: " << argv[0]
+              << " <particle_type> <fixed_rays> <prepare_postprocessing>\n";
+    std::cout << "  particle_type: 0 (DiffuseParticle) or 1 (IBEIon) (default: "
+                 "0)\n";
+    std::cout << "  fixed_rays: 0 or 1 (default: 0)\n";
+    std::cout << "  prepare_postprocessing: 0 or 1 (default: 1)\n";
+    return args;
+  }
+  std::get<0>(args) = std::stoi(argv[1]) != 0;
+  std::get<1>(args) = std::stoi(argv[2]) != 0;
+  if (argc > 3) {
+    std::get<2>(args) = std::stoi(argv[3]) != 0;
+  }
+  return args;
+}
+
 constexpr bool runDisk = true;
 constexpr bool runTriangle = true;
-constexpr bool runLine = false;
 
-constexpr auto gridDeltaValues = linspace<float, 8>(0.08f, 0.4f);
+constexpr auto gridDeltaValues = linspace<float, 10>(0.095f, 0.5f);
+// constexpr auto gridDeltaValues = linspace<float, 5>(0.2f, 0.5f); //
 constexpr int numRuns = 10;
 constexpr int raysPerPoint = 1000;
 constexpr int numRays = int(1e8);
@@ -83,20 +109,20 @@ template <typename NumericType> auto getIBEParameters() {
   return params;
 }
 
-template <typename NumericType, int D> auto makeCPUParticle() {
-  if constexpr (particleType == 0) {
+template <typename NumericType, int D>
+std::unique_ptr<viennaray::AbstractParticle<NumericType>>
+makeCPUParticle(int particleType) {
+  if (particleType == 0) {
     auto particle =
         std::make_unique<viennaray::DiffuseParticle<NumericType, D>>(
             DEFAULT_STICKING, "flux");
     return particle;
-  } else if constexpr (particleType == 1) {
+  } else if (particleType == 1) {
     auto params = getIBEParameters<NumericType>();
-    auto particle = std::make_unique<
+    return std::make_unique<
         viennaps::impl::IBEIonWithRedeposition<NumericType, D>>(params);
-    return particle;
   } else {
-    static_assert(particleType == 0 || particleType == 1,
-                  "Unsupported particle type!");
+    throw std::runtime_error("Unsupported particle type!");
   }
 }
 
@@ -104,8 +130,8 @@ template <typename NumericType, int D>
 std::tuple<viennaray::gpu::Particle<NumericType>,
            std::unordered_map<std::string, unsigned>,
            std::vector<viennaray::gpu::CallableConfig>>
-makeGPUParticle() {
-  if constexpr (particleType == 0) {
+makeGPUParticle(int particleType) {
+  if (particleType == 0) {
     auto particle = viennaray::gpu::Particle<NumericType>();
     particle.name = "SingleParticle";
     particle.sticking = DEFAULT_STICKING;
@@ -117,7 +143,7 @@ makeGPUParticle() {
         {0, viennaray::gpu::CallableSlot::REFLECTION,
          "__direct_callable__singleNeutralReflection"}};
     return {particle, pMap, cMap};
-  } else if constexpr (particleType == 1) {
+  } else if (particleType == 1) {
     auto params_ = getIBEParameters<NumericType>();
     viennaray::gpu::Particle<NumericType> particle{
         .name = "IBEIon", .cosineExponent = params_.exponent};
@@ -135,13 +161,12 @@ makeGPUParticle() {
         {0, viennaray::gpu::CallableSlot::INIT, "__direct_callable__IBEInit"}};
     return {particle, pMap, cMap};
   } else {
-    static_assert(particleType == 0 || particleType == 1,
-                  "Unsupported particle type!");
+    throw std::runtime_error("Unsupported particle type!");
   }
 }
 
-auto getDeviceParams() {
-  if constexpr (particleType != 1) {
+auto getDeviceParams(int particleType) {
+  if (particleType != 1) {
     throw std::runtime_error(
         "getDeviceParams is only defined for particleType 1 (IBEIon)!");
   }
@@ -173,12 +198,11 @@ auto getDeviceParams() {
 }
 
 template <class NumericType, int D, class TracerType>
-void setupTriangleGeometry(
-    SmartPointer<Domain<NumericType, D>> &domain,
-    SmartPointer<viennals::Mesh<float>> &surfaceMesh_,
-    SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> &elementKdTree_,
-    TracerType &rayTracer_) {
-  CreateSurfaceMesh<NumericType, float, D>(
+void setupTriangleGeometry(SmartPointer<Domain<NumericType, D>> &domain,
+                           SmartPointer<viennals::Mesh<float>> &surfaceMesh_,
+                           SmartPointer<KDTreeType> &elementKdTree_,
+                           TracerType &rayTracer_) {
+  CreateSurfaceMesh<NumericType, float, D, KDTreeType>(
       domain->getLevelSets().back(), surfaceMesh_, elementKdTree_, 1e-12, 0.05)
       .apply();
 
@@ -228,12 +252,11 @@ void setupTriangleGeometry(
 }
 
 template <class NumericType, int D, class TracerType>
-void setupLineGeometry(
-    SmartPointer<Domain<NumericType, D>> &domain,
-    SmartPointer<viennals::Mesh<float>> &surfaceMesh_,
-    SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> &elementKdTree_,
-    TracerType &rayTracer_) {
-  CreateSurfaceMesh<NumericType, float, D>(
+void setupLineGeometry(SmartPointer<Domain<NumericType, D>> &domain,
+                       SmartPointer<viennals::Mesh<float>> &surfaceMesh_,
+                       SmartPointer<KDTreeType> &elementKdTree_,
+                       TracerType &rayTracer_) {
+  CreateSurfaceMesh<NumericType, float, D, KDTreeType>(
       domain->getLevelSets().back(), surfaceMesh_, elementKdTree_, 1e-12, 0.05)
       .apply();
 

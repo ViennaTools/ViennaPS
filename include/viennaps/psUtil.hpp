@@ -14,6 +14,9 @@
 #include "psDomainSetup.hpp"
 
 namespace viennaps {
+
+using namespace viennacore;
+
 enum class FluxEngineType {
   AUTO,         // Automatic selection
   CPU_DISK,     // CPU, Disk-based
@@ -31,7 +34,7 @@ enum class SiliconOrientation { Si100, Si110, Si111, PolySi };
 namespace viennacore::util {
 
 namespace detail {
-std::string lower(std::string value) {
+inline std::string lower(std::string value) {
   std::transform(value.begin(), value.end(), value.begin(),
                  [](unsigned char c) { return std::tolower(c); });
   return value;

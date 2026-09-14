@@ -21,11 +21,11 @@ using namespace viennacore;
 VIENNAPS_TEMPLATE_ND(NumericType, D)
 class GPUTriangleEngine final : public FluxEngine<NumericType, D> {
   using KDTreeType =
-      SmartPointer<KDTree<NumericType, std::array<NumericType, 3>>>;
+      SmartPointer<NFKDTree<NumericType, std::array<NumericType, 3>>>;
   using MeshType = SmartPointer<viennals::Mesh<float>>;
   using PostProcessingType =
       ElementToPointData<NumericType, float, viennaray::gpu::ResultType, true,
-                         D == 3>;
+                         D == 3, typename KDTreeType::element_type>;
 
 public:
   explicit GPUTriangleEngine(std::shared_ptr<DeviceContext> deviceContext)
@@ -107,7 +107,7 @@ public:
 
     assert(surfaceMesh_ && "Surface mesh not initialized.");
     assert(elementKdTree_ && "Element KDTree not initialized.");
-    CreateSurfaceMesh<NumericType, float, D>(
+    CreateSurfaceMesh<NumericType, float, D, typename KDTreeType::element_type>(
         context.domain->getSurface(), surfaceMesh_, elementKdTree_, 1e-12,
         context.rayTracingParams.minNodeDistanceFactor)
         .apply();
@@ -163,7 +163,8 @@ public:
       auto const &pointMaterialIds = *context.diskMesh->getMaterialIds();
       auto pointKdTree = context.getPointKdTree();
       std::vector<int> elementMaterialIds;
-      PointToElementDataSingle<NumericType, NumericType, int, float>(
+      PointToElementDataSingle<NumericType, NumericType, int, float,
+                               decltype(*pointKdTree)>(
           pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
           .apply();
       rayTracer_.setMaterialIds(elementMaterialIds);
@@ -190,8 +191,8 @@ public:
       assert(context.translationField);
       auto numCov = coverages->getScalarDataSize();
       auto pointKdTree = context.getPointKdTree();
-      gpu::PointToElementData<NumericType, float>(d_coverages, coverages,
-                                                  *pointKdTree, surfaceMesh_)
+      gpu::PointToElementData<NumericType, float, decltype(*pointKdTree)>(
+          d_coverages, coverages, *pointKdTree, surfaceMesh_)
           .apply();
       rayTracer_.setElementData(d_coverages, numCov);
     }
@@ -256,7 +257,8 @@ public:
     auto pointKdTree = context.getPointKdTree();
     assert(surfaceMesh_ && "Surface mesh not initialized.");
     std::vector<float> elementWeights;
-    PointToElementDataSingle<NumericType, NumericType, float, float>(
+    PointToElementDataSingle<NumericType, NumericType, float, float,
+                             decltype(*pointKdTree)>(
         desorptionWeights, elementWeights, *pointKdTree, surfaceMesh_)
         .apply();
 

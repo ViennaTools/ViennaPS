@@ -9,6 +9,8 @@
 
 namespace viennaps {
 
+using namespace viennacore;
+
 enum class ProcessResult {
   SUCCESS,
   INVALID_INPUT,
@@ -143,14 +145,14 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
                TemporalScheme::RUNGE_KUTTA_3RD_ORDER;
   }
 
-  auto getPointKdTree() {
+  auto getPointKdTree(bool update = false) {
     auto &pointKdTree = translationField->getKdTree();
     if (!pointKdTree) {
-      pointKdTree = viennacore::SmartPointer<
-          viennacore::KDTree<NumericType, std::array<NumericType, 3>>>::New();
+      pointKdTree = SmartPointer<
+          typename TranslationField<NumericType, D>::KDTreeType>::New();
       translationField->setKdTree(pointKdTree);
     }
-    if (pointKdTree->getNumberOfPoints() != diskMesh->nodes.size()) {
+    if (pointKdTree->getNumberOfPoints() != diskMesh->nodes.size() || update) {
       pointKdTree->setPoints(diskMesh->nodes);
       pointKdTree->build();
     }

@@ -188,8 +188,7 @@ def setDimension(d: int):
         
     """
 PROXY_DIM: int = 2
-_SHARED_OXIDATION_TYPES: tuple = ('OxidantType', 'SiliconOrientation', 'GpuMode', 'GpuPreconditioner')
+_LS_DIMENSION_ALIASES: dict = {'LevelSet': 'Domain', 'MakeGeometry': 'MakeGeometry', 'Plane': 'Plane', 'Sphere': 'Sphere', 'Cylinder': 'Cylinder', 'Box': 'Box', 'BooleanOperation': 'BooleanOperation'}
 __version__: str = '4.7.0'
-_name: str = 'GpuPreconditioner'
 version: str = '4.7.0'
 _C = _core
