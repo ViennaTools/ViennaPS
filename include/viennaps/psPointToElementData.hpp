@@ -123,8 +123,8 @@ public:
                      TreeType const &pointKdTree,
                      SmartPointer<viennals::Mesh<MeshNT>> &surfaceMesh,
                      bool insertToMesh = false)
-      : PointToElementDataBase<NumericType, MeshNT>(*pointData, pointKdTree,
-                                                    surfaceMesh, insertToMesh),
+      : PointToElementDataBase<NumericType, MeshNT, TreeType>(
+            *pointData, pointKdTree, surfaceMesh, insertToMesh),
         elementData_(elementData) {}
 
   PointToElementData(PointData<NumericType> &elementData,
@@ -132,8 +132,8 @@ public:
                      TreeType const &pointKdTree,
                      SmartPointer<viennals::Mesh<MeshNT>> &surfaceMesh,
                      bool insertToMesh = false)
-      : PointToElementDataBase<NumericType, MeshNT>(pointData, pointKdTree,
-                                                    surfaceMesh, insertToMesh),
+      : PointToElementDataBase<NumericType, MeshNT, TreeType>(
+            pointData, pointKdTree, surfaceMesh, insertToMesh),
         elementData_(elementData) {}
 
 protected:
@@ -230,7 +230,7 @@ public:
                      TreeType const &pointKdTree,
                      SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh,
                      bool insertToMesh = false)
-      : ::viennaps::PointToElementDataBase<NumericType, MeshNT>(
+      : ::viennaps::PointToElementDataBase<NumericType, MeshNT, TreeType>(
             *pointData, pointKdTree, surfaceMesh, insertToMesh),
         d_elementData_(d_elementData) {}
 
@@ -238,7 +238,7 @@ public:
                      PointData<NumericType> &pointData, TreeType &pointKdTree,
                      SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh,
                      bool insertToMesh = false)
-      : ::viennaps::PointToElementDataBase<NumericType, MeshNT>(
+      : ::viennaps::PointToElementDataBase<NumericType, MeshNT, TreeType>(
             pointData, pointKdTree, surfaceMesh, insertToMesh),
         d_elementData_(d_elementData) {}
 

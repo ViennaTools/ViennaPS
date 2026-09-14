@@ -152,7 +152,8 @@ public:
     auto const &pointMaterialIds = *context.diskMesh->getMaterialIds();
     std::vector<int> elementMaterialIds;
     auto pointKdTree = context.getPointKdTree();
-    PointToElementDataSingle<NumericType, NumericType, int, float>(
+    PointToElementDataSingle<NumericType, NumericType, int, float,
+                             decltype(*pointKdTree)>(
         pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
         .apply();
     rayTracer_.setMaterialIds(elementMaterialIds);
@@ -175,7 +176,7 @@ public:
     if (context.flags.useCoverages) {
       auto globalTracingData = PointData<NumericType>::New();
       auto pointKdTree = context.getPointKdTree();
-      PointToElementData<NumericType, float>(
+      PointToElementData<NumericType, float, decltype(*pointKdTree)>(
           *globalTracingData, surfaceModel->getCoverages(), *pointKdTree,
           surfaceMesh_, Logger::hasIntermediate())
           .apply();
@@ -225,7 +226,8 @@ public:
     auto pointKdTree = context.getPointKdTree();
     assert(surfaceMesh_ && "Surface mesh not initialized.");
     std::vector<NumericType> elementWeights;
-    PointToElementDataSingle<NumericType, NumericType, NumericType, float>(
+    PointToElementDataSingle<NumericType, NumericType, NumericType, float,
+                             decltype(*pointKdTree)>(
         desorptionWeights, elementWeights, *pointKdTree, surfaceMesh_)
         .apply();
 

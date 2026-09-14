@@ -163,7 +163,8 @@ public:
       auto const &pointMaterialIds = *context.diskMesh->getMaterialIds();
       auto pointKdTree = context.getPointKdTree();
       std::vector<int> elementMaterialIds;
-      PointToElementDataSingle<NumericType, NumericType, int, float>(
+      PointToElementDataSingle<NumericType, NumericType, int, float,
+                               decltype(*pointKdTree)>(
           pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
           .apply();
       rayTracer_.setMaterialIds(elementMaterialIds);
@@ -190,8 +191,8 @@ public:
       assert(context.translationField);
       auto numCov = coverages->getScalarDataSize();
       auto pointKdTree = context.getPointKdTree();
-      gpu::PointToElementData<NumericType, float>(d_coverages, coverages,
-                                                  *pointKdTree, surfaceMesh_)
+      gpu::PointToElementData<NumericType, float, decltype(*pointKdTree)>(
+          d_coverages, coverages, *pointKdTree, surfaceMesh_)
           .apply();
       rayTracer_.setElementData(d_coverages, numCov);
     }
@@ -256,7 +257,8 @@ public:
     auto pointKdTree = context.getPointKdTree();
     assert(surfaceMesh_ && "Surface mesh not initialized.");
     std::vector<float> elementWeights;
-    PointToElementDataSingle<NumericType, NumericType, float, float>(
+    PointToElementDataSingle<NumericType, NumericType, float, float,
+                             decltype(*pointKdTree)>(
         desorptionWeights, elementWeights, *pointKdTree, surfaceMesh_)
         .apply();
 

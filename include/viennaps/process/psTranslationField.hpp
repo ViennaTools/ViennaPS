@@ -7,6 +7,7 @@
 
 #include <vcKDTree.hpp>
 #include <vcLogger.hpp>
+#include <vcNFKDTree.hpp>
 #include <vcSmartPointer.hpp>
 #include <vcVectorType.hpp>
 
@@ -15,10 +16,12 @@ namespace viennaps {
 using namespace viennacore;
 
 template <Numeric NumericType, int D,
-          class TreeType = KDTree<NumericType, Vec3D<NumericType>>>
+          class TreeType = NFKDTree<NumericType, Vec3D<NumericType>>>
   requires Dimension<D>
 class TranslationField final : public viennals::VelocityField<NumericType> {
+public:
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
+  using KDTreeType = TreeType;
 
 public:
   TranslationField(
@@ -66,13 +69,13 @@ public:
     translator_ = translator;
   }
 
-  void setKdTree(const SmartPointer<TreeType> &kdTree) { kdTree_ = kdTree; }
+  void setKdTree(const SmartPointer<KDTreeType> &kdTree) { kdTree_ = kdTree; }
 
   auto &getKdTree() { return kdTree_; }
 
   void buildKdTree(const std::vector<std::array<NumericType, 3>> &points) {
     if (!kdTree_)
-      kdTree_ = SmartPointer<TreeType>::New();
+      kdTree_ = SmartPointer<KDTreeType>::New();
     kdTree_->setPoints(points);
     kdTree_->build();
   }
@@ -107,7 +110,7 @@ public:
 
 private:
   SmartPointer<TranslatorType> translator_;
-  SmartPointer<TreeType> kdTree_;
+  SmartPointer<KDTreeType> kdTree_;
 
   const SmartPointer<::viennaps::VelocityField<NumericType, D>>
       modelVelocityField_;

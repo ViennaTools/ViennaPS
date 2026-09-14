@@ -14,6 +14,7 @@ namespace viennaps {
 VIENNAPS_TEMPLATE_ND(NumericType, D)
 class FluxProcessStrategy final : public ProcessStrategy<NumericType, D> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
+  using KDTreeType = typename TranslationField<NumericType, D>::KDTreeType;
   static constexpr const char *materialIdsLabel = "MaterialIds";
 
   AdvectionHandler<NumericType, D> advectionHandler_;
@@ -22,7 +23,7 @@ class FluxProcessStrategy final : public ProcessStrategy<NumericType, D> {
 
   viennals::ToDiskMesh<NumericType, D> meshGenerator_;
   SmartPointer<TranslatorType> translator_ = nullptr;
-  SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> kdTree_ = nullptr;
+  SmartPointer<KDTreeType> kdTree_ = nullptr;
 
   Timer<> callbackTimer_{};
   Timer<> diffusionTimer_{};
@@ -151,7 +152,7 @@ private:
       context.translationField->setTranslator(translator_);
     } else if (translationMethod == 2) {
       if (!kdTree_)
-        kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
+        kdTree_ = SmartPointer<KDTreeType>::New();
       context.translationField->setKdTree(kdTree_);
     }
 

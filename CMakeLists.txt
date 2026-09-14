@@ -144,8 +144,7 @@ include("cmake/vtk.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 2.3.0
-  GIT_TAG nanoflann
+  VERSION 2.4.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_FORMAT_EXCLUDE build/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -158,8 +157,7 @@ CPMAddPackage(
 
 CPMAddPackage(
   NAME ViennaRay
-  VERSION 4.4.2
-  GIT_TAG refactor-pipeline
+  VERSION 4.5.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")

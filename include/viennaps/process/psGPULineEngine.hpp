@@ -106,7 +106,7 @@ public:
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
 
-    CreateSurfaceMesh<NumericType, float, D>(
+    CreateSurfaceMesh<NumericType, float, D, typename KDTreeType::element_type>(
         context.domain->getSurface(), surfaceMesh_, elementKdTree_, 1e-12,
         context.rayTracingParams.minNodeDistanceFactor)
         .apply();
@@ -143,7 +143,8 @@ public:
       std::vector<int> lineMaterialIds(surfaceMesh_->lines.size());
       auto &pointKdTree = context.translationField->getKdTree();
       if (!pointKdTree) {
-        pointKdTree = KDTreeType::New();
+        pointKdTree = SmartPointer<
+            typename TranslationField<NumericType, D>::KDTreeType>::New();
         context.translationField->setKdTree(pointKdTree);
       }
       if (pointKdTree->getNumberOfPoints() != diskMesh->nodes.size()) {
@@ -191,7 +192,8 @@ public:
       auto numCov = coverages->getScalarDataSize();
       auto &pointKdTree = context.translationField->getKdTree();
       if (!pointKdTree) {
-        pointKdTree = KDTreeType::New();
+        pointKdTree = SmartPointer<
+            typename TranslationField<NumericType, D>::KDTreeType>::New();
         context.translationField->setKdTree(pointKdTree);
       }
       if (pointKdTree->getNumberOfPoints() != diskMesh.nodes.size()) {
