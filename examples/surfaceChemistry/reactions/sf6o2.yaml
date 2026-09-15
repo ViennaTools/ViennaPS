@@ -1,6 +1,14 @@
 name: sf6o2_silicon_etch
 temperature: 300.0        # K, the model has no thermal barrier
 
+# Surface site density, cm^-2, same convention as gaas_full.yaml. Needed by the
+# SURFACE RENEWAL sink: a receding front replaces covered sites with fresh solid
+# every lambda = sigma0/rho of depth, so every coverage is diluted at
+# R = sum_j (-solidAtoms_j)*rate_j / sigma0. Without it the coverage balance has
+# no renewal term at all and its steady state is A/(A+S).
+siteTypes:
+  - {name: default, density: 1.0e15}        # cm^-2 = 10 /nm^2
+
 # THE ACCEPTANCE TEST. This is the SF6/O2 silicon etch model that ViennaPS ships
 # as hand-written C++ (`psSF6O2Etching.hpp` + `psPlasmaEtching.hpp`), written
 # here as a reaction file. Every number below is the model's own default, taken
@@ -64,8 +72,12 @@ surface:
   - {eq: "Ar_ion + O* -> O", type: ion_enhanced,
      order: {O*: 1},
      yield: {A: 3.0, Eth: 10.0}}
-  # beta_sigma. Belen 2005 Table III lists the O recombination constant
-  # beta_sigma,Si = 4e13 cm^-2 s^-1 for EVERY O2 fraction, and with
-  # sigma0 = 1e15 cm^-2 that is 4.0e-2 /s. (This was briefly set to 1.0e-2 on
-  # a misreading of that table; the table says 4e13, not 1e13.)
+  # beta_sigma. Belen 2005 gives TWO parameter sets. Table III ("best match
+  # with experiments shown in Fig. 2") lists beta_sigma,Si = 4e13 cm^-2 s^-1
+  # for every O2 fraction, alongside A_O = 3; Table IV ("base values") lists
+  # 1e13 cm^-2 s^-1, but alongside A_O = 0.7 and Eth_O = 15 eV. This file uses
+  # A_O = 3, so it is the Table III set, and beta_sigma = 4e13 / sigma0 =
+  # 4.0e-2 /s goes with it. ViennaPS's own psSF6O2Etching.hpp agrees
+  # (beta_sigma = 4.0e-2). Do not mix the two tables: taking Table IV's
+  # beta_sigma with Table III's A_O is not a parameter set from the paper.
   - {eq: "O* -> O", type: surface, k0: 4.0e-2, Ea: 0.0}

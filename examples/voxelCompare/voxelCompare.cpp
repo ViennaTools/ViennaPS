@@ -19,6 +19,7 @@
 
 #include <csDenseCellSet.hpp>
 #include <lsMakeGeometry.hpp>
+#include <lsToDiskMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 
@@ -116,8 +117,10 @@ int main(int argc, char **argv) {
                                                  : ps::LogLevel::ERROR);
   ps::units::Length::setUnit("nm");
   ps::units::Time::setUnit("s");
+  const char *mechEnv = std::getenv("MECH_FILE");
   auto mech = ps::readChemicalMechanism<T>(
-      std::string(VIENNAPS_MECHANISM_DIR) + "/sf6o2.mechanism.json");
+      mechEnv ? std::string(mechEnv)
+              : std::string(VIENNAPS_MECHANISM_DIR) + "/sf6o2.mechanism.json");
 
   // NO_ION: drop the ion channel from the mechanism, so every arm runs the
   // purely spontaneous etch. The rate is recomputed from it, so the etch
@@ -160,7 +163,11 @@ int main(int argc, char **argv) {
   std::vector<T> th(mech.coverageNames.size(), T(0));
   mech.solveCoverages(gam, kc, th);
   const T ER = std::abs(mech.growthRate(gam, kc, th, ps::Material::Si));
-  const T time = TARGET / ER;
+  // FORCE_TIME: set the process time directly, in seconds. Needed for probes
+  // where every removal channel is switched off -- the blanket rate is then
+  // zero and TARGET/ER is meaningless.
+  const T time = std::getenv("FORCE_TIME") ? T(std::atof(std::getenv("FORCE_TIME")))
+                                           : TARGET / ER;
   std::cout << std::fixed << std::setprecision(4)
             << "trench W=" << W << " mask=" << MASKH << " dx=" << DX
             << ",  blanket ER " << ER << " nm/s,  t = " << time << " s ("
@@ -179,6 +186,10 @@ int main(int argc, char **argv) {
     // change on a blanket, where the QSSA is valid (-4.9511 vs -4.9478).
     // It is NOT the global default for SurfaceChemistry -- set here only.
     // LS_STEADY=1 restores the steady-state solve for comparison.
+    if (std::getenv("LS_RENEWAL")) {
+      model->setSurfaceRenewal(true);
+      std::cout << "  [level set: SURFACE RENEWAL sink enabled]\n";
+    }
     if (!std::getenv("LS_STEADY")) {
       model->setTransientCoverages(true);
       std::cout << "  [level set: TRANSIENT coverages (LS_STEADY=1 to disable)]\n";
@@ -189,6 +200,15 @@ int main(int argc, char **argv) {
     rt.raysPerPoint = 400; rt.useRandomSeeds = false; rt.rngSeed = 1000;
     proc.setParameters(rt);
     ps::CoverageParameters cov; cov.tolerance = 1e-6; cov.maxIterations = 40;
+    // LS_NOPREEQ: skip the coverage initialisation entirely, so the level set
+    // starts from a BARE surface like the cell model does. maxIterations = 0
+    // makes psFluxProcessStrategy's init loop run zero times. Pre-equilibrating
+    // asserts the steady state at t = 0; that is safe on a blanket, where
+    // tau_O ~ 3 ms against a 105 ms process, but in a feature the fluxes are
+    // 2-3 orders lower, tau grows with 1/flux, and the assertion outlives the
+    // whole run.
+    if (std::getenv("LS_NOPREEQ")) { cov.maxIterations = 0;
+      std::cout << "  [level set: NO coverage pre-equilibration, starts bare]\n"; }
     proc.setParameters(cov);
     // LS_DTRATIO scales the advection CFL ratio, to check that a transient
     // coverage result is converged in the time step rather than an artefact
@@ -218,6 +238,42 @@ int main(int argc, char **argv) {
                       << std::fixed << std::setprecision(1)
                       << 100.0 * rem[j] / tot << " %   ";
         std::cout << "\n";
+      }
+    }
+    // The continuum's FLUX FIELD along the feature, point by point, so it can
+    // be set against the PMC's per-cell arrival tallies on identical frozen
+    // geometry. This is transport alone -- no coverage, no yield, no removal
+    // placement, and none of the ion-count noise an etch comparison carries.
+    {
+      const auto labels = model->fluxFieldLabels();
+      const auto fields = model->fluxFields();
+      if (!labels.empty() && !fields.empty()) {
+        // coordinates come from the SAME snapshot as the flux, taken inside
+        // calculateVelocities; rebuilding a disk mesh here samples the surface
+        // after it has advected and does not even match in count
+        const auto pts = model->fluxFieldCoords();
+        if (pts.size() != fields[0].size()) {
+          std::cout << "    flux export SKIPPED: " << pts.size()
+                    << " snapshot points vs " << fields[0].size()
+                    << " flux values -- orderings do not correspond\n";
+        } else {
+          std::ofstream ff("cmp_ls_flux.csv");
+          ff << "x,z";
+          for (const auto &l : labels)
+            ff << ',' << l;
+          ff << "\n";
+          for (size_t i = 0; i < pts.size(); ++i) {
+            ff << pts[i][0] << ',' << pts[i][1];
+            for (size_t g = 0; g < fields.size(); ++g)
+              ff << ',' << fields[g][i];
+            ff << "\n";
+          }
+          std::cout << "    wrote cmp_ls_flux.csv (" << pts.size()
+                    << " points, " << labels.size() << " species:";
+          for (const auto &l : labels)
+            std::cout << ' ' << l;
+          std::cout << ")\n";
+        }
       }
     }
   }
@@ -278,7 +334,7 @@ int main(int argc, char **argv) {
   // ------------------------------------------------------- binary-cell PMC
   // Twice: once rounding each event to a whole cell, once carrying the
   // remainder. Same seed, same geometry, so the difference is the rounding.
-  struct Cfg { const char *tag; bool frac; T w; bool loc; bool reem;
+  struct Cfg { const char *tag; bool frac; bool loc; bool reem;
                cs::NormalEstimator est; };
   const auto FACE = cs::NormalEstimator::Face;
   const auto YOUNGS = cs::NormalEstimator::FillGradientYoungs;
@@ -286,14 +342,24 @@ int main(int argc, char **argv) {
   // search radius. 2.5 deg against voxelised planes, and the estimator
   // the comparison runs on.
   const auto IFACE = cs::NormalEstimator::InterfaceAverage;
+  // The three exist to compare NORMAL ESTIMATORS, so that must be the only
+  // column that varies. It was not: the table used to carry ion weights
+  // 4 / 16 / 4, so "pmcrew4" against "pmcw16" changed the estimator AND the
+  // weight together, and reading that pair as a weight comparison produced a
+  // spurious 1.86x "ion weight bias" (it was the estimator). All three now
+  // run the model's default weight; PMC_IONW overrides it for a real sweep.
+  //
+  // The TAGS ARE HISTORICAL -- they name what each configuration was probing
+  // when it was added, not what it holds now. They are kept because the run
+  // directories and figure scripts read cmp_<tag>_final.vtu.
   const Cfg cfgs[] = {
-      {"pmcrew4", true, 4, true, true, FACE},      // face normals
-      {"pmcw16", true, 16, true, true, IFACE},     // + M=16, smoother
-      {"pmciface", true, 4, true, true, IFACE},    // face average
+      {"pmcrew4", true, true, true, FACE},      // face normals
+      {"pmcw16", true, true, true, YOUNGS},     // fill-gradient (Youngs)
+      {"pmciface", true, true, true, IFACE},    // interface average
   };
-  // PMC_CFG=<tag> runs just that one PMC configuration. The three exist to
-  // compare normal estimators; a radius or seed sweep needs only one, and
-  // skipping the others is a 3x saving on the expensive arm.
+  // PMC_CFG=<tag> runs just that one PMC configuration. A radius or seed
+  // sweep needs only one, and skipping the others is a 3x saving on the
+  // expensive arm.
   const char *onlyCfg = std::getenv("PMC_CFG");
   for (const auto &cfg : cfgs) {
     if (lsOnly)
@@ -319,10 +385,15 @@ int main(int argc, char **argv) {
     if (std::getenv("NO_F")) p.fluxF = T(0);
     if (std::getenv("NO_IE")) p.A_ie = T(0);
     if (std::getenv("NO_O2")) p.fluxO = T(0);
+    // MUST be before the PMC is constructed: it takes a COPY of p, so an
+    // override applied afterwards was silently ignored (measured: four
+    // different fluxes gave byte-identical runs).
+    if (const char *e = std::getenv("PMC_FLUXF")) p.fluxF = std::atof(e);
+    if (const char *e = std::getenv("PMC_KSIGMA")) p.kSigma = std::atof(e);
+    if (const char *e = std::getenv("PMC_BETA")) p.betaSigma = std::atof(e);
     ps::VoxelPMC<T, D> pmc(lat, fill, material, p);
     pmc.setSeed(SEED);
     pmc.setFractionalRemoval(cfg.frac);
-    pmc.setIonWeight(cfg.w);
     pmc.setLocalClearing(cfg.loc);
     pmc.setReemission(cfg.reem);
     pmc.setNormalEstimator(cfg.est);
@@ -346,8 +417,16 @@ int main(int argc, char **argv) {
     if (const char *e = std::getenv("PMC_BOUNCE")) pmc.setMaxBounce(std::atoi(e));
     if (std::getenv("PMC_NOIONREFL")) pmc.setIonReflection(false);
     if (std::getenv("PMC_OXPROTECT")) pmc.setProtectOxide(true);
+    if (std::getenv("PMC_OXOPAQUE")) pmc.setOxideOpaque(true);
+    if (std::getenv("PMC_SITECOUNTS")) pmc.setSiteCounts(true);
     if (std::getenv("PMC_THERMLOCAL")) pmc.setThermalLocal(true);
     if (std::getenv("PMC_THERMAREAL")) pmc.setThermalAreal(true);
+    if (const char *e = std::getenv("PMC_RAYSMOOTH")) pmc.setRaySmoothing(std::atoi(e));
+    if (std::getenv("PMC_THERMARRIVAL")) pmc.setThermalArrival(true);
+    if (const char *e = std::getenv("PMC_SMOOTHPICK")) pmc.setSmoothPick(std::atoi(e));
+    if (std::getenv("PMC_DIRECTED")) pmc.setDirectedRemoval(true);
+    if (std::getenv("PMC_FLUXPROBE")) pmc.setFluxProbe(true);
+    if (std::getenv("PMC_UNIFORMREEMIT")) pmc.setUniformReemit(true);
     if (const char *e = std::getenv("PMC_THERMCOARSE")) pmc.setThermalCoarse(std::atoi(e));
     if (std::getenv("PMC_IONSPLIT")) pmc.setIonSplitRadius(true);
     if (const char *e = std::getenv("PMC_IONNORMR")) pmc.setIonNormalRadius(std::atoi(e));
@@ -358,7 +437,6 @@ int main(int argc, char **argv) {
       pmc.setThermalArea(std::atoi(e));
     // PMC_FLUXF scales the F flux so a prescribed p can be raised without
     // changing the etch rate: rate = flux*dx^(D-1) * p * dx.
-    if (const char *e = std::getenv("PMC_FLUXF")) p.fluxF = std::atof(e);
     if (std::getenv("PMC_NOPLANE")) pmc.setPlaneAcceptance(false);
     if (const char *e = std::getenv("PMC_PWIN")) pmc.setPlaneWindow(std::atof(e));
     if (const char *e = std::getenv("PMC_MINPTS")) pmc.setMinFitPoints(std::atoi(e));
@@ -399,7 +477,7 @@ int main(int argc, char **argv) {
     };
     std::cout << "binary-cell PMC [" << tag << "]: "
               << (cfg.frac ? "fractional" : "whole-cell") << ", ion weight "
-              << cfg.w << (cfg.loc ? ", local clearing" : "")
+              << pmc.ionWeight() << (cfg.loc ? ", local clearing" : "")
               << (cfg.reem ? ", re-emission" : "")
               << (cfg.est == YOUNGS ? ", Youngs normals"
                   : cfg.est == IFACE  ? ", interface-average normals"
@@ -440,6 +518,10 @@ int main(int argc, char **argv) {
     // point uncovered by etching is handed the steady-state coverage of its
     // local flux, not a bare surface. handDown is the cell equivalent: the
     // receding front passes its adsorbate to the cell it uncovers.
+    // Hand-down (= NO surface renewal) is the DEFAULT now, matching the
+    // continuum arm, which has no renewal term. PMC_RENEWAL restores the old
+    // behaviour for a deliberate comparison.
+    if (std::getenv("PMC_RENEWAL")) pmc.setHandDown(false);
     if (std::getenv("PMC_HANDDOWN")) pmc.setHandDown(true);
     // Sidewall vs floor NEUTRAL ARRIVAL, the direct analogue of the level
     // set's O_flux field. Same geometric bands as the level-set analysis, so
@@ -608,8 +690,62 @@ int main(int argc, char **argv) {
       }
       tF = n ? T(nF) / n : T(0); tO = n ? T(nO) / n : T(0);
     };
+    // Per-cell arrival field, for the point-by-point comparison against the
+    // continuum's cmp_ls_flux.csv on the SAME frozen geometry. The binned
+    // wall/floor report above collapses the profile; this keeps it.
+    auto dumpTally = [&]() {
+      if (!std::getenv("PMC_HITTALLY")) return;
+      const auto &hO = pmc.neutralHitsO();
+      const auto &hF = pmc.neutralHitsF();
+      const auto &hI = pmc.ionHitsPerCell();
+      const auto &hY = pmc.ionYieldPerCell();
+      const auto &hN = pmc.ionNzPerCell();
+      const auto &hC = pmc.ionCosPerCell();
+      const auto &hC2 = pmc.ionCos2PerCell();
+      const auto &hS = pmc.ionYspPerCell();
+      const auto &dd2 = lat.dims();
+      std::ofstream f("cmp_pmc_flux.csv");
+      f << "x,z,ionHits,ionYield,ionNz,ionCos,ionCos2,ionYsp,O,F,boost\n";
+      std::array<int, D> q{};
+      for (int j = 0; j < dd2[1]; ++j)
+        for (int i = 0; i < dd2[0]; ++i) {
+          q[0] = i; q[1] = j;
+          const int c = lat.cellId(q);
+          if (c < 0 || fill[c] < T(0.5)) continue;
+          if (material[c] == (int)ps::Material::Mask) continue;
+          // Same predicate as VoxelPMC::isExposed: a neighbour OUTSIDE the
+          // lattice is not gas, so it does not expose the cell. Counting it as
+          // gas put the bottom row and both side columns of bulk silicon into
+          // this file as "surface" -- rows cmp_ls_flux.csv can never contain,
+          // in the one file whose whole purpose is a point-by-point comparison
+          // against it.
+          bool exposed = false;
+          for (int d = 0; d < D && !exposed; ++d)
+            for (int sg = -1; sg <= 1 && !exposed; sg += 2) {
+              auto nb = q; nb[d] += sg;
+              const int b = lat.cellId(nb);
+              if (b >= 0 && fill[b] < T(0.5)) exposed = true;
+            }
+          if (!exposed) continue;
+          f << lat.minCorner()[0] + DX * (i + T(0.5)) << ','
+            << lat.minCorner()[1] + DX * (j + T(0.5)) << ','
+            << (c < (int)hI.size() ? hI[c] : 0) << ','
+            << (c < (int)hY.size() ? hY[c] : 0.0) << ','
+            << (c < (int)hN.size() ? hN[c] : 0.0) << ','
+            << (c < (int)hC.size() ? hC[c] : 0.0) << ','
+            << (c < (int)hC2.size() ? hC2[c] : 0.0) << ','
+            << (c < (int)hS.size() ? hS[c] : 0.0) << ','
+            << (c < (int)hO.size() ? hO[c] : 0) << ','
+            << (c < (int)hF.size() ? hF[c] : 0) << ','
+            << pmc.tallyBoost() << '\n';
+        }
+      std::cout << "    wrote cmp_pmc_flux.csv (boost "
+                << pmc.tallyBoost() << ")\n";
+    };
     if (fluxOnly) { pmc.setFreezeSurface(false);
-                    arrivalReport("FLUX ONLY: perfect trench, frozen, so this IS the flux"); }
+                    arrivalReport("FLUX ONLY: perfect trench, frozen, so this IS the flux");
+                    dumpTally(); }
+    else if (std::getenv("PMC_HITTALLY")) dumpTally();   // evolved surface too
     else arrivalReport("WHOLE RUN: surface moving, so this measures EXPOSURE TIME, not flux");
     { T tF, tO; size_t n; wallTheta(tF, tO, n);
       std::cout << std::setprecision(4) << "    SIDEWALL after the etch: theta_F "
@@ -662,13 +798,39 @@ int main(int argc, char **argv) {
     if (pmc.pruneIslands()) {
       const size_t cut = pmc.pruneUnsupported();
       std::cout << "    pruned " << cut << " unsupported cells\n";
+      // Only meaningful here: the audit is filled by pruneUnsupported itself.
+      std::cout << "    PRUNE AUDIT: islands " << pmc.prunedIslands()
+                << ", biggest " << pmc.prunedBiggest() << " cells  |  bare "
+                << pmc.prunedBare() << ", F* " << pmc.prunedF() << ", O* "
+                << pmc.prunedO() << "  (O* in islands >4 cells: "
+                << pmc.prunedOxideInBigIslands() << ")" << std::endl;
     }
+    // Counted in resolveImpact, so it is reported whether or not the islands
+    // are pruned -- it was nested in the block above, which silently hid the
+    // see-through numbers on every PMC_NOPRUNE run.
+    std::cout << "    SEE-THROUGH: rays waved through a cell " << pmc.nPassAll
+              << "  (bare " << pmc.nPassBare << ", F* " << pmc.nPassF
+              << ", O* " << pmc.nPassOx << ")"
+              // A DIFFERENT mechanism, and it was counted but never printed:
+              // nSeeThrough is the deliberate MCFPM-style spike skipping of
+              // PMC_RAYSMOOTH, not the plane test waving a ray on. Zero unless
+              // ray smoothing is switched on, which is how the two are told
+              // apart in a log.
+              << ",  ray-smoothing skips " << pmc.nSeeThrough << std::endl;
     dump("cmp_" + tag + "_final.vtu");
     const auto c = pmc.coverages();
     { long cf = 0, cfd = 0; double cr = 0; pmc.capStats(cf, cfd, cr);
       std::cout << "    curvature cap fired on " << cfd << " of " << cf
                 << " fits (" << (cf ? 100.0 * cfd / cf : 0.0)
                 << " %),  mean capped radius " << cr << "\n"; }
+    // atoms one cell carries, from the SAME parameters the model was given
+    const double atomsPerCellLedger = double(p.rho) * std::pow(double(DX), D);
+    // Cells the ISLAND PRUNE swept up are removals no channel ever asked for,
+    // and the prune above has already run by the time this prints, so they
+    // must come out of the numerator or the ledger reports credit that was
+    // never spent (and can read over 100 %).
+    const double cellsCharged =
+        double(pmc.removedCells()) - double(pmc.nPruned);
     std::cout << std::setprecision(4) << "    theta_F " << c[0] << "  theta_O "
               << c[1] << "   cells removed " << pmc.removedCells() << "\n"
               << "    ion hits " << pmc.nIons << " (on F: " << pmc.nIonsOnF
@@ -683,6 +845,19 @@ int main(int argc, char **argv) {
               << " (n=" << pmc.nDxIE << ")"
               << ",  sputter " << (pmc.nDxSp ? pmc.sumDxSp / pmc.nDxSp : 0.0)
               << " (n=" << pmc.nDxSp << ")"
+              // LEDGER AUDIT: the yields ask for atomsAsked(); the lattice
+              // gives up removedCells()*rho*dx^D. removeNearby can only take
+              // EXPOSED cells inside the damage ball, so when the ball runs
+              // out the credit is carried, not spent, and the channel
+              // under-etches. removeFails() counts those events.
+              << "\n    LEDGER: atoms asked " << pmc.atomsAsked()
+              << ", atoms taken " << cellsCharged * atomsPerCellLedger
+              << " (in " << pmc.removedCells() << " cells less "
+              << pmc.nPruned << " pruned)"
+              << "  (spent " << (pmc.atomsAsked() > 0
+                     ? 100.0 * cellsCharged * atomsPerCellLedger
+                           / pmc.atomsAsked() : 0.0)
+              << " %),  removeNearby failures " << pmc.removeFails()
               << "\n    O* FULL BUDGET  (adsorbed " << pmc.nAdsO << ")"
               << "\n      ion-cleared, DIRECT ion    " << pmc.nClearODirect
               << "\n      ion-cleared, REFLECTED ion " << pmc.nClearORefl
@@ -716,6 +891,20 @@ int main(int argc, char **argv) {
               << "\n    F* budget: adsorbed " << pmc.nAdsF
               << ", ion-cleared " << pmc.nClearF
               << ", thermal firings " << pmc.nThermF
+              << "\n    F* DEATHS BY CELL REMOVAL: " << pmc.nFLostRemoved
+              << "  (thermal " << pmc.nFRemTh << ", ion-enh " << pmc.nFRemIE
+              << ", sputter " << pmc.nFRemSp << ", other " << pmc.nFRemOther
+              << ")   -- outside the 4F*+Si ledger"
+              << "\n    F* handed down onto newly uncovered cells: " << pmc.nFHandedDown
+              << "   -> NET F* lost to removal " << (long long)pmc.nFLostRemoved - (long long)pmc.nFHandedDown
+              << "\n    O* deaths by cell removal: " << pmc.nOLostRemoved
+              << "   (O* shielded from R3/R4 by protectOxide_, F* is not)"
+              << "\n    coverages() divided by " << pmc.surfCellCount_ << " surface cells"
+              << "\n    ARRIVAL-SAMPLED theta_F = " << (pmc.nFarr ? double(pmc.nFonF)/double(pmc.nFarr) : 0.0)
+              << "  (F arrivals " << pmc.nFarr << ", on F* " << pmc.nFonF << ")"
+              << "\n    CLEARSWEPT AUDIT: delivered " << pmc.nClearF
+              << ", sweep expected " << pmc.sweptWantF
+              << ", continuum target " << pmc.sweptSiteF
               << ", bare resets " << pmc.nBareReset
               << "  -> created " << pmc.nAdsF << " vs destroyed "
               << (pmc.nClearF + pmc.nThermF)
@@ -724,6 +913,16 @@ int main(int argc, char **argv) {
               << ", rejected " << pmc.nAccClamped << " ("
               << 100.0 * pmc.nAccClamped / std::max<size_t>(pmc.nAcc, 1)
               << " %), reflections " << pmc.nBounce
+              // Where a neutral's life ENDS. A re-emission that cannot be
+              // placed outside the material is DROPPED (nBounceFail), and so
+              // is one that exhausts the bounce budget (nBounceCap). Both
+              // remove a particle that the continuum would have kept, so they
+              // are a direct loss of flux, not a redistribution.
+              << "\n    NEUTRAL FATE: dropped at re-emission " << pmc.nBounceFail
+              << ", bounce cap " << pmc.nBounceCap
+              << ", escaped " << pmc.nEscape
+              << ", site fail " << pmc.nSiteFail
+              << ", O adsorbed " << pmc.nAdsO
               << "\n    ion hits " << pmc.nIons << " (on F: " << pmc.nIonsOnF
               << "),  F ads " << pmc.nAdsF << ",  O ads " << pmc.nAdsO
               << ",  bare resets " << pmc.nBareReset

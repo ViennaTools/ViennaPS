@@ -37,6 +37,14 @@ public:
 
   virtual void setTimeStep(NumericType dt) {}
 
+  /// Suppress a model's DIAGNOSTIC accumulators for a throwaway evaluation.
+  /// psFluxProcessStrategy::predictTimeStep sizes the first advection step by
+  /// solving the coverages and evaluating the velocities on a scratch copy,
+  /// then discarding both; a model that accumulates per-step statistics inside
+  /// calculateVelocities would otherwise book a step that never happened. Only
+  /// counters may respond -- the velocities returned must not change.
+  virtual void setDiagnosticTally(bool on) {}
+
   virtual SmartPointer<std::vector<NumericType>>
   calculateVelocities(SmartPointer<PointData<NumericType>> fluxes,
                       const std::vector<Vec3D<NumericType>> &coordinates,

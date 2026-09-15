@@ -4,7 +4,7 @@
   "siteTypes": [
     {
       "name": "default",
-      "density": null
+      "density": 1000000000000000.0
     }
   ],
   "coverages": [

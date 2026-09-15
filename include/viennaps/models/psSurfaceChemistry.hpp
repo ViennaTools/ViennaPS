@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdlib>
+
 #include <functional>
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -907,12 +909,50 @@ public:
   mutable std::vector<double> channelRemoved;
   const std::vector<double> &removedByChannel() const { return channelRemoved; }
 
+  /// The PHYSICAL flux of every traced gas species at every surface point, as
+  /// the coverage solve saw it on the last update: gamma = normalisedFlux *
+  /// sourceFlux, the same product fed to the rate law. Snapshotted so the
+  /// continuum's flux field along a feature can be compared against the PMC's
+  /// per-cell arrival tallies on identical frozen geometry -- a direct
+  /// transport comparison, with no coverage, yield or removal in the way.
+  mutable std::vector<std::string> fluxLabels;
+  mutable std::vector<std::vector<NumericType>> fluxSnapshot;
+  /// Taken in calculateVelocities, which is the ONLY hook that receives the
+  /// point coordinates alongside the flux container. Snapshotting the two
+  /// together is what makes the correspondence safe: rebuilding a disk mesh
+  /// afterwards samples the surface AFTER it has advected, and the counts do
+  /// not even match (559 points against 561 values, measured).
+  mutable std::vector<Vec3D<NumericType>> fluxCoords;
+  const std::vector<std::string> &fluxFieldLabels() const { return fluxLabels; }
+  const std::vector<std::vector<NumericType>> &fluxFields() const {
+    return fluxSnapshot;
+  }
+  const std::vector<Vec3D<NumericType>> &fluxFieldCoords() const {
+    return fluxCoords;
+  }
+
   /// Set by the process strategy each step; >0 switches the coverage update
   /// from a steady-state solve to one transient step.
   void setTimeStep(NumericType dt) override { dt_ = dt; }
   NumericType dt_ = 0;
   bool transient_ = false;
   void setTransientCoverages(bool on) { transient_ = on; }
+  /// SURFACE RENEWAL. The mechanism's coverage balance has no term for the
+  /// front replacing covered sites with fresh, unreacted solid as it recedes:
+  /// its steady state is A/(A+S), and on a thermal blanket that is 0.8077
+  /// against a frozen cell model's 0.8042 -- they agree only while nothing
+  /// moves. A receding front exposes one monolayer of new sites every
+  /// lambda = sigma0/rho of depth, so every coverage is diluted at
+  ///     R = v / lambda = sum_j (-solidAtoms_j) * rate_j / sigma0
+  /// i.e. the removal expressed in monolayers per second, which needs
+  /// neither rho nor lambda explicitly. Applied as a split step over the same
+  /// dt the transient solve uses, so it is consistent to the same order.
+  bool renewal_ = false;
+  void setSurfaceRenewal(bool on) { renewal_ = on; }
+  /// Off only for the strategy's throwaway time-step prediction; see the use
+  /// in calculateVelocities.
+  bool tally_ = true;
+  void setDiagnosticTally(bool on) override { tally_ = on; }
 
   void updateCoverages(SmartPointer<PointData<NumericType>> fluxes,
                        const std::vector<NumericType> &materialIds) override {
@@ -954,9 +994,32 @@ public:
         // with or without it. It survives only in the VELOCITY, which is a
         // rate rather than a ratio -- and that is the one place the surface
         // point's coordinate is available to measure the film with.
+        // dt == 0 means "solve the steady state". A transient model must
+        // therefore never be handed a zero step; the process strategy
+        // predicts the first step (predictTimeStep) so that it is not.
+        const NumericType dtUse = transient_ ? dt_ : NumericType(0);
         mech.solveCoverages(gamma, ratesAt(kByMaterial, k, materialIds[p]),
-                            theta, 500, NumericType(1e-13),
-                            transient_ ? dt_ : NumericType(0));
+                            theta, 500, NumericType(1e-13), dtUse);
+        if (renewal_ && dt_ > NumericType(0) &&
+            mech.siteDensity > NumericType(0)) {
+          const auto &kp = ratesAt(kByMaterial, k, materialIds[p]);
+          const auto freeR = mech.freeFractions(theta);
+          NumericType atomFlux = 0;
+          for (size_t j = 0; j < mech.reactions.size(); ++j) {
+            const auto &r = mech.reactions[j];
+            if (r.solidAtoms >= 0)
+              continue;                       // removal only
+            atomFlux += NumericType(-r.solidAtoms) *
+                        mech.rate(r, kp[j], gamma, theta, freeR);
+          }
+          // siteDensity is cm^-2 by the file convention (see gaas_full.yaml);
+          // the rates here are per nm^2, so convert: 1 cm^-2 = 1e-14 nm^-2.
+          const NumericType sigma0 = mech.siteDensity * NumericType(1e-14);
+          const NumericType R = atomFlux / sigma0;
+          const NumericType decay = NumericType(1) / (NumericType(1) + R * dt_);
+          for (size_t i = 0; i < nCov; ++i)
+            theta[i] *= decay;
+        }
         for (size_t i = 0; i < nCov; ++i)
           cov[i]->at(p) = theta[i];
       }
@@ -1003,9 +1066,36 @@ public:
       if (mech.gas[g].traced)
         fluxPtr[g] = fluxes->getScalarData(mech.gas[g].label);
 
+    // Snapshot flux AND coordinates together for the transport comparison.
+    // OFF unless asked for: this is diagnostic, and the level set is the
+    // REFERENCE arm -- it must not carry anything on its default path.
+    const bool fluxDump = std::getenv("LS_FLUXDUMP") != nullptr;
+    if (fluxDump) {
+      fluxLabels.clear();
+      fluxSnapshot.clear();
+      fluxCoords.assign(coordinates.begin(), coordinates.end());
+      for (size_t g = 0; g < mech.gas.size(); ++g)
+        if (fluxPtr[g]) {
+          fluxLabels.push_back(mech.gas[g].label);
+          std::vector<NumericType> v(*fluxPtr[g]);
+          for (auto &x : v)
+            x *= mech.gas[g].sourceFlux;
+          fluxSnapshot.push_back(std::move(v));
+        }
+    }
+
     std::vector<const std::vector<NumericType> *> cov(nCov, nullptr);
     for (size_t i = 0; i < nCov; ++i)
       cov[i] = coverages->getScalarData(mech.coverageNames[i]);
+
+    // The coverages ride along in the same snapshot, so the composition can be
+    // read at the same coordinate as the flux that produced it.
+    if (fluxDump)
+      for (size_t i = 0; i < nCov; ++i)
+        if (cov[i] && cov[i]->size() == fluxCoords.size()) {
+          fluxLabels.push_back(mech.coverageNames[i]);
+          fluxSnapshot.push_back(*cov[i]);
+        }
 
     std::vector<NumericType> *growth = nullptr;
     std::vector<NumericType> *filmField = nullptr;
@@ -1021,10 +1111,36 @@ public:
     const double unitConversion =
         units::Time::convertSecond() / units::Length::convertNanometer();
 
+    // Sized ONCE, on one thread, before anyone enters the region. This used
+    // to be done lazily inside the omp for: every thread tested the size and
+    // called assign(), so threads concurrently freed and reallocated the same
+    // buffer. That is a heap race -- observed as "double free or corruption"
+    // and "free(): unaligned chunk in tcache" in about one run in six at 22
+    // threads, and never once single-threaded (0 in 30). It also lost updates
+    // on the += below, which is why the reported channel split wandered
+    // between identical reruns (14.6 / 15.3 / 9.9 %).
+    if (channelRemoved.size() < mech.reactions.size())
+      channelRemoved.assign(mech.reactions.size(), 0.0);
+
+    // THE PREDICTION PASS MUST NOT BE TALLIED. psFluxProcessStrategy sizes the
+    // first advection step by solving the coverages to steady state on a
+    // scratch copy and evaluating the velocities that state implies, then
+    // throwing both away (predictTimeStep). The channel split below is a
+    // dt-WEIGHTED accumulation, and the prediction arrives with dt_ == 0, so
+    // the weight falls back to 1.0 -- larger than the SUM of every real step's
+    // dt (0.105 s over the 20 nm trench). Left untallied, the reported
+    // decomposition is dominated by a step that never happened.
+    //
+    // The strategy says so explicitly rather than this being inferred from
+    // dt_: in LS_STEADY mode every real step also carries dt_ == 0, so there
+    // is no reading of the state that separates the two.
+    const bool predicting = !tally_;
+
 #pragma omp parallel
     {
       std::vector<NumericType> gamma(mech.gas.size(), 0.);
       std::vector<NumericType> theta(nCov, 0.);
+      std::vector<double> chanLocal(mech.reactions.size(), 0.0);
 #pragma omp for
       for (size_t p = 0; p < numPoints; ++p) {
         for (size_t g = 0; g < mech.gas.size(); ++g)
@@ -1062,22 +1178,27 @@ public:
               unitConversion;
           // per-reaction split of that same velocity, for comparison with the
           // cell method's per-channel removal counts
-          if (channelRemoved.size() < mech.reactions.size())
-            channelRemoved.assign(mech.reactions.size(), 0.0);
-          const auto free = mech.freeFractions(theta);
-          const double w = dt_ > NumericType(0) ? double(dt_) : 1.0;
-          for (size_t j = 0; j < mech.reactions.size(); ++j) {
-            const auto &r = mech.reactions[j];
-            if (r.solidAtoms >= 0)
-              continue;   // removal only
-            channelRemoved[j] +=
-                w * double(-r.solidAtoms) *
-                double(mech.rate(r, kp[j], gamma, theta, free)) /
-                double(mech.densityOf(r.solidIndex, mat));
+          if (!predicting) {
+            const auto free = mech.freeFractions(theta);
+            const double w = dt_ > NumericType(0) ? double(dt_) : 1.0;
+            for (size_t j = 0; j < mech.reactions.size(); ++j) {
+              const auto &r = mech.reactions[j];
+              if (r.solidAtoms >= 0)
+                continue;   // removal only
+              chanLocal[j] +=
+                  w * double(-r.solidAtoms) *
+                  double(mech.rate(r, kp[j], gamma, theta, free)) /
+                  double(mech.densityOf(r.solidIndex, mat));
+            }
           }
         }
         if (growth)
           growth->at(p) = velocity[p];
+      }
+#pragma omp critical
+      {
+        for (size_t j = 0; j < chanLocal.size(); ++j)
+          channelRemoved[j] += chanLocal[j];
       }
     }
 
@@ -1504,6 +1625,30 @@ public:
     auto sm = std::dynamic_pointer_cast<impl::ChemicalSurfaceModel<NumericType, D>>(
         this->getSurfaceModel());
     return sm ? sm->removedByChannel() : std::vector<double>{};
+  }
+
+  /// Physical flux per traced species at every surface point, last update.
+  std::vector<std::string> fluxFieldLabels() const {
+    auto sm = std::dynamic_pointer_cast<impl::ChemicalSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    return sm ? sm->fluxFieldLabels() : std::vector<std::string>{};
+  }
+  std::vector<std::vector<NumericType>> fluxFields() const {
+    auto sm = std::dynamic_pointer_cast<impl::ChemicalSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    return sm ? sm->fluxFields() : std::vector<std::vector<NumericType>>{};
+  }
+  std::vector<Vec3D<NumericType>> fluxFieldCoords() const {
+    auto sm = std::dynamic_pointer_cast<impl::ChemicalSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    return sm ? sm->fluxFieldCoords() : std::vector<Vec3D<NumericType>>{};
+  }
+
+  /// Dilute coverages by the receding front's surface renewal.
+  void setSurfaceRenewal(bool on) {
+    auto sm = std::dynamic_pointer_cast<impl::ChemicalSurfaceModel<NumericType, D>>(
+        this->getSurfaceModel());
+    if (sm) sm->setSurfaceRenewal(on);
   }
 
   /// Integrate the coverages in time instead of solving the steady state.

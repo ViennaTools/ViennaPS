@@ -337,6 +337,10 @@ private:
       // Hand the advection step to the surface model, so a model that can
       // integrate its coverages in time knows how long the step is. Models
       // that solve a steady state ignore it (the base setTimeStep is a no-op).
+      // On the very first step no time has been advected yet, so predict the
+      // step the kernel is about to take rather than handing over a zero.
+      if (context.timeStep <= 0.)
+        PROCESS_CHECK(predictTimeStep(context, fluxes));
       context.model->getSurfaceModel()->setTimeStep(context.timeStep);
       PROCESS_CHECK(updateCoverages(context, fluxes));
     }
@@ -415,6 +419,70 @@ private:
     auto const &materialIds = *context.diskMesh->getMaterialIds();
     return context.model->getSurfaceModel()->calculateVelocities(fluxes, points,
                                                                  materialIds);
+  }
+
+  /// Estimate the advection step before it is taken.
+  ///
+  /// context.timeStep is only assigned once performAdvection() has run, so on
+  /// the first step of a process it is still zero. A surface model that
+  /// integrates its coverages in time reads dt == 0 as "solve the steady
+  /// state", which means the very first step silently equilibrates the surface
+  /// before any time has passed. Where the relaxation time is short that is
+  /// invisible; where a species has no sink -- a passivating adsorbate on a
+  /// sidewall, say -- it asserts a converged coverage the surface could never
+  /// have reached, and because the state is then already stationary the
+  /// transient steps that follow never walk it back.
+  ///
+  /// So predict the step: solve the coverages to steady state on a scratch
+  /// copy, take the velocities that state implies, and apply the same CFL rule
+  /// the level-set kernel uses (dt = timeStepRatio * gridDelta / max|v|, since
+  /// the kernel limits on v*|grad phi| with |grad phi| = 1/gridDelta for a
+  /// signed distance). The scratch coverages are discarded, so the real solve
+  /// that follows still starts from the initial state and integrates over a
+  /// physical step.
+  ///
+  /// The estimate is an upper bound on what the kernel will choose (it may
+  /// shorten the step further at a material interface, or for a
+  /// Lax-Friedrichs scheme), and it is used for one step only -- every step
+  /// after this one has a measured step to hand over. For a model that solves
+  /// a steady state this is a no-op in everything but cost: the coverages are
+  /// restored, so the subsequent solve warm-starts from the same state and
+  /// converges to the same answer.
+  ProcessResult predictTimeStep(ProcessContext<NumericType, D> &context,
+                                SmartPointer<PointData<NumericType>> &fluxes) {
+    auto surfaceModel = context.model->getSurfaceModel();
+    auto const coverages = surfaceModel->getCoverages();
+    if (coverages == nullptr)
+      return ProcessResult::SUCCESS;
+
+    // keep the state the real solve has to start from
+    const PointData<NumericType> initial = *coverages;
+
+    surfaceModel->setTimeStep(0.); // steady state, for the velocity estimate
+    // Nothing this pass does may be recorded: the coverages are restored
+    // below, and any per-step diagnostic the model keeps must be too.
+    surfaceModel->setDiagnosticTally(false);
+    PROCESS_CHECK(updateCoverages(context, fluxes));
+    auto velocities = calculateVelocities(context, fluxes);
+    surfaceModel->setDiagnosticTally(true);
+
+    *surfaceModel->getCoverages() = initial;
+
+    double vMax = 0.;
+    if (velocities != nullptr)
+      for (auto const v : *velocities)
+        vMax = std::max(vMax, std::abs(static_cast<double>(v)));
+
+    if (vMax > 0.) {
+      const double dt = context.advectionParams.timeStepRatio *
+                        context.domain->getGridDelta() / vMax;
+      const double remaining = context.processDuration - context.processTime;
+      context.timeStep = remaining > 0. ? std::min(dt, remaining) : dt;
+      VIENNACORE_LOG_DEBUG("Predicted first time step: " +
+                           std::to_string(context.timeStep));
+    }
+
+    return ProcessResult::SUCCESS;
   }
 
   ProcessResult updateCoverages(ProcessContext<NumericType, D> &context,
