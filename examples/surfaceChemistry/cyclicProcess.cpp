@@ -1,8 +1,8 @@
 // A cyclic process, in which two half-cycle chemistries hand their coverages
 // to one another across an advection.
 //
-// A cycle is a list of phases, and the half-cycles use different chemistries,
-// so a process is written as two reaction files and a phase list:
+// A cycle is a list of stages, and the half-cycles use different chemistries,
+// so a process is written as two reaction files and a stage list:
 //
 //     dose        reactions/al2o3_tma.mechanism.json     precursor flowing
 //     purge       the same chemistry, nothing flowing
@@ -216,13 +216,13 @@ int main(int argc, char **argv) {
         labels.push_back(g.label);
     return labels;
   };
-  alp.addPhase("dose", o.doseTime, o.doseTime / o.doseSteps,
+  alp.addStage("dose", o.doseTime, o.doseTime / o.doseSteps,
                tracedOf(dose), "dose");
-  alp.addPhase("purge_dose", o.purgeTime, o.purgeTime / 4., {}, "dose");
-  alp.addPhase("coreactant", o.coreactantTime,
+  alp.addStage("purge_dose", o.purgeTime, o.purgeTime / 4., {}, "dose");
+  alp.addStage("coreactant", o.coreactantTime,
                o.coreactantTime / o.coreactantSteps,
                tracedOf(coreactant), "coreactant");
-  alp.addPhase("purge_coreactant", o.purgeTime, o.purgeTime / 4., {},
+  alp.addStage("purge_coreactant", o.purgeTime, o.purgeTime / 4., {},
                "coreactant");
 
   std::cout << o.name + ": " << o.cycles << " cycles of "

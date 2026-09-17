@@ -84,7 +84,7 @@ template <typename NumericType> struct ChemicalMechanism {
     std::string equation;        // the reaction as written, for reporting
     std::vector<NumericType> nu; // one entry per coverage
     NumericType solidAtoms = 0.; // solid atoms produced per event
-    // Which solid phase those atoms belong to. A mechanism that deposits a
+    // Which solid stage those atoms belong to. A mechanism that deposits a
     // polymer while etching a substrate has two, and their densities differ,
     // so the same atom count moves the surface by different amounts.
     int solidIndex = 0;
@@ -150,7 +150,7 @@ template <typename NumericType> struct ChemicalMechanism {
     MaterialValueMap<RateConstant> stickingConstant;
   };
 
-  // One solid phase of the mechanism: what a reaction deposits or removes.
+  // One solid stage of the mechanism: what a reaction deposits or removes.
   struct SolidPhase {
     std::string name;
     NumericType rho = 1.;
@@ -1622,9 +1622,9 @@ namespace gpu {
 /// chemistry is shared bit for bit with the CPU model.
 template <typename NumericType, int D>
 class SurfaceChemistry : public ProcessModelGPU<NumericType, D> {
-  ::viennaps::ChemicalMechanism<NumericType> mech_; // the current phase
+  ::viennaps::ChemicalMechanism<NumericType> mech_; // the current stage
   std::vector<std::pair<std::string, ::viennaps::ChemicalMechanism<NumericType>>>
-      phaseMechanisms_;
+      stageMechanisms_;
   std::unordered_map<std::string, NumericType> initialCoverage_;
   NumericType maxCoverageChange_ = 1e-3;
   SurfaceChemistryParamsGPU deviceParams_;
@@ -1643,16 +1643,16 @@ public:
   // one are the initial condition of the next.
   void addMechanism(const std::string &name,
                     const ::viennaps::ChemicalMechanism<NumericType> &m) {
-    if (!phaseMechanisms_.empty() &&
-        m.coverageNames != phaseMechanisms_.front().second.coverageNames) {
+    if (!stageMechanisms_.empty() &&
+        m.coverageNames != stageMechanisms_.front().second.coverageNames) {
       VIENNACORE_LOG_ERROR(
           "Mechanism '" + name + "' declares different coverages than '" +
-          phaseMechanisms_.front().first +
+          stageMechanisms_.front().first +
           "'. The steps of one cycle must describe the same surface.");
       return;
     }
-    phaseMechanisms_.emplace_back(name, m);
-    if (phaseMechanisms_.size() == 1)
+    stageMechanisms_.emplace_back(name, m);
+    if (stageMechanisms_.size() == 1)
       mech_ = m;
     initializeModel();
   }
@@ -1661,15 +1661,15 @@ public:
   // side moves: the coverage solve reads mech_, and the device already holds
   // every particle of every step with its own sticking, so nothing is
   // re-uploaded and no shader is rebuilt between steps of a cycle.
-  void setActivePhase(const std::string &phaseName,
+  void setActiveStage(const std::string &stageName,
                       const std::vector<std::string> &activeSpecies,
                       const std::string &mechanismName) override {
     if (!mechanismName.empty()) {
       const auto it = std::find_if(
-          phaseMechanisms_.begin(), phaseMechanisms_.end(),
+          stageMechanisms_.begin(), stageMechanisms_.end(),
           [&](const auto &entry) { return entry.first == mechanismName; });
-      if (it == phaseMechanisms_.end()) {
-        VIENNACORE_LOG_ERROR("Phase '" + phaseName + "' names mechanism '" +
+      if (it == stageMechanisms_.end()) {
+        VIENNACORE_LOG_ERROR("Stage '" + stageName + "' names mechanism '" +
                              mechanismName + "', which was not registered.");
         return;
       }
@@ -1718,7 +1718,7 @@ public:
 
 private:
   NumericType sourceFluxOf(const std::string &label) const {
-    for (const auto &entry : phaseMechanisms_)
+    for (const auto &entry : stageMechanisms_)
       for (const auto &g : entry.second.gas)
         if (g.label == label)
           return g.sourceFlux;
@@ -1728,10 +1728,10 @@ private:
   std::vector<const ::viennaps::ChemicalMechanism<NumericType> *>
   mechanismsToTrace() const {
     std::vector<const ::viennaps::ChemicalMechanism<NumericType> *> out;
-    if (phaseMechanisms_.empty()) {
+    if (stageMechanisms_.empty()) {
       out.push_back(&mech_);
     } else {
-      for (const auto &entry : phaseMechanisms_)
+      for (const auto &entry : stageMechanisms_)
         out.push_back(&entry.second);
     }
     return out;
@@ -1935,7 +1935,7 @@ public:
 
   void setMechanism(const ChemicalMechanism<NumericType> &m) {
     mech = m;
-    phaseMechanisms_.clear();
+    stageMechanisms_.clear();
     initializeModel();
   }
 
@@ -1947,18 +1947,18 @@ public:
   // silently carry the wrong species across.
   void addMechanism(const std::string &name,
                     const ChemicalMechanism<NumericType> &m) {
-    if (!phaseMechanisms_.empty()) {
-      const auto &first = phaseMechanisms_.front().second;
+    if (!stageMechanisms_.empty()) {
+      const auto &first = stageMechanisms_.front().second;
       if (m.coverageNames != first.coverageNames) {
         VIENNACORE_LOG_ERROR(
             "Mechanism '" + name + "' declares different coverages than '" +
-            phaseMechanisms_.front().first +
+            stageMechanisms_.front().first +
             "'. The steps of one cycle must describe the same surface.");
         return;
       }
     }
-    phaseMechanisms_.emplace_back(name, m);
-    if (phaseMechanisms_.size() == 1)
+    stageMechanisms_.emplace_back(name, m);
+    if (stageMechanisms_.size() == 1)
       mech = m;
     initializeModel();
   }
@@ -1968,15 +1968,15 @@ public:
   // contributes nothing while the reaction stays in the mechanism -- which is
   // what a purge is, and what the other half-cycle's reactants are during a
   // dose.
-  void setActivePhase(const std::string &phaseName,
+  void setActiveStage(const std::string &stageName,
                       const std::vector<std::string> &activeSpecies,
                       const std::string &mechanismName) override {
     if (!mechanismName.empty()) {
       const auto it = std::find_if(
-          phaseMechanisms_.begin(), phaseMechanisms_.end(),
+          stageMechanisms_.begin(), stageMechanisms_.end(),
           [&](const auto &entry) { return entry.first == mechanismName; });
-      if (it == phaseMechanisms_.end()) {
-        VIENNACORE_LOG_ERROR("Phase '" + phaseName + "' names mechanism '" +
+      if (it == stageMechanisms_.end()) {
+        VIENNACORE_LOG_ERROR("Stage '" + stageName + "' names mechanism '" +
                              mechanismName + "', which was not registered.");
         return;
       }
@@ -2048,7 +2048,7 @@ public:
 #ifdef VIENNACORE_COMPILE_GPU
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
     auto &model = gpuModel_;
-    if (phaseMechanisms_.empty()) {
+    if (stageMechanisms_.empty()) {
       model = SmartPointer<gpu::SurfaceChemistry<NumericType, D>>::New(mech);
     } else {
       // A cyclic process carries all of its steps across, not just the one
@@ -2059,7 +2059,7 @@ public:
       model->setMaxCoverageChange(maxCoverageChange_);
       for (const auto &[n, v] : initialCoverage_)
         model->setInitialCoverage(n, v);
-      for (const auto &entry : phaseMechanisms_)
+      for (const auto &entry : stageMechanisms_)
         model->addMechanism(entry.first, entry.second);
     }
     model->setProcessName(this->getProcessName().value());
@@ -2068,14 +2068,14 @@ public:
 #endif
 
 private:
-  // Every mechanism whose species must be traced: the registered phases if a
+  // Every mechanism whose species must be traced: the registered stages if a
   // cycle was built, otherwise the single mechanism this model was given.
   std::vector<const ChemicalMechanism<NumericType> *> mechanismsToTrace() const {
     std::vector<const ChemicalMechanism<NumericType> *> out;
-    if (phaseMechanisms_.empty()) {
+    if (stageMechanisms_.empty()) {
       out.push_back(&mech);
     } else {
-      for (const auto &entry : phaseMechanisms_)
+      for (const auto &entry : stageMechanisms_)
         out.push_back(&entry.second);
     }
     return out;
@@ -2155,16 +2155,16 @@ private:
 
   // The flux a species carries in the file it came from, before any gating.
   NumericType sourceFluxOf(const std::string &label) const {
-    for (const auto &entry : phaseMechanisms_)
+    for (const auto &entry : stageMechanisms_)
       for (const auto &g : entry.second.gas)
         if (g.label == label)
           return g.sourceFlux;
     return NumericType(0.);
   }
 
-  ChemicalMechanism<NumericType> mech; // the chemistry of the current phase
+  ChemicalMechanism<NumericType> mech; // the chemistry of the current stage
   std::vector<std::pair<std::string, ChemicalMechanism<NumericType>>>
-      phaseMechanisms_;
+      stageMechanisms_;
   std::unordered_map<std::string, NumericType> initialCoverage_;
   NumericType maxCoverageChange_ = 1e-3;
   SmartPointer<impl::ChemicalSurfaceModel<NumericType, D>> surfModel_ = nullptr;

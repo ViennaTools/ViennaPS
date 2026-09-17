@@ -33,7 +33,7 @@ public:
     // Validate required components
     PROCESS_CHECK(validateContext(context));
 
-    // Setup phase
+    // Setup stage
     PROCESS_CHECK(setupProcess(context));
 
     // Main processing loop
@@ -154,7 +154,7 @@ private:
     processTimer.start();
 
     const auto numCycles = context.atomicLayerParams.numCycles;
-    const auto phases = context.atomicLayerParams.cycle();
+    const auto stages = context.atomicLayerParams.cycle();
     const auto surfaceModel = context.model->getSurfaceModel();
 
     for (int cycle = 0; cycle < numCycles; ++cycle) {
@@ -182,32 +182,32 @@ private:
       }
 
       // Walk the steps of one cycle in order. A single-reactant process has
-      // two of them, a pulse and a purge, which is what an empty phase list
+      // two of them, a pulse and a purge, which is what an empty stage list
       // is taken to mean; a plasma ALD cycle has four, and the species
       // flowing and the chemistry governing them differ from step to step.
-      for (const auto &phase : phases) {
-        context.model->setActivePhase(phase.name, phase.activeSpecies,
-                                      phase.mechanism);
+      for (const auto &stage : stages) {
+        context.model->setActiveStage(stage.name, stage.activeSpecies,
+                                      stage.mechanism);
 
         double time = 0.;
         unsigned iteration = 0;
-        const double phaseTimeStep =
-            phase.timeStep > 0. ? phase.timeStep : phase.duration;
+        const double stageTimeStep =
+            stage.timeStep > 0. ? stage.timeStep : stage.duration;
 
-        while (time < phase.duration - phaseTimeStep * 1e-4) {
+        while (time < stage.duration - stageTimeStep * 1e-4) {
 #ifdef VIENNATOOLS_PYTHON_BUILD
           // Check for user interruption
           if (PyErr_CheckSignals() != 0)
             return ProcessResult::USER_INTERRUPTED;
 #endif
 
-          // Clamp last step to land exactly on the phase duration
-          double dt = std::min(phaseTimeStep, phase.duration - time);
+          // Clamp last step to land exactly on the stage duration
+          double dt = std::min(stageTimeStep, stage.duration - time);
           surfaceModel->setTimeStep(dt);
 
           auto fluxes = PointData<NumericType>::New();
 
-          if (phase.isPurge()) {
+          if (stage.isPurge()) {
             // Nothing is flowing, so there is no source to trace. A model that
             // resolves what desorbs from the surface has that re-traced as its
             // own source; one whose purge is purely thermal does not, and
@@ -216,7 +216,7 @@ private:
               auto result = fluxEngine_->calculateSurfaceFluxes(context, fluxes);
               if (result == ProcessResult::SUCCESS) {
                 outputIntermediateResults(context, fluxes,
-                                          "_" + phase.name + "_" +
+                                          "_" + stage.name + "_" +
                                               std::to_string(cycle) + "_" +
                                               std::to_string(iteration));
               }
@@ -246,8 +246,8 @@ private:
 
           if (Logger::hasInfo()) {
             std::stringstream stream;
-            stream << std::fixed << std::setprecision(4) << phase.name
-                   << " time: " << time << " / " << phase.duration << " "
+            stream << std::fixed << std::setprecision(4) << stage.name
+                   << " time: " << time << " / " << stage.duration << " "
                    << units::Time::toShortString();
             Logger::getInstance().addInfo(stream.str()).print();
           }

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""A cyclic process: two chemistries, coverages carried from phase to phase.
+"""A cyclic process: two chemistries, coverages carried from stage to stage.
 
 The Python counterpart of cyclicProcess.cpp, through the same reader and the
-same model. A cycle is four phases, and two of them use a different chemistry
-from the other two, so the process is two reaction files and a phase list:
+same model. A cycle is four stages, and two of them use a different chemistry
+from the other two, so the process is two reaction files and a stage list:
 
     dose        the dose mechanism, its traced species flowing
     purge       the same chemistry, nothing flowing
@@ -12,7 +12,7 @@ from the other two, so the process is two reaction files and a phase list:
 
 Each pulse flows exactly the species its own mechanism traces, so the driver
 names no species and works for any pair of half-cycle reaction files. The
-coverages carry from each phase into the next: what the dose leaves on the
+coverages carry from each stage into the next: what the dose leaves on the
 surface is what the co-reactant acts on, which is the whole content of a
 cycle and is why the coverages here are integrated in time.
 
@@ -95,7 +95,7 @@ def traced_labels(path):
     """The species a pulse of this mechanism flows.
 
     Every traced gas species carrying a label, which is the same rule the C++
-    driver applies. Ions live in their own block and are not phase-gated."""
+    driver applies. Ions live in their own block and are not stage-gated."""
     with open(path) as f:
         data = json.load(f)
     return [g["label"] for g in data.get("gas", [])
@@ -220,12 +220,12 @@ def main():
     # steps of that half-cycle's chemistry run through it.
     alp = ps.AtomicLayerProcessParameters()
     alp.numCycles = o.cycles
-    alp.addPhase("dose", o.dose, o.dose / o.dose_steps,
+    alp.addStage("dose", o.dose, o.dose / o.dose_steps,
                  traced_labels(dose_json), "dose")
-    alp.addPhase("purge_dose", o.purge, o.purge / 4.0, [], "dose")
-    alp.addPhase("coreactant", o.coreactant, o.coreactant / o.coreactant_steps,
+    alp.addStage("purge_dose", o.purge, o.purge / 4.0, [], "dose")
+    alp.addStage("coreactant", o.coreactant, o.coreactant / o.coreactant_steps,
                  traced_labels(coreactant_json), "coreactant")
-    alp.addPhase("purge_coreactant", o.purge, o.purge / 4.0, [], "coreactant")
+    alp.addStage("purge_coreactant", o.purge, o.purge / 4.0, [], "coreactant")
 
     print(f"\n{o.name}: {o.cycles} cycles of {o.dose} s dose / "
           f"{o.purge} s purge / {o.coreactant} s co-reactant / "

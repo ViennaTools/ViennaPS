@@ -709,7 +709,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
           "densities.")
       .def("addSolid", &ChemicalMechanism<T>::addSolid, py::arg("name"),
            py::arg("rho"),
-           "Declare a solid phase and its density. Returns its index.")
+           "Declare a solid stage and its density. Returns its index.")
       .def("setSolidDensity",
            [](ChemicalMechanism<T> &m, int solidIndex,
               const std::string &material, T rho) {
@@ -947,15 +947,15 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .def("toMetaDataString", &CoverageParameters::toMetaDataString,
            "Convert the coverage parameters to a metadata string.");
 
-  // CyclePhase: one step of an atomic layer cycle
-  py::class_<CyclePhase>(module, "CyclePhase")
+  // CycleStage: one step of an atomic layer cycle
+  py::class_<CycleStage>(module, "CycleStage")
       .def(py::init<>())
-      .def_readwrite("name", &CyclePhase::name)
-      .def_readwrite("duration", &CyclePhase::duration)
-      .def_readwrite("timeStep", &CyclePhase::timeStep)
-      .def_readwrite("activeSpecies", &CyclePhase::activeSpecies)
-      .def_readwrite("mechanism", &CyclePhase::mechanism)
-      .def("isPurge", &CyclePhase::isPurge);
+      .def_readwrite("name", &CycleStage::name)
+      .def_readwrite("duration", &CycleStage::duration)
+      .def_readwrite("timeStep", &CycleStage::timeStep)
+      .def_readwrite("activeSpecies", &CycleStage::activeSpecies)
+      .def_readwrite("mechanism", &CycleStage::mechanism)
+      .def("isPurge", &CycleStage::isPurge);
 
   // AtomicLayerProcessParameters
   py::class_<AtomicLayerProcessParameters>(module,
@@ -969,8 +969,8 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &AtomicLayerProcessParameters::purgePulseTime)
       .def_readwrite("purgeTimeStep",
                      &AtomicLayerProcessParameters::purgeTimeStep)
-      .def_readwrite("phases", &AtomicLayerProcessParameters::phases)
-      .def("addPhase", &AtomicLayerProcessParameters::addPhase,
+      .def_readwrite("stages", &AtomicLayerProcessParameters::stages)
+      .def("addStage", &AtomicLayerProcessParameters::addStage,
            py::arg("name"), py::arg("duration"), py::arg("timeStep"),
            py::arg("activeSpecies") = std::vector<std::string>{},
            py::arg("mechanism") = std::string{},

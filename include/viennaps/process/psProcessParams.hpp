@@ -117,17 +117,17 @@ struct CoverageParameters {
 // coverages are integrated through it, and which species are flowing.
 //
 // A cycle is a sequence of these. Two of them -- a pulse and a purge -- is the
-// classic single-reactant process, and is what an empty `phases` list is taken
+// classic single-reactant process, and is what an empty `stages` list is taken
 // to mean. A plasma ALD cycle is four: dose, purge, plasma, purge, with a
 // different set of species flowing in each pulse and a different chemistry
 // governing each half. `activeSpecies` empty marks a purge, where nothing is
 // flowing and only the thermal steps of the chemistry run.
-struct CyclePhase {
+struct CycleStage {
   std::string name = "pulse";
   double duration = 1.0;
   double timeStep = 1.0;
   std::vector<std::string> activeSpecies; // empty: a purge
-  std::string mechanism;                  // which chemistry governs this phase
+  std::string mechanism;                  // which chemistry governs this stage
 
   bool isPurge() const { return activeSpecies.empty(); }
 };
@@ -140,24 +140,24 @@ struct AtomicLayerProcessParameters {
   double purgeTimeStep = 1.0;
 
   // The steps of one cycle, in order. Left empty, the pulse/purge times above
-  // are used, so a process written before phases existed behaves as it did.
-  std::vector<CyclePhase> phases;
+  // are used, so a process written before stages existed behaves as it did.
+  std::vector<CycleStage> stages;
 
-  void addPhase(const std::string &name, double duration, double timeStep,
+  void addStage(const std::string &name, double duration, double timeStep,
                 std::vector<std::string> activeSpecies = {},
                 const std::string &mechanism = "") {
-    phases.push_back({name, duration, timeStep, std::move(activeSpecies),
+    stages.push_back({name, duration, timeStep, std::move(activeSpecies),
                       mechanism});
   }
 
-  // The cycle as the strategy walks it: the explicit phases if any were given,
+  // The cycle as the strategy walks it: the explicit stages if any were given,
   // otherwise the pulse and purge the older parameters describe. A pulse with
   // no named species flows everything the model has, which is what a
   // single-reactant process means by a pulse.
-  std::vector<CyclePhase> cycle() const {
-    if (!phases.empty())
-      return phases;
-    std::vector<CyclePhase> synthesized;
+  std::vector<CycleStage> cycle() const {
+    if (!stages.empty())
+      return stages;
+    std::vector<CycleStage> synthesized;
     synthesized.push_back({"pulse", pulseTime, coverageTimeStep, {"*"}, ""});
     if (purgePulseTime > 0.)
       synthesized.push_back({"purge", purgePulseTime, purgeTimeStep, {}, ""});

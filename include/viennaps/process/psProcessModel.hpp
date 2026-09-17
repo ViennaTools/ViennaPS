@@ -65,7 +65,7 @@ public:
   // the cycle into a single growth-per-cycle ignores it. `activeSpecies`
   // holding the single entry "*" means everything the model has is flowing,
   // and empty means nothing is -- a purge.
-  virtual void setActivePhase(const std::string &phaseName,
+  virtual void setActiveStage(const std::string &stageName,
                               const std::vector<std::string> &activeSpecies,
                               const std::string &mechanism) {}
   auto hasGPUModel() const { return hasGPU; }
