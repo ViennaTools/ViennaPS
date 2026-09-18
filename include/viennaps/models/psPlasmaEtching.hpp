@@ -275,15 +275,12 @@ public:
     assert(cosTheta <= 1 + 1e6 && "Error in calculating cos theta");
     assert(rayWeight > 0. && "Invalid ray weight");
 
-    NumericType A_sp = params.Substrate.A_sp;
     NumericType B_sp = params.Substrate.B_sp;
     NumericType Eth_sp = params.Substrate.Eth_sp;
     if (MaterialMap::isHardmask(materialId)) {
-      A_sp = params.Mask.A_sp;
       B_sp = params.Mask.B_sp;
       Eth_sp = params.Mask.Eth_sp;
     } else if (MaterialMap::isMaterial(materialId, Material::Polymer)) {
-      A_sp = params.Polymer.A_sp;
       B_sp = params.Polymer.B_sp;
       Eth_sp = params.Polymer.Eth_sp;
     }
@@ -313,12 +310,9 @@ public:
     //              0.);
 
     const double sqrtE = std::sqrt(E);
-    NumericType Y_sp =
-        A_sp * std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_sp_theta;
-    NumericType Y_Si = params.Substrate.A_ie *
-                       std::max(sqrtE - sqrt_E_th_ie_Sub, 0.) * f_ie_theta;
-    NumericType Y_P = params.Passivation.A_ie *
-                      std::max(sqrtE - sqrt_E_th_ie_P, 0.) * f_ie_theta;
+    NumericType Y_sp = std::max(sqrtE - std::sqrt(Eth_sp), 0.) * f_sp_theta;
+    NumericType Y_Si = std::max(sqrtE - sqrt_E_th_ie_Sub, 0.) * f_ie_theta;
+    NumericType Y_P = std::max(sqrtE - sqrt_E_th_ie_P, 0.) * f_ie_theta;
 
     assert(Y_sp >= 0. && "Invalid yield");
     assert(Y_Si >= 0. && "Invalid yield");
