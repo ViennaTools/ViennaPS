@@ -43,7 +43,12 @@ static T TARGET = 10.0;   // nm of blanket-equivalent etch; argv[1] overrides
 static unsigned SEED = 7;  // argv[2]: PMC seed, for spread over seeds
 
 static ps::SmartPointer<ps::Domain<T, D>> makeDomain() {
-  auto dom = ps::SmartPointer<ps::Domain<T, D>>::New(DX, T(4) * W, T(4) * W);
+  // PMC_EXTENT: the lateral size of the domain, default 4x the opening. The
+  // sides are mirrored, so a narrower extent is a denser array of features
+  // rather than an isolated one.
+  T ext = T(4) * W;
+  if (const char *e = std::getenv("PMC_EXTENT")) ext = std::atof(e);
+  auto dom = ps::SmartPointer<ps::Domain<T, D>>::New(DX, ext, ext);
   // PRETRENCH carves a PERFECT trench of the given depth, vertical walls, in
   // BOTH arms -- the cells are built from these same level sets. With the
   // surface then frozen, the two arms are compared on identical, static,
@@ -69,7 +74,11 @@ static ps::SmartPointer<cs::DenseCellSet<T, D>>
 makeCells(ps::SmartPointer<ps::Domain<T, D>> dom) {
   auto top = dom->getLevelSets().back();
   auto deep = ls::SmartPointer<ls::Domain<T, D>>::New(top->getGrid());
-  { T o[D] = {0., -36.}, n[D] = {0., 1.};
+  // PMC_SUB: how deep the substrate goes. A long etch runs out of silicon at
+  // the default -36 nm.
+  T sub = T(-36);
+  if (const char *e = std::getenv("PMC_SUB")) sub = std::atof(e);
+  { T o[D] = {0., 0.}, n[D] = {0., 1.}; o[D - 1] = sub;
     ls::MakeGeometry<T, D>(deep,
         ls::SmartPointer<ls::Plane<T, D>>::New(o, n)).apply(); }
   std::vector<ls::SmartPointer<ls::Domain<T, D>>> lss{deep};
@@ -198,6 +207,11 @@ int main(int argc, char **argv) {
     proc.setFluxEngineType(ps::FluxEngineType::CPU_TRIANGLE);
     ps::RayTracingParameters rt;
     rt.raysPerPoint = 400; rt.useRandomSeeds = false; rt.rngSeed = 1000;
+    // LS_SEED: the level set's own RAY seed. Fixing it makes the arm
+    // reproducible, which is not the same as noise-free -- it is still a Monte
+    // Carlo flux with 400 rays per point, so it carries a statistical spread
+    // of its own that a single seed hides.
+    if (const char *e = std::getenv("LS_SEED")) rt.rngSeed = std::atoi(e);
     proc.setParameters(rt);
     ps::CoverageParameters cov; cov.tolerance = 1e-6; cov.maxIterations = 40;
     // LS_NOPREEQ: skip the coverage initialisation entirely, so the level set
@@ -352,10 +366,13 @@ int main(int argc, char **argv) {
   // The TAGS ARE HISTORICAL -- they name what each configuration was probing
   // when it was added, not what it holds now. They are kept because the run
   // directories and figure scripts read cmp_<tag>_final.vtu.
+  // frac = false: EVENT DRIVEN removal, one draw per event, no credit ledger.
+  // PMC_FRACTIONAL restores the old carried-credit form for comparison.
+  const bool frac = std::getenv("PMC_FRACTIONAL") != nullptr;
   const Cfg cfgs[] = {
-      {"pmcrew4", true, true, true, FACE},      // face normals
-      {"pmcw16", true, true, true, YOUNGS},     // fill-gradient (Youngs)
-      {"pmciface", true, true, true, IFACE},    // interface average
+      {"pmcrew4", frac, true, true, FACE},      // face normals
+      {"pmcw16", frac, true, true, YOUNGS},     // fill-gradient (Youngs)
+      {"pmciface", frac, true, true, IFACE},    // interface average
   };
   // PMC_CFG=<tag> runs just that one PMC configuration. A radius or seed
   // sweep needs only one, and skipping the others is a 3x saving on the
@@ -389,6 +406,7 @@ int main(int argc, char **argv) {
     // override applied afterwards was silently ignored (measured: four
     // different fluxes gave byte-identical runs).
     if (const char *e = std::getenv("PMC_FLUXF")) p.fluxF = std::atof(e);
+    if (const char *e = std::getenv("PMC_STICKF")) p.stickF = std::atof(e);
     if (const char *e = std::getenv("PMC_KSIGMA")) p.kSigma = std::atof(e);
     if (const char *e = std::getenv("PMC_BETA")) p.betaSigma = std::atof(e);
     ps::VoxelPMC<T, D> pmc(lat, fill, material, p);
@@ -414,11 +432,36 @@ int main(int argc, char **argv) {
     if (std::getenv("PMC_OINIT"))
       pmc.setInitialState(ps::VoxelPMC<T, D>::Oxidised);
     if (const char *e = std::getenv("PMC_P")) pmc.setSimpleP(std::atof(e));
+    // PMC_SIMPLESTICK / PMC_SIMPLEATOMS: the s = 1 view-factor test. Sticking
+    // and the removal quantum are set independently, so a particle can be
+    // consumed on every hit (s = 1, no reflection) while carrying off only a
+    // fraction of a cell. Without this, s and the amount removed are the same
+    // number and s = 1 forces one whole cell per arrival.
+    if (const char *e = std::getenv("PMC_SIMPLESTICK"))
+      pmc.setSimpleStick(std::atof(e));
+    if (const char *e = std::getenv("PMC_SIMPLEATOMS"))
+      pmc.setSimpleAtoms(std::atof(e));
+    if (std::getenv("PMC_NOCARRY")) pmc.setCarryOn(false);
+    if (const char *e = std::getenv("PMC_SIMPLEREACT"))
+      pmc.setSimpleReactP(std::atof(e));
+    if (std::getenv("PMC_MASKREFLECT")) pmc.setMaskReflect(true);
+    if (std::getenv("PMC_NOSETTLE")) pmc.setSettleOrphans(false);
+    if (const char *e = std::getenv("PMC_SETTLER"))
+      pmc.setSettleRadius(std::atoi(e));
     if (const char *e = std::getenv("PMC_BOUNCE")) pmc.setMaxBounce(std::atoi(e));
     if (std::getenv("PMC_NOIONREFL")) pmc.setIonReflection(false);
     if (std::getenv("PMC_OXPROTECT")) pmc.setProtectOxide(true);
+    if (std::getenv("PMC_CAPSHIELD")) pmc.setCapShield(true);
     if (std::getenv("PMC_OXOPAQUE")) pmc.setOxideOpaque(true);
     if (std::getenv("PMC_SITECOUNTS")) pmc.setSiteCounts(true);
+    // Both default ON now: the spontaneous etch is arrival-driven and takes
+    // its silicon at the site that reacted. These two switch the OLD timed
+    // per-cell sweep and the 5-cell removal ball back on, for comparison.
+    if (std::getenv("PMC_LOCALQ")) pmc.setLocalQ(true);
+    if (const char *e = std::getenv("PMC_QEMA")) pmc.setQEma(std::atof(e));
+    if (const char *e = std::getenv("PMC_FSTEPS")) pmc.setFluorSteps(std::atoi(e));
+    if (std::getenv("PMC_THERMTIMED")) pmc.setThermalArrival(false);
+    if (std::getenv("PMC_THERMBALL")) pmc.setThermalLocal(false);
     if (std::getenv("PMC_THERMLOCAL")) pmc.setThermalLocal(true);
     if (std::getenv("PMC_THERMAREAL")) pmc.setThermalAreal(true);
     if (const char *e = std::getenv("PMC_RAYSMOOTH")) pmc.setRaySmoothing(std::atoi(e));
@@ -485,7 +528,12 @@ int main(int argc, char **argv) {
               << "\n";
     if (!cfg.frac)
       dump("cmp_" + tag + "_initial.vtu");
-    const int steps = static_cast<int>(3000 * TARGET / 10.0);
+    // PMC_STEPS overrides the 300-per-nm default. That default is sized for
+    // the SF6/O2 benchmark, where coverage has to be resolved in time; at
+    // s = 1 there is no coverage, the dose is fixed by the etch depth, and the
+    // only thing the extra steps buy is one surface/BVH rebuild each.
+    int steps = static_cast<int>(3000 * TARGET / 10.0);
+    if (const char *e = std::getenv("PMC_STEPS")) steps = std::atoi(e);
     // Flux-only: hold the geometry for the whole run and just tally arrivals.
     const bool fluxOnly = std::getenv("PMC_FLUXONLY") != nullptr;
     if (fluxOnly) { pmc.setFreezeSurface(true); pmc.setHitTally(true); }
@@ -745,7 +793,11 @@ int main(int argc, char **argv) {
     if (fluxOnly) { pmc.setFreezeSurface(false);
                     arrivalReport("FLUX ONLY: perfect trench, frozen, so this IS the flux");
                     dumpTally(); }
-    else if (std::getenv("PMC_HITTALLY")) dumpTally();   // evolved surface too
+    // With PMC_POSTEQ the meaningful tally is the FROZEN-window one taken
+    // below, and resetHitTally() clears this one anyway -- dumping here
+    // would write the exposure-weighted counts under the same name.
+    else if (std::getenv("PMC_HITTALLY") && !std::getenv("PMC_POSTEQ"))
+      dumpTally();                                     // evolved surface too
     else arrivalReport("WHOLE RUN: surface moving, so this measures EXPOSURE TIME, not flux");
     { T tF, tO; size_t n; wallTheta(tF, tO, n);
       std::cout << std::setprecision(4) << "    SIDEWALL after the etch: theta_F "
@@ -791,6 +843,7 @@ int main(int argc, char **argv) {
       }
       pmc.setFreezeSurface(false);
       arrivalReport("FROZEN WINDOW: geometry static, so arrivals per cell ARE a flux");
+      dumpTally();          // per-cell flux on the EVOLVED, frozen geometry
       pmc.setTallyOnly(false);
     }
     // Islands are cleared once, after the run: pruning every step removes
@@ -836,6 +889,11 @@ int main(int argc, char **argv) {
               << "    ion hits " << pmc.nIons << " (on F: " << pmc.nIonsOnF
               << "\n    neutrals launched " << pmc.nLaunch << ", surface hits "
               << pmc.nHitN << ", acceptance tests " << pmc.nAcc
+              << ", forced onto first crossed cell " << pmc.nForcedHit
+              << ", carried on through a removed cell " << pmc.nPassRemoved
+              << ", reflected off the mask " << pmc.nMaskReflect
+              << "\n    cells settled back onto the surface " << pmc.nSettled
+              << " (no supported site found " << pmc.nSettleFail << ")"
               << "\n    funnel: on mask " << pmc.nHitMask << ", occupied "
               << pmc.nHitOccupied << ", sticking fail " << pmc.nStickFail
               << "\n    LATERAL DISPLACEMENT of removals [cells], mean |dx|:"
@@ -897,6 +955,11 @@ int main(int argc, char **argv) {
               << ")   -- outside the 4F*+Si ledger"
               << "\n    F* handed down onto newly uncovered cells: " << pmc.nFHandedDown
               << "   -> NET F* lost to removal " << (long long)pmc.nFLostRemoved - (long long)pmc.nFHandedDown
+              << "\n    SiF_k ADVANCES: " << pmc.nFluorStep
+              << "\n    R3 FIRINGS: " << pmc.nQTotal << ", of them at a cell with"
+              << " NO arrival history (q fell back to 1): " << pmc.nQFresh
+              << "\n    CAP SHIELD: candidates refused as the half-atom under an"
+              << " O* cap " << pmc.nCapShield
               << "\n    O* deaths by cell removal: " << pmc.nOLostRemoved
               << "   (O* shielded from R3/R4 by protectOxide_, F* is not)"
               << "\n    coverages() divided by " << pmc.surfCellCount_ << " surface cells"

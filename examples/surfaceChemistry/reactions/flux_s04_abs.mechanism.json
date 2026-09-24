@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "name": "flux_etch_040_absorbing_mask",
+  "siteTypes": [
+    {
+      "name": "default",
+      "density": 1000000000000000.0
+    }
+  ],
+  "coverages": [],
+  "gas": [
+    {
+      "name": "F",
+      "traced": true,
+      "label": "F_flux",
+      "flux": 1800.0,
+      "sticking": {
+        "reaction": "R1",
+        "s0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 0
+      }
+    },
+    {
+      "name": "SiF4",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    }
+  ],
+  "solids": [
+    {
+      "name": "Si",
+      "rho": 5.02,
+      "rhoMaterials": {
+        "Mask": 50200.0
+      }
+    }
+  ],
+  "solid": {
+    "name": "Si",
+    "rho": 5.02,
+    "rhoMaterials": {
+      "Mask": 50200.0
+    }
+  },
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "F + Si -> 0.4 SiF4",
+      "constant": {
+        "kind": "sticking",
+        "s0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [],
+      "nu": [],
+      "solidAtoms": [
+        -0.4
+      ]
+    }
+  ],
+  "constants": {
+    "temperature": 300.0
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

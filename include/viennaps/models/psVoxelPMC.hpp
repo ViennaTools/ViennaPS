@@ -220,12 +220,25 @@ private:
   /// stays binary -- transport still sees a staircase -- only the moment a
   /// cell flips changes. It removes the rounding variance, not the variance
   /// in the dose itself.
-  /// DEFAULTS. Measured against the level set on a W=40 nm masked trench,
-  /// 3 seeds: floor depth -24.8% with none of these on, -5.2% with all three,
-  /// and the roughness sigma falls 2.38 -> 0.93 nm. Re-emission is the one
-  /// that matters for accuracy; the other two buy smoothness.
-  bool fractional_ = true;
+  /// OFF BY DEFAULT: the model is EVENT DRIVEN. A reaction either takes a
+  /// cell or it does not, drawn once from its own expectation (drawCount);
+  /// nothing is carried between events. A credit ledger is the opposite of
+  /// that -- it is state living between events, and state needs an owner, so
+  /// it acquired a pooling key, and the key acquired a hard-wired axis
+  /// (columnOf pools over z, i.e. assumes the surface normal is +-z, which is
+  /// false on any sidewall). The variance it removed was rounding variance,
+  /// not dose variance, and it is not worth a preferred direction.
+  ///
+  /// The old measurement that motivated it -- floor depth -24.8 % with none
+  /// of {fractional, local clearing, re-emission} on, -5.2 % with all three --
+  /// bundled three flags, so it never isolated this one.
+  bool fractional_ = false;
   std::vector<NumericType> credit_;
+  /// Restore the old per-COLUMN credit pooling, for comparison only. See the
+  /// note in removeAtoms: the column hard-wires the pooling axis to z.
+  bool colCredit_ = false;
+  /// Credit that had no successor cell to be handed to, in atoms.
+  double creditOrphaned = 0;
   /// Super-particles on the ION channel: trace `ionWeight_` times as many
   /// ions, each carrying 1/ionWeight_ of the yield. The mean is unchanged and
   /// the removal noise falls as 1/sqrt(ionWeight_) -- but only with
@@ -320,7 +333,7 @@ private:
   ///     false (renewal)   2845  (11.3 % of ads)      0.871        0.463
   /// With it on, fluorine is conserved: 9823 cleared + 383 lost = 10206
   /// against the CLEARSWEPT continuum target of 10306, agreement to 1 %.
-  bool handDown_ = true;
+  bool handDown_ = false;
   bool ionReflect_ = true;   ///< ions may reflect (control switch)
   /// How much interface area one cell carries, for the thermal firing rate.
   ///   0  legacy sum|n_d|: the staircase measure, wrong on any sloped surface
@@ -343,12 +356,26 @@ private:
   /// it is a correctness matter, not a tuning knob.
   bool oxideOpaque_ = false;  ///< O* cells stop rays instead of passing them
   bool protectOxide_ = true;
+  /// Forbid chemical removal of the cell directly beneath an O* cap; see
+  /// underOxideCap. DIAGNOSTIC for now, default off.
+  bool capShield_ = false;
   NumericType damageScale_ = 1;   ///< scales the cascade footprint, for the sweep
   /// The spontaneous channel removes only the cell that fired, not a ball.
-  bool thermLocal_ = false;
+  /// ...and the silicon leaves AT the site that reacted. 4F* + Si -> SiF4
+  /// consumes one site and takes its own silicon; sampling a 5-cell ball
+  /// instead lets the spontaneous channel etch sideways into a wall it never
+  /// reacted on. Paired with thermArrival_, so the reaction and the removal
+  /// are the same cell.
+  bool thermLocal_ = true;
   /// Size the cascade footprint by the SUPER-PARTICLE's yield Y/M rather than
   /// the full cascade yield Y, so the material removed and the volume it is
-  /// spread over refer to the same event.
+  /// spread over refer to the same event. DEFAULT ON: with it off, one
+  /// super-particle's Y/M atoms were scattered over the footprint of the WHOLE
+  /// cascade -- 5.89 cells instead of 2.34 at M = 16, a 109-cell removal ball
+  /// instead of 21 -- and the error grows with the ion weight, so raising
+  /// ionWeight_ 4 -> 16 made it worse. STILL OFF pending attribution: it was
+  /// bundled with localQ_ in FIX2, which regressed, and the two have not been
+  /// separated. PMC_IONSPLIT turns it on.
   bool ionSplit_ = false;
   /// Radius, in cells, over which the ion's incidence normal is averaged.
   /// <= 1 keeps the per-cell facet normal (the staircase tread).
@@ -431,6 +458,10 @@ private:
   bool fluxProbe_ = false;
   bool simpleFlux_ = true;   ///< DEFAULT: coverage-free, per-hit removal
   NumericType simpleP_ = -1;   ///< >=0 overrides the derived p
+  NumericType simpleStick_ = -1;   ///< >=0 decouples sticking from removal
+  NumericType simpleAtoms_ = 1;    ///< solid atoms one consumed particle takes
+  NumericType simpleReactP_ = 1;   ///< P(remove | consumed) -- scales the rate
+  bool maskReflect_ = false;       ///< mask reflects instead of absorbing
   /// Distance gate on a RE-EMITTED ray, in cells: it may not interact
   /// until it has travelled this far from where it left the surface.
   /// The filling-fraction arm carries the same gate.
@@ -493,7 +524,55 @@ private:
   /// the isotropic ball puts 0.85 at 10 nm and only 0.75 at 18 nm, because
   /// material leaves from the sides of the crater rather than its bottom.
   bool dirRemoval_ = false;
-  bool thermArrival_ = false;
+  /// ARRIVAL-DRIVEN R3 IS THE DEFAULT. Everything in this model is driven by
+  /// an arrival, after the MCFPM: for the spontaneous etch that arrival is a
+  /// fluorine landing on an ALREADY FLUORINATED site, which reacts with
+  /// probability q = 4*k_sigma/fluxF, frees the site and takes a quarter of a
+  /// silicon with it. The alternative -- sweeping every surface cell each step
+  /// and firing F* cells on a timer -- is NOT the model: it makes the etch
+  /// rate a property of how many cells the staircase happens to carry rather
+  /// than of how many particles arrive, which is exactly the area-weighting
+  /// problem thermAreal_/areaNorm_ exist to paper over. Set false only to
+  /// reproduce the old timed path for comparison.
+  bool thermArrival_ = true;
+  /// LOCAL reaction probability for arrival-driven R3.
+  ///
+  /// q = 4*k_sigma/A gives a removal rate G*theta_F*q, which equals the
+  /// reference 4*k_sigma*theta_F only where the local arrival rate G equals
+  /// the A it was built from. Built from the SOURCE flux that holds on an open
+  /// blanket and nowhere inside a feature: at the trench floor G is orders
+  /// below fluxF, so R3 ran proportionally slow (7153 firings against 14665 on
+  /// the timed path, floor 96.4 % -> 92.1 % of the level set). Rebuilding q
+  /// from each cell's OWN arrival rate makes the rate flux-independent again,
+  /// which is what k_sigma*theta_F means.
+  ///
+  /// arrStep_ counts this step's F arrivals per cell; arrRate_ is an
+  /// exponential average over steps, because a single step's per-cell count is
+  /// 0 or 1 and far too noisy to invert.
+  ///
+  /// OFF pending attribution. FIX2 (localQ_ + ionSplit_) collapsed the
+  /// arrival-sampled theta_F to 0.164 and took 2 nm off the floor. Suspected
+  /// cause: qLocal falls back to 1 for a cell with no arrival history, and a
+  /// receding front uncovers such cells constantly, so each reacts on the
+  /// FIRST fluorine to land and never builds coverage. nQFresh counts exactly
+  /// those firings. PMC_LOCALQ turns it on.
+  bool localQ_ = false;
+  /// FLUORINATION INDEX. MCFPM carries the chemistry in the cell's material:
+  /// Si -> SiCl -> SiCl2 -> SiCl3 -> SiCl4(g), so a cell survives FOUR events
+  /// before it can leave. Ours dies after one. fSteps_ is that ratchet length:
+  /// a cell advances fIdx_ on each reaction and becomes gas at fSteps_.
+  ///
+  /// Stoichiometry pins the physical value: a cell holds rho*dx^D = 0.502 Si
+  /// and needs 4*0.502 = 2.008 F, so N = 2 at dx = 0.1 and N = 4 would need a
+  /// cell to be a whole silicon atom (dx = 1/sqrt(rho) = 0.141 nm in 2D).
+  /// To test the ratchet LENGTH independently of the F balance, the incoming
+  /// fluorine is consumed with probability 2/N, so 2 F still go per cell at
+  /// any N. N = 2 reproduces the single-event form exactly.
+  int fSteps_ = 2;
+  std::vector<std::uint8_t> fIdx_;
+  std::vector<std::uint32_t> arrStep_;
+  std::vector<float> arrRate_;
+  float qEma_ = 0.01f;   ///< EMA weight for arrRate_; small = long window
   int smoothSupport_ = 0;
   NumericType armAfter_ = 0;
   bool planeAccept_ = true;       ///< DEFAULT: test hits against the fitted plane
@@ -522,6 +601,10 @@ private:
   NumericType depRho_ = 0;        ///< >0 overrides p_.rho for a deposited cell
   bool depNormal_ = false;        ///< grow along the interface normal
   bool depRelax_ = false;         ///< let a stuck molecule settle into a hollow
+  bool settle_ = true;            ///< DEFAULT: settle a cell left unsupported
+  int settleRadius_ = 3;          ///< how far to look for a supported site
+  int clusterRadius_ = 8;         ///< ...and for a whole detached cluster
+  std::vector<std::uint8_t> reach_;  ///< scratch: solid connected to the bulk
   /// Consecutive gas cells a walk through the film will cross before deciding
   /// it has left the film. A grown film is never solid to the last cell.
   static constexpr int kVoidRun = 3;
@@ -538,7 +621,7 @@ private:
   /// small per-hit reaction probability a particle needs many bounces
   /// to react at all, and the ones that would reach a shadowed region
   /// are the first to be cut off by a low budget.
-  int kMaxBounce = 24;
+  int kMaxBounce = 200;
   static constexpr int kMaxSideBounce = 8;
   ///< real reflections per particle
   /// Pass-throughs are NOT reflections: a ray declining a ledge keeps its
@@ -576,12 +659,35 @@ public:
   /// which is an unweighted mean over surface cells at the end of the run.
   /// On a frozen flat wafer with uniform illumination the two must agree.
   size_t nFarr = 0, nFonF = 0;
+  /// R3 reactions fired under localQ_, and how many of those were at a cell
+  /// with NO arrival history, where qLocal falls back to 1.
+  size_t nQTotal = 0, nQFresh = 0;
+  size_t nFluorStep = 0;   ///< SiF_k -> SiF_(k+1) advances
   mutable size_t surfCellCount_ = 0;   ///< denominator used by coverages()
   size_t nThermO = 0;   ///< O* lost to thermal desorption
   size_t nIons = 0, nIonsOnF = 0, nSurf = 0;
   size_t nBounce = 0, nBounceFail = 0, nBounceCap = 0, nEscape = 0;
   size_t nLaunch = 0;   ///< particles emitted, to get hits/particle
   size_t nHitN = 0;     ///< neutral surface hits actually processed
+  /// Neutrals put back on the first exposed cell they crossed because the
+  /// plane-acceptance walk ran out of candidates. See the fallback in
+  /// deliver(): without it these particles were dropped outright.
+  size_t nForcedHit = 0;
+  /// Particles that struck a cell already removed earlier in the same step and
+  /// were carried on through the gap instead of being consumed.
+  size_t nPassRemoved = 0;
+  /// Cells left with no solid face neighbour and moved back onto the surface,
+  /// and those for which no supported site was found within settleRadius_.
+  size_t nSettled = 0;
+  size_t nSettleFail = 0;
+  /// Cells moved by the per-step connectivity pass rather than by the local
+  /// no-face-neighbour test -- i.e. members of detached clusters.
+  size_t nSettledCluster = 0;
+  /// Particles bounced off the mask rather than absorbed by it.
+  size_t nMaskReflect = 0;
+  /// Carry a particle on when it struck a cell already removed this step,
+  /// rather than consuming it. Off restores the previous behaviour.
+  bool carryOn_ = true;
   size_t nRem0 = 0, nRemB = 0;  ///< removals on the FIRST hit vs after a reflection
   size_t nPruned = 0;           ///< cells removed as unsupported islands
   /// AUDIT of the final prune: composition and island-size breakdown.
@@ -689,6 +795,7 @@ public:
   size_t nFHandedDown = 0, nOHandedDown = 0;  ///< adsorbate copied onward
   size_t nFLostRemoved = 0;   ///< the FLUORINATED cell was itself removed
   size_t nFRemTh = 0, nFRemIE = 0, nFRemSp = 0, nFRemOther = 0;
+  size_t nCapShield = 0;      ///< candidates refused as the half-atom under a cap
   size_t nOLostRemoved = 0;   ///< the oxidised cell was itself removed
   size_t nOLostReset = 0;     ///< an oxidised neighbour was reset to Bare
   /// Complete O* destruction accounting. Every adsorbed O must die by exactly
@@ -889,6 +996,48 @@ private:
   /// and a ray that lands on one must bounce, not be discarded. In a hole the
   /// mask sidewall is several times the opening area, so dropping those rays
   /// starves the floor of everything.
+  /// A candidate that sits DIRECTLY BENEATH an oxidised surface cell is the
+  /// lower half of THAT SAME silicon atom, not a neighbour of it.
+  ///
+  /// At dx = 0.1 nm a cell carries nu = sigma0*dx^(D-1) = 1 adsorption site,
+  /// which is right, but only rho*dx^D = 0.502 silicon atoms -- so
+  /// 1/(rho*dx^D) = 1.99 cells span ONE atom and a monolayer is 1.99 cells
+  /// deep. LATERALLY the site spacing is correct and a sideways neighbour of
+  /// an O* cell is a genuinely separate site that fluorine may occupy and
+  /// etch; nothing here blocks that. IN DEPTH it is not correct: taking the
+  /// cell under an O* cell deletes half of the oxidised atom itself, orphans
+  /// the cap, and the island sweep then removes the oxygen -- 199 of the 1644
+  /// O* ever adsorbed left by exactly that route, against 0 removed directly
+  /// (protectOxide_ already blocks that).
+  ///
+  /// The test is local and needs no normal: `at` lies under `nb` when the cell
+  /// on the FAR side of `nb` is gas, i.e. `nb` turns its exposed face away
+  /// from `at`. On a flat floor that blocks the cell below a cap while leaving
+  /// the cap's lateral neighbours etchable, which is the distinction above.
+  ///
+  /// Off when a cell holds a whole atom or more (rho*dx^D >= 1): at dx = 0.2
+  /// the ratio inverts, one cell carries two atoms, and the argument is void.
+  bool underOxideCap(const std::array<int, D> &at) const {
+    if (!capShield_ || p_.rho * std::pow(delta(), D) >= NumericType(1))
+      return false;
+    // A cell TOUCHING an oxidised cell is protected. No normal, no axis, no
+    // gas test: an oxidised silicon shields what it is bonded to, and at
+    // rho*dx^D = 0.502 a cell is half an atom, so its face-neighbours are the
+    // rest of that atom. Earlier versions asked which side `at` was on, which
+    // needed either an axis or a normal and got both wrong on a staircase.
+    for (int d = 0; d < D; ++d)
+      for (int sgn = -1; sgn <= 1; sgn += 2) {
+        auto nb = at;
+        nb[d] += sgn;
+        const int nid = lattice_->cellId(nb);
+        if (nid >= 0 && solid(nid) && !isMask(nid) &&
+            state_[nid] == Oxidised)
+          return true;
+      }
+    return false;
+  }
+
+
   bool isExposed(const std::array<int, D> &idx) const {
     const int id = lattice_->cellId(idx);
     if (!solid(id))
@@ -1452,7 +1601,8 @@ private:
   /// while the floor is still descending. Sputtered material leaves from the
   /// surface AT the cascade, so the cell taken has to be near the impact.
   bool removeNearby(const std::array<int, D> &idx, NumericType radiusCells,
-                    const std::array<NumericType, D> *dirHint = nullptr) {
+                    const std::array<NumericType, D> *dirHint = nullptr,
+                    bool spillToNeighbours = false) {
     // The SPONTANEOUS channel reacts at one site and must take its silicon
     // from that site. Sampling a 3x3 ball instead lets a cell that fired on
     // the floor near the corner remove a cell sideways under the mask, so
@@ -1461,7 +1611,16 @@ private:
     // and the excess GROWS with depth as more of the corner neighbourhood
     // becomes wall rather than floor. The level set closes exactly (0.129
     // predicted, 0.09 measured) because its rate is evaluated at the point.
-    const bool local = thermLocal_ && removalTally_ == &remTh;
+    // spillToNeighbours is the ONE case the local rule cannot cover: when a
+    // cell holds LESS than one silicon atom (rho*dx^D < 1, i.e. dx < 0.141 nm
+    // here) a single reaction owes more than one cell, and the extra cells
+    // have nowhere to come from but the immediate neighbours -- that is the
+    // atom's own footprint, not a sampling ball. Without it removeNearby
+    // fails on every cell past the first and the dose is silently lost: a
+    // blanket at dx = 0.1 spent 50.2 % of the atoms it asked for and etched
+    // 9.2 nm where both other arms give 20.0.
+    const bool local = thermLocal_ && removalTally_ == &remTh
+                       && !spillToNeighbours;
     const int R = local ? 0
                         : std::max(1, static_cast<int>(std::lround(radiusCells)));
     const NumericType R2 = local ? NumericType(0)
@@ -1527,10 +1686,23 @@ private:
         // cannot consume an oxidised cell either -- and it is the dominant
         // channel (3759 of 5090 removals). Only R5, ion + Si -> Si_s, has no
         // coverage term: physical sputtering ejects oxidised material too.
-        const bool passivated = protectOxide_ && id >= 0 &&
-                                state_[id] == Oxidised &&
-                                (removalTally_ == &remTh || removalTally_ == &remIE);
-        if (id >= 0 && solid(id) && !isMask(id) && isExposed(at) && !passivated) {
+        const bool chemical =
+            removalTally_ == &remTh || removalTally_ == &remIE;
+        const bool passivated =
+            protectOxide_ && id >= 0 && state_[id] == Oxidised && chemical;
+        const bool eligible = id >= 0 && solid(id) && !isMask(id) &&
+                              isExposed(at) && !passivated;
+        // ...and the cell UNDER a cap is the same atom as the cap. Same
+        // channel restriction as protectOxide_: R5 sputter carries no coverage
+        // term, so physical sputtering may still eject oxidised material.
+        // When this empties the ball, removeNearby returns false and
+        // removeAtoms CARRIES the credit instead of spending it on a cell that
+        // should not have been available -- the continuum equivalent is that a
+        // passivated point has rate ~0, so its atoms are never demanded at all.
+        const bool shielded = eligible && chemical && underOxideCap(at);
+        if (shielded)
+          ++nCapShield;
+        if (eligible && !shielded) {
           if (smoothPick_ == 2) {
             // displacement of this candidate from the firing cell, projected
             // on the outward normal: larger means it sticks out further from
@@ -1640,6 +1812,180 @@ private:
     return lat && !up;
   }
 
+  /// SETTLE AN UNSUPPORTED CELL. A solid cell with no solid FACE neighbour is
+  /// not part of the surface: it either floats in the gas or hangs on by a
+  /// corner, and for transport and for the removal candidate test those are
+  /// the same thing. Island pruning DELETES such cells, which loses the
+  /// material; here it is MOVED to the nearest gas site that has solid
+  /// support, carrying its state with it, so nothing is created or destroyed.
+  ///
+  /// The target is chosen by DISTANCE, never by a direction. "Drop it down"
+  /// needs an axis, and an axis is wrong the moment the surface is not a
+  /// blanket -- the same trap columnOf fell into.
+  bool settleOrphan(const std::array<int, D> &at) {
+    const int id = lattice_->cellId(at);
+    if (id < 0 || !solid(id) || isMask(id))
+      return false;
+    if (solidFaceNeighbours(at) > 0)
+      return false;                       // still attached by a face
+    std::array<int, D> best{};
+    bool found = false;
+    NumericType bestD2 = 0;
+    int bestSup = -1;
+    for (int r = 1; r <= settleRadius_ && !found; ++r) {
+      int span = 1;
+      for (int d = 0; d < D; ++d) span *= (2 * r + 1);
+      for (int t = 0; t < span; ++t) {
+        std::array<int, D> nb = at;
+        int rem = t, cheb = 0;
+        for (int d = 0; d < D; ++d) {
+          const int o = rem % (2 * r + 1) - r;
+          nb[d] += o;
+          cheb = std::max(cheb, std::abs(o));
+          rem /= (2 * r + 1);
+        }
+        if (cheb != r) continue;          // this shell only, nearest first
+        const int nid = lattice_->cellId(nb);
+        if (nid < 0 || solid(nid)) continue;
+        const int sup = solidFaceNeighbours(nb);
+        if (sup <= 0) continue;           // that site is unsupported too
+        NumericType d2 = 0;
+        for (int d = 0; d < D; ++d) {
+          const NumericType q = static_cast<NumericType>(nb[d] - at[d]);
+          d2 += q * q;
+        }
+        if (!found || d2 < bestD2 - NumericType(1e-9) ||
+            (d2 < bestD2 + NumericType(1e-9) && sup > bestSup)) {
+          found = true; best = nb; bestD2 = d2; bestSup = sup;
+        }
+      }
+    }
+    if (!found) { ++nSettleFail; return false; }
+    const int bid = lattice_->cellId(best);
+    (*fill_)[bid] = (*fill_)[id];
+    state_[bid] = state_[id];
+    if (bid < (int)fIdx_.size() && id < (int)fIdx_.size()) fIdx_[bid] = fIdx_[id];
+    if (siteCounts_) { nF_[bid] = nF_[id]; nO_[bid] = nO_[id]; }
+    (*fill_)[id] = NumericType(0);
+    state_[id] = Bare;
+    if (id < (int)fIdx_.size()) fIdx_[id] = 0;
+    if (siteCounts_) { nF_[id] = 0; nO_[id] = 0; }
+    ++nSettled;
+    return true;
+  }
+
+  /// Move a cell onto the surface, requiring the target to touch solid that is
+  /// CONNECTED to the bulk -- otherwise a detached pair just shuffles about.
+  bool settleOnto(const std::array<int, D> &at) {
+    const int id = lattice_->cellId(at);
+    if (id < 0 || !solid(id) || isMask(id)) return false;
+    std::array<int, D> best{};
+    bool found = false; NumericType bestD2 = 0; int bestSup = -1;
+    for (int r = 1; r <= clusterRadius_ && !found; ++r) {
+      int span = 1;
+      for (int d = 0; d < D; ++d) span *= (2 * r + 1);
+      for (int t = 0; t < span; ++t) {
+        std::array<int, D> nb = at;
+        int rem = t, cheb = 0;
+        for (int d = 0; d < D; ++d) {
+          const int o = rem % (2 * r + 1) - r;
+          nb[d] += o; cheb = std::max(cheb, std::abs(o)); rem /= (2 * r + 1);
+        }
+        if (cheb != r) continue;
+        const int nid = lattice_->cellId(nb);
+        if (nid < 0 || solid(nid)) continue;
+        int sup = 0;
+        for (int d = 0; d < D; ++d)
+          for (int sg = -1; sg <= 1; sg += 2) {
+            auto q = nb; q[d] += sg;
+            const int qid = lattice_->cellId(q);
+            if (qid >= 0 && solid(qid) && reach_[qid]) ++sup;
+          }
+        if (sup <= 0) continue;
+        NumericType d2 = 0;
+        for (int d = 0; d < D; ++d) {
+          const NumericType u = static_cast<NumericType>(nb[d] - at[d]);
+          d2 += u * u;
+        }
+        if (!found || d2 < bestD2 - NumericType(1e-9) ||
+            (d2 < bestD2 + NumericType(1e-9) && sup > bestSup)) {
+          found = true; best = nb; bestD2 = d2; bestSup = sup;
+        }
+      }
+    }
+    if (!found) { ++nSettleFail; return false; }
+    const int bid = lattice_->cellId(best);
+    (*fill_)[bid] = (*fill_)[id];
+    state_[bid] = state_[id];
+    if (bid < (int)fIdx_.size() && id < (int)fIdx_.size()) fIdx_[bid] = fIdx_[id];
+    if (siteCounts_) { nF_[bid] = nF_[id]; nO_[bid] = nO_[id]; }
+    (*fill_)[id] = NumericType(0);
+    state_[id] = Bare;
+    if (id < (int)fIdx_.size()) fIdx_[id] = 0;
+    if (siteCounts_) { nF_[id] = 0; nO_[id] = 0; }
+    reach_[bid] = 1;
+    ++nSettled; ++nSettledCluster;
+    return true;
+  }
+
+  /// SETTLE DETACHED CLUSTERS, once per step.
+  ///
+  /// settleOrphan is local: it fires on a cell with no solid FACE neighbour.
+  /// It therefore cannot see a PAIR that floats together, because each cell is
+  /// the other's face neighbour. Measured at dx = 0.141 with settleOrphan on:
+  /// single unsupported cells fell to 1-2 per run, but 10-30 cells were still
+  /// detached, almost all in clusters of 2 to 6.
+  ///
+  /// Being connected to the bulk is a global property, so this runs once per
+  /// step instead of per removal: flood the solid from the substrate and the
+  /// mask, then move whatever was not reached onto the surface.
+  void settleDetached() {
+    if (!settle_ || freeze_) return;
+    const auto &dims = lattice_->dims();
+    size_t total = 1;
+    for (int d = 0; d < D; ++d) total *= static_cast<size_t>(dims[d]);
+    if (reach_.size() != state_.size()) reach_.assign(state_.size(), 0);
+    std::fill(reach_.begin(), reach_.end(), 0);
+    std::vector<std::array<int, D>> stk;
+    auto visit = [&](const std::array<int, D> &c) {
+      const int id = lattice_->cellId(c);
+      if (id < 0 || reach_[id] || !solid(id)) return;
+      reach_[id] = 1;
+      stk.push_back(c);
+    };
+    std::array<int, D> at{};
+    auto decode = [&](size_t k) {
+      size_t r = k;
+      for (int d = 0; d < D; ++d) {
+        at[d] = static_cast<int>(r % static_cast<size_t>(dims[d]));
+        r /= static_cast<size_t>(dims[d]);
+      }
+    };
+    // anchors: the bottom layer of the substrate, and the mask
+    for (size_t k = 0; k < total; ++k) {
+      decode(k);
+      const int id = lattice_->cellId(at);
+      if (id < 0 || !solid(id)) continue;
+      if (at[D - 1] == 0 || isMask(id)) visit(at);
+    }
+    while (!stk.empty()) {
+      const auto c = stk.back(); stk.pop_back();
+      for (int d = 0; d < D; ++d)
+        for (int sg = -1; sg <= 1; sg += 2) { auto nb = c; nb[d] += sg; visit(nb); }
+    }
+    // anything solid the flood did not reach is floating
+    for (int pass = 0; pass < 4; ++pass) {
+      bool moved = false;
+      for (size_t k = 0; k < total; ++k) {
+        decode(k);
+        const int id = lattice_->cellId(at);
+        if (id < 0 || !solid(id) || isMask(id) || reach_[id]) continue;
+        if (settleOnto(at)) moved = true;
+      }
+      if (!moved) break;
+    }
+  }
+
   void removeCellAt(const std::array<int, D> &at_) {
     if (freeze_) return;
     if (removalTally_) ++(*removalTally_);
@@ -1691,6 +2037,7 @@ private:
     const int id = lattice_->cellId(at);
     (*fill_)[id] = NumericType(0);
     state_[id] = Bare;
+    if (id < (int)fIdx_.size()) fIdx_[id] = 0;
     if (siteCounts_) { nF_[id] = 0; nO_[id] = 0; }
     ++removedCells_;
     q = 0;
@@ -1720,7 +2067,28 @@ private:
               handDown_ ? NumericType(0)
                         : std::min(NumericType(1),
                                    delta() * p_.rho / p_.sigma0);
-          const bool fresh = uni() < pFresh;
+          // R3 CONSUMES ITS FLUORINE. 4F* + Si -> SiF4 carries the adsorbate
+          // away as part of the product, so the silicon uncovered underneath
+          // is fresh and unreacted -- it must NOT inherit F*. Handing it down
+          // makes the front manufacture its own fluorine: a removal fluorinates
+          // the cell below, which reacts, is removed, and hands down again,
+          // needing no adsorption at all (measured: 519771 reactions from 1809
+          // adsorptions, theta_F 0.82, the blanket etched away entirely).
+          // handDown_ remains right for ION-driven removal, where the adsorbate
+          // is redistributed rather than consumed.
+          // NO HAND-DOWN. The volatile product leaves the surface and takes
+          // the adsorbate with it -- SiF4 does not pass its fluorine back to
+          // the silicon behind it, and neither does SiF2. The cell uncovered
+          // by a removal is fresh, unreacted silicon in EVERY channel.
+          //
+          // Handing it down instead lets the front manufacture its own
+          // adsorbate: a removal fluorinates the cell below, which reacts, is
+          // removed, and hands down again, needing no adsorption at all.
+          // Measured on the blanket: 519771 reactions from 1809 adsorptions,
+          // theta_F 0.82, the wafer etched away entirely.
+          //
+          // handDown_ is kept only to reproduce the old behaviour (PMC_HANDDOWN).
+          const bool fresh = !handDown_ || uni() < pFresh;
           if (state_[bid] == Oxidised && !(!fresh && carried == Oxidised))
             ++nOLostReset;
           // What the removed cell's adsorbate actually does. It is copied onto
@@ -1733,11 +2101,33 @@ private:
             else if (carried == Oxidised) ++nOHandedDown;
           }
           state_[bid] = fresh ? Bare : carried;
+          if (bid < (int)fIdx_.size())
+            fIdx_[bid] = (state_[bid] == Fluorinated) ? 1 : 0;
           if (siteCounts_) { nF_[bid] = 0; nO_[bid] = 0; }
           ++nBareReset;
         }
         ++q;
       }
+    // Taking this cell can leave a neighbour with no solid face neighbour of
+    // its own -- floating, or holding on at a corner. Settle it back onto the
+    // surface instead of leaving it there for the island prune to delete.
+    if (settle_) {
+      int span = 1;
+      for (int d = 0; d < D; ++d) span *= 3;
+      for (int t = 0; t < span; ++t) {
+        std::array<int, D> nb = at;
+        int rem = t;
+        bool same = true;
+        for (int d = 0; d < D; ++d) {
+          const int o = rem % 3 - 1;
+          nb[d] += o;
+          if (o) same = false;
+          rem /= 3;
+        }
+        if (same) continue;
+        settleOrphan(nb);
+      }
+    }
   }
 
   /// Turn one gas cell into film. The material is the film's own, so a cell
@@ -1757,6 +2147,20 @@ private:
   }
 
   /// Occupied cells among the 3^D - 1 neighbours.
+  /// Solid FACE neighbours only. A cell touching solid at a corner but at no
+  /// face is not attached to it in any sense this model uses: nothing can be
+  /// removed through that contact and no flux is blocked by it.
+  int solidFaceNeighbours(const std::array<int, D> &idx) const {
+    int n = 0;
+    for (int d = 0; d < D; ++d)
+      for (int sgn = -1; sgn <= 1; sgn += 2) {
+        auto nb = idx;
+        nb[d] += sgn;
+        if (solid(lattice_->cellId(nb))) ++n;
+      }
+    return n;
+  }
+
   int solidNeighbourCount(const std::array<int, D> &idx) const {
     int span = 1;
     for (int d = 0; d < D; ++d) span *= 3;
@@ -1940,33 +2344,76 @@ private:
 
   void removeCells(const std::array<int, D> &idx, int count,
                    NumericType radiusCells = 0) {
+    // Credit the ledger here too. This path takes whole cells without going
+    // through removeAtoms, so with fractional_ off -- the default -- the ion
+    // and sputter channels removed silicon the ledger never counted as asked
+    // for, while "atoms taken" counted every channel. The printed figure was
+    // thermal demand over total removal and read 986 % on an SF6/O2 trench.
+    atomsOwed += count * p_.rho * std::pow(delta(), D);
     for (int c = 0; c < count; ++c)
       removeNearby(idx, radiusCells);
   }
 
   /// The fractional path: credit the drawn column with `atoms` and flip cells
   /// only once a whole cell's worth has accumulated.
-  void removeAtoms(const std::array<int, D> &idx, NumericType atoms,
+  bool removeAtoms(const std::array<int, D> &idx, NumericType atoms,
                    NumericType radiusCells = 0,
                    const std::array<NumericType, D> *dirHint = nullptr) {
     if (atoms <= NumericType(0))
-      return;
-    // Keyed per COLUMN, not per cell. Per-cell was tried: a cell removed by
-    // any other channel takes its partial credit with it, so the ledger leaks
-    // and the blanket under-etches by 38 %. The column keeps the remainder.
-    // Locality is not lost by this: removeNearby already samples a 1-cell
-    // ball around the event, so the removal lands where the reaction was.
-    const size_t c = columnOf(idx);
+      return false;
+    // Keyed PER CELL, and handed down to the successor cell on removal.
+    //
+    // It used to be keyed per COLUMN, because per-cell leaked: a cell removed
+    // by any other channel took its partial credit with it and the blanket
+    // under-etched by 38 %. But columnOf pools over the LAST dimension only
+    //     for (int d = 0; d < D - 1; ++d)   // lateral indices
+    // which hard-wires the pooling axis to z and therefore assumes the surface
+    // normal is +-z. On a blanket or a floor the column runs INTO the material
+    // the front is eating and that is defensible. On a vertical sidewall it
+    // runs ALONG the surface and pools the whole wall face -- every exposed
+    // cell from the mask to the floor -- into one counter. That is 90 degrees
+    // wrong, and it is not physics: the etch front has no preferred axis.
+    //
+    // The column was really standing in for "the cell that succeeds this one
+    // when it is removed", which is only the cell below if the front moves in
+    // -z. The successor is geometry-agnostic: it is whichever cell this one
+    // uncovers. So keep the credit per cell and HAND IT DOWN in removeCellAt,
+    // exactly as handDown_ already does for the adsorbate state. That closes
+    // the leak the column was introduced for without choosing an axis.
     const NumericType atomsPerCell = p_.rho * std::pow(delta(), D);
     atomsOwed += atoms;
+    if (!fractional_) {
+      // EVENT DRIVEN. One draw per event, nothing carried between events:
+      // floor(atoms/atomsPerCell) cells for certain, plus one more with the
+      // remainder as probability. Mean-exact by construction, and it owns no
+      // state -- so there is no ledger to leak, no pool to key, and no axis to
+      // choose. The credit form below is kept only for comparison.
+      const int k = drawCount(atoms / atomsPerCell);
+      bool any = false;
+      for (int i = 0; i < k; ++i) {
+        // the reacting cell first; anything still owed spills to the
+        // neighbours, because the atom is larger than the cell
+        if (!removeNearby(idx, radiusCells, dirHint, i > 0)) {
+          ++nRemoveFail;
+          break;
+        }
+        any = true;
+      }
+      return any;
+    }
+    const size_t c = colCredit_ ? columnOf(idx)
+                              : static_cast<size_t>(lattice_->cellId(idx));
     credit_[c] += atoms;
+    bool any = false;
     while (credit_[c] >= atomsPerCell) {
       if (!removeNearby(idx, radiusCells, dirHint)) {
         ++nRemoveFail;
         break;   // nothing left to take: keep the credit, do not discard it
       }
       credit_[c] -= atomsPerCell;
+      any = true;
     }
+    return any;
   }
 
   /// flip `count` cells out of `from` back to Bare, scanning the surface
@@ -2228,7 +2675,7 @@ public:
     // over-asking by +4.1 % was cancelled by the -4.6 % deferral, and that
     // cancellation held only at this depth and grid spacing.
     const NumericType atomsPerCell = p_.rho * std::pow(delta(), D);
-    credit_.resize(columns);
+    credit_.resize(std::max(columns, state_.size()));
     for (auto &c : credit_)
       c = static_cast<NumericType>(
               std::uniform_real_distribution<double>(0.0, 1.0)(rng_)) *
@@ -2279,11 +2726,41 @@ public:
   /// Set the per-hit removal probability directly: no sticking
   /// coefficient, no desorption, no coverage. Pure transport test.
   void setSimpleP(NumericType p) { simpleP_ = p; }
+  /// Sticking probability per hit, INDEPENDENT of how much is removed.
+  /// s = 1 is then a genuine unity-sticking particle: never reflects, and
+  /// removes simpleAtoms_ atoms rather than a whole cell.
+  void setSimpleStick(NumericType s) { simpleStick_ = s; }
+  /// Solid atoms one consumed particle carries off (1 = Si + F -> one atom).
+  void setSimpleAtoms(NumericType a) { simpleAtoms_ = a; }
+  /// Probability that a consumed particle removes anything. Scales the etch
+  /// rate and leaves the transport untouched.
+  void setSimpleReactP(NumericType p) { simpleReactP_ = p; }
+  /// Let the mask reflect particles instead of absorbing them.
+  void setMaskReflect(bool on) { maskReflect_ = on; }
+  void setCarryOn(bool on) { carryOn_ = on; }
   void setArmAfter(NumericType cells) { armAfter_ = cells; }
   void setRaySmoothing(int minSupport) { smoothSupport_ = minSupport; }
   void setThermalArrival(bool on) { thermArrival_ = on; }
+  void setLocalQ(bool on) { localQ_ = on; }
+  void setQEma(double w) { qEma_ = float(w > 0 ? w : 0.01); }
+  void setFluorSteps(int n) { fSteps_ = n > 1 ? n : 1; }
   void setSmoothPick(int mode) { smoothPick_ = mode; }
   void setDirectedRemoval(bool on) { dirRemoval_ = on; }
+  /// Local q from this cell's own smoothed arrival rate. Falls back to 1 when
+  /// the cell has seen nothing yet: then rate = G*theta_F, i.e. genuinely
+  /// flux-limited, which is the right answer where fluorine cannot keep up.
+  NumericType qLocal(int id, NumericType dt) const {
+    if (!localQ_ || id < 0 || id >= (int)arrRate_.size() || dt <= 0)
+      return arrivalQ();
+    const NumericType G = NumericType(arrRate_[id]) / (nuScalar() * dt);
+    if (G <= NumericType(0))
+      return arrivalQ();   // no history yet: fall back to the SOURCE-flux
+                           // value, not 1. A receding front uncovers such
+                           // cells constantly, and q = 1 makes each of them
+                           // react on its very first arrival -- a 12x
+                           // over-reaction that doubled the blanket etch.
+    return std::min(NumericType(1), 4 * p_.kSigma / G);
+  }
   /// q = 4*k_sigma / (arrivals per site per second at the source)
   NumericType arrivalQ() const {
     const NumericType A = p_.fluxF;
@@ -2298,6 +2775,7 @@ public:
   void setThermalCoarse(int r) { thermCoarse_ = r; }
   void setOxideOpaque(bool on) { oxideOpaque_ = on; }
   void setProtectOxide(bool on) { protectOxide_ = on; }
+  void setCapShield(bool on) { capShield_ = on; }
   void setDamageScale(NumericType f) { damageScale_ = f; }
   void setThermalLocal(bool on) { thermLocal_ = on; }
   void setIonSplitRadius(bool on) { ionSplit_ = on; }
@@ -2432,6 +2910,10 @@ public:
   void setDepositAlongNormal(bool on) { depNormal_ = on; }
   /// Let arriving material settle into the neighbouring hollow.
   void setDepositRelaxation(bool on) { depRelax_ = on; }
+  /// Move a cell left without any solid face neighbour back onto the surface
+  /// instead of leaving it floating or corner-attached.
+  void setSettleOrphans(bool on) { settle_ = on; }
+  void setSettleRadius(int r) { settleRadius_ = r > 0 ? r : 1; }
   void setFilmMaterial(int m) { filmMaterial_ = m; }
   bool deposition() const { return deposit_; }
   size_t depositedCells() const { return depositedCells_; }
@@ -3238,6 +3720,12 @@ public:
       return;
     }
     const auto &dims = lattice_->dims();
+    if (fIdx_.size() != state_.size())
+      fIdx_.assign(state_.size(), 0);
+    if (localQ_ && arrRate_.size() != state_.size()) {
+      arrRate_.assign(state_.size(), 0.0f);
+      arrStep_.assign(state_.size(), 0u);
+    }
     NumericType area = 1;
     for (int d = 0; d < D - 1; ++d)
       area *= delta() * static_cast<NumericType>(dims[d]);
@@ -3275,16 +3763,35 @@ public:
           // flips one time in nu. Anything not absorbed reflects.
           auto o = origin, dir = direction;
           auto h = hit;
+          const auto firstHit = hit;   // first exposed cell this ray crossed
+          bool forced = false;
           for (int bounce = 0;; ++bounce) {
             const int hid = h.cellId;
-            if (!resolveImpact(h, dir)) {       // the plane is elsewhere
-              if (bounce >= kMaxBounce) break;   // a separate, lattice-scaled
-              passThrough(h, dir, o);            // budget measured WORSE: 3D
-                                                 // -27.9 % -> -31.9 %
-              h = traceReflective(o, dir);
-              if (!h.hit() || !isExposed(h.index)) break;
+            if (!forced && !resolveImpact(h, dir)) {  // the plane is elsewhere
+              if (bounce < kMaxBounce) {
+                passThrough(h, dir, o);          // a separate, lattice-scaled
+                auto nh = traceReflective(o, dir);  // budget measured WORSE:
+                if (nh.hit() && isExposed(nh.index)) {  // 3D -27.9 -> -31.9 %
+                  h = nh;
+                  continue;
+                }
+              }
+              // DOSE IS CONSERVED. Acceptance only redistributes flux between
+              // facets -- that is why deliver() carries no flux boost -- so a
+              // ray that runs out of candidates must still land somewhere, on
+              // the first exposed cell it crossed. Dropping it instead cost
+              // 10.9 % of the dose on an s = 1 blanket (48541 launched, 43235
+              // resolved, 17.07 nm etched against an exact 20.00). It never
+              // showed on the SF6/O2 benchmark because theta_F saturates
+              // there, so the rate is k_sigma-limited and barely reads the
+              // flux; at s = 1 the rate is linear in flux and it shows 1:1.
+              h = firstHit;
+              dir = direction;
+              forced = true;
+              ++nForcedHit;
               continue;
             }
+            forced = false;       // the fallback is spent, one impact only
             ++nHitN;              // a real surface hit, not a re-emission
             // Per-cell ARRIVAL tally, before sticking or the site test, so it
             // is the flux itself and is directly comparable with the level
@@ -3303,11 +3810,70 @@ public:
               }
               // otherwise it reflects, handled by the re-emission below
             } else if (simpleFlux_ && adsorbState == Fluorinated) {
-              // stick with s0*(1-theta) and be CONSUMED; a stuck F takes a
-              // quarter of a silicon atom with it. Reflection is then free:
-              // the same probability applies wherever the particle lands
-              // next, so multiple hits do not multiply the removal.
-              if (!isMask(hid) && uni() < simpleRemoveP()) {
+              if (simpleStick_ >= 0) {
+                // STICKING SEPARATED FROM THE REMOVAL QUANTUM. Above, one
+                // number is both: a particle that does not remove a cell
+                // reflects, so s and the amount removed cannot be set
+                // independently and s = 1 forces a whole cell per arrival.
+                // Here the particle is consumed with probability
+                // simpleStick_ -- at s = 1 it never reflects -- and carries
+                // off simpleAtoms_ silicon atoms, drawn event-wise over
+                // atomsPerCell by removeAtoms. That is sub-cell at coarse dx
+                // and several cells at fine dx, mean-exact either way.
+                if (isMask(hid) && maskReflect_) {
+                  // A PERFECT REFLECTOR. The mask consumes nothing: the
+                  // particle keeps its dose and carries on into the feature,
+                  // so the flux reaching the floor is no longer line of sight
+                  // alone. Off by default, because it changes TRANSPORT and
+                  // not just the rate.
+                  ++nMaskReflect;
+                } else if (uni() < simpleStick_) {
+                  // simpleReactP_ scales the RATE without touching transport:
+                  // the particle is consumed either way, it just removes
+                  // nothing with probability 1 - simpleReactP_. v = p*Gamma/rho.
+                  if (!isMask(hid) && uni() < simpleReactP_) {
+                    removalTally_ = &remTh;
+                    // removeAtoms returns false for TWO different reasons:
+                    // the event-wise draw legitimately asked for no cell this
+                    // time (normal whenever rho*dx^D > 1), or a removal was
+                    // attempted and no eligible cell existed. Only the second
+                    // means the particle has not reacted. nRemoveFail moves
+                    // only in that case, so compare it across the call.
+                    const std::size_t failBefore = nRemoveFail;
+                    const bool removed = removeAtoms(h.index, simpleAtoms_);
+                    const bool blocked = (nRemoveFail != failBefore);
+                    if (!removed && blocked) {
+                      // NOTHING was removed, so this particle has not reacted.
+                      // The traced geometry is rebuilt once per step, so the
+                      // cell it struck may already have been removed by an
+                      // earlier particle in the same step -- it is not there
+                      // any more, and the particle must fly on through the gap
+                      // and react on whatever is actually behind it. Consuming
+                      // it here would delete its dose instead.
+                      // Only when nothing at all was removed: a reaction that
+                      // took its first cell and failed only on the neighbour
+                      // spill HAS reacted, and must not continue.
+                      ++nPassRemoved;
+                      if (carryOn_ && bounce < kMaxBounce) {
+                        passThrough(h, dir, o);
+                        auto nh = traceReflective(o, dir);
+                        if (nh.hit() && isExposed(nh.index)) {
+                          h = nh;
+                          continue;
+                        }
+                      }
+                      break;   // nothing left along the path
+                    }
+                    if (removed) { if (bounce == 0) ++nRem0; else ++nRemB; }
+                  }
+                  break;   // consumed, whether or not it removed anything
+                }
+                // otherwise it reflects, handled by the re-emission below
+              } else if (!isMask(hid) && uni() < simpleRemoveP()) {
+                // stick with s0*(1-theta) and be CONSUMED; a stuck F takes a
+                // quarter of a silicon atom with it. Reflection is then free:
+                // the same probability applies wherever the particle lands
+                // next, so multiple hits do not multiply the removal.
                 removalTally_ = &remTh;
                 if (bounce == 0) ++nRem0; else ++nRemB;
                 removeCellAt(h.index);        // remove the cell it hit
@@ -3353,49 +3919,94 @@ public:
             } else if (thermArrival_ && adsorbState == Fluorinated &&
                        state_[hid] == Fluorinated) {
               ++nFarr; ++nFonF;
-              // ARRIVAL-DRIVEN R3: this F meets an F* already there. With
-              // probability q the pair reacts, the site is freed and a
-              // quarter of a silicon leaves. The staircase's area never
-              // enters: a rough surface has more cells but each sees
-              // proportionally fewer arrivals.
+              if (localQ_ && hid < (int)arrStep_.size()) ++arrStep_[hid];
               ++nHitOccupied;
-              // DO NOT decouple the credit from the coin. Crediting the
-              // expectation q*nu/4 on every arrival instead of nu/4 on one in
-              // 1/q is mean-exact only at FIXED arrival statistics, and the
-              // arrival statistics depend on the coverage, which the
-              // decoupling changes: atomsPerCell is 0.502 against a credit of
-              // nu/4, so about every second firing triggers removeNearby on a
-              // ball that contains the cell that just reacted -- the silicon
-              // leaves with its own fluorine, which is what 4F* + Si -> SiF4
-              // says. Decoupled, bared cells survive and must re-adsorb.
-              // Measured on the thermal-only blanket: adsorption +15 %,
-              // theta_F 0.748 -> 0.683, floor -4.670 -> -4.376 (under-etch
-              // 6.6 % -> 12.5 %), for a roughness gain of only 0.130 -> 0.096.
-              if (uni() < arrivalQ()) {
-                state_[hid] = Bare;
-                ++nThermF;
+              // ARRIVAL-DRIVEN R3, ONE EVENT. An F lands on a site that is
+              // already fluorinated. With probability qRemove the reaction
+              // completes and THE CELL LEAVES -- it takes its silicon and its
+              // own F* with it, because that is what 4F* + Si -> SiF4 does.
+              // Otherwise nothing changes and the F re-emits. There is no
+              // intermediate state in which the F* has been consumed but the
+              // silicon has not: the cell is never set Bare here.
+              //
+              // Rate: a cell carries 0.502 Si, so one event removes 0.502
+              // atoms where a firing represents nu/4 = 0.25. Scale the coin by
+              // that ratio and the silicon rate is k_sigma*theta_F exactly, as
+              // Belen has it:
+              //     qRemove = q * (nu/4) / (rho*dx^D)      (= 0.498*q here)
+              //
+              // The FLUORINE balance closes on its own, because TWO fluorines
+              // go per event: the INCOMING F is consumed (it breaks out here,
+              // so it never adsorbs and never re-emits -- it leaves as part of
+              // the SiF4) and the RESIDENT F* leaves with the cell. That is 2
+              // against the 4*0.502 = 2.008 the cell's silicon requires, which
+              // closes to 0.4 %. Nothing extra has to be cleared:
+              //     2 * G*theta_F*qRemove = 2*k_sigma*theta_F/0.502
+              //                           = 3.98*k_sigma*theta_F ~ 4*k_sigma*theta_F
+              //
+              // Because the state is no longer pre-cleared, removeCellAt now
+              // reads `carried` as Fluorinated, so handDown_ actually carries
+              // adsorbate on this channel for the first time.
+              // N events per cell, so the per-event probability is N times
+              // the single-event one; the mean silicon rate is unchanged.
+              // N-1, not N: adsorption already put the first fluorine on the
+              // cell (fIdx_ = 1), so only N-1 further events are needed. Using
+              // N made N=2 run twice as fast as the single-event model it is
+              // supposed to reproduce, and the N/(N-1) error shrinking with N
+              // masqueraded as the ratchet working.
+              const NumericType qRemove =
+                  std::min(NumericType(1), NumericType(fSteps_ - 1) *
+                           qLocal(hid, dt) * (nu / 4) / atomsPerCell);
+              if (uni() < qRemove) {
+                ++nQTotal;
+                if (localQ_ && hid < (int)arrRate_.size() &&
+                    arrRate_[hid] <= 0.0f)
+                  ++nQFresh;
+                if (fSteps_ > 1 && hid < (int)fIdx_.size() &&
+                    fIdx_[hid] + 1 < fSteps_) {
+                  ++fIdx_[hid];            // SiF_k -> SiF_(k+1), cell stays
+                  ++nFluorStep;
+                  // 2 F per cell over N events keeps the balance at any N
+                  if (uni() < NumericType(2) / NumericType(fSteps_))
+                    break;                 // this F went into the cell
+                  // otherwise it did not stick: re-emit below
+                } else {
                 removalTally_ = &remTh;
-                removeAtoms(h.index, nu / 4);
-                break;                       // consumed in the reaction
+                // exactly one cell: drawCount(1.0) is deterministic.
+                // If the cell cannot be taken -- it is the half-atom under an
+                // O* cap, say -- then the reaction did NOT happen: the F is
+                // not consumed and re-emits, rather than vanishing with no
+                // product.
+                if (removeAtoms(h.index, atomsPerCell)) {
+                  ++nThermF;
+                  break;                     // consumed in the reaction
+                }
+                }
               }
+              // q failed: nothing changes, the F re-emits below
             } else if (state_[hid] != Bare) {
               ++nHitOccupied;                // the site is already taken
               if (adsorbState == Fluorinated) {
                 ++nFarr;
+                if (localQ_ && hid < (int)arrStep_.size()) ++arrStep_[hid];
                 if (state_[hid] == Fluorinated) ++nFonF;
               }
               if (adsorbState == Oxidised) ++nOHitOccupied;
             } else if (!(uni() < stick)) {
-              if (adsorbState == Fluorinated) ++nFarr;   // bare, did not stick
+              if (adsorbState == Fluorinated) { ++nFarr;
+                if (localQ_ && hid < (int)arrStep_.size()) ++arrStep_[hid]; }
               ++nStickFail;
             } else {
               // one arrival fills ONE site of the nu*sum|n| this cell holds
               if (adsorbState == Oxidised) ++nOHitBare;
-              if (adsorbState == Fluorinated) ++nFarr;   // bare, stuck
+              if (adsorbState == Fluorinated) { ++nFarr;
+                if (localQ_ && hid < (int)arrStep_.size()) ++arrStep_[hid]; }
               if (!(uni() < NumericType(1) / (nu * areaFactor(h.index))))
                 ++nSiteFail;
               else {
                 state_[hid] = adsorbState;
+                if (hid < (int)fIdx_.size())
+                  fIdx_[hid] = (adsorbState == Fluorinated) ? 1 : 0;
                 if (adsorbState == Fluorinated) ++nAdsF; else ++nAdsO;
                 // FBALANCE: drive the spontaneous etch off the F BALANCE
                 // rather than off a per-cell firing rate. A flip to [F]
@@ -3813,6 +4424,15 @@ public:
       if (!isSurface(idx))
         continue;
       const int id = lattice_->cellId(idx);
+      if (localQ_ && id >= 0 && id < (int)arrRate_.size()) {
+        // exponential average over steps: one step's per-cell count is 0 or 1
+        // The window must hold MANY arrivals. q = min(1, c/G) is convex in
+        // 1/G and capped on one side, so a noisy G biases q upward: at 0.3 the
+        // window held ~0.6 arrivals, G was mostly 0 or 1 count, q saturated at
+        // 1 for about half the cells and the blanket etched 2x too fast.
+        arrRate_[id] = (1.0f - qEma_) * arrRate_[id] + qEma_ * float(arrStep_[id]);
+        arrStep_[id] = 0u;
+      }
       const NumericType w = areaWeight(idx) / kappaLocal(idx);
       // NOTE: the weight is applied to the FIRING RATE here, not to the
       // volume each firing takes. Deriving it the other way round -- a
@@ -3874,6 +4494,9 @@ public:
         ++nThermO;
       }
     }
+    // Clusters that floated free this step: a connectivity property, so it
+    // cannot be caught by the per-removal neighbourhood test.
+    settleDetached();
   }
 };
 
