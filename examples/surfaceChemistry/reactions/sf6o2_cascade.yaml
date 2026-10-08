@@ -1,0 +1,70 @@
+name: sf6o2_cascade
+temperature: 300.0
+
+# SF6/O2 on silicon, written as the PER-ATOM FLUORINATION CASCADE rather than
+# Belen's lumped 4F* + Si -> SiF4.  A silicon atom carries a chemical IDENTITY
+# -- Si, SiF, SiF2, SiF3, SiO -- and fluorine advances it one step at a time,
+# so the cell arm and this file describe the SAME object: a coverage here is a
+# population of atoms in that state, and a cell there is one atom in it.
+#
+# THE STEP PROBABILITIES ARE NOT FREE.  Steady state over the chain gives
+#     R = a / sum(1/p_i),   a = arrivals per site per second
+# so the blanket rate is v = Gamma / (rho * sum(1/p_i)) -- the site density
+# cancels, which is why this is a chemistry and not a lattice artefact.
+# Matching k_sigma's blanket, v = k_sigma*theta_F*sigma0/rho = 12.0671 nm/s,
+# needs sum(1/p_i) = Gamma/(rho*v) = 29.714.  Belen's s0 = 0.7 fixes the three
+# adsorption steps and the last one follows:
+#     1/p4 = 29.714 - 3/0.7  ->  p4 = 0.03933
+# Nothing here is fitted to the cell arm.
+siteTypes:
+  - {name: default, density: 1.0e15}        # cm^-2 = 10 /nm^2
+
+species:
+  F:      {phase: gas, flux: 1.8e3}
+  O:      {phase: gas, flux: 1.0e2}
+  Ar_ion: {phase: ion, flux: 1.2e1,
+           meanEnergy: 100.0, sigmaEnergy: 10.0, exponent: 500.0,
+           inflectAngle: 89.0, n_l: 10.0, minAngle: 80.0,
+           thetaRMin: 70.0, thetaRMax: 90.0}
+  SiF4:   {phase: gas, reemit_only: true, atoms: {Si: 1}}
+  # NOTE: solidAtoms comes from the STOICHIOMETRY, net(r,Si) = rhs - lhs, not
+  # from a product's atom content -- so every step that removes silicon must
+  # name `Si` on the left, exactly as Belen's `4F* + Si -> SiF4` does.
+  SiFxg:  {phase: gas, reemit_only: true, atoms: {Si: 1}}   # carries the Si away
+  Si_s:   {phase: gas, reemit_only: true, atoms: {Si: 1}}
+  SiF:    {phase: surface}
+  SiF2:   {phase: surface}
+  SiF3:   {phase: surface}
+  SiO:    {phase: surface}
+  Si:     {phase: solid, rho: {default: 5.02, Mask: 500.0}}
+
+surface:
+  # --- the fluorination cascade: one F per step, the last one leaves as SiF4
+  - {eq: "F -> SiF",           type: adsorption, s0: 0.134615, Ea: 0.0,
+     materials: {default: 0.0, Si: 1.0}}
+  - {eq: "F + SiF -> SiF2",    type: adsorption, s0: 0.134615, Ea: 0.0,
+     materials: {default: 0.0, Si: 1.0}}
+  - {eq: "F + SiF2 -> SiF3",   type: adsorption, s0: 0.134615, Ea: 0.0,
+     materials: {default: 0.0, Si: 1.0}}
+  - {eq: "F + SiF3 + Si -> SiF4",   type: adsorption, s0: 0.134615, Ea: 0.0,
+     materials: {default: 0.0, Si: 1.0}}
+
+  # --- oxygen takes a BARE silicon only, and blocks the chain where it sits
+  - {eq: "O -> SiO",           type: adsorption, s0: 1.0,     Ea: 0.0}
+
+  # --- ions: the yield is chosen by what the atom IS
+  - {eq: "Ar_ion + SiO + Si -> O + Si_s", type: ion_enhanced, order: {SiO: 1},
+     yield: {A: 3.0, Eth: 10.0, materials: {Mask: {A: 0.0, Eth: 10.0}}}}
+  - {eq: "Ar_ion + SiF + Si -> SiFxg",    type: ion_enhanced, order: {SiF: 1},
+     yield: {A: 7.0, Eth: 15.0, materials: {Mask: {A: 0.0, Eth: 15.0}}}}
+  - {eq: "Ar_ion + SiF2 + Si -> SiFxg",   type: ion_enhanced, order: {SiF2: 1},
+     yield: {A: 7.0, Eth: 15.0, materials: {Mask: {A: 0.0, Eth: 15.0}}}}
+  - {eq: "Ar_ion + SiF3 + Si -> SiFxg",   type: ion_enhanced, order: {SiF3: 1},
+     yield: {A: 7.0, Eth: 15.0, materials: {Mask: {A: 0.0, Eth: 15.0}}}}
+  - {eq: "Ar_ion + Si -> Si_s",      type: sputtering,
+     yield: {A: 0.0337, Eth: 20.0, B: 9.3,
+             materials: {Mask: {A: 0.0139, Eth: 20.0}}}}
+
+  # --- beta_sigma, the oxide leaving on its own.  Negligible over a 0.4 s run
+  # (0.04 /s), kept because Belen has it.
+  - {eq: "SiO -> O", type: surface, k0: 4.0e-2, Ea: 0.0}

@@ -25,7 +25,7 @@
 //   DEP_W, DEP_H  trench width and depth in nm
 //   DEP_PMCONLY   skip the two continuum arms
 //   DEP_BOUNCE    re-emissions a molecule may make before it is discarded
-//   PMC_FITR / PMC_REFLR / PMC_PWIN / PMC_MINPTS / PMC_NOPRUNE / PMC_NOPLANE
+//   PMC_FITR / PMC_REFLR / PMC_PWIN / PMC_MINPTS / PMC_PRUNE / PMC_PLANE
 #include <models/psChemicalMechanismIO.hpp>
 #include <models/psSurfaceChemistry.hpp>
 #include <models/psVoxelChemistry.hpp>
@@ -288,8 +288,8 @@ int main(int argc, char **argv) {
     if (const char *e = std::getenv("PMC_REFLR")) pmc.setReflectRadius(std::atoi(e));
     if (const char *e = std::getenv("PMC_PWIN")) pmc.setPlaneWindow(std::atof(e));
     if (const char *e = std::getenv("PMC_MINPTS")) pmc.setMinFitPoints(std::atoi(e));
-    if (std::getenv("PMC_NOPLANE")) pmc.setPlaneAcceptance(false);
-    if (std::getenv("PMC_NOPRUNE")) pmc.setPruneIslands(false);
+    if (std::getenv("PMC_PLANE")) pmc.setPlaneAcceptance(true);
+    if (std::getenv("PMC_PRUNE")) pmc.setPruneIslands(true);
     auto dump = [&](const std::string &name) {
       auto &ff = *cells->getFillingFractions();
       auto &mmv = *cells->getScalarData("Material");

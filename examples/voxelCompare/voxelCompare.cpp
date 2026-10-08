@@ -9,6 +9,7 @@
 // and differ only in how the interface is represented and moved. The PMC
 // carries the same network as discrete site states; its rate constants are the
 // mechanism's, converted to per-site units by sigma0.
+#include <sstream>
 #include <models/psChemicalMechanismIO.hpp>
 #include <models/psSurfaceChemistry.hpp>
 #include <models/psVoxelChemistry.hpp>
@@ -221,8 +222,14 @@ int main(int argc, char **argv) {
     // tau_O ~ 3 ms against a 105 ms process, but in a feature the fluxes are
     // 2-3 orders lower, tau grows with 1/flux, and the assertion outlives the
     // whole run.
-    if (std::getenv("LS_NOPREEQ")) { cov.maxIterations = 0;
-      std::cout << "  [level set: NO coverage pre-equilibration, starts bare]\n"; }
+    // NO PRE-EQUILIBRATION IN EITHER ARM (agreed with the user, 2026-09-26):
+    // the level set starts from a bare wafer exactly like the cell set.
+    // LS_PREEQ=1 turns the level set's coverage initialisation back on, for a
+    // comparison only. Never pre-equilibrate the cell set.
+    if (!std::getenv("LS_PREEQ")) { cov.maxIterations = 0;
+      std::cout << "  [level set: no coverage pre-equilibration, starts bare like the cell set]\n"; }
+    else
+      std::cout << "  [level set: coverages PRE-EQUILIBRATED (LS_PREEQ) -- comparison only]\n";
     proc.setParameters(cov);
     // LS_DTRATIO scales the advection CFL ratio, to check that a transient
     // coverage result is converged in the time step rather than an artefact
@@ -296,7 +303,9 @@ int main(int argc, char **argv) {
   // LS_ONLY runs the level set and nothing else. A time-step or coverage
   // study varies only that arm, and the other two are the expensive ones.
   const bool lsOnly = std::getenv("LS_ONLY") != nullptr;
-  if (!pmcOnly && !lsOnly) {
+  // OFF by default since 2026-10-07: the level set against the cell set does
+  // not use this arm, and it cost about 40 % of every run. FF_ARM=1 runs it.
+  if (!pmcOnly && !lsOnly && std::getenv("FF_ARM")) {
     auto cells = makeCells(makeDomain());
     cs::LatticeMap<T, D> lat(*cells);
     const auto &mid = *cells->getScalarData("Material");
@@ -396,6 +405,10 @@ int main(int argc, char **argv) {
     // taken: adding one reallocates and would dangle them
     cells->addScalarData("State", 0.);
     cells->addScalarData("Nz", -1.);      // estimator normal, for validation
+    // LADDER identity: 0..4 = Si, SiF, SiF2, SiF3, SiF4, 5 = SiO, 6 = mask.
+    // -1 where the ladder is off, so the field is never silently misread as
+    // bare silicon when the run did not use it.
+    cells->addScalarData("Rung", -1.);
     ps::VoxelPMC<T, D>::Parameters p;
     if (const char *e = std::getenv("PMC_AIE")) p.A_ie *= std::atof(e);
     if (std::getenv("NO_ION")) p.fluxIon = T(0);
@@ -409,6 +422,18 @@ int main(int argc, char **argv) {
     if (const char *e = std::getenv("PMC_STICKF")) p.stickF = std::atof(e);
     if (const char *e = std::getenv("PMC_KSIGMA")) p.kSigma = std::atof(e);
     if (const char *e = std::getenv("PMC_BETA")) p.betaSigma = std::atof(e);
+    // The rest of the mechanism's numbers, so the PMC can be pointed at the
+    // SAME values as the mechanism file the level set reads. Hand-matching is
+    // how the two arms drift apart; every number the file sets needs a knob.
+    if (const char *e = std::getenv("PMC_FLUXO")) p.fluxO = std::atof(e);
+    if (const char *e = std::getenv("PMC_STICKO")) p.stickO = std::atof(e);
+    if (const char *e = std::getenv("PMC_FLUXION")) p.fluxIon = std::atof(e);
+    if (const char *e = std::getenv("PMC_ENERGY")) p.meanEnergy = std::atof(e);
+    if (const char *e = std::getenv("PMC_ASP")) p.A_sp = std::atof(e);
+    if (const char *e = std::getenv("PMC_ETHSP")) p.Eth_sp = std::atof(e);
+    if (const char *e = std::getenv("PMC_BSP")) p.B_sp = std::atof(e);
+    if (const char *e = std::getenv("PMC_AP")) p.A_p = std::atof(e);
+    if (const char *e = std::getenv("PMC_ETHP")) p.Eth_p = std::atof(e);
     ps::VoxelPMC<T, D> pmc(lat, fill, material, p);
     pmc.setSeed(SEED);
     pmc.setFractionalRemoval(cfg.frac);
@@ -423,6 +448,8 @@ int main(int argc, char **argv) {
     if (std::getenv("PMC_FBAL")) pmc.setFluorineBalance(true);
     if (const char *e = std::getenv("PMC_SEGTOL")) pmc.setSegmentTolerance(std::atof(e));
     if (std::getenv("PMC_NOREEMIT")) pmc.setReemission(false);
+    // Off by default since 2026-09-26; PMC_REEMITPLANE=1 re-emits from the plane.
+    if (std::getenv("PMC_REEMITPLANE")) pmc.setReemitPlane(true);
     // PMC_SIMPLE: the flux-only model -- a particle hits a cell and either
     // removes it or reflects. No coverage, no state, no thermal firing.
     if (std::getenv("PMC_COVERAGE")) pmc.setSimpleFlux(false);
@@ -446,6 +473,67 @@ int main(int argc, char **argv) {
       pmc.setSimpleReactP(std::atof(e));
     if (std::getenv("PMC_MASKREFLECT")) pmc.setMaskReflect(true);
     if (std::getenv("PMC_NOSETTLE")) pmc.setSettleOrphans(false);
+    // PMC_SETTLEKEEP restores the old behaviour: a relocated cell carries its
+    // surface state, which is what welded O* into filaments.
+    // PMC_SETTLEFRESH: the CONTROL -- a relocated cell arrives bare, which
+    // destroys the adsorbate rather than moving it. PMC_SETTLEANY: drop the
+    // bare-silicon preference, so a relocation lands on the nearest support
+    // whatever its state (the behaviour that welded O* into filaments).
+    if (std::getenv("PMC_SETTLEFRESH")) pmc.setSettleFresh(true);
+    if (std::getenv("PMC_SETTLEANY")) pmc.setSettleBare(false);
+    // PMC_RECAPTURE=<p>: correct the sticking for staircase re-capture, so the
+    // EFFECTIVE sticking on cells matches the nominal one on the level set's
+    // smooth surface. Measure p first with a zero-sticking frozen pass
+    // (PMC_FLUXONLY=1 PMC_STICKF=0 PMC_STICKO=0): there every particle just
+    // bounces until it escapes, so H0 = hits/launch = 1/(1-p).
+    // PMC_SAMEFACET: refuse a fresh reaction test on a re-hit that is close
+    // AND on the same fitted facet -- sub-resolution for the continuum. DEFAULT
+    // ON, 2 cells and 30 degrees since 2026-10-07 (see psVoxelPMC).
+    // PMC_REEMITSKIP: start the re-emitted particle one dx out, on the
+    // circle about the point of incidence, unless solid lies within dx
+    // along that ray -- which is a genuine corner.
+    // Off by default since 2026-09-26; PMC_REEMITSKIP=1 turns the sphere on.
+    if (std::getenv("PMC_REEMITSKIP")) pmc.setReemitSkip(true);
+    // Ion removal takes only the species of the cell hit (default). PMC_IONANYCELL
+    // restores the old pick of any exposed cell in the footprint, for comparison.
+    if (std::getenv("PMC_IONANYCELL")) pmc.setIonSameIdentity(false);
+    // PMC_FHOP=R: an adsorbing F bonds to a random exposed Si within R cells of
+    // where it landed. DEFAULT 2; PMC_FHOP=0 turns it off.
+    if (const char *e = std::getenv("PMC_FHOP")) pmc.setFHopRadius(std::atoi(e));
+    if (std::getenv("PMC_FHOPLEAST")) pmc.setFHopUniform(false);
+    // PMC_OHOP=0: oxygen reacts with the exact cell it hit (F still hops).
+    if (const char *e = std::getenv("PMC_OHOP")) pmc.setOHop(std::atoi(e) != 0);
+    // Ions react on a cell of their cascade (same neighbourhood as the neutrals)
+    // instead of only the cell on their line of flight. DEFAULT ON; PMC_IONHOP=0 off.
+    if (const char *e = std::getenv("PMC_IONHOP")) pmc.setIonHop(std::atoi(e) != 0);
+    // PMC_HOPW="w0,w1,w2": per-cell hop weights by distance from the landing
+    // cell. DEFAULT 0.30,0.20,0.15; PMC_HOPW=0,0,0 gives the uniform box.
+    if (const char *e = std::getenv("PMC_HOPW")) {
+      double w0 = 0, w1 = 0, w2 = 0;
+      if (std::sscanf(e, "%lf,%lf,%lf", &w0, &w1, &w2) == 3) pmc.setHopWeights(w0, w1, w2);
+      std::cout << "  [neutral hop weights by distance: " << w0 << " / " << w1 << " / " << w2 << "]\n";
+    }
+    if (const char *e = std::getenv("PMC_REEMITSKIP_R"))
+      pmc.setReemitSkipRadius(std::atof(e));
+    // PMC_FACETPLANE: suppress a re-hit that lies ON the plane the particle
+    // just left -- impossible in the continuum, so it is the staircase.
+    if (std::getenv("PMC_FACETPLANE")) pmc.setFacetPlane(true);
+    if (const char *e = std::getenv("PMC_FACETTOL"))
+      pmc.setFacetTol(std::atof(e));
+    // Re-hit rule: DEFAULT ON since 2026-10-06, 2 cells and 30 degrees since
+    // 2026-10-07; PMC_SAMEFACET=0 turns it off.
+    if (const char *e = std::getenv("PMC_SAMEFACET")) pmc.setSameFacet(std::atoi(e) != 0);
+    if (const char *e = std::getenv("PMC_SAMEFACET_ANG"))
+      pmc.setSameFacetAngle(std::atof(e));
+    if (const char *e = std::getenv("PMC_SAMEFACET_R"))
+      pmc.setSameFacetCells(std::atoi(e));
+    if (const char *e = std::getenv("PMC_RECAPTURE")) {
+      pmc.setRecapture(std::atof(e));
+      std::cout << "  re-capture p = " << pmc.recapture()
+                << "  ->  sticking " << p.stickF << " used as "
+                << pmc.stickCorrected(p.stickF) << " (F), " << p.stickO
+                << " as " << pmc.stickCorrected(p.stickO) << " (O)\n";
+    }
     if (const char *e = std::getenv("PMC_SETTLER"))
       pmc.setSettleRadius(std::atoi(e));
     if (const char *e = std::getenv("PMC_BOUNCE")) pmc.setMaxBounce(std::atoi(e));
@@ -454,6 +542,46 @@ int main(int argc, char **argv) {
     if (std::getenv("PMC_CAPSHIELD")) pmc.setCapShield(true);
     if (std::getenv("PMC_OXOPAQUE")) pmc.setOxideOpaque(true);
     if (std::getenv("PMC_SITECOUNTS")) pmc.setSiteCounts(true);
+    // PMC_LADDER: the cell carries a chemical IDENTITY rather than a coverage
+    // flag -- Si, SiF, SiF2, SiF3, SiF4 (which leaves), and SiO. Four fluorine
+    // arrivals at the SAME cell are what 4F* + Si -> SiF4 costs, so the cell
+    // must be one silicon atom and dx is pinned to rho^(-1/D) = 0.141139 nm
+    // in 2D. Prints the atom count and the blanket rate the chain predicts;
+    // both are validation, not configuration.
+    if (std::getenv("PMC_LADDER")) {
+      pmc.setLadder(true);
+      // PMC_LADDERAREA: weight the per-arrival reaction by the TRUE area
+      // the cell carries, so a staircase does not over-collect flux.
+      if (std::getenv("PMC_LADDERAREA")) pmc.setLadderArea(true);
+      // PMC_LADDERP: one probability for all four rungs, which is what makes
+      // the transport identical to the level set (a single sticking number
+      // there). Only sum(1/p_i) sets the blanket rate.
+      // PMC_LADDERAUTO: n = 4*rho*dx^D rungs, calibrated so the blanket rate
+      // AND the effective sticking are the same at every dx. That is what
+      // makes a mesh-refinement sweep mean anything.
+      if (const char *e = std::getenv("PMC_LADDERN"))
+        pmc.setLadderN(std::atoi(e));
+      if (std::getenv("PMC_LADDERAUTO"))
+        pmc.setLadderAuto(std::getenv("PMC_LADDERS0")
+                              ? std::atof(std::getenv("PMC_LADDERS0"))
+                              : 0.7);
+      if (const char *e = std::getenv("PMC_LADDERP"))
+        for (int k = 0; k < pmc.ladderN(); ++k) pmc.setLadderP(k, std::atof(e));
+      for (int k = 0; k < pmc.ladderN() && k < 10; ++k)
+        if (const char *e = std::getenv((std::string("PMC_LADDERP") +
+                                         char('0' + k)).c_str()))
+          pmc.setLadderP(k, std::atof(e));
+      std::cout << "  ladder n = " << pmc.ladderN() << " rungs, p =";
+      for (int k = 0; k < pmc.ladderN(); ++k)
+        std::cout << (k ? "/" : " ") << pmc.ladderP(k);
+      std::cout << ", sum(1/p) = " << pmc.ladderHarmonic() << " (target "
+                << pmc.atomsPerCellNow() * pmc.ladderHarmonicTarget()
+                << "), effective sticking "
+                << pmc.ladderN() / pmc.ladderHarmonic() << "\n";
+      std::cout << "  ladder: " << pmc.atomsPerCellNow()
+                << " atoms/cell (needs 1.0000), blanket "
+                << pmc.ladderBlanketRate() << " nm/s\n";
+    }
     // Both default ON now: the spontaneous etch is arrival-driven and takes
     // its silicon at the site that reacted. These two switch the OLD timed
     // per-cell sweep and the 5-cell removal ball back on, for comparison.
@@ -480,10 +608,13 @@ int main(int argc, char **argv) {
       pmc.setThermalArea(std::atoi(e));
     // PMC_FLUXF scales the F flux so a prescribed p can be raised without
     // changing the etch rate: rate = flux*dx^(D-1) * p * dx.
-    if (std::getenv("PMC_NOPLANE")) pmc.setPlaneAcceptance(false);
+    // Off by default since 2026-09-26; PMC_PLANE=1 turns plane acceptance on.
+    if (std::getenv("PMC_PLANE")) pmc.setPlaneAcceptance(true);
     if (const char *e = std::getenv("PMC_PWIN")) pmc.setPlaneWindow(std::atof(e));
     if (const char *e = std::getenv("PMC_MINPTS")) pmc.setMinFitPoints(std::atoi(e));
-    if (std::getenv("PMC_NOPRUNE")) pmc.setPruneIslands(false);
+    // Pruning is OFF by default -- settling reattaches detached cells and
+    // nothing is deleted. PMC_PRUNE=1 runs the old post-run prune as an audit.
+    if (std::getenv("PMC_PRUNE")) pmc.setPruneIslands(true);
     if (std::getenv("PMC_OFFPLANE")) pmc.setOffPlaneTest(true);
     if (const char *e = std::getenv("PMC_IONW")) pmc.setIonWeight(std::atof(e));
     // PMC_EST=fit selects the least-squares plane through cell centres;
@@ -500,6 +631,7 @@ int main(int argc, char **argv) {
       auto &mmv = *cells->getScalarData("Material");
       auto &state = *cells->getScalarData("State");
       auto &nzf = *cells->getScalarData("Nz");
+      auto &rung = *cells->getScalarData("Rung");
       { std::vector<T> nz; pmc.fillNormalZ(nz);
         for (size_t c = 0; c < nz.size() && c < nzf.size(); ++c) nzf[c] = nz[c]; }
       const auto &st = pmc.states();
@@ -514,6 +646,12 @@ int main(int argc, char **argv) {
         const bool mask = material[c] == (int)ps::Material::Mask;
         mmv[c] = solid ? T(material[c]) : T((int)ps::Material::GAS);
         state[c] = !solid ? T(0) : (mask ? T(3) : T(st[c]));
+        if (pmc.ladder() && c < pmc.fluorCount().size())
+          rung[c] = !solid ? T(-1)
+                    : mask ? T(6)
+                    : st[c] == ps::VoxelPMC<T, D>::Oxidised
+                        ? T(5)
+                        : T(pmc.fluorCount()[c]);
       }
       cells->writeVTU(name);
       std::cout << "    wrote " << name << "\n";
@@ -562,13 +700,14 @@ int main(int argc, char **argv) {
                 << "  theta_O " << ce[1] << " (surface frozen for "
                 << nEq << " sub-steps)\n";
     }
-    // The continuum re-solves the coverage of EVERY point at EVERY step, so a
-    // point uncovered by etching is handed the steady-state coverage of its
-    // local flux, not a bare surface. handDown is the cell equivalent: the
-    // receding front passes its adsorbate to the cell it uncovers.
-    // Hand-down (= NO surface renewal) is the DEFAULT now, matching the
-    // continuum arm, which has no renewal term. PMC_RENEWAL restores the old
-    // behaviour for a deliberate comparison.
+    // The continuum re-solves the coverage of every point at every step, so a
+    // point uncovered by etching keeps the coverage of its local flux. handDown
+    // is the cell equivalent, and it is OFF by default (psVoxelPMC, handDown_):
+    // the volatile product takes the adsorbate with it, so the silicon a removal
+    // uncovers starts bare in every channel. With hand-down the front fluorinated
+    // itself (blanket: 519771 reactions from 1809 adsorptions, see removeCellAt).
+    // PMC_HANDDOWN turns it on for a comparison; PMC_RENEWAL is the default and
+    // changes nothing.
     if (std::getenv("PMC_RENEWAL")) pmc.setHandDown(false);
     if (std::getenv("PMC_HANDDOWN")) pmc.setHandDown(true);
     // Sidewall vs floor NEUTRAL ARRIVAL, the direct analogue of the level
@@ -860,7 +999,7 @@ int main(int argc, char **argv) {
     }
     // Counted in resolveImpact, so it is reported whether or not the islands
     // are pruned -- it was nested in the block above, which silently hid the
-    // see-through numbers on every PMC_NOPRUNE run.
+    // see-through numbers whenever pruning was off (now the default).
     std::cout << "    SEE-THROUGH: rays waved through a cell " << pmc.nPassAll
               << "  (bare " << pmc.nPassBare << ", F* " << pmc.nPassF
               << ", O* " << pmc.nPassOx << ")"
@@ -892,6 +1031,17 @@ int main(int argc, char **argv) {
               << ", forced onto first crossed cell " << pmc.nForcedHit
               << ", carried on through a removed cell " << pmc.nPassRemoved
               << ", reflected off the mask " << pmc.nMaskReflect
+              << "\n    RE-EMISSION ORIGIN: on the fitted plane "
+              << pmc.nReemitPlane << ", fell back to the cell "
+              << pmc.nReemitCell
+              << "\n    RE-EMISSION moved clear " << pmc.reemitSkipped()
+              << ", held at a corner " << pmc.reemitCorner()
+              << "\n    SUB-RESOLUTION re-hits refused " << pmc.subResolutionSkips()
+              << ", close re-hits KEPT as a corner " << pmc.cornerKeeps()
+              << "\n    HITS PER LAUNCHED NEUTRAL H = " << pmc.hitsPerLaunch()
+              << "   (zero-sticking frozen pass gives H0; p = 1 - 1/H0)"
+              << "\n    settled onto bare silicon " << pmc.settleOntoBare()
+              << ", gave up a surface state " << pmc.settleReset()
               << "\n    cells settled back onto the surface " << pmc.nSettled
               << " (no supported site found " << pmc.nSettleFail << ")"
               << "\n    funnel: on mask " << pmc.nHitMask << ", occupied "
@@ -955,6 +1105,40 @@ int main(int argc, char **argv) {
               << ")   -- outside the 4F*+Si ledger"
               << "\n    F* handed down onto newly uncovered cells: " << pmc.nFHandedDown
               << "   -> NET F* lost to removal " << (long long)pmc.nFLostRemoved - (long long)pmc.nFHandedDown
+              << (pmc.ladder() ? [&] {
+                   std::ostringstream o;
+                   const auto c = pmc.ladderCensus();
+                   double tot = 0;
+                   for (auto v : c) tot += double(v);
+                   o << "\n    LADDER census of " << (long long)tot
+                     << " surface cells: ";
+                   for (size_t k = 0; k + 1 < c.size(); ++k)
+                     o << " SiF" << k << " " << c[k];
+                   o << "  SiO " << c.back();
+                   if (tot > 0 && c.size() >= 2)
+                     o << "   (top rung frac "
+                       << double(c[c.size() - 2]) / tot << ")";
+                   // A chain passes the same current at every rung. A split
+                   // between these means a rung is losing cells to something
+                   // other than the next rung.
+                   o << "\n    LADDER advances by rung:";
+                   for (int k = 0; k < pmc.ladderN(); ++k)
+                     o << (k ? " / " : " ") << pmc.nLadAdv[k];
+                   o << "\n    LADDER SiF4 desorbed " << pmc.nLadDesorb
+                     << ", SiO -> Si " << pmc.nLadODesorb
+                     << ", F reflected off SiO " << pmc.nLadFonO
+                     << ", off SiF4 " << pmc.nLadFonSat
+                     << "\n    LADDER ion impacts by identity: Si "
+                     << pmc.nLadIonSi << ", SiF_k " << pmc.nLadIonF
+                     << ", SiO " << pmc.nLadIonO
+                     << "\n    F HOP: radius " << pmc.fHopR_ << " cells, bonds moved to a neighbour "
+                     << pmc.nFHop << ", kept on the hit cell " << pmc.nFHopStay
+                     << ";  O hop " << (pmc.oHop_ ? "on" : "off") << ", O sites moved " << pmc.nOHop
+                     << "\n    ION HOP " << (pmc.ionHop_ ? "on" : "off") << ": moved " << pmc.nIonHop << ", kept " << pmc.nIonHopStay
+                     << "\n    WHERE F BONDS: top cells " << pmc.nFbondTop << ", side-only cells " << pmc.nFbondSide
+                     << "   WHERE SiF4 LEAVES: top cells " << pmc.nSiF4Top << ", side-only cells " << pmc.nSiF4Side;
+                   return o.str();
+                 }() : std::string())
               << "\n    SiF_k ADVANCES: " << pmc.nFluorStep
               << "\n    R3 FIRINGS: " << pmc.nQTotal << ", of them at a cell with"
               << " NO arrival history (q fell back to 1): " << pmc.nQFresh
@@ -999,7 +1183,10 @@ int main(int argc, char **argv) {
               << "   (1.0 = every impact reads normal incidence)\n"
               << "    cells removed by channel: ion-enhanced " << pmc.remIE
               << "  sputter " << pmc.remSp << "  thermal " << pmc.remTh
-              << "   (continuum split 82.4 / 0.9 / 12.6 %)\n";
+              << "  oxide-clear " << pmc.remOx
+              << "   (continuum split 82.4 / 0.9 / 12.6 %)\n"
+              << "    ION SAME-SPECIES: hit cells taken " << pmc.nIonHitTaken
+              << ", further cells not available in the footprint " << pmc.nIonShort << "\n";
     if (tag == "pmciface") {
       std::cout << "    x[nm]  ionHits  onF  ieRem  thermRem  (trench -20..20)\n";
       for (size_t q = 0; q < pmc.histHit.size(); ++q) {

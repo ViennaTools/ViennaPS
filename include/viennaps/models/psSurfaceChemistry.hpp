@@ -142,6 +142,29 @@ template <typename NumericType> struct ChemicalMechanism {
     NumericType stickingBeta = 0.; // temperature exponent, -1/2 when from k_ads
     int stickingFreeSiteExponent = 0;
     int stickingSite = 0; // site type whose free sites this adsorption consumes
+    /// THE COVERAGES THAT BLOCK THIS SPECIES, when it is named explicitly.
+    ///
+    /// The tracer's sticking is an ATTENUATION: it decides what fraction of
+    /// arrivals is consumed. The rate laws then multiply the surviving flux by
+    /// their own s0. Those two must agree, or flux is created or destroyed --
+    /// a particle that sticks without reacting is lost, one that reacts
+    /// without sticking was never removed from the beam.
+    ///
+    /// With ONE adsorption step they agree automatically: attenuation
+    /// s0*free and rate s0*Gamma*free are the same expression, which is why
+    /// every lumped mechanism has been fine. A CHAIN breaks that. Four steps
+    ///     F + *  -> SiF     F + SiF -> SiF2     F + SiF2 -> SiF3
+    ///     F + SiF3 + Si -> SiF4
+    /// consume a total of p*(free + SiF + SiF2 + SiF3) = p*(1 - SiO), yet the
+    /// descriptor can only carry ONE step -- so the tracer attenuates by one
+    /// rung's rule while the surface reacts by all four.
+    ///
+    /// Stated the other way round: what attenuates the beam is everything the
+    /// species can react with, so what does NOT is the blocking set. Naming it
+    /// makes free = 1 - sum(blockers), which is 1 - theta_SiO here, and the
+    /// two sides agree again. Empty means the old behaviour: every coverage on
+    /// stickingSite blocks.
+    std::vector<int> stickingBlockers;
 
     // The sticking on a given material, taken from the adsorption step that
     // consumes this species. A selective chemistry adsorbs differently on
@@ -207,9 +230,17 @@ template <typename NumericType> struct ChemicalMechanism {
     g.stickingBeta = beta;
     g.stickingFreeSiteExponent = freeSiteExponent;
     g.stickingSite = site;
+    g.stickingBlockers.clear();
     // unless a material says otherwise, every material sticks like this
     g.stickingConstant =
         MaterialValueMap<RateConstant>::fromDefault({s0, Ea, beta});
+  }
+
+  /// Name the coverages that BLOCK this species, so the tracer attenuates by
+  /// 1 - sum(those) instead of by the free sites of one site type. See
+  /// GasSpecies::stickingBlockers.
+  void setStickingBlockers(int gasIndex, std::vector<int> coverages) {
+    gas.at(gasIndex).stickingBlockers = std::move(coverages);
   }
 
   // The sticking this species takes on a given material, mirroring the
@@ -1729,9 +1760,14 @@ private:
       // the coverages the particle's re-emission sees are those on the site
       // type its adsorption consumes free sites of
       std::vector<int> siteCov;
-      for (int i = 0; i < nCov; ++i)
-        if (mech.coverageSite[i] == mech.gas[g].stickingSite)
-          siteCov.push_back(i);
+      if (!mech.gas[g].stickingBlockers.empty()) {
+        // the mechanism named them: attenuate by 1 - sum(blockers)
+        siteCov = mech.gas[g].stickingBlockers;
+      } else {
+        for (int i = 0; i < nCov; ++i)
+          if (mech.coverageSite[i] == mech.gas[g].stickingSite)
+            siteCov.push_back(i);
+      }
       auto particle = std::make_unique<impl::ChemicalParticle<NumericType, D>>(
           mech.gas[g].label, mech.stickingTable(int(g)),
           mech.gas[g].stickingFreeSiteExponent, std::move(siteCov));

@@ -1,0 +1,250 @@
+{
+  "schemaVersion": 1,
+  "name": "F_cascade_SiF4",
+  "siteTypes": [
+    {
+      "name": "default",
+      "density": 1000000000000000.0
+    }
+  ],
+  "coverages": [
+    {
+      "name": "SiF",
+      "site": 0
+    },
+    {
+      "name": "SiF2",
+      "site": 0
+    },
+    {
+      "name": "SiF3",
+      "site": 0
+    }
+  ],
+  "gas": [
+    {
+      "name": "F",
+      "traced": true,
+      "label": "F_flux",
+      "flux": 1800.0,
+      "sticking": {
+        "reaction": "R1",
+        "s0": 0.134615,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 0,
+        "freeSiteExp": 0
+      }
+    },
+    {
+      "name": "SiF4",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
+    }
+  ],
+  "solids": [
+    {
+      "name": "Si",
+      "rho": 5.02,
+      "rhoMaterials": {
+        "Mask": 500.0
+      }
+    }
+  ],
+  "solid": {
+    "name": "Si",
+    "rho": 5.02,
+    "rhoMaterials": {
+      "Mask": 500.0
+    }
+  },
+  "reactions": [
+    {
+      "id": "R1",
+      "eq": "F + * -> SiF",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.7,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [],
+      "freeSiteExp": [
+        1
+      ],
+      "nu": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "materialConstants": {
+        "Si": {
+          "prefactor": 0.7,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      },
+      "materialDefault": {
+        "prefactor": 0.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      }
+    },
+    {
+      "id": "R2",
+      "eq": "F + SiF -> SiF2",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.7,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "materialConstants": {
+        "Si": {
+          "prefactor": 0.7,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      },
+      "materialDefault": {
+        "prefactor": 0.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      }
+    },
+    {
+      "id": "R3",
+      "eq": "F + SiF2 -> SiF3",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.7,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 1,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        -1.0,
+        1.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "materialConstants": {
+        "Si": {
+          "prefactor": 0.7,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      },
+      "materialDefault": {
+        "prefactor": 0.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      }
+    },
+    {
+      "id": "R4",
+      "eq": "F + SiF3 -> SiF4 + *",
+      "constant": {
+        "kind": "sticking",
+        "s0": 0.03933,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "covFactors": [
+        {
+          "idx": 2,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "solidAtoms": [
+        -1.0
+      ],
+      "materialConstants": {
+        "Si": {
+          "prefactor": 0.03933,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      },
+      "materialDefault": {
+        "prefactor": 0.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      }
+    }
+  ],
+  "constants": {
+    "temperature": 300.0
+  },
+  "conventions": {
+    "stickingAppliedIn": "rateLawAndReflection",
+    "energyUnit": "eV",
+    "inputEnergyUnit": "eV",
+    "fluxUnit": "1e15/cm2/s",
+    "rhoUnit": "1e22/cm3"
+  }
+}

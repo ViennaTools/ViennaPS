@@ -368,6 +368,21 @@ parseChemicalMechanism(const std::string &text) {
                      static_cast<int>(sticking->num("freeSiteExp", 0.)),
                      static_cast<NumericType>(sticking->num("beta", 0.)),
                      static_cast<int>(sticking->num("site", 0.)));
+    // blockedBy: the coverages that ATTENUATE this species, named directly.
+    // Needed whenever a species has several adsorption steps -- a chain -- for
+    // which "the free sites of one site type" is not what the beam actually
+    // loses. See GasSpecies::stickingBlockers.
+    if (auto blocked = sticking->get("blockedBy");
+        blocked && !blocked->isNull()) {
+      std::vector<int> blockIdx;
+      for (const auto &b : blocked->array) {
+        const std::string want = b->text;
+        for (int c = 0; c < static_cast<int>(mech.coverageNames.size()); ++c)
+          if (mech.coverageNames[c] == want)
+            blockIdx.push_back(c);
+      }
+      mech.setStickingBlockers(idx, std::move(blockIdx));
+    }
     // the particle re-emits with the sticking of the material it hit
     readMaterialConstants(
         *sticking,

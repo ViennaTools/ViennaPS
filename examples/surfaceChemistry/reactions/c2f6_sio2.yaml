@@ -8,7 +8,7 @@
 # beneath it. SiO2 has no reaction with F at all: the only way into the etch
 # chain is a CF_x chemisorption that puts a carbon on the oxide as SiF2CO2_s,
 # which then dissociates -- shedding the oxygen as CO2 -- to leave SiF_x_s.
-# F and ions carry that up the ladder to volatile SiF4. So SiO2 etching IS a
+# F and ions carry that through the fluorination cascade to volatile SiF4. So SiO2 etching IS a
 # polymer-wafer interaction, and the film is both the mask and the precursor.
 #
 # FOUR THINGS THIS FORMAT CANNOT SAY, all of them real parts of Table I. They
