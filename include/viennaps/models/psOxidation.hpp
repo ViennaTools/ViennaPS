@@ -780,7 +780,7 @@ private:
     // k_base is the B/A for the chosen bulk orientation; ratio is the B/A of
     // faces perpendicular to the wafer normal divided by k_base. crystalAxis
     // points along the wafer normal (y = surface-normal convention in 2D).
-    // Ratios derived from the (100):(110):(111) = 1 : 1.45 : 1.68 ladder.
+    // Ratios derived from the (100):(110):(111) = 1 : 1.45 : 1.68 sequence.
     p.crystalAxis = {0., 1., 0.};
     switch (orientation_) {
     case SiliconOrientation::Si100:

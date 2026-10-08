@@ -6,6 +6,10 @@
 #include <csVoxelInteraction.hpp>
 #include <rayReflection.hpp>
 #include <materials/psMaterialMap.hpp>
+#ifdef VIENNACORE_COMPILE_GPU
+#include "psVoxelPMCGPU.hpp"
+#include <memory>
+#endif
 
 #include <algorithm>
 #include <array>
@@ -152,7 +156,7 @@ public:
     /// half being the ion energy transfer -- and in a cell model it is a
     /// penetration depth, exactly as the ion's is. Without it the film seals
     /// the wafer off completely: measured on the blanket, a 3 monolayer film
-    /// covering 61 of 68 columns left the SiF_x ladder unseeded and every
+    /// covering 61 of 68 columns left the SiF_x cascade unseeded and every
     /// silicon leaving through the single ion + P + SiO2 channel.
     /// 8 nm, not the 1.2 first guessed: sweeping it, the etch rate rises
     /// 28 -> 44 -> 49 -> 50 nm/min over 1.2, 3, 8, 20 nm and is flat beyond
@@ -435,13 +439,13 @@ private:
   bool thermAreal_ = false;
   bool siteCounts_ = false;
   std::vector<std::uint8_t> nF_, nO_;
-  /// LADDER -- the cell carries a chemical IDENTITY, not a coverage flag.
+  /// CASCADE -- the cell carries a chemical IDENTITY, not a coverage flag.
   ///
   /// nF_[id] is how many fluorine are bonded to this cell's silicon:
   ///     0 = Si      1 = SiF     2 = SiF2     3 = SiF3     4 = SiF4
   /// and Oxidised is SiO. A cell is ONE silicon atom, so the four F that
   /// 4F* + Si -> SiF4 needs are four arrivals at the SAME cell, and SiF4
-  /// leaves as a molecule. Nothing is ever taken back off: no rung is
+  /// leaves as a molecule. Nothing is ever taken back off: no step is
   /// reduced, no coverage is cleared, an ion takes the whole cell.
   ///
   /// This replaces theta entirely. There is no nu, no per-cell site budget
@@ -452,8 +456,8 @@ private:
   /// dx IS PINNED. The stoichiometry is four F per ATOM, so a cell must be
   /// one atom: rho*dx^D = 1, i.e. dx = rho^(-1/D) = 0.141139 nm in 2D at
   /// rho = 50.2/nm^3. A cell holding two atoms would still leave on four F
-  /// and etch twice too fast. checkLadderDx() reports the deviation.
-  /// SCALE THE LADDER'S REACTION BY THE AREA THE CELL REALLY CARRIES.
+  /// and etch twice too fast. checkCascadeDx() reports the deviation.
+  /// SCALE THE CASCADE'S REACTION BY THE AREA THE CELL REALLY CARRIES.
   ///
   /// A staircase presents more exposed FACE than the smooth surface it stands
   /// for, and an arrival-driven reaction collects in proportion to face, so it
@@ -469,22 +473,22 @@ private:
   /// facing the flux gets 1 and is untouched; the SIDE of a one-cell step gets
   /// almost nothing, which is right, because a step side carries no
   /// macroscopic area and the arrivals it swallows belong to the real surface.
-  bool ladderArea_ = false;
-  bool ladder_ = false;
-  static constexpr std::uint8_t kLadderMax = 32;
-  /// Rungs are 0..ladderTop_; an F arriving on ladderTop_ removes the cell.
-  /// n = ladderTop_+1 rungs. FOUR FLUORINE PER SILICON ATOM, so a cell holding
+  bool cascadeArea_ = false;
+  bool cascade_ = false;
+  static constexpr std::uint8_t kCascadeMax = 32;
+  /// Steps are 0..cascadeTop_; an F arriving on cascadeTop_ removes the cell.
+  /// n = cascadeTop_+1 steps. FOUR FLUORINE PER SILICON ATOM, so a cell holding
   /// rho*dx^D atoms needs n = 4*rho*dx^D of them -- that is the whole reason
-  /// the rung count is not fixed at 4. It is 4 only where a cell is one atom.
+  /// the step count is not fixed at 4. It is 4 only where a cell is one atom.
   ///
   /// Holding n proportional to the atom count keeps BOTH invariants while dx
   /// moves: the blanket rate (sum(1/p_i) = rho*dx^D * 29.714) and the
   /// effective sticking (sum p_i*theta_i = n/sum(1/p_i) = 0.13462, constant).
-  /// Rescaling only the last rung would hold the rate but let the sticking
+  /// Rescaling only the last step would hold the rate but let the sticking
   /// swing 4x, and trapping depends on sticking -- so that test measures the
   /// wrong thing.
-  std::uint8_t ladderTop_ = 3;
-  /// Per-rung probabilities: p[0] F on Si, p[1] on SiF, p[2] on SiF2, and
+  std::uint8_t cascadeTop_ = 3;
+  /// Per-step probabilities: p[0] F on Si, p[1] on SiF, p[2] on SiF2, and
   /// p[3] on SiF3, which leaves as SiF4 and takes the cell with it. An F that
   /// does not react reflects, so each p is both the sticking and the reaction
   /// probability -- the mechanism format's "stickingAppliedIn":
@@ -499,7 +503,7 @@ private:
   /// = 12.0671 nm/s, needs sum(1/p_i) = Gamma/(rho*v) = 29.714. Belen's
   /// s0 = 0.7 fixes p[0] and nothing constrains p[1] and p[2] independently,
   /// so with all three at 0.7, 1/p[3] = 29.714 - 3/0.7 and p[3] = 0.03933.
-  NumericType ladderP_[kLadderMax] = {0.7, 0.7, 0.7, 0.03933};
+  NumericType cascadeP_[kCascadeMax] = {0.7, 0.7, 0.7, 0.03933};
   /// FLUX-DRIVEN spontaneous etch: no coverage state at all.
   ///
   /// At steady state theta is slaved to the local flux,
@@ -648,7 +652,7 @@ private:
   NumericType armAfter_ = 0;
   /// OFF by default since 2026-09-26, with reemitPlane_ and reemitSkip_. Once
   /// ions removed only their own species, the three turned out to overcorrect
-  /// the ladder trench (one run each, area vs level set): all on -9.8 %, plane
+  /// the cascade trench (one run each, area vs level set): all on -9.8 %, plane
   /// acceptance off -4.8 %, all three off -5.4 % with the smoothest floor
   /// (sd 0.20 nm). The plane test waved ions through fluorinated cells
   /// (ion-enhanced 0.87x -> 0.93x). Every hit counts; re-emit from the cell.
@@ -673,6 +677,40 @@ private:
   /// more bounces; at s = 1 nothing re-emits and it does nothing, which is why
   /// the s = 1 arms already agreed to 0.4 %.
   bool reemitPlane_ = false;      ///< OFF: re-emit from the cell (see planeAccept_)
+  /// GPU TRANSPORT (setUseGPU, PMC_GPU in voxelCompare). The particles are
+  /// traced by ViennaRay's cell tracer (psVoxelPMCGPU.hpp, gpu/models/
+  /// VoxelPMC.cuh). Per step the surface band goes to the device with each
+  /// cell's state, built once per step as the CPU's embree band is. The
+  /// device makes the per-hit decisions this class makes in deliver(), keeps
+  /// the cell states live as reactions happen, and returns every reaction as
+  /// an event, which is applied here with the same bookkeeping. Cascade path
+  /// only; any option the device does not implement falls back to the CPU
+  /// (gpuSupported).
+  bool useGPU_ = false;
+  bool gpuWarned_ = false;
+  /// F, O and ion events whose site was no longer there when applied: two
+  /// rays that raced for one cell, or an ion on a cell another ion of the
+  /// same launch removed (the device leaves ion removal to the host)
+  size_t nGpuLost[3] = {0, 0, 0};
+  size_t nGpuGone = 0;      ///< hits on a cell removed earlier in the step
+  size_t nGpuSteps = 0;     ///< steps whose transport ran on the device
+  size_t nGpuBuried = 0;    ///< hits on a buried band cell, dropped
+  size_t nGpuNoNormal = 0;  ///< hits on a cell without an estimator normal
+  size_t nGpuOverflow = 0;  ///< events beyond the device buffer
+#ifdef VIENNACORE_COMPILE_GPU
+  std::unique_ptr<VoxelPMCGPU<NumericType, D>> gpu_;
+  typename VoxelPMCGPU<NumericType, D>::Band band_;
+  std::vector<int> bandOf_;
+  std::vector<int> gpuEventsF_, gpuEventsO_;
+  std::vector<float> gpuEventsIon_;
+  std::array<unsigned long long, VoxelPMCParamsGPU::numCounters> gpuCtr_{};
+  /// The plane fit at reflectRadius_ per cell, kept between steps: it only
+  /// changes where the geometry changed within the fit radius, and refitting
+  /// every band cell every step would cost more than the transport.
+  std::vector<std::array<float, 3>> fitCache_;
+  std::vector<unsigned char> fitValid_;
+  std::vector<NumericType> prevFill_;
+#endif
   /// STAIRCASE RE-CAPTURE, and the sticking correction that removes it.
   ///
   /// A sticking coefficient is not the same object in the two surface
@@ -974,11 +1012,11 @@ public:
   /// as though it had no oxide channel while the level set reported one,
   /// which is a reporting difference, not a physics difference.
   size_t remOx = 0;
-  /// LADDER counters. nLadAdv[k] counts advances OUT of rung k, so
-  /// nLadAdv[0] is Si -> SiF and nLadAdv[3] is SiF3 -> SiF4. In steady state
-  /// all four must be equal: the ladder is a chain, so every rung passes the
-  /// same current, and a split between them means a rung is leaking.
-  size_t nLadAdv[kLadderMax] = {0};   ///< last index is the removing arrival
+  /// CASCADE counters. nCasAdv[k] counts advances OUT of step k, so
+  /// nCasAdv[0] is Si -> SiF and nCasAdv[3] is SiF3 -> SiF4. In steady state
+  /// all four must be equal: the cascade is a chain, so every step passes the
+  /// same current, and a split between them means a step is leaking.
+  size_t nCasAdv[kCascadeMax] = {0};   ///< last index is the removing arrival
   /// F hopping (fHopR_ > 0): bonds placed on a neighbour, and on the hit cell
   /// DEFAULT 2 (user decision 2026-09-26): an adsorbing F bonds to a random
   /// exposed silicon within 2 cells. Blanket, one seed: -6.5 % -> -2.1 % vs the
@@ -1056,7 +1094,7 @@ public:
   /// cells of `at`, Chebyshev, ties uniform. The hit cell is always a candidate.
   std::array<int, D> fHopTarget(const std::array<int, D> &at) {
     std::array<int, D> best = at;
-    int bestRung = 1 << 30, seen = 0;
+    int bestStep = 1 << 30, seen = 0;
     const int R = fHopR_, w = 2 * R + 1;
     int span = 1;
     for (int d = 0; d < D; ++d) span *= w;
@@ -1077,8 +1115,8 @@ public:
         continue;
       }
       const int rk = nF_[id];
-      if (rk < bestRung) { bestRung = rk; best = nb; seen = 1; }
-      else if (rk == bestRung) { ++seen; if (uni() * seen < NumericType(1)) best = nb; }
+      if (rk < bestStep) { bestStep = rk; best = nb; seen = 1; }
+      else if (rk == bestStep) { ++seen; if (uni() * seen < NumericType(1)) best = nb; }
     }
     return best;
   }
@@ -1089,16 +1127,16 @@ public:
   size_t nSubRes = 0;         ///< re-hits refused as sub-resolution
   size_t nCornerKeep = 0;     ///< close re-hits KEPT, being a real corner
   size_t nSettleOntoBare = 0; ///< relocations that landed on bare silicon
-  size_t nLadDesorb = 0;      ///< SiF4 left, taking its cell
-  size_t nLadODesorb = 0;     ///< SiO -> Si, the oxide left and the Si stayed
-  size_t nLadFonO = 0;        ///< F reflected off SiO
-  size_t nLadFonSat = 0;      ///< F reflected off SiF4, no bond left to make
-  size_t nLadIonSi = 0, nLadIonF = 0, nLadIonO = 0;   ///< ion, by identity
+  size_t nCasDesorb = 0;      ///< SiF4 left, taking its cell
+  size_t nCasODesorb = 0;     ///< SiO -> Si, the oxide left and the Si stayed
+  size_t nCasFonO = 0;        ///< F reflected off SiO
+  size_t nCasFonSat = 0;      ///< F reflected off SiF4, no bond left to make
+  size_t nCasIonSi = 0, nCasIonF = 0, nCasIonO = 0;   ///< ion, by identity
   /// fluorocarbon tallies
   size_t nPolyGrown = 0, nPolySputter = 0, nPolyFEtch = 0, nPolyAct = 0;
   size_t nPolyWafer = 0;   ///< carbons the ion + P + SiO2 channel consumed
   /// Which channel took each silicon: ion chemical sputtering of SiF_x,
-  /// the F ladder's last step, and the ion + P + SiO2 interface reaction.
+  /// the F cascade's last step, and the ion + P + SiO2 interface reaction.
   size_t nSiIon = 0, nSiF = 0, nSiPolyWafer = 0;
   size_t nOxRemoved = 0, nOxPassivate = 0;   ///< CELLS, and passivation events
   /// The quantities the rate is actually computed from: reaction events, and
@@ -2118,12 +2156,12 @@ private:
         // coverage term: physical sputtering ejects oxidised material too.
         const bool chemical =
             removalTally_ == &remTh || removalTally_ == &remIE;
-        // NOT UNDER THE LADDER. There, an SiO cell is protected by the
+        // NOT UNDER THE CASCADE. There, an SiO cell is protected by the
         // chemistry itself -- fluorine reflects off it, so it never
         // fluorinates and never desorbs -- and the ONE channel that is meant
         // to clear it, yieldClearO, tallies as remIE. Blocking remIE on an
         // oxidised cell would make oxide permanent and every O* immortal.
-        const bool passivated = !ladder_ &&
+        const bool passivated = !cascade_ &&
             protectOxide_ && id >= 0 && state_[id] == Oxidised && chemical;
         const bool eligible = id >= 0 && solid(id) && !isMask(id) &&
                               isExposed(at) && !passivated &&
@@ -2135,13 +2173,13 @@ private:
         // removeAtoms CARRIES the credit instead of spending it on a cell that
         // should not have been available -- the continuum equivalent is that a
         // passivated point has rate ~0, so its atoms are never demanded at all.
-        // Also not under the ladder, and there it has no referent: the cap
+        // Also not under the cascade, and there it has no referent: the cap
         // exists because 1/(rho*dx^D) = 1.99 cells span one atom at dx = 0.1,
         // so the cell beneath an O* is the lower half of that same atom. The
-        // ladder pins rho*dx^D = 1, so a cell IS one atom and the cell below
+        // cascade pins rho*dx^D = 1, so a cell IS one atom and the cell below
         // it is a different atom.
         const bool shielded =
-            !ladder_ && eligible && chemical && underOxideCap(at);
+            !cascade_ && eligible && chemical && underOxideCap(at);
         if (shielded)
           ++nCapShield;
         if (eligible && !shielded) {
@@ -2325,16 +2363,16 @@ private:
       if (state_[id] != Bare) ++nSettleReset;
       state_[bid] = Bare;
       if (bid < (int)fIdx_.size()) fIdx_[bid] = 0;
-      if (siteCounts_ || ladder_) { nF_[bid] = 0; nO_[bid] = 0; }
+      if (siteCounts_ || cascade_) { nF_[bid] = 0; nO_[bid] = 0; }
     } else {
       state_[bid] = state_[id];
       if (bid < (int)fIdx_.size() && id < (int)fIdx_.size()) fIdx_[bid] = fIdx_[id];
-      if (siteCounts_ || ladder_) { nF_[bid] = nF_[id]; nO_[bid] = nO_[id]; }
+      if (siteCounts_ || cascade_) { nF_[bid] = nF_[id]; nO_[bid] = nO_[id]; }
     }
     (*fill_)[id] = NumericType(0);
     state_[id] = Bare;
     if (id < (int)fIdx_.size()) fIdx_[id] = 0;
-    if (siteCounts_ || ladder_) { nF_[id] = 0; nO_[id] = 0; }
+    if (siteCounts_ || cascade_) { nF_[id] = 0; nO_[id] = 0; }
     ++nSettled;
     return true;
   }
@@ -2393,16 +2431,16 @@ private:
       if (state_[id] != Bare) ++nSettleReset;
       state_[bid] = Bare;
       if (bid < (int)fIdx_.size()) fIdx_[bid] = 0;
-      if (siteCounts_ || ladder_) { nF_[bid] = 0; nO_[bid] = 0; }
+      if (siteCounts_ || cascade_) { nF_[bid] = 0; nO_[bid] = 0; }
     } else {
       state_[bid] = state_[id];
       if (bid < (int)fIdx_.size() && id < (int)fIdx_.size()) fIdx_[bid] = fIdx_[id];
-      if (siteCounts_ || ladder_) { nF_[bid] = nF_[id]; nO_[bid] = nO_[id]; }
+      if (siteCounts_ || cascade_) { nF_[bid] = nF_[id]; nO_[bid] = nO_[id]; }
     }
     (*fill_)[id] = NumericType(0);
     state_[id] = Bare;
     if (id < (int)fIdx_.size()) fIdx_[id] = 0;
-    if (siteCounts_ || ladder_) { nF_[id] = 0; nO_[id] = 0; }
+    if (siteCounts_ || cascade_) { nF_[id] = 0; nO_[id] = 0; }
     reach_[bid] = 1;
     ++nSettled; ++nSettledCluster;
     return true;
@@ -2518,7 +2556,7 @@ private:
     (*fill_)[id] = NumericType(0);
     state_[id] = Bare;
     if (id < (int)fIdx_.size()) fIdx_[id] = 0;
-    if (siteCounts_ || ladder_) { nF_[id] = 0; nO_[id] = 0; }
+    if (siteCounts_ || cascade_) { nF_[id] = 0; nO_[id] = 0; }
     ++removedCells_;
     q = 0;
     for (int d = 0; d < D; ++d)
@@ -2583,7 +2621,7 @@ private:
           state_[bid] = fresh ? Bare : carried;
           if (bid < (int)fIdx_.size())
             fIdx_[bid] = (state_[bid] == Fluorinated) ? 1 : 0;
-          if (siteCounts_ || ladder_) { nF_[bid] = 0; nO_[bid] = 0; }
+          if (siteCounts_ || cascade_) { nF_[bid] = 0; nO_[bid] = 0; }
           ++nBareReset;
         }
         ++q;
@@ -3219,6 +3257,24 @@ public:
   void setMaskReflect(bool on) { maskReflect_ = on; }
   void setCarryOn(bool on) { carryOn_ = on; }
   void setReemitPlane(bool on) { reemitPlane_ = on; }
+  /// Trace the particles on the GPU (see useGPU_).
+  void setUseGPU(bool on) {
+#ifdef VIENNACORE_COMPILE_GPU
+    useGPU_ = on;
+#else
+    if (on)
+      std::fprintf(stderr, "VoxelPMC: built without GPU support, tracing on "
+                           "the CPU\n");
+    useGPU_ = false;
+#endif
+  }
+  bool useGPU() const { return useGPU_; }
+  size_t gpuLost(int species) const { return nGpuLost[species]; }
+  size_t gpuGoneHits() const { return nGpuGone; }
+  size_t gpuSteps() const { return nGpuSteps; }
+  size_t gpuBuriedHits() const { return nGpuBuried; }
+  size_t gpuNoNormalHits() const { return nGpuNoNormal; }
+  size_t gpuOverflow() const { return nGpuOverflow; }
   void setRecapture(NumericType p) {
     recapture_ = p > NumericType(0) ? (p < NumericType(0.99) ? p
                                                             : NumericType(0.99))
@@ -3466,63 +3522,63 @@ public:
     siteCounts_ = on;
     if (on) { nF_.assign(state_.size(), 0); nO_.assign(state_.size(), 0); }
   }
-  void setLadderP(int rung, NumericType q) {
-    if (rung >= 0 && rung < kLadderMax) ladderP_[rung] = q;
+  void setCascadeP(int step, NumericType q) {
+    if (step >= 0 && step < kCascadeMax) cascadeP_[step] = q;
   }
-  int ladderN() const { return ladderTop_ + 1; }
-  /// Force the rung count. n = 1 is the LUMPED chemical etch: one F arriving
+  int cascadeN() const { return cascadeTop_ + 1; }
+  /// Force the step count. n = 1 is the LUMPED chemical etch: one F arriving
   /// on bare silicon removes the cell with p[0], which together with the
   /// passivant state and the two ion yields is exactly the four-reaction HAR
   /// mechanism -- R1 P + * -> P*, R2 F + Si -> SiF4 (blocked where P* sits,
   /// because F reflects off it), R3 ion + P* -> P, R4 ion + Si -> Si_s.
-  void setLadderN(int n) {
-    n = std::max(1, std::min<int>(kLadderMax, n));
-    ladderTop_ = static_cast<std::uint8_t>(n - 1);
+  void setCascadeN(int n) {
+    n = std::max(1, std::min<int>(kCascadeMax, n));
+    cascadeTop_ = static_cast<std::uint8_t>(n - 1);
   }
-  /// n = 4*rho*dx^D rungs, the first n-1 at s0 and the last set so that
+  /// n = 4*rho*dx^D steps, the first n-1 at s0 and the last set so that
   /// sum(1/p_i) = rho*dx^D * target. Both the blanket rate and the effective
   /// sticking then hold as dx moves.
-  void setLadderAuto(NumericType s0 = 0.7) {
+  void setCascadeAuto(NumericType s0 = 0.7) {
     const NumericType atoms = p_.rho * std::pow(delta(), D);
     int n = static_cast<int>(std::lround(4 * atoms));
-    n = std::max(1, std::min<int>(kLadderMax, n));
-    ladderTop_ = static_cast<std::uint8_t>(n - 1);
-    const NumericType want = atoms * ladderHarmonicTarget();
-    for (int k = 0; k < n - 1; ++k) ladderP_[k] = s0;
+    n = std::max(1, std::min<int>(kCascadeMax, n));
+    cascadeTop_ = static_cast<std::uint8_t>(n - 1);
+    const NumericType want = atoms * cascadeHarmonicTarget();
+    for (int k = 0; k < n - 1; ++k) cascadeP_[k] = s0;
     const NumericType restInv = want - (n - 1) / s0;
-    ladderP_[n - 1] = restInv > NumericType(0) ? 1 / restInv : NumericType(1);
+    cascadeP_[n - 1] = restInv > NumericType(0) ? 1 / restInv : NumericType(1);
   }
-  NumericType ladderP(int rung) const { return ladderP_[rung]; }
+  NumericType cascadeP(int step) const { return cascadeP_[step]; }
   /// sum(1/p_i), the only combination of the four the blanket rate sees
-  NumericType ladderHarmonic() const {
+  NumericType cascadeHarmonic() const {
     NumericType h = 0;
-    for (int k = 0; k <= ladderTop_; ++k)
-      h += ladderP_[k] > NumericType(0) ? 1 / ladderP_[k] : NumericType(0);
+    for (int k = 0; k <= cascadeTop_; ++k)
+      h += cascadeP_[k] > NumericType(0) ? 1 / cascadeP_[k] : NumericType(0);
     return h;
   }
   /// the sum(1/p_i) that reproduces the reference k_sigma blanket
-  NumericType ladderHarmonicTarget() const {
+  NumericType cascadeHarmonicTarget() const {
     const NumericType a = p_.fluxF * p_.stickF;
     const NumericType th = a / (a + 4 * p_.kSigma);
     const NumericType v = p_.kSigma * th * p_.sigma0 / p_.rho;
     return v > NumericType(0) ? p_.fluxF * p_.sigma0 / (p_.rho * v)
                               : NumericType(0);
   }
-  void setLadderArea(bool on) { ladderArea_ = on; }
-  void setLadder(bool on) {
-    ladder_ = on;
-    // nO_ is unused by the ladder -- oxidation is the Oxidised STATE, not a
+  void setCascadeArea(bool on) { cascadeArea_ = on; }
+  void setCascade(bool on) {
+    cascade_ = on;
+    // nO_ is unused by the cascade -- oxidation is the Oxidised STATE, not a
     // count -- but the cell-relocation paths move nF_ and nO_ together, so it
     // must exist or those writes run off the end.
     if (on) { nF_.assign(state_.size(), 0); nO_.assign(state_.size(), 0); }
   }
-  bool ladder() const { return ladder_; }
-  /// per-cell bonded-fluorine count, 0..4 -- the ladder's identity field
+  bool cascade() const { return cascade_; }
+  /// per-cell bonded-fluorine count, 0..4 -- the cascade's identity field
   const std::vector<std::uint8_t> &fluorCount() const { return nF_; }
   /// Exposed cells by identity: [0..4] = Si, SiF, SiF2, SiF3, SiF4, [5] = SiO.
   /// This IS the coverage, counted rather than solved.
-  std::vector<size_t> ladderCensus() const {
-    std::vector<size_t> c(static_cast<size_t>(ladderTop_) + 2, 0);
+  std::vector<size_t> cascadeCensus() const {
+    std::vector<size_t> c(static_cast<size_t>(cascadeTop_) + 2, 0);
     const auto &dims = lattice_->dims();
     size_t n = 1;
     for (int d = 0; d < D; ++d) n *= static_cast<size_t>(dims[d]);
@@ -3537,22 +3593,22 @@ public:
       const int id = lattice_->cellId(idx);
       if (id < 0) continue;
       if (state_[id] == Oxidised) ++c.back();
-      else ++c[nF_[id] <= ladderTop_ ? nF_[id] : ladderTop_];
+      else ++c[nF_[id] <= cascadeTop_ ? nF_[id] : cascadeTop_];
     }
     return c;
   }
-  /// atoms per cell. The ladder is only self-consistent at 1.
+  /// atoms per cell. The cascade is only self-consistent at 1.
   NumericType atomsPerCellNow() const {
     return p_.rho * std::pow(delta(), D);
   }
-  /// The blanket rate this ladder predicts, in nm/s, from the chain alone:
-  /// four rungs at s0 and a top rung leaving at nu*k_sigma give
+  /// The blanket rate this cascade predicts, in nm/s, from the chain alone:
+  /// four steps at s0 and a top step leaving at nu*k_sigma give
   ///     R = a*L/(4L + a),   a = s0*fluxF*nu,   L = nu*k_sigma
   /// cells per cell per second, and one cell is dx of depth. Compare with
   /// k_sigma*sigma0*theta_F/rho, the continuum's own blanket -- the two agree
   /// exactly when rho*dx^D = 1.
-  NumericType ladderBlanketRate() const {
-    const NumericType h = ladderHarmonic();
+  NumericType cascadeBlanketRate() const {
+    const NumericType h = cascadeHarmonic();
     return h > NumericType(0) ? p_.fluxF * p_.sigma0 / (p_.rho * h)
                               : NumericType(0);
   }
@@ -3616,11 +3672,11 @@ public:
         continue;
       const int id = lattice_->cellId(idx);
       ++n;
-      if (ladder_) {
-        // theta_F's counterpart is the TOP RUNG, the silicon already carrying
+      if (cascade_) {
+        // theta_F's counterpart is the TOP STEP, the silicon already carrying
         // a full complement of fluorine and waiting to leave -- not the mean
         // bond count. See the sweep in step(): n4 reproduces Belen's theta_F.
-        if (nF_[id] >= ladderTop_) ++nF;
+        if (nF_[id] >= cascadeTop_) ++nF;
         else if (state_[id] == Oxidised) ++nO;
       } else if (siteCounts_) {
         const NumericType nu = nuScalar();
@@ -4340,6 +4396,393 @@ public:
     }
   }
 
+#ifdef VIENNACORE_COMPILE_GPU
+  /// What the device programs implement: the cascade path with its agreed
+  /// defaults. Anything else runs on the CPU, with one notice.
+  bool gpuSupported() {
+    const bool ok = cascade_ && !deposit_ && !fluorocarbon_ && !cascadeArea_ &&
+                    recapture_ <= NumericType(0) && !planeAccept_ &&
+                    !reemitPlane_ && !reemitSkip_ && !facetPlane_ &&
+                    !uniformReemit_ && !tallyOnly_ && !fluxProbe_ &&
+                    !hitTally_ && reemit_ && ionReflect_ && ionNormR_ <= 1 &&
+                    ionSameIdentity_ && !freeze_ && smoothSupport_ <= 0 &&
+                    !oxideOpaque_;
+    if (!ok && !gpuWarned_) {
+      std::fprintf(stderr, "VoxelPMC: an option the GPU transport does not "
+                           "implement is set, tracing on the CPU\n");
+      gpuWarned_ = true;
+    }
+    return ok;
+  }
+
+  /// The surface band for the device, the same cells as the CPU's embree band
+  /// (csVoxelEmbreeTraversal::build): every solid cell with an opening
+  /// anywhere in its 3^D neighbourhood, the mask included. A band cell with no
+  /// gas face is buried; the CPU drops a ray that lands in one, and so does
+  /// the device. Per cell, what the per-hit decisions read: state and cascade
+  /// step at the start of the step, the estimator's normal (re-emission), the
+  /// plane fit at reflectRadius_ (re-hit rule, ion reflection), the restart
+  /// distance of reemitFrom, and the spreading candidates of hopSite.
+  void buildBand() {
+    auto &b = band_;
+    b.clear();
+    const auto &dims = lattice_->dims();
+    const auto &lo = lattice_->minCorner();
+    size_t sites = 1;
+    for (int d = 0; d < D; ++d)
+      sites *= static_cast<size_t>(dims[d]);
+    if (bandOf_.size() != sites)
+      bandOf_.assign(sites, -1);
+    // invalidate the cached plane fits within the fit radius of every cell
+    // whose fill changed since the last step
+    if (fitCache_.size() != fill_->size() || prevFill_.size() != fill_->size()) {
+      fitCache_.assign(fill_->size(), {0.f, 0.f, 0.f});
+      fitValid_.assign(fill_->size(), 0);
+      prevFill_ = *fill_;
+    } else {
+      const int Rf = reflectRadius_ + 1;
+      for (size_t flat = 0; flat < sites; ++flat) {
+        std::array<int, D> idx{};
+        size_t rem = flat;
+        for (int d = 0; d < D; ++d) {
+          idx[d] = static_cast<int>(rem % static_cast<size_t>(dims[d]));
+          rem /= static_cast<size_t>(dims[d]);
+        }
+        const int id = lattice_->cellId(idx);
+        if (id < 0 || (*fill_)[id] == prevFill_[id])
+          continue;
+        prevFill_[id] = (*fill_)[id];
+        const int w = 2 * Rf + 1;
+        int span = 1;
+        for (int d = 0; d < D; ++d)
+          span *= w;
+        for (int t = 0; t < span; ++t) {
+          auto nb = idx;
+          int r2 = t;
+          for (int d = 0; d < D; ++d) {
+            nb[d] += r2 % w - Rf;
+            r2 /= w;
+          }
+          const int nid = lattice_->cellId(nb);
+          if (nid >= 0)
+            fitValid_[nid] = 0;
+        }
+      }
+    }
+    std::vector<size_t> flats;
+    int span3 = 1;
+    for (int d = 0; d < D; ++d)
+      span3 *= 3;
+    for (size_t flat = 0; flat < sites; ++flat) {
+      std::array<int, D> idx{};
+      size_t rem = flat;
+      for (int d = 0; d < D; ++d) {
+        idx[d] = static_cast<int>(rem % static_cast<size_t>(dims[d]));
+        rem /= static_cast<size_t>(dims[d]);
+      }
+      const int id = lattice_->cellId(idx);
+      if (id < 0 || !solid(id))
+        continue;
+      const bool exposed = isExposed(idx);
+      if (!exposed) {
+        // the embree band's test: an opening among the 3^D neighbours,
+        // beyond the lattice the material continues
+        bool open = false;
+        for (int t = 0; t < span3 && !open; ++t) {
+          if (t == span3 / 2)
+            continue;
+          auto nb = idx;
+          int r3 = t;
+          bool inside = true;
+          for (int d = 0; d < D; ++d) {
+            nb[d] += r3 % 3 - 1;
+            r3 /= 3;
+            if (nb[d] < 0 || nb[d] >= dims[d])
+              inside = false;
+          }
+          if (!inside)
+            continue;
+          const int nid = lattice_->cellId(nb);
+          if (nid < 0 || (*fill_)[nid] < NumericType(1))
+            open = true;
+        }
+        if (!open)
+          continue;
+      }
+      bandOf_[flat] = static_cast<int>(b.idx.size());
+      flats.push_back(flat);
+      b.idx.push_back(idx);
+      Vec3Df mp{0.f, 0.f, 0.f};
+      for (int d = 0; d < D; ++d)
+        mp[d] = static_cast<float>(lo[d] + delta() * static_cast<NumericType>(idx[d]));
+      b.minPoints.push_back(mp);
+      const auto nn = interaction_.normalAt(idx);
+      NumericType l = 0;
+      for (int d = 0; d < D; ++d)
+        l += nn[d] * nn[d];
+      Vec3Df nf{0.f, 0.f, 0.f};
+      if (l > NumericType(1e-12)) {
+        l = std::sqrt(l);
+        for (int d = 0; d < D; ++d)
+          nf[d] = static_cast<float>(nn[d] / l);
+      } else {
+        nf[D - 1] = 1.f; // the CPU takes the entered face here; counted
+      }
+      b.normals.push_back(nf);
+      b.normalValid.push_back(l > NumericType(1e-12) ? 1 : 0);
+      b.state.push_back(!exposed     ? static_cast<int>(pmcBuried)
+                        : isMask(id) ? static_cast<int>(pmcMask)
+                                     : static_cast<int>(state_[id]));
+      b.step.push_back(id < static_cast<int>(nF_.size()) ? nF_[id] : 0);
+      if (!exposed) {
+        // a ray that lands here is dropped: nothing else is read
+        for (int k = 0; k < 3; ++k)
+          b.fitNormal.push_back(0.f);
+        b.walkOut.push_back(-1.f);
+        continue;
+      }
+      if (!fitValid_[id]) {
+        const auto fn = interaction_.fitNormalAt(idx, reflectRadius_);
+        for (int k = 0; k < 3; ++k)
+          fitCache_[id][k] = k < D ? static_cast<float>(fn[k]) : 0.f;
+        fitValid_[id] = 1;
+      }
+      for (int k = 0; k < 3; ++k)
+        b.fitNormal.push_back(fitCache_[id][k]);
+      // reemitFrom: out along the normal's steepest axis until gas
+      int axis = 0;
+      float steepest = 0.f;
+      for (int d = 0; d < D; ++d)
+        if (std::abs(nf[d]) > steepest) {
+          steepest = std::abs(nf[d]);
+          axis = d;
+        }
+      const int outward = nf[axis] > 0.f ? 1 : -1;
+      int clear = 0;
+      bool escaped = false;
+      auto probe = idx;
+      for (int s = 0; s < 8; ++s) {
+        probe[axis] += outward;
+        ++clear;
+        const int nid = lattice_->cellId(probe);
+        if (nid < 0 || (*fill_)[nid] <= NumericType(1e-9)) {
+          escaped = true;
+          break;
+        }
+      }
+      b.walkOut.push_back(
+          escaped ? static_cast<float>(delta() * (static_cast<NumericType>(clear) +
+                                                  NumericType(1e-3)))
+                  : -1.f);
+    }
+    // the spreading candidates: exposed, non-mask cells within fHopR_
+    b.hopStart.assign(1, 0);
+    const int R = fHopR_;
+    for (size_t k = 0; k < b.idx.size(); ++k) {
+      if (R > 0) {
+        const int w = 2 * R + 1;
+        int span = 1;
+        for (int d = 0; d < D; ++d)
+          span *= w;
+        for (int t = 0; t < span; ++t) {
+          auto nb = b.idx[k];
+          int rem = t, cheb = 0;
+          for (int d = 0; d < D; ++d) {
+            const int o = rem % w - R;
+            nb[d] += o;
+            rem /= w;
+            cheb = std::max(cheb, std::abs(o));
+          }
+          bool inside = true;
+          size_t f2 = 0, stride = 1;
+          for (int d = 0; d < D; ++d) {
+            if (nb[d] < 0 || nb[d] >= dims[d]) {
+              inside = false;
+              break;
+            }
+            f2 += static_cast<size_t>(nb[d]) * stride;
+            stride *= static_cast<size_t>(dims[d]);
+          }
+          if (!inside)
+            continue;
+          const int bb = bandOf_[f2];
+          if (bb < 0 || b.state[bb] == pmcMask || b.state[bb] == pmcBuried)
+            continue;
+          b.hopList.push_back(bb);
+          b.hopCheb.push_back(static_cast<unsigned char>(cheb));
+        }
+      }
+      b.hopStart.push_back(static_cast<int>(b.hopList.size()));
+    }
+    for (const auto f : flats)
+      bandOf_[f] = -1;
+  }
+
+  /// The three species of one step on the GPU in deliver()'s order, F, O and
+  /// the ions, with each one's events applied in the order the device
+  /// recorded them. The device's states already hold every reaction, so
+  /// each species sees what the ones before it left.
+  void gpuDeliver(NumericType dt, NumericType area, NumericType atomsPerCell) {
+    if (!gpu_) {
+      gpu_ = std::make_unique<VoxelPMCGPU<NumericType, D>>(
+          DeviceContext::createContext(),
+          static_cast<float>(p_.cosinePowerNeutral),
+          static_cast<float>(p_.cosinePowerIon));
+      gpu_->setMaxSideMirrors(kMaxSideBounce);
+      auto &g = gpu_->params();
+      g.hopR = fHopR_;
+      g.hopWeighted = hopW_[0] > NumericType(0) ? 1 : 0;
+      for (int k = 0; k < 3; ++k)
+        g.hopW[k] = static_cast<float>(hopW_[k]);
+      g.fHop = fHopR_ > 0 ? 1 : 0;
+      g.oHop = oHop_ ? 1 : 0;
+      g.cascadeTop = cascadeTop_;
+      for (int k = 0; k < kCascadeMax && k < VoxelPMCParamsGPU::maxSteps; ++k)
+        g.cascadeP[k] = static_cast<float>(stickCorrected(cascadeP_[k]));
+      g.stickO = static_cast<float>(stickCorrected(p_.stickO));
+      g.sameFacet = sameFacet_ ? 1 : 0;
+      g.sameFacetCells = sameFacetCells_;
+      g.cosLim = static_cast<float>(
+          std::cos(sameFacetAngle_ * NumericType(M_PI) / 180));
+      g.maxBounce = kMaxBounce;
+      constexpr NumericType toRad = NumericType(M_PI) / 180;
+      g.meanEnergy = static_cast<float>(p_.meanEnergy);
+      g.sigmaEnergy = static_cast<float>(p_.sigmaEnergy);
+      g.inflectAngle = static_cast<float>(p_.inflectAngle * toRad);
+      g.n_l = static_cast<float>(p_.n_l);
+      g.minAngle = static_cast<float>(p_.minAngle * toRad);
+      g.thetaRMin = static_cast<float>(p_.thetaRMin * toRad);
+      g.thetaRMax = static_cast<float>(p_.thetaRMax * toRad);
+      g.minEth = static_cast<float>(std::min(p_.Eth_p, std::min(p_.Eth_sp, p_.Eth_ie)));
+    }
+    // how many arrive in dt, as deliver() draws them
+    auto count = [&](NumericType flux) -> size_t {
+      const NumericType expected = flux * p_.sigma0 * area * dt;
+      std::poisson_distribution<long long> pois(
+          static_cast<double>(std::max(NumericType(0), expected)));
+      return static_cast<size_t>(pois(rng_));
+    };
+    const size_t nF = count(p_.fluxF);
+    const size_t nO = count(p_.fluxO);
+    const size_t nI = count(p_.fluxIon * ionWeight_);
+    nLaunch += nF + nO;
+
+    buildBand();
+    std::array<int, D> dims{};
+    std::array<NumericType, D> lo{};
+    for (int d = 0; d < D; ++d) {
+      dims[d] = lattice_->dims()[d];
+      lo[d] = lattice_->minCorner()[d];
+    }
+    gpu_->prepare(band_, dims, lo, delta());
+    gpuCtr_.fill(0ull);
+    std::uniform_int_distribution<unsigned int> seed;
+    gpu_->traceNeutral(0, nF, seed(rng_), gpuEventsF_, gpuCtr_);
+    gpu_->traceNeutral(1, nO, seed(rng_), gpuEventsO_, gpuCtr_);
+    gpu_->traceIon(nI, seed(rng_), gpuEventsIon_, gpuCtr_);
+
+    // F: one cascade step on the reaction site, or SiF4 from the top one
+    for (const int bi : gpuEventsF_) {
+      const auto &site = band_.idx[bi];
+      const int sid = lattice_->cellId(site);
+      if (sid < 0 || !solid(sid) || isMask(sid) || state_[sid] == Oxidised) {
+        ++nGpuLost[0];
+        continue;
+      }
+      const bool topSite = gasAbove(site);
+      ++(topSite ? nFbondTop : nFbondSide);
+      if (nF_[sid] >= cascadeTop_) {
+        ++(topSite ? nSiF4Top : nSiF4Side);
+        ++nCasAdv[cascadeTop_];
+        removalTally_ = &remTh;
+        if (removeAtoms(site, atomsPerCell))
+          ++nCasDesorb;
+      } else {
+        ++nCasAdv[nF_[sid]];
+        ++nF_[sid];
+        state_[sid] = Fluorinated;
+      }
+      ++nAdsF;
+    }
+    // O: SiO on bare silicon
+    for (const int bi : gpuEventsO_) {
+      const auto &site = band_.idx[bi];
+      const int sid = lattice_->cellId(site);
+      if (sid < 0 || !solid(sid) || isMask(sid) || state_[sid] != Bare) {
+        ++nGpuLost[1];
+        continue;
+      }
+      state_[sid] = Oxidised;
+      ++nAdsO;
+    }
+    // the ions: spread to the reaction site, the yield of its identity, and
+    // cells of that identity removed -- the cascade path of the ion's own
+    for (size_t e = 0; e + 3 < gpuEventsIon_.size(); e += 4) {
+      const int bi = static_cast<int>(gpuEventsIon_[e]);
+      const NumericType E = gpuEventsIon_[e + 1];
+      const NumericType cosT = gpuEventsIon_[e + 2];
+      const auto &hitIdx = band_.idx[bi];
+      const int id = lattice_->cellId(hitIdx);
+      if (id < 0 || !solid(id) || isMask(id)) {
+        ++nGpuLost[2];
+        continue;
+      }
+      ++nIons;
+      std::array<int, D> rat = hitIdx;
+      int rid = id;
+      if (ionHop_ && fHopR_ > 0) {
+        rat = hopSite(hitIdx);
+        rid = lattice_->cellId(rat);
+        if (rid != id) ++nIonHop; else ++nIonHopStay;
+      }
+      const bool isOx = state_[rid] == Oxidised;
+      const bool isF = state_[rid] == Fluorinated;
+      const NumericType Y = isOx ? yieldClearO(E, cosT)
+                           : isF ? yieldEnhanced(E, cosT)
+                                 : yieldSputter(E, cosT);
+      if (isOx)     ++nCasIonO;
+      else if (isF) ++nCasIonF;
+      else          ++nCasIonSi;
+      removalTally_ = isOx ? &remOx : isF ? &remIE : &remSp;
+      const int want = drawCount(Y / (ionWeight_ * atomsPerCell));
+      atomsOwed += want * p_.rho * std::pow(delta(), D);
+      if (want > 0) {
+        ionOnly_ = static_cast<int>(state_[rid]);
+        removeCellAt(rat);
+        ++nIonHitTaken;
+        if (removalTally_ == &remIE)      { ++dxIE[0]; ++nDxIE; }
+        else if (removalTally_ == &remSp) { ++dxSp[0]; ++nDxSp; }
+        for (int c = 1; c < want; ++c)
+          if (!removeNearby(rat, damageRadius(Y / ionWeight_))) {
+            nIonShort += static_cast<size_t>(want - c);
+            break;
+          }
+        ionOnly_ = -1;
+      }
+    }
+
+    nHitN += gpuCtr_[pmcHits];
+    nSubRes += gpuCtr_[pmcRefused];
+    nCornerKeep += gpuCtr_[pmcCornerKeep];
+    nMaskReflect += gpuCtr_[pmcMaskReflect];
+    nFarr += gpuCtr_[pmcFArrivals];
+    nCasFonO += gpuCtr_[pmcFonO];
+    nStickFail += gpuCtr_[pmcStickFail];
+    nOHitBare += gpuCtr_[pmcOBare];
+    nOHitOccupied += gpuCtr_[pmcOOccupied];
+    nFHop += gpuCtr_[pmcHopMoved];
+    nFHopStay += gpuCtr_[pmcHopStay];
+    nBounceCap += gpuCtr_[pmcBounceCap];
+    nBounceFail += gpuCtr_[pmcNoEscape];
+    nIonBounce += gpuCtr_[pmcIonBounce];
+    nGpuOverflow += gpuCtr_[pmcOverflow];
+    nGpuGone += gpuCtr_[pmcGoneHit];
+    nGpuBuried += gpuCtr_[pmcBuriedHit];
+    nGpuNoNormal += gpuCtr_[pmcNoNormalHit];
+    ++nGpuSteps;
+  }
+#endif
+
   /// One step of `dt`: deliver the particles that arrive in that time, then
   /// fire the thermal events that occur in it.
   void step(NumericType dt) {
@@ -4445,7 +4888,7 @@ public:
                 break;
               }
               // otherwise it reflects, handled by the re-emission below
-            } else if (ladder_) {
+            } else if (cascade_) {
               // ONE ARRIVAL, ONE BOND. The cell's identity decides what can
               // happen to it, so no site test and no nu appear here: the
               // arrival RATE per cell is already areal, because it is a ray
@@ -4479,7 +4922,7 @@ public:
                   }
                   ++nStickFail;
                 } else {
-                  // R2 takes BARE silicon only. A fluorinated rung has no
+                  // R2 takes BARE silicon only. A fluorinated step has no
                   // bare Si to oxidise and an SiO is already oxidised.
                   ++nOHitOccupied;
                 }
@@ -4492,21 +4935,21 @@ public:
                   const auto site = hopSite(h.index);
                   const int sid = lattice_->cellId(site);
                   if (state_[sid] == Oxidised) {
-                    ++nLadFonO;                 // F does not touch SiO
+                    ++nCasFonO;                 // F does not touch SiO
                   } else {
-                    const int rk = std::min<int>(nF_[sid], ladderTop_);
-                    if (uni() < stickCorrected(ladderP_[rk]) *
-                                    (ladderArea_ ? areaFactor(site) : NumericType(1))) {
+                    const int rk = std::min<int>(nF_[sid], cascadeTop_);
+                    if (uni() < stickCorrected(cascadeP_[rk]) *
+                                    (cascadeArea_ ? areaFactor(site) : NumericType(1))) {
                       if (sid != hid) ++nFHop; else ++nFHopStay;
                       const bool topSite = gasAbove(site);
                       ++(topSite ? nFbondTop : nFbondSide);
-                      if (nF_[sid] >= ladderTop_) {
+                      if (nF_[sid] >= cascadeTop_) {
                         ++(topSite ? nSiF4Top : nSiF4Side);
-                        ++nLadAdv[ladderTop_];
+                        ++nCasAdv[cascadeTop_];
                         removalTally_ = &remTh;
-                        if (removeAtoms(site, atomsPerCell)) ++nLadDesorb;
+                        if (removeAtoms(site, atomsPerCell)) ++nCasDesorb;
                       } else {
-                        ++nLadAdv[nF_[sid]];
+                        ++nCasAdv[nF_[sid]];
                         ++nF_[sid];
                         state_[sid] = Fluorinated;
                       }
@@ -4516,7 +4959,7 @@ public:
                     ++nStickFail;
                   }
                 } else if (state_[hid] == Oxidised) {
-                  ++nLadFonO;                   // F does not touch SiO
+                  ++nCasFonO;                   // F does not touch SiO
                 } else if (false && fHopR_ > 0) {
                   // F SPREADS BEFORE IT BONDS. The sticking draw is the hit
                   // cell's; the bond goes to a random exposed silicon within
@@ -4526,18 +4969,18 @@ public:
                   // bare -- the step survival rose 0.35 -> 0.40 -> 0.43 against
                   // the level set's flat 0.32 -- which a continuum surface point,
                   // mixed over its own area, cannot do.
-                  const int rk = std::min<int>(nF_[hid], ladderTop_);
-                  if (uni() < stickCorrected(ladderP_[rk]) *
-                                  (ladderArea_ ? areaFactor(h.index) : NumericType(1))) {
+                  const int rk = std::min<int>(nF_[hid], cascadeTop_);
+                  if (uni() < stickCorrected(cascadeP_[rk]) *
+                                  (cascadeArea_ ? areaFactor(h.index) : NumericType(1))) {
                     const auto tgt = fHopTarget(h.index);
                     const int tid = lattice_->cellId(tgt);
                     if (tid != hid) ++nFHop; else ++nFHopStay;
-                    if (nF_[tid] >= ladderTop_) {
-                      ++nLadAdv[ladderTop_];
+                    if (nF_[tid] >= cascadeTop_) {
+                      ++nCasAdv[cascadeTop_];
                       removalTally_ = &remTh;
-                      if (removeAtoms(tgt, atomsPerCell)) ++nLadDesorb;
+                      if (removeAtoms(tgt, atomsPerCell)) ++nCasDesorb;
                     } else {
-                      ++nLadAdv[nF_[tid]];
+                      ++nCasAdv[nF_[tid]];
                       ++nF_[tid];
                       state_[tid] = Fluorinated;
                     }
@@ -4545,26 +4988,26 @@ public:
                     break;                      // consumed into the bond
                   }
                   ++nStickFail;
-                } else if (nF_[hid] >= ladderTop_) {
+                } else if (nF_[hid] >= cascadeTop_) {
                   // SiF3: this F completes SiF4, which leaves and takes the
                   // silicon with it. ARRIVAL driven -- there is no timed
-                  // desorption anywhere in the ladder.
+                  // desorption anywhere in the cascade.
                   const NumericType aw =
-                      ladderArea_ ? areaFactor(h.index) : NumericType(1);
-                  if (uni() < stickCorrected(ladderP_[ladderTop_]) * aw) {
-                    ++nLadAdv[ladderTop_];
+                      cascadeArea_ ? areaFactor(h.index) : NumericType(1);
+                  if (uni() < stickCorrected(cascadeP_[cascadeTop_]) * aw) {
+                    ++nCasAdv[cascadeTop_];
                     removalTally_ = &remTh;
-                    if (removeAtoms(h.index, atomsPerCell)) ++nLadDesorb;
+                    if (removeAtoms(h.index, atomsPerCell)) ++nCasDesorb;
                     ++nAdsF;
                     break;
                   }
-                  ++nLadFonSat;                 // did not complete; reflects
-                } else if (uni() < stickCorrected(ladderP_[nF_[hid]]) *
-                                       (ladderArea_ ? areaFactor(h.index)
+                  ++nCasFonSat;                 // did not complete; reflects
+                } else if (uni() < stickCorrected(cascadeP_[nF_[hid]]) *
+                                       (cascadeArea_ ? areaFactor(h.index)
                                                     : NumericType(1))) {
-                  ++nLadAdv[nF_[hid]];
+                  ++nCasAdv[nF_[hid]];
                   ++nF_[hid];
-                  state_[hid] = Fluorinated;    // rung >= 1
+                  state_[hid] = Fluorinated;    // step >= 1
                   ++nAdsF;
                   break;                        // consumed into the bond
                 } else {
@@ -4964,17 +5407,17 @@ public:
             }
             ++histHit[h.index[0]];
             if (uni() < fFrac(id)) ++histOnF[h.index[0]];
-            if (ladder_) {
+            if (cascade_) {
               // ONE IDENTITY, ONE YIELD. Belen weights his three yields by
               // theta_F and theta_O; here those are not probabilities, they
               // are what the cell IS, so the identity selects the yield and
-              // the ion takes the cell whatever rung it had. Nothing is
-              // stripped off a neighbour -- there is no rung to reduce and no
+              // the ion takes the cell whatever step it had. Nothing is
+              // stripped off a neighbour -- there is no step to reduce and no
               // site to clear, so the cascade sweep has no counterpart.
               //
               // The yield scaling is left EXACTLY as the flag model has it
               // (full Y, no ionWeight_ division on this path) so that turning
-              // the ladder on changes the chemistry and not the ion dose.
+              // the cascade on changes the chemistry and not the ion dose.
               // ION HOP (ionHop_): the ion reacts on a cell of its collision
               // cascade -- the same neighbourhood and weights as the neutrals --
               // and that cell's state picks the channel and is what goes.
@@ -4990,9 +5433,9 @@ public:
               const NumericType Y = isOx ? yieldClearO(E, cosT)
                                    : isF ? yieldEnhanced(E, cosT)
                                          : yieldSputter(E, cosT);
-              if (isOx)     ++nLadIonO;
-              else if (isF) ++nLadIonF;
-              else          ++nLadIonSi;
+              if (isOx)     ++nCasIonO;
+              else if (isF) ++nCasIonF;
+              else          ++nCasIonSi;
               removalTally_ = isOx ? &remOx : isF ? &remIE : &remSp;
               if (!tallyOnly_) {
                 const int want = drawCount(Y / (ionWeight_ * atomsPerCell));
@@ -5005,7 +5448,7 @@ public:
                   // the SAME identity in the footprint, and when there are
                   // none the rest is not taken. Picking any exposed cell let an
                   // ion-enhanced event remove bare Si and SiO and leave the
-                  // fluorinated cell it hit to finish its ladder as SiF4.
+                  // fluorinated cell it hit to finish its cascade as SiF4.
                   atomsOwed += want * p_.rho * std::pow(delta(), D);
                   if (want > 0) {
                     ionOnly_ = static_cast<int>(state_[rid]);
@@ -5142,17 +5585,24 @@ public:
       deliver(p_.fluxF, p_.cosinePowerNeutral, false, Fluorinated, depP_);
       return;
     }
-    deliver(p_.fluxF, p_.cosinePowerNeutral, false, Fluorinated,
-            stickCorrected(p_.stickF));
-    deliver(p_.fluxO, p_.cosinePowerNeutral, false, Oxidised,
-            stickCorrected(p_.stickO));
-    deliver(p_.fluxIon * ionWeight_, p_.cosinePowerIon, true, Bare, 0);
+#ifdef VIENNACORE_COMPILE_GPU
+    if (useGPU_ && gpuSupported()) {
+      gpuDeliver(dt, area, atomsPerCell);
+    } else
+#endif
+    {
+      deliver(p_.fluxF, p_.cosinePowerNeutral, false, Fluorinated,
+              stickCorrected(p_.stickF));
+      deliver(p_.fluxO, p_.cosinePowerNeutral, false, Oxidised,
+              stickCorrected(p_.stickO));
+      deliver(p_.fluxIon * ionWeight_, p_.cosinePowerIon, true, Bare, 0);
+    }
 
-    if (ladder_) {
+    if (cascade_) {
       // ---- the only event that fires with TIME, not with an arrival.
       //
       // SiO goes back to bare silicon at beta_sigma -- Belen's O* loss. It is
-      // the oxide leaving, not a rung being reduced: the silicon stays and the
+      // the oxide leaving, not a step being reduced: the silicon stays and the
       // cell survives. The fluorine chain has no timed step at all; SiF4
       // leaves on the fourth ARRIVAL, inside the ray loop.
       const NumericType nuL = p_.sigma0 * std::pow(delta(), D - 1);
@@ -5174,7 +5624,7 @@ public:
         const NumericType w = areaFactor(lidx);
         if (uni() < 1 - std::exp(-nuL * w * p_.betaSigma * dt)) {
           state_[id] = Bare;
-          ++nLadODesorb;
+          ++nCasODesorb;
         }
       }
       if (settle_ && !freeze_)

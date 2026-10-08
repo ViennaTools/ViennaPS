@@ -24,6 +24,8 @@ viennacore_add_optixir(
   "${VIENNAPS_GPU_MODELS}/SingleParticleALD.cuh"
   "${VIENNAPS_GPU_MODELS}/SurfaceChemistry.cuh"
   "${VIENNAPS_GPU_MODELS}/TEOSPECVD.cuh"
+  "${VIENNAPS_GPU_MODELS}/VoxelPMC.cuh"
+  "${PROJECT_SOURCE_DIR}/include/viennaps/models/psVoxelPMCParamsGPU.hpp"
   # ViennaRay's shared device headers too: these callables read LaunchParams,
   # so a layout change there must rebuild this module or the device reads a
   # stale struct with no build error (it happened: the ion silently lost its

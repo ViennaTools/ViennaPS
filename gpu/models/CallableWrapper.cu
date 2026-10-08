@@ -9,6 +9,7 @@
 #include "SingleParticle.cuh"
 #include "SingleParticleALD.cuh"
 #include "TEOSPECVD.cuh"
+#include "VoxelPMC.cuh"
 
 //
 // --- Direct Callables wrapper
@@ -215,4 +216,42 @@ extern "C" __device__ void
 __direct_callable__TEOSPECVDIonReflection(const void *sbtData,
                                           viennaray::gpu::PerRayData *prd) {
   TEOSPECVDIonReflection(sbtData, prd);
+}
+
+//
+// --- binary-cell PMC (psVoxelPMC on the GPU)
+//
+
+extern "C" __device__ void
+__direct_callable__pmcNeutralInit(const void *, viennaray::gpu::PerRayData *prd) {
+  pmcNeutralInit(prd);
+}
+
+extern "C" __device__ void
+__direct_callable__pmcNeutralCollision(const void *sbtData,
+                                       viennaray::gpu::PerRayData *prd) {
+  pmcNeutralCollision(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__pmcNeutralReflection(const void *sbtData,
+                                        viennaray::gpu::PerRayData *prd) {
+  pmcNeutralReflection(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__pmcIonInit(const void *, viennaray::gpu::PerRayData *prd) {
+  pmcIonInit(prd);
+}
+
+extern "C" __device__ void
+__direct_callable__pmcIonCollision(const void *sbtData,
+                                   viennaray::gpu::PerRayData *prd) {
+  pmcIonCollision(sbtData, prd);
+}
+
+extern "C" __device__ void
+__direct_callable__pmcIonReflection(const void *sbtData,
+                                    viennaray::gpu::PerRayData *prd) {
+  pmcIonReflection(sbtData, prd);
 }

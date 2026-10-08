@@ -167,7 +167,7 @@ void testDealGroveEstimateDryLowT() {
 }
 
 // Verify that the Si110 and Si111 B/A scale factors relative to Si100
-// match the established 1 : 1.45 : 1.68 ladder.  At very short times the
+// match the established 1 : 1.45 : 1.68 sequence.  At very short times the
 // linear regime dominates and thickness ∝ B/A, so the ratio of thicknesses
 // directly reflects the orientation-dependent rate constants in dealGroveRow().
 void testOrientationRatios() {

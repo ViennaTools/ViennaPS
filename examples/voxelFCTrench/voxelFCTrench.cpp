@@ -9,7 +9,7 @@
 //
 // WHY A SEPARATE HARNESS. The shared surfaceChemistry example builds its
 // substrate as Material::Si, and this mechanism gates every passivation step
-// to SiO2, so on that geometry the SiF_x ladder is never seeded and the etch
+// to SiO2, so on that geometry the SiF_x cascade is never seeded and the etch
 // runs on one channel. The substrate material has to be the one the chemistry
 // is written for.
 //

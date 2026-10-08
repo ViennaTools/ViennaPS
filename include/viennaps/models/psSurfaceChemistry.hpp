@@ -157,7 +157,7 @@ template <typename NumericType> struct ChemicalMechanism {
     ///     F + SiF3 + Si -> SiF4
     /// consume a total of p*(free + SiF + SiF2 + SiF3) = p*(1 - SiO), yet the
     /// descriptor can only carry ONE step -- so the tracer attenuates by one
-    /// rung's rule while the surface reacts by all four.
+    /// step's rule while the surface reacts by all four.
     ///
     /// Stated the other way round: what attenuates the beam is everything the
     /// species can react with, so what does NOT is the blocking set. Naming it

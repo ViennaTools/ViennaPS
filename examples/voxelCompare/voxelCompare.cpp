@@ -24,7 +24,10 @@
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 
+#include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <iomanip>
 #include <limits>
 #include <cstdlib>
@@ -96,8 +99,10 @@ makeCells(ps::SmartPointer<ps::Domain<T, D>> dom) {
   return cs_;
 }
 
-static void writeSurface(ps::SmartPointer<ps::Domain<T, D>> dom,
-                         const std::string &name) {
+/// Writes the surface as .vtp and as plain segments (.csv); returns the
+/// lowest point of the surface, the trench floor once one has formed.
+static T writeSurface(ps::SmartPointer<ps::Domain<T, D>> dom,
+                      const std::string &name) {
   auto mesh = ps::SmartPointer<ls::Mesh<T>>::New();
   ls::ToSurfaceMesh<T, D>(dom->getLevelSets().back(), mesh).apply();
   ls::VTKWriter<T>(mesh, name).apply();
@@ -111,7 +116,36 @@ static void writeSurface(ps::SmartPointer<ps::Domain<T, D>> dom,
     f << nodes[l[0]][0] << ',' << nodes[l[0]][1] << ',' << nodes[l[1]][0] << ','
       << nodes[l[1]][1] << '\n';
   std::cout << "    wrote " << name << " and " << csv << "\n";
+  T lowest = std::numeric_limits<T>::max();
+  for (const auto &n : nodes) lowest = std::min(lowest, n[1]);
+  return lowest;
 }
+
+/// SNAP_NM: the level-set surface every SNAP_NM nm of blanket-equivalent etch,
+/// written from inside the one Process so the transient coverages carry on
+/// undisturbed (a chain of shorter Processes would restart them). The cell set
+/// writes its cells at the same marks. One run then gives the floor depth
+/// against time and the sidewall as the feature deepens.
+class SnapshotCallback : public ps::AdvectionCallback<T, D> {
+  T every_, next_, nm_;
+  int k_ = 0;
+
+public:
+  SnapshotCallback(T everySeconds, T everyNm)
+      : every_(everySeconds), next_(everySeconds), nm_(everyNm) {}
+  bool applyPostAdvect(const T processTime) override {
+    while (every_ > T(0) && processTime >= next_ * (1 - T(1e-9))) {
+      ++k_;
+      char tag[32];
+      std::snprintf(tag, sizeof tag, std::fmod(nm_, T(1)) == T(0) ? "%04.0f" : "%06.1f", k_ * nm_);
+      const T low = writeSurface(this->domain, std::string("cmp_ls_snap_") + tag + ".vtp");
+      std::cout << "    level-set snapshot " << tag << " nm at t = " << processTime
+                << " s, lowest point z = " << low << " nm" << std::endl;
+      next_ += every_;
+    }
+    return true;
+  }
+};
 
 int main(int argc, char **argv) {
   if (argc > 1)
@@ -182,6 +216,12 @@ int main(int argc, char **argv) {
             << "trench W=" << W << " mask=" << MASKH << " dx=" << DX
             << ",  blanket ER " << ER << " nm/s,  t = " << time << " s ("
             << TARGET << " nm blanket-equivalent)\n\n";
+  // SNAP_NM: profiles every SNAP_NM nm of blanket-equivalent etch in both arms
+  const T snapNm = std::getenv("SNAP_NM") ? T(std::atof(std::getenv("SNAP_NM"))) : T(0);
+  const T snapEvery = (snapNm > T(0) && ER > T(0)) ? snapNm / ER : T(0);
+  if (snapEvery > T(0))
+    std::cout << "  [snapshots every " << snapNm << " nm blanket-equivalent, "
+              << snapEvery << " s]\n";
 
   // ------------------------------------------------------------- level set
   if (!pmcOnly) {
@@ -240,8 +280,15 @@ int main(int argc, char **argv) {
       proc.setParameters(adv);
       std::cout << "  [level set: timeStepRatio x" << e << "]\n";
     }
+    if (snapEvery > T(0))
+      model->setAdvectionCallback(
+          ps::SmartPointer<SnapshotCallback>::New(snapEvery, snapNm));
     std::cout << "level set:\n";
+    const auto lsStart = std::chrono::steady_clock::now();
     proc.apply();
+    std::cout << "    level set took "
+              << std::chrono::duration<double>(std::chrono::steady_clock::now() - lsStart).count()
+              << " s wall clock" << std::endl;
     writeSurface(dom, "cmp_ls_final.vtp");
     // The continuum's OWN per-channel removal split, integrated over its
     // surface and the process time. The PMC prints "cells removed by channel";
@@ -405,10 +452,10 @@ int main(int argc, char **argv) {
     // taken: adding one reallocates and would dangle them
     cells->addScalarData("State", 0.);
     cells->addScalarData("Nz", -1.);      // estimator normal, for validation
-    // LADDER identity: 0..4 = Si, SiF, SiF2, SiF3, SiF4, 5 = SiO, 6 = mask.
-    // -1 where the ladder is off, so the field is never silently misread as
+    // CASCADE identity: 0..4 = Si, SiF, SiF2, SiF3, SiF4, 5 = SiO, 6 = mask.
+    // -1 where the cascade is off, so the field is never silently misread as
     // bare silicon when the run did not use it.
-    cells->addScalarData("Rung", -1.);
+    cells->addScalarData("CascadeStep", -1.);
     ps::VoxelPMC<T, D>::Parameters p;
     if (const char *e = std::getenv("PMC_AIE")) p.A_ie *= std::atof(e);
     if (std::getenv("NO_ION")) p.fluxIon = T(0);
@@ -542,45 +589,45 @@ int main(int argc, char **argv) {
     if (std::getenv("PMC_CAPSHIELD")) pmc.setCapShield(true);
     if (std::getenv("PMC_OXOPAQUE")) pmc.setOxideOpaque(true);
     if (std::getenv("PMC_SITECOUNTS")) pmc.setSiteCounts(true);
-    // PMC_LADDER: the cell carries a chemical IDENTITY rather than a coverage
+    // PMC_CASCADE: the cell carries a chemical IDENTITY rather than a coverage
     // flag -- Si, SiF, SiF2, SiF3, SiF4 (which leaves), and SiO. Four fluorine
     // arrivals at the SAME cell are what 4F* + Si -> SiF4 costs, so the cell
     // must be one silicon atom and dx is pinned to rho^(-1/D) = 0.141139 nm
     // in 2D. Prints the atom count and the blanket rate the chain predicts;
     // both are validation, not configuration.
-    if (std::getenv("PMC_LADDER")) {
-      pmc.setLadder(true);
-      // PMC_LADDERAREA: weight the per-arrival reaction by the TRUE area
+    if (std::getenv("PMC_CASCADE")) {
+      pmc.setCascade(true);
+      // PMC_CASCADEAREA: weight the per-arrival reaction by the TRUE area
       // the cell carries, so a staircase does not over-collect flux.
-      if (std::getenv("PMC_LADDERAREA")) pmc.setLadderArea(true);
-      // PMC_LADDERP: one probability for all four rungs, which is what makes
+      if (std::getenv("PMC_CASCADEAREA")) pmc.setCascadeArea(true);
+      // PMC_CASCADEP: one probability for all four steps, which is what makes
       // the transport identical to the level set (a single sticking number
       // there). Only sum(1/p_i) sets the blanket rate.
-      // PMC_LADDERAUTO: n = 4*rho*dx^D rungs, calibrated so the blanket rate
+      // PMC_CASCADEAUTO: n = 4*rho*dx^D steps, calibrated so the blanket rate
       // AND the effective sticking are the same at every dx. That is what
       // makes a mesh-refinement sweep mean anything.
-      if (const char *e = std::getenv("PMC_LADDERN"))
-        pmc.setLadderN(std::atoi(e));
-      if (std::getenv("PMC_LADDERAUTO"))
-        pmc.setLadderAuto(std::getenv("PMC_LADDERS0")
-                              ? std::atof(std::getenv("PMC_LADDERS0"))
+      if (const char *e = std::getenv("PMC_CASCADEN"))
+        pmc.setCascadeN(std::atoi(e));
+      if (std::getenv("PMC_CASCADEAUTO"))
+        pmc.setCascadeAuto(std::getenv("PMC_CASCADES0")
+                              ? std::atof(std::getenv("PMC_CASCADES0"))
                               : 0.7);
-      if (const char *e = std::getenv("PMC_LADDERP"))
-        for (int k = 0; k < pmc.ladderN(); ++k) pmc.setLadderP(k, std::atof(e));
-      for (int k = 0; k < pmc.ladderN() && k < 10; ++k)
-        if (const char *e = std::getenv((std::string("PMC_LADDERP") +
+      if (const char *e = std::getenv("PMC_CASCADEP"))
+        for (int k = 0; k < pmc.cascadeN(); ++k) pmc.setCascadeP(k, std::atof(e));
+      for (int k = 0; k < pmc.cascadeN() && k < 10; ++k)
+        if (const char *e = std::getenv((std::string("PMC_CASCADEP") +
                                          char('0' + k)).c_str()))
-          pmc.setLadderP(k, std::atof(e));
-      std::cout << "  ladder n = " << pmc.ladderN() << " rungs, p =";
-      for (int k = 0; k < pmc.ladderN(); ++k)
-        std::cout << (k ? "/" : " ") << pmc.ladderP(k);
-      std::cout << ", sum(1/p) = " << pmc.ladderHarmonic() << " (target "
-                << pmc.atomsPerCellNow() * pmc.ladderHarmonicTarget()
+          pmc.setCascadeP(k, std::atof(e));
+      std::cout << "  cascade n = " << pmc.cascadeN() << " steps, p =";
+      for (int k = 0; k < pmc.cascadeN(); ++k)
+        std::cout << (k ? "/" : " ") << pmc.cascadeP(k);
+      std::cout << ", sum(1/p) = " << pmc.cascadeHarmonic() << " (target "
+                << pmc.atomsPerCellNow() * pmc.cascadeHarmonicTarget()
                 << "), effective sticking "
-                << pmc.ladderN() / pmc.ladderHarmonic() << "\n";
-      std::cout << "  ladder: " << pmc.atomsPerCellNow()
+                << pmc.cascadeN() / pmc.cascadeHarmonic() << "\n";
+      std::cout << "  cascade: " << pmc.atomsPerCellNow()
                 << " atoms/cell (needs 1.0000), blanket "
-                << pmc.ladderBlanketRate() << " nm/s\n";
+                << pmc.cascadeBlanketRate() << " nm/s\n";
     }
     // Both default ON now: the spontaneous etch is arrival-driven and takes
     // its silicon at the site that reacted. These two switch the OLD timed
@@ -624,6 +671,10 @@ int main(int argc, char **argv) {
                              ? cs::NormalEstimator::InterfaceFit
                              : cs::NormalEstimator::InterfaceAverage);
     if (const char *e = std::getenv("PMC_CURVA")) pmc.setCurvatureAlpha(std::atof(e));
+    // PMC_GPU=1 traces the cell set's particles on the GPU (cascade path,
+    // default options); anything the device does not implement stays on the
+    // CPU, and the log line after the etch says how many steps ran where.
+    if (std::getenv("PMC_GPU")) pmc.setUseGPU(true);
     if (const char *e = std::getenv("PMC_MINR")) pmc.setMinFitRadius(std::atoi(e));
     const std::string tag = cfg.tag;
     auto dump = [&](const std::string &name) {
@@ -631,7 +682,7 @@ int main(int argc, char **argv) {
       auto &mmv = *cells->getScalarData("Material");
       auto &state = *cells->getScalarData("State");
       auto &nzf = *cells->getScalarData("Nz");
-      auto &rung = *cells->getScalarData("Rung");
+      auto &step = *cells->getScalarData("CascadeStep");
       { std::vector<T> nz; pmc.fillNormalZ(nz);
         for (size_t c = 0; c < nz.size() && c < nzf.size(); ++c) nzf[c] = nz[c]; }
       const auto &st = pmc.states();
@@ -646,8 +697,8 @@ int main(int argc, char **argv) {
         const bool mask = material[c] == (int)ps::Material::Mask;
         mmv[c] = solid ? T(material[c]) : T((int)ps::Material::GAS);
         state[c] = !solid ? T(0) : (mask ? T(3) : T(st[c]));
-        if (pmc.ladder() && c < pmc.fluorCount().size())
-          rung[c] = !solid ? T(-1)
+        if (pmc.cascade() && c < pmc.fluorCount().size())
+          step[c] = !solid ? T(-1)
                     : mask ? T(6)
                     : st[c] == ps::VoxelPMC<T, D>::Oxidised
                         ? T(5)
@@ -835,12 +886,39 @@ int main(int argc, char **argv) {
     };
     const int tallyLast = std::getenv("PMC_TALLYLAST")
                               ? std::atoi(std::getenv("PMC_TALLYLAST")) : 0;
+    int snapK = 0;
+    const auto pmcStart = std::chrono::steady_clock::now();
     for (int s = 0; s < steps; ++s) {
       // Reset the tally N steps from the end so arrivals and coverages
       // describe the SAME state: etch running, geometry barely moved.
       if (tallyLast > 0 && s == steps - tallyLast) pmc.resetHitTally();
       pmc.step(time / steps);
+      // SNAP_NM: the cells at the same marks as the level-set snapshots
+      const T tNow = T(s + 1) * (time / steps);
+      while (snapEvery > T(0) && tNow >= T(snapK + 1) * snapEvery * (1 - T(1e-9))) {
+        ++snapK;
+        char snapTag[32];
+        std::snprintf(snapTag, sizeof snapTag,
+                      std::fmod(snapNm, T(1)) == T(0) ? "%04.0f" : "%06.1f", snapK * snapNm);
+        dump("cmp_" + tag + "_snap_" + snapTag + ".vtu");
+        std::cout << std::setprecision(4) << "    cell-set snapshot " << snapTag << " nm at t = " << tNow
+                  << " s, " << std::chrono::duration<double>(
+                                   std::chrono::steady_clock::now() - pmcStart).count()
+                  << " s wall clock" << std::endl;
+      }
     }
+    std::cout << "    cell-set etch took "
+              << std::chrono::duration<double>(std::chrono::steady_clock::now() - pmcStart).count()
+              << " s wall clock" << std::endl;
+    if (pmc.useGPU())
+      std::cout << "    GPU transport: " << pmc.gpuSteps() << " of " << steps
+                << " steps on the device, hits on cells gone earlier in the step "
+                << pmc.gpuGoneHits() << ", on buried cells " << pmc.gpuBuriedHits()
+                << ", on cells without an estimator normal "
+                << pmc.gpuNoNormalHits() << ", events lost F / O / ion "
+                << pmc.gpuLost(0) << " / " << pmc.gpuLost(1) << " / "
+                << pmc.gpuLost(2) << ", overflow " << pmc.gpuOverflow()
+                << std::endl;
     if (tallyLast > 0)
       arrivalReport("LAST STEPS OF THE ETCH: same state as the coverages");
     // Sidewall-restricted coverage. The continuum's theta_O = 0.993 is a
@@ -1105,32 +1183,32 @@ int main(int argc, char **argv) {
               << ")   -- outside the 4F*+Si ledger"
               << "\n    F* handed down onto newly uncovered cells: " << pmc.nFHandedDown
               << "   -> NET F* lost to removal " << (long long)pmc.nFLostRemoved - (long long)pmc.nFHandedDown
-              << (pmc.ladder() ? [&] {
+              << (pmc.cascade() ? [&] {
                    std::ostringstream o;
-                   const auto c = pmc.ladderCensus();
+                   const auto c = pmc.cascadeCensus();
                    double tot = 0;
                    for (auto v : c) tot += double(v);
-                   o << "\n    LADDER census of " << (long long)tot
+                   o << "\n    CASCADE census of " << (long long)tot
                      << " surface cells: ";
                    for (size_t k = 0; k + 1 < c.size(); ++k)
                      o << " SiF" << k << " " << c[k];
                    o << "  SiO " << c.back();
                    if (tot > 0 && c.size() >= 2)
-                     o << "   (top rung frac "
+                     o << "   (top step frac "
                        << double(c[c.size() - 2]) / tot << ")";
-                   // A chain passes the same current at every rung. A split
-                   // between these means a rung is losing cells to something
-                   // other than the next rung.
-                   o << "\n    LADDER advances by rung:";
-                   for (int k = 0; k < pmc.ladderN(); ++k)
-                     o << (k ? " / " : " ") << pmc.nLadAdv[k];
-                   o << "\n    LADDER SiF4 desorbed " << pmc.nLadDesorb
-                     << ", SiO -> Si " << pmc.nLadODesorb
-                     << ", F reflected off SiO " << pmc.nLadFonO
-                     << ", off SiF4 " << pmc.nLadFonSat
-                     << "\n    LADDER ion impacts by identity: Si "
-                     << pmc.nLadIonSi << ", SiF_k " << pmc.nLadIonF
-                     << ", SiO " << pmc.nLadIonO
+                   // A chain passes the same current at every step. A split
+                   // between these means a step is losing cells to something
+                   // other than the next step.
+                   o << "\n    CASCADE advances by step:";
+                   for (int k = 0; k < pmc.cascadeN(); ++k)
+                     o << (k ? " / " : " ") << pmc.nCasAdv[k];
+                   o << "\n    CASCADE SiF4 desorbed " << pmc.nCasDesorb
+                     << ", SiO -> Si " << pmc.nCasODesorb
+                     << ", F reflected off SiO " << pmc.nCasFonO
+                     << ", off SiF4 " << pmc.nCasFonSat
+                     << "\n    CASCADE ion impacts by identity: Si "
+                     << pmc.nCasIonSi << ", SiF_k " << pmc.nCasIonF
+                     << ", SiO " << pmc.nCasIonO
                      << "\n    F HOP: radius " << pmc.fHopR_ << " cells, bonds moved to a neighbour "
                      << pmc.nFHop << ", kept on the hit cell " << pmc.nFHopStay
                      << ";  O hop " << (pmc.oHop_ ? "on" : "off") << ", O sites moved " << pmc.nOHop

@@ -142,7 +142,7 @@ k(n̂) = k_base · [1 + (r − 1) · (1 − (n̂ · ê_axis)²)]
 
 where `ê_axis` is the wafer normal (`crystalAxis`) and `r` is the ratio between
 the perpendicular-face `B/A` and the baseline wafer `B/A`. The built-in rates use
-the ladder `(100):(110):(111) = 1 : 1.45 : 1.68`, so the per-face ratios are:
+the sequence `(100):(110):(111) = 1 : 1.45 : 1.68`, so the per-face ratios are:
 
 | Wafer orientation | Baseline `B/A` | Perpendicular-face ratio `r` |
 |---|---|---|
