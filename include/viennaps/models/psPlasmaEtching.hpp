@@ -170,10 +170,10 @@ public:
     // match the coverage names created in initializeCoverages so the process
     // applies the diffusion to the computed coverages.
     std::unordered_map<std::string, NumericType> coefficients;
-    if (params.etchantDiffusionCoefficient > 0.)
-      coefficients["eCoverage"] = params.etchantDiffusionCoefficient;
-    if (params.passivationDiffusionCoefficient > 0.)
-      coefficients["pCoverage"] = params.passivationDiffusionCoefficient;
+    if (params_.etchantDiffusionCoefficient > 0.)
+      coefficients["eCoverage"] = params_.etchantDiffusionCoefficient;
+    if (params_.passivationDiffusionCoefficient > 0.)
+      coefficients["pCoverage"] = params_.passivationDiffusionCoefficient;
 
     if (coefficients.empty())
       return std::nullopt;

@@ -304,7 +304,8 @@ void postProcessLineData(
   const auto numElements = surfaceMesh_->lines.size();
 
   NumericType conversionRadius = gridDelta * (smoothingNeighbors + 1);
-  // findNearestWithinRadius compares distances, not their squares
+  conversionRadius *= conversionRadius; // the KD trees of ViennaCore 2.4
+                                        // take the squared radius
 
   std::vector<std::vector<std::pair<unsigned, NumericType>>> elementsToPoint;
   elementsToPoint.reserve(numDisks);

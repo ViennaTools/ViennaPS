@@ -68,28 +68,24 @@ extern "C" __device__ void __direct_callable__singleALDNeutralCollision(
 // --- SurfaceChemistry pipeline
 //
 
-extern "C" __device__ void
-__direct_callable__chemicalNeutralCollision(const void *sbtData,
-                                            viennaray::gpu::PerRayData *prd) {
-  chemicalNeutralCollision(sbtData, prd);
+extern "C" __device__ void __direct_callable__chemicalNeutralCollision(
+    const void *sbtData, viennaray::gpu::PerRayData *prd, unsigned int primID) {
+  chemicalNeutralCollision(sbtData, prd, primID);
 }
 
-extern "C" __device__ void
-__direct_callable__chemicalNeutralReflection(const void *sbtData,
-                                             viennaray::gpu::PerRayData *prd) {
-  chemicalNeutralReflection(sbtData, prd);
+extern "C" __device__ void __direct_callable__chemicalNeutralReflection(
+    const void *sbtData, viennaray::gpu::PerRayData *prd, unsigned int primID) {
+  chemicalNeutralReflection(sbtData, prd, primID);
 }
 
-extern "C" __device__ void
-__direct_callable__chemicalIonCollision(const void *sbtData,
-                                        viennaray::gpu::PerRayData *prd) {
-  chemicalIonCollision(sbtData, prd);
+extern "C" __device__ void __direct_callable__chemicalIonCollision(
+    const void *sbtData, viennaray::gpu::PerRayData *prd, unsigned int primID) {
+  chemicalIonCollision(sbtData, prd, primID);
 }
 
-extern "C" __device__ void
-__direct_callable__chemicalIonReflection(const void *sbtData,
-                                         viennaray::gpu::PerRayData *prd) {
-  chemicalIonReflection(sbtData, prd);
+extern "C" __device__ void __direct_callable__chemicalIonReflection(
+    const void *sbtData, viennaray::gpu::PerRayData *prd, unsigned int primID) {
+  chemicalIonReflection(sbtData, prd, primID);
 }
 
 extern "C" __device__ void

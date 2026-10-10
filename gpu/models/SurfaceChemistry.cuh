@@ -6,7 +6,7 @@
 #include "raygLaunchParams.hpp"
 #include "raygReflection.hpp"
 
-#include "models/psPipelineParameters.hpp"
+#include "models/psIonModelUtil.hpp"
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
@@ -101,13 +101,12 @@ chemicalFreeSiteFraction(const float *coverages,
 // the rate law and once in the re-emission below; applying it here as well
 // would count it twice.
 __forceinline__ __device__ void
-chemicalNeutralCollision(const void *, viennaray::gpu::PerRayData *prd) {
-  for (int i = 0; i < prd->ISCount; ++i) {
-    atomicAdd(&launchParams
-                   .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
-                                 prd->primIDs[i]],
-              (viennaray::gpu::ResultType)prd->rayWeight);
-  }
+chemicalNeutralCollision(const void *, viennaray::gpu::PerRayData *prd,
+                         unsigned int primID) {
+  atomicAdd(&launchParams
+                 .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
+                               primID],
+            (viennaray::gpu::ResultType)prd->rayWeight);
 }
 
 // The rate constant of reaction c of this particle on the material under the
@@ -131,8 +130,8 @@ chemicalChannelRate(const viennaps::SurfaceChemistryParamsGPU *params,
 // reactions that consume it of k * prod theta_*t^n * prod theta_i^n, the same
 // law the CPU particle uses.
 __forceinline__ __device__ void
-chemicalNeutralReflection(const void *sbtData,
-                          viennaray::gpu::PerRayData *prd) {
+chemicalNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd,
+                          unsigned int primID) {
   const viennaps::SurfaceChemistryParamsGPU *params =
       reinterpret_cast<const viennaps::SurfaceChemistryParamsGPU *>(
           launchParams.customData);
@@ -140,7 +139,6 @@ chemicalNeutralReflection(const void *sbtData,
       reinterpret_cast<const viennaray::gpu::HitSBTDataBase *>(sbtData);
   const float *coverages = (const float *)baseData->cellData;
   const int p = launchParams.particleIdx;
-  const unsigned primID = prd->primID;
 
   float sEff = 0.f;
   for (int c = 0; c < params->numChannels[p]; ++c) {
@@ -165,7 +163,7 @@ chemicalNeutralReflection(const void *sbtData,
   }
 
   prd->rayWeight -= prd->rayWeight * __saturatef(sEff);
-  auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+  auto geoNormal = viennaray::gpu::getNormal(sbtData, primID);
   viennaray::gpu::diffuseReflection(prd, geoNormal);
 }
 
@@ -186,53 +184,54 @@ chemicalParams() {
 __forceinline__ __device__ void
 chemicalIonInit(viennaray::gpu::PerRayData *prd) {
   const auto *p = chemicalParams();
-  viennaps::gpu::impl::initNormalDistEnergy(prd, p->meanEnergy, p->sigmaEnergy);
+  viennaps::impl::initNormalDistEnergy(prd, p->meanEnergy, p->sigmaEnergy);
 }
 
 __forceinline__ __device__ void
-chemicalIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
+chemicalIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd,
+                     unsigned int primID) {
   const auto *p = chemicalParams();
-  for (int i = 0; i < prd->ISCount; ++i) {
-    const int consecutiveId = launchParams.materialIds[prd->primIDs[i]];
-    const int legacyId = launchParams.materialMap[consecutiveId];
+  const int consecutiveId = launchParams.materialIds[primID];
+  const int legacyId = launchParams.materialMap[consecutiveId];
 
-    auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
-    const float cosTheta =
-        __saturatef(-viennacore::DotProduct(prd->dir, geomNormal));
-    const float angle = acosf(cosTheta);
-    const float sqrtE = sqrtf(prd->energy);
+  auto geomNormal = viennaray::gpu::getNormal(sbtData, primID);
+  const float cosTheta =
+      __saturatef(-viennacore::DotProduct(prd->dir, geomNormal));
+  const float angle = acosf(cosTheta);
+  const float sqrtE = sqrtf(prd->energy);
 
-    for (int c = 0; c < p->numYields; ++c) {
-      float A = p->yieldA[c];
-      float Eth = p->yieldEth[c];
-      for (int k = 0; k < p->yieldNumOverrides[c]; ++k)
-        if (p->yieldOverrideMaterial[c][k] == legacyId) {
-          A = p->yieldOverrideA[c][k];
-          Eth = p->yieldOverrideEth[c][k];
-          break;
-        }
-
-      float f;
-      if (p->yieldEnhanced[c]) {
-        f = cosTheta < 0.5f ? fmaxf(3.f - 6.f * angle / M_PIf, 0.f) : 1.f;
-      } else {
-        f = fmaxf((1.f + p->yieldB[c] * (1.f - cosTheta * cosTheta)) * cosTheta,
-                  0.f);
+  for (int c = 0; c < p->numYields; ++c) {
+    float A = p->yieldA[c];
+    float Eth = p->yieldEth[c];
+    for (int k = 0; k < p->yieldNumOverrides[c]; ++k)
+      if (p->yieldOverrideMaterial[c][k] == legacyId) {
+        A = p->yieldOverrideA[c][k];
+        Eth = p->yieldOverrideEth[c][k];
+        break;
       }
 
-      const float Y = A * fmaxf(sqrtE - sqrtf(Eth), 0.f) * f;
-      atomicAdd(&launchParams.resultBuffer[viennaray::gpu::getIdxOffset(
-                    c, launchParams) +
-                                           prd->primIDs[i]],
-                (viennaray::gpu::ResultType)(Y * prd->rayWeight));
+    float f;
+    if (p->yieldEnhanced[c]) {
+      f = cosTheta < 0.5f ? fmaxf(3.f - 6.f * angle / M_PIf, 0.f) : 1.f;
+    } else {
+      f = fmaxf((1.f + p->yieldB[c] * (1.f - cosTheta * cosTheta)) * cosTheta,
+                0.f);
     }
+
+    const float Y = A * fmaxf(sqrtE - sqrtf(Eth), 0.f) * f;
+    atomicAdd(
+        &launchParams
+             .resultBuffer[viennaray::gpu::getIdxOffset(c, launchParams) +
+                           primID],
+        (viennaray::gpu::ResultType)(Y * prd->rayWeight));
   }
 }
 
 __forceinline__ __device__ void
-chemicalIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
+chemicalIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd,
+                      unsigned int primID) {
   const auto *p = chemicalParams();
-  auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+  auto geomNormal = viennaray::gpu::getNormal(sbtData, primID);
   const float cosTheta =
       __saturatef(-viennacore::DotProduct(prd->dir, geomNormal));
   const float angle = acosf(cosTheta);
@@ -247,7 +246,7 @@ chemicalIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     return;
   }
 
-  viennaps::gpu::impl::updateEnergy(prd, p->inflectAngle, p->n_l, angle);
+  viennaps::impl::updateEnergy(prd, p->inflectAngle, p->n_l, angle);
   if (prd->energy > p->minEth) {
     prd->rayWeight -= prd->rayWeight * sticking;
     viennaray::gpu::conedCosineReflection(prd, geomNormal,
