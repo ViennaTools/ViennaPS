@@ -28,11 +28,15 @@ the robust quantity.
 
     # 4. pin the machine
     sudo cpupower frequency-set -g performance     # if available
-    export OMP_NUM_THREADS=<cores>                 # record what you set
+    export OMP_NUM_THREADS=<physical cores>        # record what you set
 
-    # 5. run
+    # 5. run, from the build directory that holds the driver
     cd build/examples/surfaceChemistry
-    python3 benchmark.py --repeats 7
+    python3 ../../../examples/surfaceChemistry/benchmark.py --repeats 7
+
+The script sets `OMP_WAIT_POLICY=active` for its runs unless it is already set,
+so idle threads wait actively between parallel loops and the short coverage
+loop is not timed as thread wake-up, and it records both settings.
 
 That prints a summary and writes three files:
 
@@ -44,18 +48,18 @@ That prints a summary and writes three files:
 
 ## Putting it in the paper
 
-Copy the two `.tex` files over the placeholders:
+The paper's table and macros are generated from `benchmark_results.txt` by
+`make_benchmark_tex.py` in the paper's `reproduce` directory, which writes
+them into the paper directory:
 
-    cp benchmark_table.tex benchmark_numbers.tex <paper directory>/
+    cp benchmark_results.txt <papers>/reproduce/
+    cd <papers>/reproduce && python3 make_benchmark_tex.py benchmark_results.txt
 
 The manuscript already carries `\input{benchmark_numbers}` in its preamble and
 `\input{benchmark_table}` in the section on computational cost, so no editing
 is needed. Without these files the paper builds with placeholders that print
 `??` for every quoted figure and a table of dashes captioned NOT YET MEASURED,
-so an unpopulated build is obvious rather than plausible. The files now in the
-paper hold the timings of 6 September 2026, taken with a seven-reaction version
-of `sf6o2.yaml` and the code of that date, and have to be retaken with the
-current files.
+so an unpopulated build is obvious rather than plausible.
 
 Requires only Python 3 from the standard library. ViennaChem is not needed,
 since each mechanism ships compiled alongside its reaction file.

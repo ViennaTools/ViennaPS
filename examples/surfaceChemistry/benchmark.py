@@ -35,6 +35,9 @@ ROWS = [
 
 
 ENV = dict(os.environ)
+# idle OpenMP threads spin between parallel loops instead of sleeping, so a
+# coverage solve over a few hundred points is not timed as thread wake-up
+ENV.setdefault('OMP_WAIT_POLICY', 'active')
 
 
 def run(args):
@@ -88,7 +91,8 @@ def size(mech):
 def machine():
     info = {'platform': platform.platform(),
             'python': platform.python_version(),
-            'OMP_NUM_THREADS': ENV.get('OMP_NUM_THREADS', 'unset')}
+            'OMP_NUM_THREADS': ENV.get('OMP_NUM_THREADS', 'unset'),
+            'OMP_WAIT_POLICY': ENV.get('OMP_WAIT_POLICY', 'unset')}
     try:
         with open('/proc/cpuinfo') as f:
             for line in f:
@@ -242,8 +246,8 @@ def main():
     # the machine is recorded by the same run that produced the timings, so
     # the host the paper names is the host the paper measured
     try:
-        import machine
-        machine.main()
+        import machine as machine_tex
+        machine_tex.main()
     except Exception as exc:
         print('could not record the machine (%s); run machine.py by hand'
               % type(exc).__name__)

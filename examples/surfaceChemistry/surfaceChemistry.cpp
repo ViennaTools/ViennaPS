@@ -240,19 +240,26 @@ void report(const ChemicalMechanism<NumericType> &mech,
             << std::defaultfloat;
 }
 
+struct SolveTimer {
+  double seconds = 0.;
+  long calls = 0;
+};
+
 // Forwards every call to the model it wraps and times the coverage solve, so
 // that the cost of finding the coverages can be read as a fraction of the run
-// it sits inside rather than on its own.
-template <typename NumericType, int D>
-class TimedSurfaceModel : public SurfaceModel<NumericType> {
+// it sits inside rather than on its own. Base is the surface-model class the
+// process model expects: the plasma-etching models look theirs up as a
+// PlasmaEtchingSurfaceModel, and the extra arguments construct that base.
+template <typename NumericType, int D,
+          typename Base = SurfaceModel<NumericType>>
+class TimedSurfaceModel : public Base, public SolveTimer {
   SmartPointer<SurfaceModel<NumericType>> inner_;
 
 public:
-  double seconds = 0.;
-  long calls = 0;
-
-  explicit TimedSurfaceModel(SmartPointer<SurfaceModel<NumericType>> inner)
-      : inner_(std::move(inner)) {}
+  template <typename... BaseArgs>
+  explicit TimedSurfaceModel(SmartPointer<SurfaceModel<NumericType>> inner,
+                             const BaseArgs &...baseArgs)
+      : Base(baseArgs...), inner_(std::move(inner)) {}
 
   void initializeCoverages(unsigned n) override {
     inner_->initializeCoverages(n);
@@ -269,6 +276,7 @@ public:
   }
   void initializeProcessParameters() override {
     inner_->initializeProcessParameters();
+    this->processParams = inner_->getProcessParameters();
   }
   void setSurfaceCoordinates(const std::vector<Vec3D<NumericType>> &c) override {
     inner_->setSurfaceCoordinates(c);
@@ -291,6 +299,28 @@ public:
                    .count();
     ++calls;
     this->coverages = inner_->getCoverages();
+  }
+
+  void updateCoveragesFromDesorption(
+      SmartPointer<viennals::PointData<NumericType>> fluxes,
+      const std::vector<NumericType> &materialIds) override {
+    const auto t0 = std::chrono::steady_clock::now();
+    inner_->updateCoveragesFromDesorption(fluxes, materialIds);
+    seconds += std::chrono::duration<double>(
+                   std::chrono::steady_clock::now() - t0)
+                   .count();
+    ++calls;
+    this->coverages = inner_->getCoverages();
+  }
+
+  std::optional<std::vector<NumericType>>
+  getDesorptionWeights(const std::vector<NumericType> &materialIds) const override {
+    return inner_->getDesorptionWeights(materialIds);
+  }
+
+  std::optional<std::unordered_map<std::string, NumericType>>
+  getDiffusionCoefficients() const override {
+    return inner_->getDiffusionCoefficients();
   }
 };
 
@@ -610,7 +640,7 @@ template <int D> int run(const Options &o) {
   // model here rather than leaving it to the process lets the same wrapper be
   // placed on it, and a model that is already a device model is used as it
   // stands.
-  SmartPointer<TimedSurfaceModel<NumericType, D>> timed;
+  SmartPointer<SolveTimer> timed;
   if (o.profile) {
 #ifdef VIENNACORE_COMPILE_GPU
     if (o.gpu) {
@@ -627,9 +657,19 @@ template <int D> int run(const Options &o) {
       }
     }
 #endif
-    timed = SmartPointer<TimedSurfaceModel<NumericType, D>>::New(
-        model->getSurfaceModel());
-    model->setSurfaceModel(timed);
+    auto inner = model->getSurfaceModel();
+    if (auto plasma = std::dynamic_pointer_cast<
+            impl::PlasmaEtchingSurfaceModel<NumericType, D>>(inner)) {
+      auto t = SmartPointer<TimedSurfaceModel<
+          NumericType, D, impl::PlasmaEtchingSurfaceModel<NumericType, D>>>::
+          New(inner, plasma->params_);
+      model->setSurfaceModel(t);
+      timed = t;
+    } else {
+      auto t = SmartPointer<TimedSurfaceModel<NumericType, D>>::New(inner);
+      model->setSurfaceModel(t);
+      timed = t;
+    }
   }
 
   const int snapshots = std::max(1, o.snapshots);
