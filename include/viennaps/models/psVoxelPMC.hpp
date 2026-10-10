@@ -89,14 +89,17 @@ template <class NumericType, int D> class VoxelPMC {
 public:
   /// 0-2 are the SF6/O2 states. 4-10 are Table I's surface species: P* on a
   /// polymer cell, and the wafer's own chain on a SiO2 or Si cell. Bare is
-  /// SiO2_s / Si_s -- a site with nothing on it.
+  /// SiO2_s / Si_s -- a site with nothing on it. 11 and 12 are the silane CVD
+  /// adsorbates (setCVD).
   enum State : std::uint8_t {
     Bare = 0, Fluorinated = 1, Oxidised = 2,
     Passivated = 4,      ///< reduced fluorocarbon model, kept for comparison
     Activated = 5,       ///< P*, a polymer site a low-energy ion activated
     SiF2CO2 = 6,         ///< SiF2CO2_s, from CF2 on SiO2_s
     SiFCO2 = 7,          ///< SiFCO2_s,  from CF  on SiO2_s
-    SiF1 = 8, SiF2 = 9, SiF3 = 10
+    SiF1 = 8, SiF2 = 9, SiF3 = 10,
+    Silyl = 11,          ///< SiH3*
+    Hydrogenated = 12    ///< H*
   };
 
   /// FLUOROCARBON, the C2F6/SiO2 mechanism of Zhang & Kushner, JVST A 19, 524
@@ -389,7 +392,14 @@ private:
   bool ionSplit_ = false;
   /// Radius, in cells, over which the ion's incidence normal is averaged.
   /// <= 1 keeps the per-cell facet normal (the staircase tread).
-  int ionNormR_ = 0;
+  /// The ion's incidence angle comes from a plane fit over this many cells
+  /// (ionFitNormal, cached). DEFAULT 6 since 2026-10-09: at high O the floor
+  /// stays rough at the scale of single cells, and the per-cell normal sends
+  /// a share of ions in at more than 60 deg, where yields fall and ions
+  /// reflect; the level set's yield laws refer to the macroscopic angle. At O
+  /// 800 it moves the corner deficit from -7.1 to -5.0 % and leaves O 100 as
+  /// it was. 0 or 1 restores the estimator normal (PMC_IONNORMR).
+  int ionNormR_ = 6;
   /// DIAGNOSTIC pass: trace tallyBoost_ times the physical flux, record the
   /// per-cell tallies, and let NOTHING react. Dividing the tallies by the
   /// boost gives an unbiased flux estimate with 1/sqrt(boost) the noise --
@@ -823,6 +833,16 @@ private:
   /// 2 cells, 90 deg -1.4 / -1.6. At 30 deg the trench SiF4 excess is 1.13 and
   /// ion-enhanced 0.97. No effect at s = 1, where nothing re-emits.
   /// PMC_SAMEFACET=0 turns it off; PMC_SAMEFACET_R / _ANG change it.
+  /// FINITE PARTICLE SIZE, in cells (setParticleSize, PMC_PSIZE): every
+  /// neutral and ion is the MCFPM's seven-point molecule, its centre plus one
+  /// point this far along each axis, and meets a cell when any point enters
+  /// it (csVoxelEmbreeTraversal). At one atom per cell an F atom is itself
+  /// about a cell across, and a point particle slips through one-cell gaps in
+  /// the oxide skin that no atom could pass. DEFAULT 1 cell since 2026-10-08
+  /// (with hopVisible_): in the AR-10 trench the floor then tracks the level
+  /// set within 0.5 % to 60 nm instead of falling 3.4 % behind. Zero is the
+  /// point particle (PMC_PSIZE=0).
+  NumericType particleSize_ = 1;
   bool sameFacet_ = true;
   int sameFacetCells_ = 2;        ///< Chebyshev range counted as sub-resolution
   NumericType sameFacetAngle_ = 30;   ///< degrees; beyond this it is a corner
@@ -894,6 +914,37 @@ private:
   NumericType depAtoms_ = 1;      ///< solid atoms carried by one molecule
   int filmMaterial_ = -1;         ///< <0: adopt the cell grown on
   std::vector<NumericType> depCredit_;  ///< atoms banked, per cell
+  std::array<int, D> lastAdded_{};      ///< where addCellAt last grew a cell
+  /// SILANE CVD (setCVD), the three reactions of silane.mechanism.json:
+  ///   R1  SiH4 + 2* -> SiH3* + H*    sticking s(T) on a free site pair
+  ///   R2  SiH3* -> Si + H* + H2      k1 per site, grows the film
+  ///   R3  2H* -> H2 + 2*             k2 per site
+  bool cvd_ = false;
+  NumericType cvdStick_ = 0, cvdK1_ = 0, cvdK2_ = 0;
+  /// H* hops per R3 attempt. R1 puts the two hydrogens of one SiH4 on
+  /// neighbouring cells, and R3 pairs neighbouring cells, so immobile H*
+  /// recombines with its own partner far more often than the level set's
+  /// mean-field rate law k2*theta_H^2 allows. A 1D lattice model of R1 to R3
+  /// at 900 K (s = 4.4e-4) gave theta_H 40 % low and growth 9 % fast; 100
+  /// hops per R3 attempt bring both within 1 % of the rate law, at s = 4.4e-4
+  /// and at s = 0.05 alike. The hops only mix: the rate law has no diffusion,
+  /// and the mixing length is a few nm.
+  NumericType cvdMix_ = 100;
+  /// Reach, in cells, of the site an R2 silicon joins the film at: the gas
+  /// cell within this Chebyshev distance of the SiH3* cell that touches the
+  /// most solid cells. Growing straight off the SiH3* cell builds a porous,
+  /// columnar film (packing 0.57 on the blanket, 0.83 with the one-cell
+  /// relaxation of relaxTarget). A compact film still roughens unless the
+  /// reach is wide enough, and a rough film catches a molecule more than
+  /// once: on the s = 0.05 blanket at 5 nm, reach 2, 3 and 4 gave 1.079,
+  /// 1.028 and 1.014 hits per molecule (a flat wafer gives 1), roughness
+  /// 2.9, 1.6 and 1.2 cells, and second-half growth +7.7, +2.4 and -0.6 %
+  /// against the rate law, while the free-site odds an arriving molecule
+  /// meets matched the rate law in all three.
+  int cvdRelaxR_ = 4;
+  std::vector<int> cvdList_;      ///< cells carrying SiH3* or H*
+  std::vector<int> cvdPos_;       ///< position in cvdList_, -1 if absent
+  std::vector<std::array<int, D>> cellIdx_;  ///< lattice index of each cell
   /// Re-emissions a neutral may make before it is discarded. With a
   /// small per-hit reaction probability a particle needs many bounces
   /// to react at all, and the ones that would reach a shadowed region
@@ -1053,7 +1104,8 @@ public:
   /// cell included. Choosing it this way gives the level set's s*Gamma*theta:
   /// the chance the site is SiO (F reflects) or bare (O bonds) is the local
   /// coverage, not the state of whichever cell the ray happened to strike.
-  std::array<int, D> hopSite(const std::array<int, D> &at) {
+  std::array<int, D> hopSite(const std::array<int, D> &at,
+                             const std::array<NumericType, D> *from = nullptr) {
     std::array<int, D> best = at;
     int seen = 0;
     NumericType wsum = 0;
@@ -1066,12 +1118,16 @@ public:
       for (int d = 0; d < D; ++d) { nb[d] += rem % w - R; rem /= w; }
       const int id = lattice_->cellId(nb);
       if (id < 0 || !solid(id) || isMask(id) || !isExposed(nb)) continue;
+      if (hopVisible_ && from && nb != at && !visibleFrom(*from, nb)) {
+        ++nHopHidden;
+        continue;
+      }
       if (hopW_[0] > NumericType(0)) {
         // WEIGHTED by distance from the landing cell (Chebyshev), renormalised
         // over the exposed cells actually present
         int cheb = 0;
         for (int d = 0; d < D; ++d) cheb = std::max(cheb, std::abs(nb[d] - at[d]));
-        const NumericType wgt = cheb < 3 ? hopW_[cheb] : NumericType(0);
+        NumericType wgt = cheb < 3 ? hopW_[cheb] : NumericType(0);
         if (wgt <= NumericType(0)) continue;
         wsum += wgt;
         if (uni() * wsum < wgt) best = nb;
@@ -1082,6 +1138,114 @@ public:
     }
     return best;
   }
+  /// SPREADING SEES WHAT THE PARTICLE SEES (setHopVisible, PMC_HOPVIS). A
+  /// candidate counts only if the straight line from where the particle met
+  /// the surface to the gas just outside one of the candidate's exposed faces
+  /// crosses no solid cell. Without it the spreading reaches cells behind a
+  /// one-cell oxide skin, in the cavity the etch has opened there, and F
+  /// hollows the wall out from behind the skin it cannot react with. DEFAULT
+  /// ON since 2026-10-08, with the finite particle size; PMC_HOPVIS=0 turns
+  /// it off.
+  bool hopVisible_ = true;
+  size_t nHopHidden = 0;   ///< spreading candidates excluded as hidden
+  void setHopVisible(bool on) { hopVisible_ = on; }
+  bool hopVisible() const { return hopVisible_; }
+  size_t hopHidden() const { return nHopHidden; }
+
+  /// Where the particle stands when it meets the surface at `h`, a quarter
+  /// cell out along the normal so that a line from it does not graze the
+  /// face it just met.
+  std::array<NumericType, D>
+  viewPoint(const viennacs::VoxelHit<NumericType, D> &h) const {
+    const auto n = unitNormal(h);
+    std::array<NumericType, D> p{};
+    for (int d = 0; d < D; ++d)
+      p[d] = h.point[d] + NumericType(0.25) * delta() * n[d];
+    return p;
+  }
+
+  /// No solid cell on the straight line from a to b (a grid walk through
+  /// the cells it crosses, the cell holding a excluded). Cells outside the
+  /// lattice do not block.
+  bool lineOfSight(const std::array<NumericType, D> &a,
+                   const std::array<NumericType, D> &b) const {
+    const auto &lo = lattice_->minCorner();
+    const NumericType dx = delta();
+    constexpr NumericType inf = std::numeric_limits<NumericType>::max();
+    std::array<NumericType, D> dir{};
+    NumericType len = 0;
+    for (int d = 0; d < D; ++d) {
+      dir[d] = b[d] - a[d];
+      len += dir[d] * dir[d];
+    }
+    len = std::sqrt(len);
+    if (len <= NumericType(0))
+      return true;
+    std::array<int, D> c{}, step{};
+    std::array<NumericType, D> tMax{}, tDelta{};
+    for (int d = 0; d < D; ++d) {
+      dir[d] /= len;
+      const NumericType u = (a[d] - lo[d]) / dx;
+      c[d] = static_cast<int>(std::floor(u));
+      if (dir[d] > NumericType(0)) {
+        step[d] = 1;
+        tMax[d] = (static_cast<NumericType>(c[d] + 1) - u) * dx / dir[d];
+        tDelta[d] = dx / dir[d];
+      } else if (dir[d] < NumericType(0)) {
+        step[d] = -1;
+        tMax[d] = (u - static_cast<NumericType>(c[d])) * dx / -dir[d];
+        tDelta[d] = dx / -dir[d];
+      } else {
+        step[d] = 0;
+        tMax[d] = inf;
+        tDelta[d] = inf;
+      }
+    }
+    for (int it = 0; it < 256; ++it) {
+      int ax = 0;
+      for (int d = 1; d < D; ++d)
+        if (tMax[d] < tMax[ax]) ax = d;
+      if (tMax[ax] >= len)
+        return true; // b lies in the cell reached
+      c[ax] += step[ax];
+      tMax[ax] += tDelta[ax];
+      const int id = lattice_->cellId(c);
+      if (id >= 0 && solid(id))
+        return false;
+    }
+    return true;
+  }
+
+  /// Is the exposed cell `nb` visible from `p`: from the face that turns
+  /// most towards p, a quarter cell out into the gas.
+  bool visibleFrom(const std::array<NumericType, D> &p,
+                   const std::array<int, D> &nb) const {
+    const auto &lo = lattice_->minCorner();
+    const NumericType dx = delta();
+    bool found = false;
+    NumericType bestDot = -std::numeric_limits<NumericType>::max();
+    std::array<NumericType, D> target{};
+    for (int d = 0; d < D; ++d)
+      for (int s = -1; s <= 1; s += 2) {
+        auto g = nb;
+        g[d] += s;
+        const int gid = lattice_->cellId(g);
+        if (gid < 0 || solid(gid))
+          continue; // not an exposed face
+        std::array<NumericType, D> f{};
+        for (int k = 0; k < D; ++k)
+          f[k] = lo[k] + dx * (static_cast<NumericType>(nb[k]) + NumericType(0.5));
+        f[d] += NumericType(s) * dx * NumericType(0.75); // face + a quarter cell
+        const NumericType dot = NumericType(s) * (p[d] - f[d]);
+        if (dot > bestDot) {
+          bestDot = dot;
+          target = f;
+          found = true;
+        }
+      }
+    return found && lineOfSight(p, target);
+  }
+
   /// Per-cell weights by distance 0 / 1 / 2 from the landing cell. DEFAULT
   /// 0.30 / 0.20 / 0.15 (user decision 2026-09-26; blanket, 6 seeds: area
   /// +1.5 +- 1.4 % vs the level set, against +2.2 +- 0.9 % for the uniform box).
@@ -1148,6 +1312,14 @@ public:
   size_t nDepStick = 0;   ///< precursors consumed by the surface
   size_t nDepFail = 0;    ///< stuck, but with nowhere to put the atoms
   size_t depositedCells_ = 0;
+  /// Silane CVD: R1 adsorptions, and the R1 attempts that passed the sticking
+  /// draw but found the site taken, no exposed neighbour, or the neighbour
+  /// taken; R2 events and the cells they grew; R3 pair desorptions and the
+  /// firings whose neighbour carried no H*; H* hops made and blocked; and
+  /// adsorbates moved off, or lost under, a newly grown cell.
+  size_t nCvdAds = 0, nCvdSiteBusy = 0, nCvdNoMate = 0, nCvdMateBusy = 0;
+  size_t nCvdGrow = 0, nCvdGrowCell = 0, nCvdH2 = 0, nCvdR3Miss = 0;
+  size_t nCvdHop = 0, nCvdHopBlocked = 0, nCvdMoved = 0, nCvdLost = 0;
   /// where the ions land and where they bite, binned by lateral cell index
   std::vector<size_t> histHit, histOnF, histRem, histTh;
   /// ion response vs local surface angle: 10-degree bins of theta
@@ -2661,7 +2833,237 @@ private:
             ? filmMaterial_
             : (grownOn >= 0 && !isMask(grownOn) ? (*material_)[grownOn]
                                                 : static_cast<int>(Material::Si));
+    lastAdded_ = at;
     ++depositedCells_;
+  }
+
+  /// Put a cell into a CVD state and keep the list of occupied cells.
+  void cvdSet(int id, std::uint8_t s) {
+    state_[id] = s;
+    const bool occ = (s == Silyl || s == Hydrogenated);
+    if (occ && cvdPos_[id] < 0) {
+      cvdPos_[id] = static_cast<int>(cvdList_.size());
+      cvdList_.push_back(id);
+    } else if (!occ && cvdPos_[id] >= 0) {
+      const int p = cvdPos_[id], b = cvdList_.back();
+      cvdList_[p] = b;
+      cvdPos_[b] = p;
+      cvdList_.pop_back();
+      cvdPos_[id] = -1;
+    }
+  }
+
+  /// A random exposed, non-mask cell within `reach` cells (Chebyshev) of
+  /// `at`, `at` itself excluded, or among the free ones only. False if there
+  /// is none.
+  bool cvdNeighbour(const std::array<int, D> &at, std::array<int, D> &out,
+                    bool freeOnly = false, int reach = 1) {
+    const int w = 2 * reach + 1;
+    int span = 1;
+    for (int d = 0; d < D; ++d) span *= w;
+    int seen = 0;
+    for (int s = 0; s < span; ++s) {
+      std::array<int, D> nb = at;
+      int rem = s;
+      bool same = true;
+      for (int d = 0; d < D; ++d) {
+        const int o = rem % w - reach;
+        nb[d] += o;
+        if (o) same = false;
+        rem /= w;
+      }
+      if (same) continue;
+      const int id = lattice_->cellId(nb);
+      if (id < 0 || !solid(id) || isMask(id) || !isExposed(nb)) continue;
+      if (freeOnly && state_[id] != Bare) continue;
+      ++seen;
+      if (uni() * seen < NumericType(1)) out = nb;
+    }
+    return seen > 0;
+  }
+
+  /// Solid at a lattice index, with the side walls of the domain mirrored and
+  /// the substrate continuing below the lattice.
+  bool cvdSolidAt(std::array<int, D> idx) const {
+    const auto &dims = lattice_->dims();
+    for (int d = 0; d < D - 1; ++d) {
+      if (idx[d] < 0) idx[d] = -1 - idx[d];
+      else if (idx[d] >= dims[d]) idx[d] = 2 * dims[d] - 1 - idx[d];
+    }
+    if (idx[D - 1] < 0) return true;
+    if (idx[D - 1] >= dims[D - 1]) return false;
+    return solid(lattice_->cellId(idx));
+  }
+
+  /// Where the silicon of one R2 event joins the film: among the gas cells
+  /// within cvdRelaxR_ cells (Chebyshev) of the SiH3* cell that share a face
+  /// with the film, the one with the most solid cells among its 3^D - 1
+  /// neighbours, ties broken at random. A crevice fills before a flat
+  /// stretch, and a flat stretch before the top of a protrusion, which is
+  /// what surface mobility does to a real film.
+  bool cvdGrowTarget(const std::array<int, D> &at, std::array<int, D> &out) {
+    const int R = std::max(cvdRelaxR_, 1), w = 2 * R + 1;
+    int span = 1, span3 = 1;
+    for (int d = 0; d < D; ++d) {
+      span *= w;
+      span3 *= 3;
+    }
+    int best = -1, ties = 0;
+    for (int t = 0; t < span; ++t) {
+      std::array<int, D> g = at;
+      int rem = t;
+      for (int d = 0; d < D; ++d) {
+        g[d] += rem % w - R;
+        rem /= w;
+      }
+      const int gid = lattice_->cellId(g);
+      if (gid < 0 || solid(gid)) continue;
+      bool face = false;
+      for (int d = 0; d < D && !face; ++d)
+        for (int sgn = -1; sgn <= 1; sgn += 2) {
+          auto f = g;
+          f[d] += sgn;
+          const int fid = lattice_->cellId(f);
+          if (fid >= 0 && solid(fid) && !isMask(fid)) {
+            face = true;
+            break;
+          }
+        }
+      if (!face) continue;
+      int c = 0;
+      for (int s = 0; s < span3; ++s) {
+        std::array<int, D> nb = g;
+        int r2 = s;
+        bool same = true;
+        for (int d = 0; d < D; ++d) {
+          const int o = r2 % 3 - 1;
+          nb[d] += o;
+          if (o) same = false;
+          r2 /= 3;
+        }
+        if (!same && cvdSolidAt(nb)) ++c;
+      }
+      if (c > best) {
+        best = c;
+        ties = 1;
+        out = g;
+      } else if (c == best && uni() * ++ties < NumericType(1)) {
+        out = g;
+      }
+    }
+    return best >= 0;
+  }
+
+  /// A cell grown at `t` can take the exposure of its face neighbours. An
+  /// adsorbate on one of those moves to the nearest free exposed cell, within
+  /// three cells, and is lost only if there is none. Searching only the
+  /// adjacent cells lost 5 % of all H* on the s = 0.05 blanket, at theta_H
+  /// 0.5, which the rate law removes only through R3.
+  void cvdBury(const std::array<int, D> &t) {
+    for (int d = 0; d < D; ++d)
+      for (int sgn = -1; sgn <= 1; sgn += 2) {
+        auto nb = t;
+        nb[d] += sgn;
+        const int nid = lattice_->cellId(nb);
+        if (nid < 0 || !solid(nid) || cvdPos_[nid] < 0 || isExposed(nb))
+          continue;
+        const std::uint8_t s = state_[nid];
+        cvdSet(nid, Bare);
+        std::array<int, D> to{};
+        bool moved = false;
+        for (int r = 1; r <= 3 && !moved; ++r)
+          moved = cvdNeighbour(nb, to, true, r);
+        if (moved) {
+          cvdSet(lattice_->cellId(to), s);
+          ++nCvdMoved;
+        } else {
+          ++nCvdLost;
+        }
+      }
+  }
+
+  /// The timed half of the silane mechanism. A cell stands for
+  /// nu = sigma0*dx^(D-1) sites and already receives nu times a site's
+  /// arrivals, so each per-site rate constant is applied nu times over, the
+  /// same scaling as the cascade's O* loss.
+  void cvdThermal(NumericType dt) {
+    const NumericType nu = p_.sigma0 * std::pow(delta(), D - 1);
+    std::vector<int> work;
+    auto collect = [&](std::uint8_t s) {
+      work.clear();
+      for (int id : cvdList_)
+        if (state_[id] == s) work.push_back(id);
+      std::shuffle(work.begin(), work.end(), rng_);
+    };
+    // R2, SiH3* -> Si + H* + H2. The silicon atom joins the film along the
+    // local normal. The hydrogen stays on the surface: on the new cell when
+    // one grows, on the same cell while the atom is still banked.
+    collect(Silyl);
+    for (int id : work) {
+      if (state_[id] != Silyl) continue;
+      const auto at = cellIdx_[id];
+      if (!(uni() < 1 - std::exp(-nu * areaFactor(at) * cvdK1_ * dt)))
+        continue;
+      ++nCvdGrow;
+      cvdSet(id, Bare);
+      viennacs::VoxelHit<NumericType, D> h;
+      h.cellId = id;
+      h.index = at;
+      const auto n = interaction_.normalAt(at);
+      std::array<NumericType, D> dir{};
+      for (int d = 0; d < D; ++d) dir[d] = -n[d];
+      const size_t before = depositedCells_;
+      depositAt(h, dir);
+      if (depositedCells_ > before) {
+        ++nCvdGrowCell;
+        cvdSet(lattice_->cellId(lastAdded_), Hydrogenated);
+        cvdBury(lastAdded_);
+      } else {
+        cvdSet(id, Hydrogenated);
+      }
+    }
+    // H* MIXING, cvdMix_ hops per R3 attempt to a free exposed neighbour.
+    collect(Hydrogenated);
+    for (int id : work) {
+      if (state_[id] != Hydrogenated) continue;
+      std::poisson_distribution<int> pois(static_cast<double>(
+          cvdMix_ * nu * areaFactor(cellIdx_[id]) * cvdK2_ * dt));
+      const int n = pois(rng_);
+      int cur = id;
+      for (int k = 0; k < n; ++k) {
+        std::array<int, D> to{};
+        if (!cvdNeighbour(cellIdx_[cur], to)) break;
+        const int tid = lattice_->cellId(to);
+        if (state_[tid] != Bare) {
+          ++nCvdHopBlocked;
+          continue;
+        }
+        cvdSet(cur, Bare);
+        cvdSet(tid, Hydrogenated);
+        cur = tid;
+        ++nCvdHop;
+      }
+    }
+    // R3, 2H* -> H2 + 2*. Each H* cell fires at nu*k2 and takes a random
+    // exposed neighbour with it if that one carries H* too. Firing and being
+    // taken each happen at nu*k2*theta_H, so a site loses H* at
+    // 2*k2*theta_H^2, the rate law with its two sites.
+    collect(Hydrogenated);
+    for (int id : work) {
+      if (state_[id] != Hydrogenated) continue;
+      const auto at = cellIdx_[id];
+      if (!(uni() < 1 - std::exp(-nu * areaFactor(at) * cvdK2_ * dt)))
+        continue;
+      std::array<int, D> to{};
+      if (!cvdNeighbour(at, to) ||
+          state_[lattice_->cellId(to)] != Hydrogenated) {
+        ++nCvdR3Miss;
+        continue;
+      }
+      cvdSet(id, Bare);
+      cvdSet(lattice_->cellId(to), Bare);
+      ++nCvdH2;
+    }
   }
 
   /// Occupied cells among the 3^D - 1 neighbours.
@@ -2748,7 +3150,9 @@ private:
                  const std::array<NumericType, D> &dir) {
     ++nDepStick;
     std::array<int, D> t = h.index;
-    bool placed = false;
+    // CVD places the atom by coordination within cvdRelaxR_ (cvdGrowTarget)
+    const bool cvdPlaced = cvd_ && cvdGrowTarget(h.index, t);
+    bool placed = cvdPlaced;
     // ALONG THE NORMAL, not along the ray. The face a ray crossed is the
     // growth direction only for a ray arriving head on; a cosine-distributed
     // neutral at 60 degrees hands its atoms to a cell BESIDE the surface. With
@@ -2757,7 +3161,7 @@ private:
     // the fluorocarbon blanket, 8.5 filled cells per column spread over a span
     // of 17.6, a packing of 0.48. A film that porous has no thickness for
     // anything to depend on.
-    if (depNormal_) {
+    if (depNormal_ && !placed) {
       const auto n = interaction_.normalAt(h.index);
       NumericType best = -std::numeric_limits<NumericType>::max();
       for (int d = 0; d < D; ++d)
@@ -2786,7 +3190,8 @@ private:
         }
       t[axis] += n[axis] > 0 ? 1 : -1;
     }
-    t = relaxTarget(t);
+    if (!cvdPlaced)
+      t = relaxTarget(t);
     int tid = lattice_->cellId(t);
     // The face the ray crossed is not always open: a hit accepted after a
     // pass-through, or one taken on a cell tucked behind a ledge, can be
@@ -3162,6 +3567,7 @@ public:
     // comparison measures the tracer as well as the representation.
     interaction_.setTraversalEngine(viennacs::TraversalEngine::EmbreeBVH);
     interaction_.setInterfaceRadius(fitRadius_);
+    interaction_.setParticleRadius(particleSize_ * lattice.gridDelta());
     state_.assign(fill.size(), Bare);
     // binary from the outset: a fractional cell has no meaning here
     for (auto &f : *fill_)
@@ -3290,6 +3696,11 @@ public:
   void setFacetPlane(bool on) { facetPlane_ = on; }
   void setFacetTol(NumericType t) { facetTol_ = t > 0 ? t : NumericType(1); }
   void setSameFacet(bool on) { sameFacet_ = on; }
+  void setParticleSize(NumericType cells) {
+    particleSize_ = cells > NumericType(0) ? cells : NumericType(0);
+    interaction_.setParticleRadius(particleSize_ * delta());
+  }
+  NumericType particleSize() const { return particleSize_; }
   void setSameFacetAngle(NumericType deg) { sameFacetAngle_ = deg; }
   void setSameFacetCells(int c) { sameFacetCells_ = c > 0 ? c : 1; }
   size_t subResolutionSkips() const { return nSubRes; }
@@ -3353,6 +3764,56 @@ public:
   void setThermalLocal(bool on) { thermLocal_ = on; }
   void setIonSplitRadius(bool on) { ionSplit_ = on; }
   void setIonNormalRadius(int r) { ionNormR_ = r; }
+
+  /// The ion's plane-fit normal at ionNormR_, CACHED per cell. The fit
+  /// (VoxelInteraction::fitNormalAt) reads only whether each cell within
+  /// ionNormR_ + 1 holds material, so the cache keeps that pattern as bits
+  /// and refits only when it has changed: the normal a fresh fit would give,
+  /// without paying the fit at every ion hit (3.5x the run time otherwise).
+  struct IonFitEntry {
+    std::vector<std::uint64_t> bits;
+    viennacore::Vec3D<NumericType> n{0, 0, 0};
+    int radius = -1;
+  };
+  std::vector<IonFitEntry> ionFitCache_;
+  size_t nIonFitHit = 0, nIonFitMiss = 0;
+  size_t ionFitHits() const { return nIonFitHit; }
+  bool ionFitCache_on_ = true;  ///< false: fit at every hit (to check the cache)
+  void setIonFitCache(bool on) { ionFitCache_on_ = on; }
+  size_t ionFitMisses() const { return nIonFitMiss; }
+
+  viennacore::Vec3D<NumericType> ionFitNormal(const std::array<int, D> &idx) {
+    const int id = lattice_->cellId(idx);
+    if (id < 0 || !ionFitCache_on_)
+      return interaction_.fitNormalAt(idx, ionNormR_);
+    if (ionFitCache_.size() != fill_->size())
+      ionFitCache_.assign(fill_->size(), IonFitEntry{});
+    const int Rs = ionNormR_ + 1, w = 2 * Rs + 1;
+    size_t span = 1;
+    for (int d = 0; d < D; ++d)
+      span *= static_cast<size_t>(w);
+    std::vector<std::uint64_t> sig((span + 63) / 64, 0);
+    for (size_t t = 0; t < span; ++t) {
+      auto nb = idx;
+      size_t rem = t;
+      for (int d = 0; d < D; ++d) {
+        nb[d] += static_cast<int>(rem % static_cast<size_t>(w)) - Rs;
+        rem /= static_cast<size_t>(w);
+      }
+      if (interaction_.fillAt(nb) >= NumericType(0.5))
+        sig[t / 64] |= std::uint64_t(1) << (t % 64);
+    }
+    auto &e = ionFitCache_[id];
+    if (e.radius == ionNormR_ && e.bits == sig) {
+      ++nIonFitHit;
+      return e.n;
+    }
+    ++nIonFitMiss;
+    e.n = interaction_.fitNormalAt(idx, ionNormR_);
+    e.bits = std::move(sig);
+    e.radius = ionNormR_;
+    return e.n;
+  }
   /// The estimator's normal at every surface cell, for validation against a
   /// geometry whose angle is known analytically. Sampling it through ion
   /// impacts instead carries the ion statistics; this does not.
@@ -3489,6 +3950,57 @@ public:
     deposit_ = false;              // ... but the generic growth path stays off
   }
   const FCParameters &fcParameters() const { return fc_; }
+  /// Silane CVD instead of SF6/O2: SiH4 on the neutral channel (fluxF) and
+  /// the three reactions of silane.mechanism.json, with s the sticking of R1
+  /// and k1, k2 the per-site constants of R2 and R3, all at the mechanism's
+  /// temperature. Every surface cell starts free.
+  void setCVD(bool on, NumericType s = 0, NumericType k1 = 0,
+              NumericType k2 = 0) {
+    cvd_ = on;
+    if (!on) return;
+    cvdStick_ = s;
+    cvdK1_ = k1;
+    cvdK2_ = k2;
+    cellIdx_.assign(fill_->size(), std::array<int, D>{});
+    const auto &dims = lattice_->dims();
+    size_t sites = 1;
+    for (int d = 0; d < D; ++d)
+      sites *= static_cast<size_t>(dims[d]);
+    std::array<int, D> idx{};
+    for (size_t flat = 0; flat < sites; ++flat) {
+      size_t rem = flat;
+      for (int d = 0; d < D; ++d) {
+        idx[d] = static_cast<int>(rem % static_cast<size_t>(dims[d]));
+        rem /= static_cast<size_t>(dims[d]);
+      }
+      const int id = lattice_->cellId(idx);
+      if (id >= 0)
+        cellIdx_[id] = idx;
+    }
+    cvdList_.clear();
+    cvdPos_.assign(fill_->size(), -1);
+    depNormal_ = true;             // the film grows along the local normal
+    setDeposition(true);           // sizes and seeds the growth accumulator
+    deposit_ = false;              // ... but the generic growth path stays off
+  }
+  void setCVDMixing(NumericType hopsPerR3) { cvdMix_ = hopsPerR3; }
+  void setCVDRelaxRadius(int cells) { cvdRelaxR_ = cells; }
+  int cvdRelaxRadius() const { return cvdRelaxR_; }
+  bool cvd() const { return cvd_; }
+  NumericType cvdMixing() const { return cvdMix_; }
+  /// Exposed non-mask cells that are free, SiH3* and H*.
+  std::array<size_t, 3> cvdCensus() const {
+    std::array<size_t, 3> c{0, 0, 0};
+    for (size_t id = 0; id < cellIdx_.size(); ++id) {
+      if (!solid(static_cast<int>(id)) || isMask(static_cast<int>(id)) ||
+          !isExposed(cellIdx_[id]))
+        continue;
+      if (state_[id] == Silyl) ++c[1];
+      else if (state_[id] == Hydrogenated) ++c[2];
+      else ++c[0];
+    }
+    return c;
+  }
   /// net sticking probability per surface hit
   void setDepositionP(NumericType p) { depP_ = p; }
   /// solid atoms one stuck molecule carries
@@ -4406,7 +4918,8 @@ public:
                     !uniformReemit_ && !tallyOnly_ && !fluxProbe_ &&
                     !hitTally_ && reemit_ && ionReflect_ && ionNormR_ <= 1 &&
                     ionSameIdentity_ && !freeze_ && smoothSupport_ <= 0 &&
-                    !oxideOpaque_;
+                    !oxideOpaque_ && particleSize_ <= NumericType(0) &&
+                    !hopVisible_;
     if (!ok && !gpuWarned_) {
       std::fprintf(stderr, "VoxelPMC: an option the GPU transport does not "
                            "implement is set, tracing on the CPU\n");
@@ -4888,6 +5401,38 @@ public:
                 break;
               }
               // otherwise it reflects, handled by the re-emission below
+            } else if (cvd_) {
+              // R1, SiH4 + 2* -> SiH3* + H*. The molecule sticks with s(T) to
+              // a free site that has a free exposed neighbour for its
+              // hydrogen: s*theta_free^2 per arrival, the level set's rate law
+              // and its reflection at once. The site is chosen by the same
+              // spreading as an F or O arrival. Anything else reflects. The
+              // sticking draw comes first only because it is cheap; the
+              // probability is the same product in any order.
+              if (isMask(hid)) {
+                ++nMaskReflect;
+              } else if (uni() < stick) {
+                std::array<int, D> site = h.index;
+                if (fHopR_ > 0) {
+                  const auto vp = viewPoint(h);
+                  site = hopSite(h.index, &vp);
+                }
+                const int sid = lattice_->cellId(site);
+                std::array<int, D> mate{};
+                if (state_[sid] != Bare) {
+                  ++nCvdSiteBusy;
+                } else if (!cvdNeighbour(site, mate)) {
+                  ++nCvdNoMate;
+                } else if (state_[lattice_->cellId(mate)] != Bare) {
+                  ++nCvdMateBusy;
+                } else {
+                  cvdSet(sid, Silyl);
+                  cvdSet(lattice_->cellId(mate), Hydrogenated);
+                  ++nCvdAds;
+                  break;                        // consumed
+                }
+              }
+              // otherwise it reflects, handled by the re-emission below
             } else if (cascade_) {
               // ONE ARRIVAL, ONE BOND. The cell's identity decides what can
               // happen to it, so no site test and no nu appear here: the
@@ -4898,7 +5443,8 @@ public:
                 ++nMaskReflect;                 // the mask reacts with nothing
               } else if (adsorbState == Oxidised && fHopR_ > 0 && oHop_) {
                 // O on the hopped site: SiO if that site is bare, else reflect
-                const auto site = hopSite(h.index);
+                const auto vp = viewPoint(h);
+                const auto site = hopSite(h.index, &vp);
                 const int sid = lattice_->cellId(site);
                 if (sid != hid) ++nOHop;
                 if (state_[sid] == Bare) {
@@ -4932,7 +5478,8 @@ public:
                 if (fHopR_ > 0) {
                   // F on the hopped site: reflects if it is SiO, else takes
                   // one cascade step with that step's probability.
-                  const auto site = hopSite(h.index);
+                  const auto vp = viewPoint(h);
+                  const auto site = hopSite(h.index, &vp);
                   const int sid = lattice_->cellId(site);
                   if (state_[sid] == Oxidised) {
                     ++nCasFonO;                 // F does not touch SiO
@@ -4995,6 +5542,9 @@ public:
                   const NumericType aw =
                       cascadeArea_ ? areaFactor(h.index) : NumericType(1);
                   if (uni() < stickCorrected(cascadeP_[cascadeTop_]) * aw) {
+                    const bool topSite = gasAbove(h.index);
+                    ++(topSite ? nFbondTop : nFbondSide);
+                    ++(topSite ? nSiF4Top : nSiF4Side);
                     ++nCasAdv[cascadeTop_];
                     removalTally_ = &remTh;
                     if (removeAtoms(h.index, atomsPerCell)) ++nCasDesorb;
@@ -5005,6 +5555,7 @@ public:
                 } else if (uni() < stickCorrected(cascadeP_[nF_[hid]]) *
                                        (cascadeArea_ ? areaFactor(h.index)
                                                     : NumericType(1))) {
+                  ++(gasAbove(h.index) ? nFbondTop : nFbondSide);
                   ++nCasAdv[nF_[hid]];
                   ++nF_[hid];
                   state_[hid] = Fluorinated;    // step >= 1
@@ -5316,7 +5867,7 @@ public:
           // macroscopic orientation instead of the cell it happened to hit.
           auto n = unitNormal(h);
           if (ionNormR_ > 1) {
-            const auto nf = interaction_.fitNormalAt(h.index, ionNormR_);
+            const auto nf = ionFitNormal(h.index);
             NumericType l = 0;
             for (int d = 0; d < D; ++d) l += nf[d] * nf[d];
             if (l > NumericType(0.5)) {
@@ -5424,7 +5975,8 @@ public:
               std::array<int, D> rat = h.index;
               int rid = id;
               if (ionHop_ && fHopR_ > 0) {
-                rat = hopSite(h.index);
+                const auto vp = viewPoint(h);
+                rat = hopSite(h.index, &vp);
                 rid = lattice_->cellId(rat);
                 if (rid != id) ++nIonHop; else ++nIonHopStay;
               }
@@ -5580,6 +6132,13 @@ public:
       }
     };
 
+    if (cvd_) {
+      // SiH4 rides the neutral channel; R2, the H* hops and R3 fire with time
+      deliver(p_.fluxF, p_.cosinePowerNeutral, false, Silyl,
+              stickCorrected(cvdStick_));
+      cvdThermal(dt);
+      return;
+    }
     if (deposit_) {
       // one precursor species, and nothing that fires with time
       deliver(p_.fluxF, p_.cosinePowerNeutral, false, Fluorinated, depP_);

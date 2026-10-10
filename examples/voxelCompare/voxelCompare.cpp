@@ -129,10 +129,15 @@ static T writeSurface(ps::SmartPointer<ps::Domain<T, D>> dom,
 class SnapshotCallback : public ps::AdvectionCallback<T, D> {
   T every_, next_, nm_;
   int k_ = 0;
+  /// With LS_FLUXDUMP, the level set's flux and coverage fields at every
+  /// snapshot too (cmp_ls_flux_snap_<nm>.csv, the format of cmp_ls_flux.csv).
+  /// A plain pointer: the model owns this callback.
+  ps::SurfaceChemistry<T, D> *model_ = nullptr;
 
 public:
-  SnapshotCallback(T everySeconds, T everyNm)
-      : every_(everySeconds), next_(everySeconds), nm_(everyNm) {}
+  SnapshotCallback(T everySeconds, T everyNm,
+                   ps::SurfaceChemistry<T, D> *model = nullptr)
+      : every_(everySeconds), next_(everySeconds), nm_(everyNm), model_(model) {}
   bool applyPostAdvect(const T processTime) override {
     while (every_ > T(0) && processTime >= next_ * (1 - T(1e-9))) {
       ++k_;
@@ -141,6 +146,24 @@ public:
       const T low = writeSurface(this->domain, std::string("cmp_ls_snap_") + tag + ".vtp");
       std::cout << "    level-set snapshot " << tag << " nm at t = " << processTime
                 << " s, lowest point z = " << low << " nm" << std::endl;
+      if (model_ && std::getenv("LS_FLUXDUMP")) {
+        const auto labels = model_->fluxFieldLabels();
+        const auto fields = model_->fluxFieldLabels().empty()
+                                ? std::vector<std::vector<T>>{}
+                                : model_->fluxFields();
+        const auto pts = model_->fluxFieldCoords();
+        if (!fields.empty() && pts.size() == fields[0].size()) {
+          std::ofstream ff(std::string("cmp_ls_flux_snap_") + tag + ".csv");
+          ff << "x,z";
+          for (const auto &l : labels) ff << ',' << l;
+          ff << "\n";
+          for (size_t i = 0; i < pts.size(); ++i) {
+            ff << pts[i][0] << ',' << pts[i][1];
+            for (size_t g = 0; g < fields.size(); ++g) ff << ',' << fields[g][i];
+            ff << "\n";
+          }
+        }
+      }
       next_ += every_;
     }
     return true;
@@ -282,7 +305,7 @@ int main(int argc, char **argv) {
     }
     if (snapEvery > T(0))
       model->setAdvectionCallback(
-          ps::SmartPointer<SnapshotCallback>::New(snapEvery, snapNm));
+          ps::SmartPointer<SnapshotCallback>::New(snapEvery, snapNm, model.get()));
     std::cout << "level set:\n";
     const auto lsStart = std::chrono::steady_clock::now();
     proc.apply();
@@ -648,6 +671,8 @@ int main(int argc, char **argv) {
     if (const char *e = std::getenv("PMC_THERMCOARSE")) pmc.setThermalCoarse(std::atoi(e));
     if (std::getenv("PMC_IONSPLIT")) pmc.setIonSplitRadius(true);
     if (const char *e = std::getenv("PMC_IONNORMR")) pmc.setIonNormalRadius(std::atoi(e));
+    // PMC_IONFITCACHE=0 refits the ion normal at every hit (checks the cache)
+    if (const char *e = std::getenv("PMC_IONFITCACHE")) pmc.setIonFitCache(std::atoi(e) != 0);
     if (const char *e = std::getenv("PMC_DMGSCALE"))
       pmc.setDamageScale(std::atof(e));
     if (std::getenv("PMC_HITTALLY")) pmc.setHitTally(true);
@@ -675,6 +700,15 @@ int main(int argc, char **argv) {
     // default options); anything the device does not implement stays on the
     // CPU, and the log line after the etch says how many steps ran where.
     if (std::getenv("PMC_GPU")) pmc.setUseGPU(true);
+    // Finite particle size (the MCFPM's seven-point molecule) and
+    // line-of-sight spreading, both ON by default
+    // since 2026-10-08: PMC_PSIZE (cells, 0 = point particle) and
+    // PMC_HOPVIS=0 restore the earlier transport.
+    if (const char *e = std::getenv("PMC_HOPVIS")) pmc.setHopVisible(std::atoi(e) != 0);
+    if (const char *e = std::getenv("PMC_PSIZE")) pmc.setParticleSize(std::atof(e));
+    std::cout << "  particle size " << pmc.particleSize()
+              << " cells (seven-point molecule), spreading by line of sight "
+              << (pmc.hopVisible() ? "on" : "off") << std::endl;
     if (const char *e = std::getenv("PMC_MINR")) pmc.setMinFitRadius(std::atoi(e));
     const std::string tag = cfg.tag;
     auto dump = [&](const std::string &name) {
@@ -910,6 +944,12 @@ int main(int argc, char **argv) {
     std::cout << "    cell-set etch took "
               << std::chrono::duration<double>(std::chrono::steady_clock::now() - pmcStart).count()
               << " s wall clock" << std::endl;
+    if (pmc.hopVisible())
+      std::cout << "    SPREADING by line of sight: candidates hidden "
+                << pmc.hopHidden() << std::endl;
+    if (pmc.ionFitHits() + pmc.ionFitMisses() > 0)
+      std::cout << "    ION NORMAL plane fits: cached " << pmc.ionFitHits()
+                << ", fitted " << pmc.ionFitMisses() << std::endl;
     if (pmc.useGPU())
       std::cout << "    GPU transport: " << pmc.gpuSteps() << " of " << steps
                 << " steps on the device, hits on cells gone earlier in the step "
