@@ -66,7 +66,14 @@
       "traced": true,
       "label": "AlC3H9_flux",
       "flux": 2925.514276308217,
-      "sticking": null
+      "sticking": {
+        "reaction": "R4",
+        "s0": 0.001,
+        "Ea": 0.0,
+        "beta": 0.0,
+        "site": 1,
+        "freeSiteExp": 1
+      }
     },
     {
       "name": "CH4",
@@ -94,10 +101,10 @@
       "id": "R1",
       "eq": "AlC3H9 + 2Xp + *Al -> AlC2H6 + X + Ob + CH4",
       "constant": {
-        "kind": "arrhenius",
-        "k0": 20840000000.0,
-        "Ea": 0.52,
-        "beta": 1.0
+        "kind": "sticking",
+        "s0": 0.001,
+        "Ea": 0.0,
+        "beta": 0.0
       },
       "gasFactors": [
         {
@@ -134,7 +141,7 @@
       "eq": "AlC2H6 + Xp + X -> AlCH3 + Ob + CH4 + X",
       "constant": {
         "kind": "arrhenius",
-        "k0": 20840000000.0,
+        "k0": 16255000000.0,
         "Ea": 1.09,
         "beta": 1.0
       },
@@ -176,7 +183,7 @@
       "eq": "AlCH3 + X -> Al + Ob + CH4",
       "constant": {
         "kind": "arrhenius",
-        "k0": 20840000000.0,
+        "k0": 16255000000.0,
         "Ea": 1.21,
         "beta": 1.0
       },
@@ -213,10 +220,10 @@
       "id": "R4",
       "eq": "AlC3H9 + Ob + 2Al + *Al -> 3AlCH3 + Oc",
       "constant": {
-        "kind": "arrhenius",
-        "k0": 20840000000.0,
-        "Ea": 0.5,
-        "beta": 1.0
+        "kind": "sticking",
+        "s0": 0.001,
+        "Ea": 0.0,
+        "beta": 0.0
       },
       "gasFactors": [
         {

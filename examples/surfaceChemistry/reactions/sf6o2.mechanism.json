@@ -67,6 +67,13 @@
       "label": null,
       "flux": null,
       "sticking": null
+    },
+    {
+      "name": "F2",
+      "traced": false,
+      "label": null,
+      "flux": null,
+      "sticking": null
     }
   ],
   "solids": [
@@ -196,6 +203,97 @@
     },
     {
       "id": "R4",
+      "eq": "4F* -> 2F2 + 4*",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 75.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -4.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "blocked": false,
+      "materialConstants": {
+        "Mask": {
+          "prefactor": 75.0,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      },
+      "materialDefault": {
+        "prefactor": 0.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      }
+    },
+    {
+      "id": "R5",
+      "eq": "Ar_ion + 2F* -> F2 + 2*",
+      "constant": {
+        "kind": "arrhenius",
+        "k0": 1.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "gasFactors": [],
+      "covFactors": [
+        {
+          "idx": 0,
+          "exp": 1
+        }
+      ],
+      "freeSiteExp": [
+        0
+      ],
+      "nu": [
+        -2.0,
+        0.0
+      ],
+      "solidAtoms": [
+        0.0
+      ],
+      "blocked": false,
+      "materialConstants": {
+        "Mask": {
+          "prefactor": 1.0,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      },
+      "materialDefault": {
+        "prefactor": 0.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
+      "ionYield": {
+        "ion": "Ar_ion",
+        "label": "R5_yieldFlux",
+        "flux": 12.0,
+        "meanEnergy": 100.0,
+        "A": 7.0,
+        "Eth": 15.0,
+        "B": 0.0,
+        "enhanced": true,
+        "materials": {}
+      }
+    },
+    {
+      "id": "R6",
       "eq": "Ar_ion + 2F* + Si -> SiF2 + 2*",
       "constant": {
         "kind": "arrhenius",
@@ -221,25 +319,32 @@
         -1.0
       ],
       "blocked": false,
+      "materialConstants": {
+        "Si": {
+          "prefactor": 1.0,
+          "Ea": 0.0,
+          "beta": 0.0
+        }
+      },
+      "materialDefault": {
+        "prefactor": 0.0,
+        "Ea": 0.0,
+        "beta": 0.0
+      },
       "ionYield": {
         "ion": "Ar_ion",
-        "label": "R4_yieldFlux",
+        "label": "R6_yieldFlux",
         "flux": 12.0,
         "meanEnergy": 100.0,
         "A": 7.0,
         "Eth": 15.0,
         "B": 0.0,
         "enhanced": true,
-        "materials": {
-          "Mask": {
-            "A": 0.0,
-            "Eth": 15.0
-          }
-        }
+        "materials": {}
       }
     },
     {
-      "id": "R5",
+      "id": "R7",
       "eq": "Ar_ion + Si -> Si_s",
       "constant": {
         "kind": "arrhenius",
@@ -262,7 +367,7 @@
       "blocked": false,
       "ionYield": {
         "ion": "Ar_ion",
-        "label": "R5_yieldFlux",
+        "label": "R7_yieldFlux",
         "flux": 12.0,
         "meanEnergy": 100.0,
         "A": 0.0337,
@@ -278,7 +383,7 @@
       }
     },
     {
-      "id": "R6",
+      "id": "R8",
       "eq": "Ar_ion + O* -> O + *",
       "constant": {
         "kind": "arrhenius",
@@ -306,7 +411,7 @@
       "blocked": false,
       "ionYield": {
         "ion": "Ar_ion",
-        "label": "R6_yieldFlux",
+        "label": "R8_yieldFlux",
         "flux": 12.0,
         "meanEnergy": 100.0,
         "A": 3.0,
@@ -317,7 +422,7 @@
       }
     },
     {
-      "id": "R7",
+      "id": "R9",
       "eq": "O* -> O + *",
       "constant": {
         "kind": "arrhenius",

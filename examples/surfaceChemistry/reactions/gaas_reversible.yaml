@@ -35,4 +35,4 @@ surface:
   - {eq: "AsH <-> AsH*",     type: adsorption, s0: 1.0, Ea: 0.0,
      k0_rev: 2.2125e13, Ea_rev: 40.0}
   # [S22] the growth step, irreversible
-  - {eq: "GaCH3* + AsH* -> GaAs + CH4", type: surface, k0: 4.064e8, Ea: 29.3}
+  - {eq: "GaCH3* + AsH* -> GaAs + CH4", type: surface, k0: 4.0643e8, Ea: 29.3}   # 5e18, as in gaas_cvd.yaml

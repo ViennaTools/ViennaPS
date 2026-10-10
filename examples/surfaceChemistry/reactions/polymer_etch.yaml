@@ -54,8 +54,10 @@ siteTypes:
 surface:
   # --- the polymer film. The precursor sticks with beta_p and the adsorbed
   #     fragment is what builds into the film.
+  #     A number in a materials block multiplies the prefactor, so the class's
+  #     absolute values are written as mappings.
   - {eq: "CF2 -> CF2*", type: adsorption, s0: 0.26, Ea: 0.0,
-     materials: {default: 0.26, Mask: 0.01}}
+     materials: {Mask: {s0: 0.01, Ea: 0.0}}}
   - {eq: "2CF2* -> C + CF4", type: surface, k0: 2.0e2, Ea: 0.0}
 
   # --- ions remove the adsorbed fragment, which keeps the floor of a feature
@@ -69,11 +71,13 @@ surface:
 
   # --- the etchant on the substrate, beta_e per material
   - {eq: "F -> F*", type: adsorption, s0: 0.9, Ea: 0.0,
-     materials: {default: 0.0, SiO2: 0.9, Mask: 0.1}}
+     materials: {default: 0.0, SiO2: 1.0, Mask: {s0: 0.1, Ea: 0.0}}}
 
-  # --- the chemical etch, K * etchantFlux with the barrier of the class
+  # --- the chemical etch, K * etchantFlux with the barrier of the class. The
+  #     class evaluates this step with its source etchant flux, so the
+  #     prefactor is K = 0.002789491704544977 times the 150 declared for F above.
   - {eq: "2F* + SiO2 -> SiF2 + O2", type: surface,
-     k0: 1.3947458522724885, Ea: 0.168,
+     k0: 0.41842375568174655, Ea: 0.168,
      order: {F*: 1},
      materials: {default: 0.0, SiO2: 1.0}}
 

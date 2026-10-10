@@ -37,6 +37,7 @@ species:
   SiF4:   {phase: gas, reemit_only: true}     # the chemical etch product
   SiF2:   {phase: gas, reemit_only: true}     # the ion-enhanced etch product
   Si_s:   {phase: gas, reemit_only: true, atoms: {Si: 1}}   # a sputtered atom
+  F2:     {phase: gas, reemit_only: true}     # fluorine lost on the mask, below
   F*:     {phase: surface}               # eCoverage
   O*:     {phase: surface}               # pCoverage
   Si:     {phase: solid, rho: {default: 5.02, Mask: 500.0}}
@@ -50,12 +51,25 @@ surface:
   - {eq: "4F* + Si -> SiF4", type: surface, k0: 7.5e1, Ea: 0.0,
      order: {F*: 1},
      materials: {default: 0.0, Si: 1.0}}          # substrate only
+  # --- the class solves the same coverage balance on the mask as on the
+  #     substrate, so the chemical and the ion-enhanced term consume fluorine
+  #     there too, while the mask is removed only by sputtering. On the mask the
+  #     two terms therefore release the fluorine instead of etching. Like the
+  #     class, both ion-enhanced steps use one yield on every material and
+  #     select the material at the surface point, through `materials`.
+  - {eq: "4F* -> 2F2", type: surface, k0: 7.5e1, Ea: 0.0,
+     order: {F*: 1},
+     materials: {default: 0.0, Mask: 1.0}}        # mask only
+  - {eq: "Ar_ion + 2F* -> F2", type: ion_enhanced,
+     order: {F*: 1},
+     yield: {A: 7.0, Eth: 15.0},
+     materials: {default: 0.0, Mask: 1.0}}        # mask only
 
   # --- ion-enhanced etch: two fluorine consumed per silicon, first order
   - {eq: "Ar_ion + 2F* + Si -> SiF2", type: ion_enhanced,
      order: {F*: 1},
-     yield: {A: 7.0, Eth: 15.0,
-             materials: {Mask: {A: 0.0, Eth: 15.0}}}}   # substrate only
+     yield: {A: 7.0, Eth: 15.0},
+     materials: {default: 0.0, Si: 1.0}}          # substrate only
 
   # --- physical sputtering, on every material, with its own A per material
   - {eq: "Ar_ion + Si -> Si_s", type: sputtering,

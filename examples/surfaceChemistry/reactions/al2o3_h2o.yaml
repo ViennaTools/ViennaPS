@@ -6,10 +6,17 @@ energyUnit: eV
 #
 #   ||Al-CH3 + H2O(g) -> ||Al-OH + CH4(g)
 #
-# applied to every methyl the TMA half-cycle left. The barrier is the
-# 18 kJ/mol that Sperling et al. measure by infrared spectroscopy. Two
+# applied to every methyl the TMA half-cycle left. Sperling et al., J. Phys.
+# Chem. C 124 (2020) 3410, write the reaction probability of water on a
+# methylated surface as S(theta, T) = (sigma0 M) exp(-Eeff(theta)/kT) with
+# Eeff(1) = 18 kJ/mol = 0.187 eV, and take S(1, 150 C) = 2e-5. The prefactor
+# that gives this value is s0 = 2e-5 exp(0.187 eV / k / 423.15 K) = 3.4e-3, so
+# the reaction probability on a fully methylated surface is 2.7e-5 at 450 K.
+# The rise of Eeff as the methyl coverage falls is not represented. Two
 # hydroxylated aluminiums then condense into one formula unit of the film,
-# which returns the anion positions to hydroxyl termination.
+# which returns the anion positions to hydroxyl termination. The prefactor of
+# the condensation is the transition-state value k_B T / h per site, written as
+# k0 = (k_B/h) S0 / 1e15 = 8.336e9 with beta = 1, as in al2o3_tma.yaml.
 siteTypes:
   - {name: A, density: 4.0e14}      # /cm2
   - {name: C, density: 4.0e14}      # /cm2
@@ -17,7 +24,7 @@ siteTypes:
 species:
   H2O:      {phase: gas, pressure: 1.0e2}    # mTorr
   CH4:      {phase: gas, reemit_only: true}
-  Al2C6H18: {phase: gas, reemit_only: true}  # shared with the dose
+  AlC3H9:   {phase: gas, reemit_only: true}  # shared with the dose
   OH:       {phase: surface, site: A}
   O:        {phase: surface, site: A}
   AlC3H10O: {phase: surface, site: A}
@@ -31,8 +38,8 @@ species:
   Al2O3:    {phase: solid, rho: 1.77}        # 1e22 formula units /cm3
 
 surface:
-  - {eq: "H2O + AlC2H6O -> AlCH4O2 + CH4", type: adsorption, s0: 1.0, Ea: 0.187}
-  - {eq: "H2O + AlCH4O2 -> AlH2O3 + CH4", type: adsorption, s0: 1.0, Ea: 0.187}
-  - {eq: "H2O + AlCH3 -> AlHO + CH4", type: adsorption, s0: 1.0, Ea: 0.187}
+  - {eq: "H2O + AlC2H6O -> AlCH4O2 + CH4", type: adsorption, s0: 3.4e-3, Ea: 0.187}
+  - {eq: "H2O + AlCH4O2 -> AlH2O3 + CH4", type: adsorption, s0: 3.4e-3, Ea: 0.187}
+  - {eq: "H2O + AlCH3 -> AlHO + CH4", type: adsorption, s0: 3.4e-3, Ea: 0.187}
   - {eq: "2 AlH2O3 -> Al2O3 + 2 OH + H2O", type: surface,
-     k0: 2.084e10, Ea: 0.20, beta: 1.0}
+     k0: 8.336e9, Ea: 0.20, beta: 1.0}

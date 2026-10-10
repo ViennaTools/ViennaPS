@@ -37,13 +37,13 @@
         "freeSiteExp": 1,
         "materialConstants": {
           "Mask": {
-            "prefactor": 0.0026000000000000003,
+            "prefactor": 0.01,
             "Ea": 0.0,
             "beta": 0.0
           }
         },
         "materialDefault": {
-          "prefactor": 0.06760000000000001,
+          "prefactor": 0.26,
           "Ea": 0.0,
           "beta": 0.0
         }
@@ -63,12 +63,12 @@
         "freeSiteExp": 1,
         "materialConstants": {
           "SiO2": {
-            "prefactor": 0.81,
+            "prefactor": 0.9,
             "Ea": 0.0,
             "beta": 0.0
           },
           "Mask": {
-            "prefactor": 0.09000000000000001,
+            "prefactor": 0.1,
             "Ea": 0.0,
             "beta": 0.0
           }
@@ -172,13 +172,13 @@
       "blocked": false,
       "materialConstants": {
         "Mask": {
-          "prefactor": 0.0026000000000000003,
+          "prefactor": 0.01,
           "Ea": 0.0,
           "beta": 0.0
         }
       },
       "materialDefault": {
-        "prefactor": 0.06760000000000001,
+        "prefactor": 0.26,
         "Ea": 0.0,
         "beta": 0.0
       }
@@ -285,12 +285,12 @@
       "blocked": false,
       "materialConstants": {
         "SiO2": {
-          "prefactor": 0.81,
+          "prefactor": 0.9,
           "Ea": 0.0,
           "beta": 0.0
         },
         "Mask": {
-          "prefactor": 0.09000000000000001,
+          "prefactor": 0.1,
           "Ea": 0.0,
           "beta": 0.0
         }
@@ -306,7 +306,7 @@
       "eq": "2F* + SiO2 -> SiF2 + O2 + 2*sub",
       "constant": {
         "kind": "arrhenius",
-        "k0": 1.3947458522724885,
+        "k0": 0.41842375568174656,
         "Ea": 0.168,
         "beta": 0.0
       },
@@ -332,7 +332,7 @@
       "blocked": false,
       "materialConstants": {
         "SiO2": {
-          "prefactor": 1.3947458522724885,
+          "prefactor": 0.41842375568174656,
           "Ea": 0.168,
           "beta": 0.0
         }

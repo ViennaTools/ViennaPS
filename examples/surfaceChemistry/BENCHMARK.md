@@ -49,10 +49,13 @@ Copy the two `.tex` files over the placeholders:
     cp benchmark_table.tex benchmark_numbers.tex <paper directory>/
 
 The manuscript already carries `\input{benchmark_numbers}` in its preamble and
-`\input{benchmark_table}` in Section 7.5, so no editing is needed. The
-placeholders currently in the paper print `??` for every quoted figure and a
-table of dashes captioned NOT YET MEASURED, so an unpopulated build is obvious
-rather than plausible.
+`\input{benchmark_table}` in the section on computational cost, so no editing
+is needed. Without these files the paper builds with placeholders that print
+`??` for every quoted figure and a table of dashes captioned NOT YET MEASURED,
+so an unpopulated build is obvious rather than plausible. The files now in the
+paper hold the timings of 6 September 2026, taken with a seven-reaction version
+of `sf6o2.yaml` and the code of that date, and have to be retaken with the
+current files.
 
 Requires only Python 3 from the standard library. ViennaChem is not needed,
 since each mechanism ships compiled alongside its reaction file.
@@ -64,7 +67,7 @@ grid at 2000 rays per surface point, advanced by 5 nm. Holding the geometry
 fixed means the rows differ only in the mechanism.
 
 - `silane_inputs`, 3 reactions over 2 coverages, the smallest
-- `sf6o2`, 7 reactions over 2 coverages
+- `sf6o2`, 9 reactions over 2 coverages
 - `sf6o2` again through `--handwritten`, which swaps in ViennaPS's own
   `SF6O2Etching` class so the same chemistry is solved from its closed form
 - `gaas_cvd`, 30 reactions over 7 coverages, the largest

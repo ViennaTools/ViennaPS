@@ -14,28 +14,36 @@ namespace viennaps {
 
 // Device-side data for the generic chemical-deposition particles.
 //
-// The sticking s(T) already travels per particle in launchParams.sticking, so
-// only the free-site exponent and the number of coverages are model specific.
-// The exponent is indexed by launchParams.particleIdx, because a mechanism may
-// trace several gas species whose adsorption steps take different site counts.
+// A neutral is absorbed with the probability that it reacts at the hit, the
+// sum over the reactions that consume it of their rate laws per unit incident
+// flux. Those reactions are indexed by launchParams.particleIdx, because a
+// mechanism may trace several gas species that react in different ways.
 struct SurfaceChemistryParamsGPU {
   static constexpr int maxParticles = 16; // a published mechanism
                                           // can adsorb a dozen species
   static constexpr int maxCoverages = 16;
-  static constexpr int maxMaterials = 8; // per-particle sticking overrides
+  static constexpr int maxMaterials = 8; // per-channel rate overrides
+  static constexpr int maxChannels = 4;  // reactions consuming one species
+  static constexpr int maxSiteTypes = 4;
+  static constexpr int maxChannelFactors = 3; // coverage factors per reaction
 
   int numCoverages = 0;
+  int numSiteTypes = 1;
   int coverageSite[maxCoverages] = {}; // site-type index of each coverage
-  int freeSiteExponent[maxParticles] = {};
-  int stickingSite[maxParticles] = {}; // site type each particle sticks to
 
-  // Sticking per particle, already evaluated at the mechanism temperature.
-  // `defaultSticking` applies unless the material under the hit is listed, so a
-  // species that adsorbs on one material and not another reflects accordingly.
-  float defaultSticking[maxParticles] = {};
-  int numOverrides[maxParticles] = {};
-  int overrideMaterial[maxParticles][maxMaterials] = {}; // legacy material ids
-  float overrideSticking[maxParticles][maxMaterials] = {};
+  // The reactions that consume each traced species: the rate constant at the
+  // mechanism temperature, which `channelK` gives unless the material under
+  // the hit is listed, and the free-site and coverage exponents.
+  int numChannels[maxParticles] = {};
+  float channelK[maxParticles][maxChannels] = {};
+  int channelNumOverrides[maxParticles][maxChannels] = {};
+  int channelOverrideMaterial[maxParticles][maxChannels][maxMaterials] =
+      {}; // legacy material ids
+  float channelOverrideK[maxParticles][maxChannels][maxMaterials] = {};
+  int channelFreeExp[maxParticles][maxChannels][maxSiteTypes] = {};
+  int channelNumFactors[maxParticles][maxChannels] = {};
+  int channelFactorIndex[maxParticles][maxChannels][maxChannelFactors] = {};
+  int channelFactorExp[maxParticles][maxChannels][maxChannelFactors] = {};
 
   // --- ions -----------------------------------------------------------------
   // Everything below comes from the reaction file, by way of the mechanism.
@@ -66,25 +74,22 @@ struct SurfaceChemistryParamsGPU {
 static_assert(SurfaceChemistryParamsGPU::maxParticles == 16 &&
                   SurfaceChemistryParamsGPU::maxCoverages == 16 &&
                   SurfaceChemistryParamsGPU::maxMaterials == 8 &&
+                  SurfaceChemistryParamsGPU::maxChannels == 4 &&
+                  SurfaceChemistryParamsGPU::maxSiteTypes == 4 &&
+                  SurfaceChemistryParamsGPU::maxChannelFactors == 3 &&
                   SurfaceChemistryParamsGPU::maxYields == 6,
               "SurfaceChemistryParamsGPU must have the same shape in "
               "psSurfaceChemistry.hpp and gpu/models/SurfaceChemistry.cuh");
 
 } // namespace viennaps
 
-// theta_*t = 1 - sum_{i in t} theta_i for the site type t this particle sticks
-// to, read from the per-element coverage buffer. Coverage i of element e sits at
+// theta_*t = 1 - sum_{i in t} theta_i for site type t, read from the
+// per-element coverage buffer. Coverage i of element e sits at
 // e + i * numElements, the layout the surface model uploads.
 __forceinline__ __device__ float
-chemicalFreeSiteFraction(const void *sbtData, const unsigned primID) {
-  const viennaray::gpu::HitSBTDataBase *baseData =
-      reinterpret_cast<const viennaray::gpu::HitSBTDataBase *>(sbtData);
-  const float *coverages = (const float *)baseData->cellData;
-  const viennaps::SurfaceChemistryParamsGPU *params =
-      reinterpret_cast<const viennaps::SurfaceChemistryParamsGPU *>(
-          launchParams.customData);
-
-  const int site = params->stickingSite[launchParams.particleIdx];
+chemicalFreeSiteFraction(const float *coverages,
+                         const viennaps::SurfaceChemistryParamsGPU *params,
+                         const int site, const unsigned primID) {
   float occupied = 0.f;
   for (int i = 0; i < params->numCoverages; ++i)
     if (params->coverageSite[i] == site)
@@ -105,37 +110,59 @@ chemicalNeutralCollision(const void *, viennaray::gpu::PerRayData *prd) {
   }
 }
 
-// The sticking of this particle on the material under the hit. Mirrors the
-// per-material lookup the CPU particle does, so the two engines agree.
-__forceinline__ __device__ float chemicalSticking(const unsigned primID) {
-  const viennaps::SurfaceChemistryParamsGPU *params =
-      reinterpret_cast<const viennaps::SurfaceChemistryParamsGPU *>(
-          launchParams.customData);
-  const int p = launchParams.particleIdx;
-  const int count = params->numOverrides[p];
+// The rate constant of reaction c of this particle on the material under the
+// hit. Mirrors the per-material lookup the CPU particle does, so the two
+// engines agree.
+__forceinline__ __device__ float
+chemicalChannelRate(const viennaps::SurfaceChemistryParamsGPU *params,
+                    const int p, const int c, const unsigned primID) {
+  const int count = params->channelNumOverrides[p][c];
   if (count > 0) {
     const int consecutiveId = launchParams.materialIds[primID];
     const int legacyId = launchParams.materialMap[consecutiveId];
     for (int i = 0; i < count; ++i)
-      if (params->overrideMaterial[p][i] == legacyId)
-        return params->overrideSticking[p][i];
+      if (params->channelOverrideMaterial[p][c][i] == legacyId)
+        return params->channelOverrideK[p][c][i];
   }
-  return params->defaultSticking[p];
+  return params->channelK[p][c];
 }
 
-// s_eff = s(T) * theta_free^n, the same law the CPU particle uses.
+// The probability that the particle reacts at the hit, the sum over the
+// reactions that consume it of k * prod theta_*t^n * prod theta_i^n, the same
+// law the CPU particle uses.
 __forceinline__ __device__ void
 chemicalNeutralReflection(const void *sbtData,
                           viennaray::gpu::PerRayData *prd) {
   const viennaps::SurfaceChemistryParamsGPU *params =
       reinterpret_cast<const viennaps::SurfaceChemistryParamsGPU *>(
           launchParams.customData);
-  const float thetaFree = chemicalFreeSiteFraction(sbtData, prd->primID);
+  const viennaray::gpu::HitSBTDataBase *baseData =
+      reinterpret_cast<const viennaray::gpu::HitSBTDataBase *>(sbtData);
+  const float *coverages = (const float *)baseData->cellData;
+  const int p = launchParams.particleIdx;
+  const unsigned primID = prd->primID;
 
-  float sEff = chemicalSticking(prd->primID);
-  const int n = params->freeSiteExponent[launchParams.particleIdx];
-  for (int e = 0; e < n; ++e)
-    sEff *= thetaFree;
+  float sEff = 0.f;
+  for (int c = 0; c < params->numChannels[p]; ++c) {
+    float v = chemicalChannelRate(params, p, c, primID);
+    for (int t = 0; t < params->numSiteTypes; ++t) {
+      const int n = params->channelFreeExp[p][c][t];
+      if (n == 0)
+        continue;
+      const float thetaFree =
+          chemicalFreeSiteFraction(coverages, params, t, primID);
+      for (int e = 0; e < n; ++e)
+        v *= thetaFree;
+    }
+    for (int f = 0; f < params->channelNumFactors[p][c]; ++f) {
+      const float theta =
+          coverages[primID + params->channelFactorIndex[p][c][f] *
+                                 launchParams.numElements];
+      for (int e = 0; e < params->channelFactorExp[p][c][f]; ++e)
+        v *= theta;
+    }
+    sEff += v;
+  }
 
   prd->rayWeight -= prd->rayWeight * __saturatef(sEff);
   auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);

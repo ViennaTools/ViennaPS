@@ -86,12 +86,16 @@ struct Options {
   // surface can be watched saturating through a pulse and down the trench.
   // One file per sub-step per cycle, so keep --cycles small when using it.
   bool intermediate = false;
+  bool debug = false;  // ray tracing statistics of every flux calculation
   std::string engine = "auto";  // auto | cpu | gpu
   double maxChange = 1e-3;  // transient integrator accuracy; ~5% at 1e-3
   // The termination the substrate carries before the first pulse. An atomic
   // layer process starts on a terminated surface, and a mechanism whose first
   // step consumes that termination deposits nothing without it.
   std::vector<std::pair<std::string, double>> initial;
+  // radius of the disks of the CPU flux engine in the length unit of the run;
+  // 0 keeps the ViennaRay default of 0.707 grid spacings in 2-D
+  double diskRadius = 0.;
 };
 
 Options parse(int argc, char **argv) {
@@ -129,6 +133,8 @@ Options parse(int argc, char **argv) {
       o.out = next();
     else if (arg == "--intermediate")
       o.intermediate = true;
+    else if (arg == "--debug")
+      o.debug = true;
     else if (arg == "--dose-file")
       o.dose = next();
     else if (arg == "--coreactant-file")
@@ -156,6 +162,8 @@ Options parse(int argc, char **argv) {
     }
     else if (arg == "--max-change")
       o.maxChange = std::stod(next());
+    else if (arg == "--disk-radius")
+      o.diskRadius = std::stod(next());
     else {
       std::cerr << "unknown option " << arg << "\n";
       std::exit(1);
@@ -177,6 +185,8 @@ int main(int argc, char **argv) {
   const NumericType perAngstrom = o.lateral ? 1.e4 : 10.;
   if (o.intermediate)
     Logger::setLogLevel(LogLevel::INTERMEDIATE);
+  if (o.debug)
+    Logger::setLogLevel(LogLevel::DEBUG);
 
   auto dose = readChemicalMechanism<NumericType>(o.dose);
   auto coreactant = readChemicalMechanism<NumericType>(o.coreactant);
@@ -255,6 +265,7 @@ int main(int argc, char **argv) {
   process.setParameters(alp);
   RayTracingParameters tracing;
   tracing.raysPerPoint = o.rays;
+  tracing.diskRadius = o.diskRadius;
   process.setParameters(tracing);
   process.apply();
 

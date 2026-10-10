@@ -25,6 +25,17 @@ energyUnit: eV
 # The blocking pool is their (1 - theta_Me): a chemisorbed methyl takes one
 # place, an AlMe2 two, and the adduct on a bare bridge three, that last scaled
 # by the free fraction itself, which is what makes their definition implicit.
+#
+# Travis and Adomaitis write R1 and R4 as the transition-state rate of an
+# adduct held in Langmuir equilibrium with the gas, v1 = (k_B T/h) K1' [AX] with
+# [AX] = K1 P_A [X'] / (k_B T + K1 P_A), which is not of mass-action form. The
+# two TMA steps are therefore written with the net reaction probability of
+# Al(CH3)3 per incident molecule, 1e-3, from the (0.5 to 2)e-3 that Arts et al.
+# (J. Vac. Sci. Technol. A 37 (2019) 030908) extract, as in al2o3_tma.yaml.
+# The two thermal steps R2 and R3 keep the transition-state value k_B T / h per
+# site with beta = 1. The model reads k as a rate per unit area at unit coverage
+# in 1e15 /cm2 /s, so k0 = (k_B/h) S0 / 1e15 = 2.084e10 x 0.78 = 1.6255e10 for
+# S0 = 7.8e14 /cm2.
 blocking:
   pool:    {AlCH3: 1, AlC2H6: 2}
   adducts: {Ob: 3}
@@ -47,11 +58,11 @@ species:
   Al2O3:  {phase: solid, rho: 1.77}        # 1e22 formula units /cm3
 
 surface:
-  - {eq: "AlC3H9 + 2 Xp -> AlC2H6 + X + Ob + CH4", type: surface,
-     k0: 2.084e10, Ea: 0.52, beta: 1.0, order: {Xp: 1}, blocked: true}
+  - {eq: "AlC3H9 + 2 Xp -> AlC2H6 + X + Ob + CH4", type: adsorption,
+     s0: 1.0e-3, Ea: 0.0, order: {Xp: 1}, blocked: true}
   - {eq: "AlC2H6 + Xp + X -> AlCH3 + Ob + CH4 + X", type: surface,
-     k0: 2.084e10, Ea: 1.09, beta: 1.0, order: {AlC2H6: 1, X: 1}}
+     k0: 1.6255e10, Ea: 1.09, beta: 1.0, order: {AlC2H6: 1, X: 1}}
   - {eq: "AlCH3 + X -> Al + Ob + CH4", type: surface,
-     k0: 2.084e10, Ea: 1.21, beta: 1.0}
-  - {eq: "AlC3H9 + Ob + 2 Al -> 3 AlCH3 + Oc", type: surface,
-     k0: 2.084e10, Ea: 0.50, beta: 1.0, order: {Ob: 1, Al: 1}, blocked: true}
+     k0: 1.6255e10, Ea: 1.21, beta: 1.0}
+  - {eq: "AlC3H9 + Ob + 2 Al -> 3 AlCH3 + Oc", type: adsorption,
+     s0: 1.0e-3, Ea: 0.0, order: {Ob: 1, Al: 1}, blocked: true}

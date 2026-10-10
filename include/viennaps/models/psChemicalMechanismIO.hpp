@@ -297,6 +297,16 @@ parseChemicalMechanism(const std::string &text) {
         ". Regenerate it with a matching ViennaChem.");
   }
 
+  // Steric blocking is evaluated by the Python evaluator of ViennaChem and not
+  // by this surface model. A file that declares it would otherwise run here
+  // without it, so it is refused.
+  if (const auto blocking = root->get("blocking");
+      blocking && !blocking->isNull())
+    VIENNACORE_LOG_ERROR(
+        "Mechanism '" + root->str("name") +
+        "' declares steric blocking, which the ViennaPS surface model does not "
+        "evaluate. Evaluate it with the ViennaChem evaluator instead.");
+
   ChemicalMechanism<NumericType> mech;
 
   mech.name = root->str("name");

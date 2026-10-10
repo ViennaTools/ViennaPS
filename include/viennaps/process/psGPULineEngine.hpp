@@ -221,9 +221,12 @@ public:
     // output
     if (Logger::hasIntermediate()) {
       if (context.flags.useCoverages) {
+        // the device holds the coverages per line element, the output is per
+        // disk point, where the host copy already lives
         auto coverages = model_->getSurfaceModel()->getCoverages();
-        downloadCoverages(d_coverages, context.diskMesh->getCellData(),
-                          coverages, context.diskMesh->getNodes().size());
+        for (unsigned i = 0; i < coverages->getScalarDataSize(); ++i)
+          context.diskMesh->getCellData().insertReplaceScalarData(
+              *coverages->getScalarData(i), coverages->getScalarDataLabel(i));
       }
       downloadResultsToPointData(context.diskMesh->getCellData(),
                                  context.diskMesh,
@@ -287,7 +290,7 @@ private:
     const auto numElements = surfaceMesh_->lines.size();
 
     NumericType conversionRadius = gridDelta * (smoothingNeighbors + 1);
-    conversionRadius *= conversionRadius; // use squared radius
+    // findNearestWithinRadius compares distances, not their squares
 
     std::vector<std::vector<std::pair<unsigned, NumericType>>> elementsToPoint;
     elementsToPoint.reserve(numDisks);
@@ -314,11 +317,6 @@ private:
         }
       }
 
-      if (numClosePoints == 0) { // fallback to nearest point
-        auto nearestPoint = elementKdTree_->findNearest(diskMesh->nodes[i]);
-        closePointsArray.emplace_back(
-            static_cast<unsigned>(nearestPoint->first), NumericType(1));
-      }
 
       // Compute weighted average
       const NumericType sum =

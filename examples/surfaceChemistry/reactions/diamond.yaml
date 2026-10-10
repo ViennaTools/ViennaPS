@@ -29,6 +29,10 @@ energyUnit: kcal/mol
 #
 # Rate parameters: the ratios are fixed by the closed form above
 # (A2/A1 = 0.3 with (E1-E2)/R = 3430 K; A-1/A1 = 0.1 with (E1-E-1)/R = -4420 K),
+# where [H2]/[H] is the ratio of the gas concentrations above the surface. This
+# file states fluxes, Gamma = [X] vbar/4 with vbar proportional to m^-1/2, so
+# the reverse step, whose gas reactant is H2, carries sqrt(m_H2/m_H) = sqrt(2):
+# its prefactor is 0.1 sqrt(2) = 0.141421 relative to the forward step.
 # which gives E1 = 6.82 and E-1 = 15.60 kcal/mol with E2 = 0. These agree with
 # the thesis SURF.INP table, where the H-abstraction barrier is 7.3 kcal/mol,
 # H re-addition is barrierless with a sticking coefficient of 0.3, and methyl
@@ -46,7 +50,7 @@ species:
 surface:
   # [1] reversible H abstraction: this is what sets the radical fraction
   - {eq: "H* + H <-> H2", type: adsorption, s0: 1.0, Ea: 6.816,
-     k0_rev: 0.1, Ea_rev: 15.600}
+     k0_rev: 0.141421, Ea_rev: 15.600}
   # [2] H re-addition, barrierless
   - {eq: "H -> H*",       type: adsorption, s0: 0.3, Ea: 0.0}
   # [3] methyl addition, barrierless; the carbon joins the lattice

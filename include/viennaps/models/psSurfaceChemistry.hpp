@@ -259,6 +259,62 @@ template <typename NumericType> struct ChemicalMechanism {
     return out;
   }
 
+  // A reaction's rate constant evaluated once per material at the mechanism
+  // temperature, built the same way as stickingTable.
+  MaterialValueMap<NumericType> rateTable(int reactionIndex) const {
+    const auto &r = reactions.at(reactionIndex);
+    const auto &d = r.materialConstant.getDefault();
+    auto out = MaterialValueMap<NumericType>::fromDefault(
+        arrhenius(d.prefactor, d.Ea, d.beta));
+#define PS_EVAL_RATE(id, sym, cat, dens, cond, color)                          \
+  if (r.materialConstant.has(BuiltInMaterial::sym)) {                          \
+    const auto &c = r.materialConstant.get(BuiltInMaterial::sym);              \
+    out.set(Material(BuiltInMaterial::sym),                                    \
+            arrhenius(c.prefactor, c.Ea, c.beta));                             \
+  }
+    BUILTIN_MATERIAL_LIST(PS_EVAL_RATE)
+#undef PS_EVAL_RATE
+    return out;
+  }
+
+  // One reaction in which a traced gas is the single gas reactant, with what a
+  // particle needs to evaluate its rate law per unit incident flux: the rate
+  // constant on each material and the free-site and coverage factors.
+  struct AbsorptionChannel {
+    MaterialValueMap<NumericType> k;
+    std::vector<int> freeSiteExponent; // one entry per site type
+    std::vector<Factor> coverageFactors;
+  };
+
+  // Every reaction that consumes this gas. The sum of their rate laws per unit
+  // incident flux is the probability that a particle of the gas reacts at a
+  // hit, so the ray tracer absorbs exactly what the rate laws consume. A step
+  // that consumes an adsorbate instead of free sites, such as a ligand
+  // exchange, contributes through that adsorbate's coverage and absorbs nothing
+  // once the adsorbate is used up.
+  std::vector<AbsorptionChannel> absorptionChannels(int gasIndex) const {
+    std::vector<AbsorptionChannel> out;
+    for (size_t j = 0; j < reactions.size(); ++j) {
+      const auto &r = reactions[j];
+      if (r.gasFactors.size() != 1 || r.gasFactors[0].index != gasIndex)
+        continue;
+      if (r.gasFactors[0].exponent != 1) {
+        VIENNACORE_LOG_WARNING(
+            "Reaction '" + r.equation +
+            "' is not first order in its gas reactant and is left out of the "
+            "absorption probability of that species.");
+        continue;
+      }
+      AbsorptionChannel c;
+      c.k = rateTable(int(j));
+      c.freeSiteExponent = r.freeSiteExponent;
+      c.freeSiteExponent.resize(numSiteTypes, 0);
+      c.coverageFactors = r.coverageFactors;
+      out.push_back(std::move(c));
+    }
+    return out;
+  }
+
   int addReaction(NumericType prefactor, NumericType Ea, bool isAdsorption,
                   const std::vector<int> &freeSiteExponent,
                   const std::vector<NumericType> &nu, NumericType solidAtoms,
@@ -1383,25 +1439,28 @@ public:
 private:
 };
 
-// Neutral gas species. Records the raw incident flux; its re-emission uses the
-// coverage-dependent sticking of the adsorption step that consumes it.
+// Neutral gas species. Records the raw incident flux. At a hit it is absorbed
+// with the probability that it reacts there, the sum over the reactions that
+// consume it of their rate laws per unit incident flux, and the rest is
+// re-emitted.
 template <typename NumericType, int D>
 class ChemicalParticle final
     : public viennaray::Particle<ChemicalParticle<NumericType, D>, NumericType> {
+  using Channel = typename ChemicalMechanism<NumericType>::AbsorptionChannel;
+
   const std::string fluxLabel;
-  // sticking already evaluated at the mechanism temperature, per material
-  const MaterialValueMap<NumericType> sticking;
-  const int freeSiteExponent;
-  const std::vector<int> siteCoverages; // coverage indices on this site type
+  // rate constants already evaluated at the mechanism temperature, per material
+  const std::vector<Channel> channels;
+  // coverage indices on each site type, for the free fraction of that type
+  const std::vector<std::vector<int>> siteCoverages;
   const NumericType sourcePower;
 
 public:
-  ChemicalParticle(std::string label, MaterialValueMap<NumericType> stickingAtT,
-                   int freeSiteExp, std::vector<int> siteCoverages,
+  ChemicalParticle(std::string label, std::vector<Channel> absorptionChannels,
+                   std::vector<std::vector<int>> coveragesBySite,
                    NumericType power = 1.)
-      : fluxLabel(std::move(label)), sticking(std::move(stickingAtT)),
-        freeSiteExponent(freeSiteExp), siteCoverages(std::move(siteCoverages)),
-        sourcePower(power) {}
+      : fluxLabel(std::move(label)), channels(std::move(absorptionChannels)),
+        siteCoverages(std::move(coveragesBySite)), sourcePower(power) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &,
                         const Vec3D<NumericType> &, const unsigned int primID,
@@ -1416,16 +1475,32 @@ public:
                     const unsigned int primID, const int materialId,
                     const PointData<NumericType> *globalData,
                     RNG &rngState) override {
-    NumericType occupied = 0.;
-    for (int i : siteCoverages)
-      occupied += globalData->getScalarData(i)->at(primID);
-    NumericType free = std::max(NumericType(1.) - occupied, NumericType(0.));
-
-    // the sticking follows the material under the hit, so a species that
-    // adsorbs on one material and not another reflects accordingly
-    NumericType sEff = sticking.get(MaterialMap::mapToMaterial(materialId));
-    for (int i = 0; i < freeSiteExponent; ++i)
-      sEff *= free;
+    // the rate constants follow the material under the hit, so a species that
+    // reacts on one material and not another reflects accordingly
+    const auto material = MaterialMap::mapToMaterial(materialId);
+    NumericType sEff = 0.;
+    for (const auto &c : channels) {
+      NumericType v = c.k.get(material);
+      for (size_t t = 0; t < c.freeSiteExponent.size(); ++t) {
+        const int n = c.freeSiteExponent[t];
+        if (n == 0)
+          continue;
+        NumericType occupied = 0.;
+        for (int i : siteCoverages[t])
+          occupied += globalData->getScalarData(i)->at(primID);
+        const NumericType free =
+            std::max(NumericType(1.) - occupied, NumericType(0.));
+        for (int e = 0; e < n; ++e)
+          v *= free;
+      }
+      for (const auto &f : c.coverageFactors) {
+        const NumericType theta = globalData->getScalarData(f.index)->at(primID);
+        for (int e = 0; e < f.exponent; ++e)
+          v *= theta;
+      }
+      sEff += v;
+    }
+    sEff = std::min(sEff, NumericType(1.));
 
     auto direction =
         viennaray::ReflectionDiffuse<NumericType, D>(geomNormal, rngState);
@@ -1568,19 +1643,30 @@ struct SurfaceChemistryParamsGPU {
   static constexpr int maxParticles = 16; // a published mechanism
                                           // can adsorb a dozen species
   static constexpr int maxCoverages = 16;
-  static constexpr int maxMaterials = 8; // per-particle sticking overrides
+  static constexpr int maxMaterials = 8; // per-channel rate overrides
+  static constexpr int maxChannels = 4;  // reactions consuming one species
+  static constexpr int maxSiteTypes = 4;
+  static constexpr int maxChannelFactors = 3; // coverage factors per reaction
 
   int numCoverages = 0;
+  int numSiteTypes = 1;
   int coverageSite[maxCoverages] = {}; // site-type index of each coverage
-  int freeSiteExponent[maxParticles] = {};
-  int stickingSite[maxParticles] = {}; // site type each particle sticks to
 
-  // Sticking per particle, already evaluated at the mechanism temperature.
-  // `defaultSticking` applies unless the material under the hit is listed.
-  float defaultSticking[maxParticles] = {};
-  int numOverrides[maxParticles] = {};
-  int overrideMaterial[maxParticles][maxMaterials] = {}; // legacy material ids
-  float overrideSticking[maxParticles][maxMaterials] = {};
+  // The reactions that consume each traced species. A particle is absorbed
+  // with the sum of their rate laws per unit incident flux: the rate constant,
+  // already evaluated at the mechanism temperature, times the free fraction of
+  // each site type and the coverage of each adsorbate to their exponents.
+  // `channelK` applies unless the material under the hit is listed.
+  int numChannels[maxParticles] = {};
+  float channelK[maxParticles][maxChannels] = {};
+  int channelNumOverrides[maxParticles][maxChannels] = {};
+  int channelOverrideMaterial[maxParticles][maxChannels][maxMaterials] =
+      {}; // legacy material ids
+  float channelOverrideK[maxParticles][maxChannels][maxMaterials] = {};
+  int channelFreeExp[maxParticles][maxChannels][maxSiteTypes] = {};
+  int channelNumFactors[maxParticles][maxChannels] = {};
+  int channelFactorIndex[maxParticles][maxChannels][maxChannelFactors] = {};
+  int channelFactorExp[maxParticles][maxChannels][maxChannelFactors] = {};
 
   // --- ions -----------------------------------------------------------------
   // Everything below comes from the reaction file, by way of the mechanism.
@@ -1611,6 +1697,9 @@ struct SurfaceChemistryParamsGPU {
 static_assert(SurfaceChemistryParamsGPU::maxParticles == 16 &&
                   SurfaceChemistryParamsGPU::maxCoverages == 16 &&
                   SurfaceChemistryParamsGPU::maxMaterials == 8 &&
+                  SurfaceChemistryParamsGPU::maxChannels == 4 &&
+                  SurfaceChemistryParamsGPU::maxSiteTypes == 4 &&
+                  SurfaceChemistryParamsGPU::maxChannelFactors == 3 &&
                   SurfaceChemistryParamsGPU::maxYields == 6,
               "SurfaceChemistryParamsGPU must have the same shape in "
               "psSurfaceChemistry.hpp and gpu/models/SurfaceChemistry.cuh");
@@ -1750,6 +1839,10 @@ private:
     for (int i = 0; i < nCov && i < SurfaceChemistryParamsGPU::maxCoverages;
          ++i)
       deviceParams_.coverageSite[i] = mech_.coverageSite[i];
+    if (mech_.numSiteTypes > SurfaceChemistryParamsGPU::maxSiteTypes)
+      VIENNACORE_LOG_ERROR("SurfaceChemistry GPU: too many site types.");
+    deviceParams_.numSiteTypes =
+        std::min(mech_.numSiteTypes, SurfaceChemistryParamsGPU::maxSiteTypes);
 
     std::unordered_map<std::string, unsigned> pMap;
     std::vector<viennaray::gpu::CallableConfig> cMap;
@@ -1778,31 +1871,54 @@ private:
           .sticking = static_cast<NumericType>(source->stickingOf(int(g)))};
       particle.dataLabels.push_back(source->gas[g].label);
 
-      deviceParams_.freeSiteExponent[p] =
-          source->gas[g].stickingFreeSiteExponent;
-      deviceParams_.stickingSite[p] = source->gas[g].stickingSite;
-
-      // per-material sticking, evaluated once here so the shader only looks up
-      const auto &d = source->gas[g].stickingConstant.getDefault();
-      deviceParams_.defaultSticking[p] =
-          static_cast<float>(source->arrhenius(d.prefactor, d.Ea, d.beta));
-      int nOverride = 0;
-#define PS_GPU_STICKING(id, sym, cat, dens, cond, color)                       \
-  if (source->gas[g].stickingConstant.has(BuiltInMaterial::sym)) {             \
+      // the reactions that consume this species, with their rate constants
+      // evaluated once per material here so the shader only looks them up
+      const auto channels = source->absorptionChannels(int(g));
+      if (channels.size() >
+          static_cast<size_t>(SurfaceChemistryParamsGPU::maxChannels))
+        VIENNACORE_LOG_ERROR("SurfaceChemistry GPU: too many reactions consume '" +
+                             source->gas[g].label + "'.");
+      int nc = 0;
+      for (const auto &c : channels) {
+        if (nc >= SurfaceChemistryParamsGPU::maxChannels)
+          break;
+        deviceParams_.channelK[p][nc] = static_cast<float>(c.k.getDefault());
+        int nOverride = 0;
+#define PS_GPU_RATE(id, sym, cat, dens, cond, color)                           \
+  if (c.k.has(BuiltInMaterial::sym)) {                                         \
     if (nOverride < SurfaceChemistryParamsGPU::maxMaterials) {               \
-      deviceParams_.overrideMaterial[p][nOverride] =                           \
+      deviceParams_.channelOverrideMaterial[p][nc][nOverride] =                \
           Material(BuiltInMaterial::sym).legacyId();                           \
-      deviceParams_.overrideSticking[p][nOverride] = static_cast<float>(       \
-          source->stickingOf(int(g), Material(BuiltInMaterial::sym)));         \
+      deviceParams_.channelOverrideK[p][nc][nOverride] =                       \
+          static_cast<float>(c.k.get(Material(BuiltInMaterial::sym)));         \
       ++nOverride;                                                             \
     } else {                                                                   \
       VIENNACORE_LOG_ERROR(                                                    \
-          "SurfaceChemistry GPU: too many per-material stickings.");         \
+          "SurfaceChemistry GPU: too many per-material rate constants.");    \
     }                                                                          \
   }
-      BUILTIN_MATERIAL_LIST(PS_GPU_STICKING)
-#undef PS_GPU_STICKING
-      deviceParams_.numOverrides[p] = nOverride;
+        BUILTIN_MATERIAL_LIST(PS_GPU_RATE)
+#undef PS_GPU_RATE
+        deviceParams_.channelNumOverrides[p][nc] = nOverride;
+        for (int t = 0; t < deviceParams_.numSiteTypes; ++t)
+          deviceParams_.channelFreeExp[p][nc][t] = c.freeSiteExponent[t];
+        int nf = 0;
+        for (const auto &f : c.coverageFactors) {
+          if (nf >= SurfaceChemistryParamsGPU::maxChannelFactors) {
+            VIENNACORE_LOG_ERROR(
+                "SurfaceChemistry GPU: too many coverage factors in a "
+                "reaction that consumes '" +
+                source->gas[g].label + "'.");
+            break;
+          }
+          deviceParams_.channelFactorIndex[p][nc][nf] = f.index;
+          deviceParams_.channelFactorExp[p][nc][nf] = f.exponent;
+          ++nf;
+        }
+        deviceParams_.channelNumFactors[p][nc] = nf;
+        ++nc;
+      }
+      deviceParams_.numChannels[p] = nc;
 
       pMap[source->gas[g].label] = p;
       cMap.push_back({p, viennaray::gpu::CallableSlot::COLLISION,
@@ -2119,16 +2235,15 @@ private:
         if (std::find(seen.begin(), seen.end(), gas.label) != seen.end())
           continue;
         seen.push_back(gas.label);
-        // the coverages the particle's re-emission sees are those on the site
-        // type its adsorption consumes free sites of
-        std::vector<int> siteCov;
+        // the coverages of each site type, from which the particle forms the
+        // free fractions of the reactions that consume it
+        std::vector<std::vector<int>> siteCov(source->numSiteTypes);
         for (int i = 0; i < nCov; ++i)
-          if (source->coverageSite[i] == gas.stickingSite)
-            siteCov.push_back(i);
+          siteCov[source->coverageSite[i]].push_back(i);
         auto particle =
             std::make_unique<impl::ChemicalParticle<NumericType, D>>(
-                gas.label, source->stickingTable(int(g)),
-                gas.stickingFreeSiteExponent, std::move(siteCov));
+                gas.label, source->absorptionChannels(int(g)),
+                std::move(siteCov));
         this->insertNextParticleType(particle);
       }
     }

@@ -13,23 +13,30 @@ energyUnit: eV
 #
 # Chemistry from Puurunen's review of the AlMe3/H2O process, J. Appl. Phys. 97
 # (2005) 121301: Eq. (15), the ligand exchange with a surface hydroxyl, and
-# Eq. (18), the dissociative reaction on a bare oxygen bridge, which needs both
+# Eq. (19), the dissociative reaction on a bare oxygen bridge, which needs both
 # a bare bridge and a bare lattice aluminium and so is open only before the
 # first water pulse. Travis and Adomaitis, Theor Chem Acc 133 (2014) 1414,
 # write the same two as R1 and R4; their Table 1 gives 0.52 eV for the R1
 # elimination and 0.5 eV for the R4 dissociation.
 #
+# TMA enters as the monomer Al(CH3)3, the species of the kinetic model of
+# Travis and Adomaitis and of the sticking probabilities of Arts et al., J.
+# Vac. Sci. Technol. A 37 (2019) 030908, so each adsorption event places one
+# aluminium on the surface, on a hydroxyl or on a bare oxygen bridge.
+#
 # A fuller transcription of their surface species dynamics, which resolves the
 # aluminium groups from the oxygen positions, is in al2o3_travis_tma.yaml.
 #
-# The prefactor is the transition-state value k_B T / h, written through the
-# modified Arrhenius form as k0 = k_B/h with beta = 1.
+# The prefactor is the transition-state value k_B T / h per site, written
+# through the modified Arrhenius form with beta = 1. The model reads k as a rate
+# per unit area at unit coverage in 1e15 /cm2 /s, so k0 = (k_B/h) S0 / 1e15 =
+# 2.084e10 x 0.4 = 8.336e9 for the site density S0 = 4e14 /cm2.
 siteTypes:
   - {name: A, density: 4.0e14}      # /cm2, anion positions in the top layer
   - {name: C, density: 4.0e14}      # /cm2, cation positions
 
 species:
-  Al2C6H18: {phase: gas, pressure: 1.0e2}    # TMA, dimeric in the gas, mTorr
+  AlC3H9:   {phase: gas, pressure: 1.0e2}    # TMA monomer, mTorr
   CH4:      {phase: gas, reemit_only: true}
   H2O:      {phase: gas, reemit_only: true}  # released by the condensation
   OH:       {phase: surface, site: A}        # ||O-H
@@ -45,14 +52,14 @@ species:
   Al2O3:    {phase: solid, rho: 1.77}        # 1e22 formula units /cm3
 
 surface:
-  # Reactive sticking of TMA on hydroxylated alumina, 4e-3, which Arts et al.
-  # and Ylilammi et al. both extract from saturation profiles in lateral high
-  # aspect ratio channels and molecular dynamics puts at 4.26e-3.
-  - {eq: "Al2C6H18 + 2 OH -> 2 AlC3H10O", type: adsorption, s0: 4.0e-3, Ea: 0.0,
-     order: {OH: 1}}
+  # Reactive sticking of Al(CH3)3 on hydroxylated alumina: Arts et al. extract
+  # (0.5 to 2)e-3 from the leading front of the thickness profile in lateral
+  # high-aspect-ratio structures at about 220 C. The adduct forms without a
+  # barrier, so 1e-3, the logarithmic middle of that range, is used at 177 C.
+  # The bare-bridge channel below is given the same probability.
+  - {eq: "AlC3H9 + OH -> AlC3H10O", type: adsorption, s0: 1.0e-3, Ea: 0.0}
   - {eq: "AlC3H10O -> AlC2H6O + CH4", type: surface,
-     k0: 2.084e10, Ea: 0.52, beta: 1.0}
-  - {eq: "Al2C6H18 + 2 O -> 2 AlC3H9O", type: adsorption, s0: 4.0e-3, Ea: 0.0,
-     order: {O: 1}}
+     k0: 8.336e9, Ea: 0.52, beta: 1.0}
+  - {eq: "AlC3H9 + O -> AlC3H9O", type: adsorption, s0: 1.0e-3, Ea: 0.0}
   - {eq: "AlC3H9O + Al -> AlC2H6O + AlCH3", type: surface,
-     k0: 2.084e10, Ea: 0.5, beta: 1.0}
+     k0: 8.336e9, Ea: 0.5, beta: 1.0}

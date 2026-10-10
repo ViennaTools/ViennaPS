@@ -352,10 +352,11 @@ template <int D> int run(const Options &o) {
         continue;
       found = true;
       g.s0 *= factor;
-      // The same number is held twice, once as the prefactor of the adsorption
-      // step's rate law and once as the sticking the ray tracer terminates on,
-      // so a change to it has to reach both or the surface solve and the
-      // transport stop describing the same chemistry.
+      // The ray tracer absorbs a species with the rate laws of the reactions
+      // that consume it, so scaling the prefactor of its adsorption steps
+      // reaches the surface solve and the transport together. The species'
+      // own sticking entry, which the hand-written comparison and the run's
+      // metadata read, is scaled with it.
       const int gasIndex = static_cast<int>(&g - mech.gas.data());
       for (auto &r : mech.reactions) {
         if (!r.isAdsorption)
