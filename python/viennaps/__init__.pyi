@@ -11,11 +11,21 @@ microelectronic fabrication processes.
 from __future__ import annotations
 import sys as _sys
 import viennals as ls
+from viennals._core import BooleanOperationEnum as BooleanOperationType
 from viennals._core import BoundaryConditionEnum as BoundaryType
 from viennals._core import LogLevel
 from viennals._core import SpatialSchemeEnum as SpatialScheme
 from viennals._core import TemporalSchemeEnum as TemporalScheme
+from viennals._core import VTKWriter
+from viennals.d2 import BooleanOperation
+from viennals.d2 import Box
+from viennals.d2 import Cylinder
+from viennals.d2 import Domain as LevelSet
+from viennals.d2 import MakeGeometry
+from viennals.d2 import Plane
+from viennals.d2 import Sphere
 from viennaps._core import AdvectionParameters
+from viennaps._core import AnnealMode
 from viennaps._core import AtomicLayerProcessParameters
 from viennaps._core import BuiltInMaterial
 from viennaps._core import CF4O2Parameters
@@ -34,10 +44,9 @@ from viennaps._core import FluxEngineType
 from viennaps._core import GpuMode
 from viennaps._core import GpuPreconditioner
 from viennaps._core import HoleShape
-from viennaps._core import OxidantType
-from viennaps._core import SiliconOrientation
 from viennaps._core import IBEParameters
 from viennaps._core import IBEParametersCos4Yield
+from viennaps._core import ImplantDoseControl
 from viennaps._core import Length
 from viennaps._core import LengthUnit
 from viennaps._core import Logger
@@ -51,6 +60,8 @@ from viennaps._core import MaterialValueMap
 from viennaps._core import MetaDataLevel
 from viennaps._core import NeutralTransportParameters
 from viennaps._core import NormalizationType
+from viennaps._core import OxidantType
+from viennaps._core import PearsonIVParameters
 from viennaps._core import PlasmaEtchingParameters
 from viennaps._core import PlasmaEtchingParametersIons
 from viennaps._core import PlasmaEtchingParametersMask
@@ -61,21 +72,28 @@ from viennaps._core import ProcessParams
 from viennaps._core import RateSet
 from viennaps._core import RayTracingParameters
 from viennaps._core import RenderMode
+from viennaps._core import ScreenEnergyLoss
+from viennaps._core import SiliconOrientation
 from viennaps._core import SingleParticleALDParams
 from viennaps._core import Slice
 from viennaps._core import SurfaceDiffusionParameters
 from viennaps._core import Time
 from viennaps._core import TimeUnit
 from viennaps._core import constants
+from viennaps._core import getModelDbRoot
 from viennaps._core import gpu
 from viennaps._core import gpuAvailable
+from viennaps._core import initModelDbRoot
+from viennaps._core import setModelDbRoot
 from viennaps._core import setNumThreads
 from viennaps._core import util
 from viennaps.d2 import AdvectionCallback
+from viennaps.d2 import Anneal
 from viennaps.d2 import BoxDistribution
 from viennaps.d2 import CF4O2Etching
 from viennaps.d2 import CSVFileProcess
 from viennaps.d2 import CustomSphereDistribution
+from viennaps.d2 import DamageTableModel
 from viennaps.d2 import DenseCellSet
 from viennaps.d2 import DirectionalProcess
 from viennaps.d2 import Domain
@@ -87,8 +105,15 @@ from viennaps.d2 import GDSReader
 from viennaps.d2 import GeometricTrenchDeposition
 from viennaps.d2 import GeometryFactory
 from viennaps.d2 import HBrO2Etching
+from viennaps.d2 import ImplantDamageHobler
+from viennaps.d2 import ImplantDualPearsonIV
+from viennaps.d2 import ImplantPearsonIV
+from viennaps.d2 import ImplantPearsonIVChanneling
+from viennaps.d2 import ImplantProfileModel
+from viennaps.d2 import ImplantTableModel
 from viennaps.d2 import Interpolation
 from viennaps.d2 import IonBeamEtching
+from viennaps.d2 import IonImplantation
 from viennaps.d2 import IsotropicProcess
 from viennaps.d2 import MakeFin
 from viennaps.d2 import MakeHole
@@ -96,6 +121,7 @@ from viennaps.d2 import MakePlane
 from viennaps.d2 import MakeStack
 from viennaps.d2 import MakeTrench
 from viennaps.d2 import MultiParticleProcess
+from viennaps.d2 import NetDoping
 from viennaps.d2 import NeutralTransport
 from viennaps.d2 import Oxidation
 from viennaps.d2 import OxideRegrowth
@@ -108,6 +134,7 @@ from viennaps.d2 import Reader
 from viennaps.d2 import SF6C4F8Etching
 from viennaps.d2 import SF6O2Etching
 from viennaps.d2 import SelectiveEpitaxy
+from viennaps.d2 import SheetResistance
 from viennaps.d2 import SingleParticleALD
 from viennaps.d2 import SingleParticleProcess
 from viennaps.d2 import SphereDistribution
@@ -121,7 +148,7 @@ from viennaps.d2 import Writer
 from . import _core
 from . import d2
 from . import d3
-__all__: list[str] = ['AdvectionCallback', 'AdvectionParameters', 'AtomicLayerProcessParameters', 'BoundaryType', 'BoxDistribution', 'BuiltInMaterial', 'CF4O2Etching', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CSVFileProcess', 'CoverageParameters', 'CustomSphereDistribution', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'Extrude', 'FaradayCageEtching', 'FaradayCageParameters', 'FluorocarbonEtching', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'GpuMode', 'GpuPreconditioner', 'HBrO2Etching', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'Length', 'LengthUnit', 'LogLevel', 'Logger', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'MultiParticleProcess', 'NeutralTransport', 'NeutralTransportParameters', 'NormalizationType', 'Oxidation', 'OxidantType', 'OxideRegrowth', 'PROXY_DIM', 'Planarize', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'Process', 'ProcessModel', 'ProcessModelBase', 'ProcessParams', 'RateGrid', 'RateSet', 'RayTracingParameters', 'Reader', 'RenderMode', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SiliconOrientation', 'SingleParticleALD', 'SingleParticleALDParams', 'SingleParticleProcess', 'Slice', 'SpatialScheme', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'SurfaceDiffusionParameters', 'TEOSDeposition', 'TEOSPECVD', 'TemporalScheme', 'Time', 'TimeUnit', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'constants', 'd2', 'd3', 'gpu', 'gpuAvailable', 'ls', 'readConfigFile', 'setDimension', 'setNumThreads', 'util', 'version']
+__all__: list[str] = ['AdvectionCallback', 'AdvectionParameters', 'Anneal', 'AnnealMode', 'AtomicLayerProcessParameters', 'BooleanOperation', 'BooleanOperationType', 'BoundaryType', 'Box', 'BoxDistribution', 'BuiltInMaterial', 'CF4O2Etching', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CSVFileProcess', 'CoverageParameters', 'CustomSphereDistribution', 'Cylinder', 'DamageTableModel', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'Extrude', 'FaradayCageEtching', 'FaradayCageParameters', 'FluorocarbonEtching', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'GpuMode', 'GpuPreconditioner', 'HBrO2Etching', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDamageHobler', 'ImplantDoseControl', 'ImplantDualPearsonIV', 'ImplantPearsonIV', 'ImplantPearsonIVChanneling', 'ImplantProfileModel', 'ImplantTableModel', 'Interpolation', 'IonBeamEtching', 'IonImplantation', 'IsotropicProcess', 'Length', 'LengthUnit', 'LevelSet', 'LogLevel', 'Logger', 'MakeFin', 'MakeGeometry', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'MultiParticleProcess', 'NetDoping', 'NeutralTransport', 'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'Oxidation', 'OxideRegrowth', 'PROXY_DIM', 'PearsonIVParameters', 'Planarize', 'Plane', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'Process', 'ProcessModel', 'ProcessModelBase', 'ProcessParams', 'RateGrid', 'RateSet', 'RayTracingParameters', 'Reader', 'RenderMode', 'SF6C4F8Etching', 'SF6O2Etching', 'ScreenEnergyLoss', 'SelectiveEpitaxy', 'SheetResistance', 'SiliconOrientation', 'SingleParticleALD', 'SingleParticleALDParams', 'SingleParticleProcess', 'Slice', 'SpatialScheme', 'Sphere', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'SurfaceDiffusionParameters', 'TEOSDeposition', 'TEOSPECVD', 'TemporalScheme', 'Time', 'TimeUnit', 'ToDiskMesh', 'VTKRenderWindow', 'VTKWriter', 'WetEtching', 'Writer', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'ls', 'readConfigFile', 'setDimension', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
 def __dir__():
     ...
 def __getattr__(name):
@@ -130,19 +157,24 @@ def _module_ptx_path():
     ...
 def _windows_dll_path():
     ...
-def readConfigFile(fileName: str):
+def readConfigFile(fileName: str) -> dict:
     """
     Read a config file in the ViennaPS standard config file format.
     
         Parameters
         ----------
-        fileName: str
-                    Name of the config file.
+        fileName : str
+            Name of the config file.
     
         Returns
         -------
         dict
             A dictionary containing the parameters from the config file.
+            Numeric values are returned as floats, and comma-separated numeric
+            values as lists of floats. Other values are returned as strings or
+            lists of strings, with surrounding whitespace removed. If any list
+            item is nonnumeric, all items in that list are returned as strings.
+            Comments starting with '#' and lines without '=' are ignored.
         
     """
 def setDimension(d: int):
@@ -156,6 +188,7 @@ def setDimension(d: int):
         
     """
 PROXY_DIM: int = 2
+_LS_DIMENSION_ALIASES: dict = {'LevelSet': 'Domain', 'MakeGeometry': 'MakeGeometry', 'Plane': 'Plane', 'Sphere': 'Sphere', 'Cylinder': 'Cylinder', 'Box': 'Box', 'BooleanOperation': 'BooleanOperation'}
 __version__: str = '4.7.0'
 version: str = '4.7.0'
 _C = _core

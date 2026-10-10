@@ -5,8 +5,8 @@
 #include "../process/psProcessModel.hpp"
 #include "../psConstants.hpp"
 #include "../psUtil.hpp"
+#include "psIonBeamParameters.hpp"
 #include "psIonModelUtil.hpp"
-#include "psPipelineParameters.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -416,7 +416,7 @@ public:
     setDirection(particle);
     particle.cosineExponent = sourcePower;
 
-    impl::IonParams params;
+    IonParams params;
     params.thetaRMin = constants::degToRad(thetaRMin);
     params.thetaRMax = constants::degToRad(thetaRMax);
     params.minAngle = constants::degToRad(minAngle);

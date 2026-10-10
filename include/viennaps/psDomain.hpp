@@ -151,9 +151,14 @@ public:
 
     // Copy material map.
     materialMap_ = MaterialMapType::New();
-    for (std::size_t i = 0; i < domain->materialMap_->size(); i++) {
-      materialMap_->insertNextMaterial(
-          domain->materialMap_->getMaterialAtIdx(i));
+    if (!domain->materialMap_) {
+      VIENNACORE_LOG_WARNING(
+          "No material map in source domain. Creating empty material map.");
+    } else {
+      for (std::size_t i = 0; i < domain->materialMap_->size(); i++) {
+        materialMap_->insertNextMaterial(
+            domain->materialMap_->getMaterialAtIdx(i));
+      }
     }
 
     // Copy Cell-Set.
@@ -317,7 +322,7 @@ public:
   }
 
   void removeStrayPoints() {
-    auto &surface = getSurface();
+    auto surface = getSurface();
     viennals::BooleanOperation<NumericType, D>(
         surface, viennals::BooleanOperationEnum::INVERT)
         .apply();
@@ -343,7 +348,7 @@ public:
           "No Level-Sets in domain. Returning 0 components.");
       return 0;
     }
-    auto &surface = getSurface();
+    auto surface = getSurface();
     viennals::BooleanOperation<NumericType, D>(
         surface, viennals::BooleanOperationEnum::INVERT)
         .apply();
@@ -404,12 +409,19 @@ public:
   }
 
   // Returns the top Level-Set (surface) in the domain.
-  [[nodiscard]] auto &getSurface() const { return levelSets_.back(); }
+  [[nodiscard]] lsDomainType getSurface() const {
+    if (levelSets_.empty()) {
+      VIENNACORE_LOG_WARNING(
+          "No Level-Sets in domain. Returning empty Level-Set.");
+      return lsDomainType::New();
+    }
+    return levelSets_.back();
+  }
 
   // Returns a vector with all Level-Sets in the domain.
   [[nodiscard]] auto &getLevelSets() const { return levelSets_; }
 
-  [[nodiscard]] auto getNumberOfLevelSets() const {
+  [[nodiscard]] unsigned getNumberOfLevelSets() const {
     return static_cast<unsigned int>(levelSets_.size());
   }
 
@@ -431,7 +443,7 @@ public:
   // Returns the bounding box of the top Level-Set in the domain.
   // [min, max][x, y, z]
   [[nodiscard]] auto getBoundingBox() const {
-    std::array<viennacore::Vec3D<NumericType>, 2> boundingBox;
+    std::array<viennacore::Vec3D<NumericType>, 2> boundingBox{};
     if (levelSets_.empty()) {
       VIENNACORE_LOG_WARNING(
           "No Level-Sets in domain. Returning empty bounding box.");
@@ -446,12 +458,23 @@ public:
 
   // Returns the boundary conditions of the domain.
   auto getBoundaryConditions() const {
+    if (levelSets_.empty()) {
+      VIENNACORE_LOG_WARNING(
+          "No Level-Sets in domain. Returning empty boundary conditions.");
+      return std::array<BoundaryType, D>{};
+    }
     return levelSets_.back()->getGrid().getBoundaryConditions();
   }
 
   // Returns a set of all materials present in the domain.
   auto getMaterialsInDomain() const {
     std::set<Material> materials;
+    if (!materialMap_) {
+      VIENNACORE_LOG_WARNING(
+          "No material map in domain. Returning empty material set.");
+      return materials;
+    }
+
     for (std::size_t i = 0; i < materialMap_->size(); i++) {
       materials.insert(materialMap_->getMaterialAtIdx(i));
     }
@@ -529,12 +552,15 @@ public:
   }
 
   std::vector<SmartPointer<viennals::Mesh<NumericType>>>
-  getLevelSetMesh(int width = 1) {
+  getLevelSetMesh(int width = 1) const {
     std::vector<SmartPointer<viennals::Mesh<NumericType>>> meshes;
     for (int i = 0; i < levelSets_.size(); i++) {
       auto mesh = viennals::Mesh<NumericType>::New();
-      viennals::Expand<NumericType, D>(levelSets_.at(i), width).apply();
-      viennals::ToMesh<NumericType, D>(levelSets_.at(i), mesh).apply();
+      auto lsCopy = lsDomainType::New(levelSets_.at(i));
+      viennals::Reduce<NumericType, D>(lsCopy, 1).apply();
+      if (width > 1)
+        viennals::Expand<NumericType, D>(lsCopy, width).apply();
+      viennals::ToMesh<NumericType, D>(lsCopy, mesh).apply();
       meshes.push_back(mesh);
     }
     return meshes;
@@ -605,7 +631,7 @@ public:
   }
 
   // Save the level set as a VTK file.
-  void saveLevelSetMesh(const std::string &fileName, int width = 1) {
+  void saveLevelSetMesh(const std::string &fileName, int width = 1) const {
     auto meshes = getLevelSetMesh(width);
     for (int i = 0; i < meshes.size(); i++) {
       viennals::VTKWriter<NumericType> writer(

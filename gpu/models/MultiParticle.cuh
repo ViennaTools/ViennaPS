@@ -6,7 +6,8 @@
 #include "raygLaunchParams.hpp"
 #include "raygReflection.hpp"
 
-#include "models/psPipelineParameters.hpp"
+#include "models/psIonBeamParameters.hpp"
+#include "models/psIonModelUtil.hpp"
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
@@ -15,21 +16,20 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 //
 
 __forceinline__ __device__ void
-multiNeutralCollision(viennaray::gpu::PerRayData *prd) {
-  for (int i = 0; i < prd->ISCount; ++i) {
-    atomicAdd(&launchParams
-                   .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
-                                 prd->primIDs[i]],
-              (viennaray::gpu::ResultType)prd->rayWeight);
-  }
+multiNeutralCollision(viennaray::gpu::PerRayData *prd, unsigned int primID) {
+  atomicAdd(
+      &launchParams
+           .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams, primID)],
+      (viennaray::gpu::ResultType)prd->rayWeight);
 }
 
 __forceinline__ __device__ void
-multiNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  int material = launchParams.materialIds[prd->primID];
+multiNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd,
+                       unsigned int primID) {
+  int material = launchParams.materialIds[primID];
   float sticking = launchParams.materialSticking[material];
   prd->rayWeight -= prd->rayWeight * sticking;
-  auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+  auto geoNormal = viennaray::gpu::getNormal(sbtData, primID);
   viennaray::gpu::diffuseReflection(prd, geoNormal);
 }
 
@@ -38,36 +38,36 @@ multiNeutralReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 //
 
 __forceinline__ __device__ void
-multiIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  for (int i = 0; i < prd->ISCount; ++i) {
+multiIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd,
+                  unsigned int primID) {
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
 
-    float flux = prd->rayWeight;
+  float flux = prd->rayWeight;
 
-    if (params->B_sp >= 0.f) {
-      auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
-      auto cosTheta = __saturatef(
-          -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
-      flux *= (1 + params->B_sp * (1.f - cosTheta * cosTheta)) * cosTheta;
-    }
-
-    if (params->meanEnergy > 0.f) {
-      flux *= max(sqrtf(prd->energy) - params->thresholdEnergy, 0.f);
-    }
-
-    atomicAdd(&launchParams
-                   .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
-                                 prd->primIDs[i]],
-              (viennaray::gpu::ResultType)flux);
+  if (params->B_sp >= 0.f) {
+    auto geomNormal = viennaray::gpu::getNormal(sbtData, primID);
+    auto cosTheta = __saturatef(
+        -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
+    flux *= (1 + params->B_sp * (1.f - cosTheta * cosTheta)) * cosTheta;
   }
+
+  if (params->meanEnergy > 0.f) {
+    flux *= max(sqrtf(prd->energy) - params->thresholdEnergy, 0.f);
+  }
+
+  atomicAdd(
+      &launchParams
+           .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams, primID)],
+      (viennaray::gpu::ResultType)flux);
 }
 
 __forceinline__ __device__ void
-multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd,
+                   unsigned int primID) {
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
+  auto geomNormal = viennaray::gpu::getNormal(sbtData, primID);
   auto cosTheta = __saturatef(-viennacore::DotProduct(prd->dir, geomNormal));
   float incomingAngle = acosf(cosTheta);
 
@@ -83,8 +83,8 @@ multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   }
 
   if (params->meanEnergy > 0.f) {
-    viennaps::gpu::impl::updateEnergy(prd, params->inflectAngle, params->n_l,
-                                      incomingAngle);
+    viennaps::impl::updateEnergy(prd, params->inflectAngle, params->n_l,
+                                 incomingAngle);
   }
 
   prd->rayWeight -= prd->rayWeight * sticking;
@@ -93,10 +93,10 @@ multiIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 }
 
 __forceinline__ __device__ void multiIonInit(viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
   if (params->meanEnergy > 0.f) {
-    viennaps::gpu::impl::initNormalDistEnergy(prd, params->meanEnergy,
-                                              params->sigmaEnergy);
+    viennaps::impl::initNormalDistEnergy(prd, params->meanEnergy,
+                                         params->sigmaEnergy);
   }
 }

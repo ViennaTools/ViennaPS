@@ -4,13 +4,18 @@ import subprocess
 import sys
 from typing import Dict, List
 
-
 # List of examples to run
 EXAMPLES: List[Dict[str, object]] = [
     {
         "name": "Trench_Deposition",
         "dir": "examples/trenchDeposition",
         "script": "trenchDeposition.py",
+        "args": ["-D", "2", "config.txt"],
+    },
+    {
+        "name": "Trench_Deposition_Geometric",
+        "dir": "examples/trenchDepositionGeometric",
+        "script": "trenchDepositionGeometric.py",
         "args": ["-D", "2", "config.txt"],
     },
     {
@@ -96,6 +101,36 @@ EXAMPLES: List[Dict[str, object]] = [
         "dir": "examples/cantileverWetEtching",
         "script": "cantileverWetEtching.py",
         "args": [],
+    },
+    {
+        "name": "Fin_Oxidation",
+        "dir": "examples/finOxidation",
+        "script": "finOxidation.py",
+        "args": ["config.txt"],
+    },
+    {
+        "name": "Trench_Oxidation",
+        "dir": "examples/trenchOxidation",
+        "script": "trenchOxidation.py",
+        "args": ["config.txt"],
+    },
+    {
+        "name": "Step_Oxidation",
+        "dir": "examples/stepOxidation",
+        "script": "stepOxidation.py",
+        "args": ["config.txt"],
+    },
+    {
+        "name": "Ion_Implantation",
+        "dir": "examples/ionImplantation",
+        "script": "ionImplantation.py",
+        "args": ["config.txt"],
+    },
+    {
+        "name": "LOCOS_Oxidation",
+        "dir": "examples/locosOxidation",
+        "script": "locosOxidation.py",
+        "args": ["config.txt"],
     },
 ]
 

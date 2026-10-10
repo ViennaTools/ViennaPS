@@ -80,21 +80,21 @@ saveSurface(domain, "substrate")
 print("\nStep 2: Creating mandrels (core pattern)...")
 # Create two mandrels to show the pattern multiplication
 # First mandrel at x = 25nm
-box = ps.ls.Domain(domain.getGrid())
-ps.ls.MakeGeometry(
+box = ps.LevelSet(domain.getGrid())
+ps.MakeGeometry(
     box,
-    ps.ls.Box([25.0 - mandrelWidth / 2, 0.0], [25.0 + mandrelWidth / 2, mandrelHeight]),
+    ps.Box([25.0 - mandrelWidth / 2, 0.0], [25.0 + mandrelWidth / 2, mandrelHeight]),
 ).apply()
 
-box2 = ps.ls.Domain(domain.getGrid())
-ps.ls.MakeGeometry(
+box2 = ps.LevelSet(domain.getGrid())
+ps.MakeGeometry(
     box2,
-    ps.ls.Box(
+    ps.Box(
         [25.0 + mandrelPitch - mandrelWidth / 2, 0.0],
         [25.0 + mandrelPitch + mandrelWidth / 2, mandrelHeight],
     ),
 ).apply()
-ps.ls.BooleanOperation(box, box2, ps.ls.BooleanOperationEnum.UNION).apply()
+ps.BooleanOperation(box, box2, ps.BooleanOperationEnum.UNION).apply()
 domain.insertNextLevelSetAsMaterial(box, ps.Material.SiN)
 
 

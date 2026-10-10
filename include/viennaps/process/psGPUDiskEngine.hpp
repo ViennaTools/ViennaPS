@@ -58,6 +58,15 @@ public:
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
       if (!context.rayTracingParams.useRandomSeeds)
         rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
+      if (context.rayTracingParams.minRayDistance <
+          context.domain->getGridDelta() * 0.5) {
+        rayTracer_.setTnear(context.rayTracingParams.minRayDistance);
+      } else {
+        VIENNACORE_LOG_WARNING(
+            "Minimum ray distance is too large. Surface hits may be missed. "
+            "Consider reducing the minimum ray distance.");
+      }
+
       for (auto &particle : model_->getParticleTypes()) {
         rayTracer_.insertNextParticle(particle);
       }

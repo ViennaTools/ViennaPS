@@ -28,24 +28,22 @@ struct NeutralTransportParametersGPU {
 //
 
 __forceinline__ __device__ void
-neutralTransportCollision(viennaray::gpu::PerRayData *prd) {
-  for (int i = 0; i < prd->ISCount; ++i) {
-    atomicAdd(
-        &launchParams
-             .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
-                           prd->primIDs[i]],
-        (viennaray::gpu::ResultType)prd->rayWeight);
-  }
+neutralTransportCollision(viennaray::gpu::PerRayData *prd,
+                          unsigned int primID) {
+  atomicAdd(
+      &launchParams.resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
+                                 primID],
+      (viennaray::gpu::ResultType)prd->rayWeight);
 }
 
 __forceinline__ __device__ void
-neutralTransportReflection(const void *sbtData,
-                           viennaray::gpu::PerRayData *prd) {
+neutralTransportReflection(const void *sbtData, viennaray::gpu::PerRayData *prd,
+                           unsigned int primID) {
   const viennaps::NeutralTransportParametersGPU *params =
       reinterpret_cast<const viennaps::NeutralTransportParametersGPU *>(
           launchParams.customData);
 
-  int consecutiveId = launchParams.materialIds[prd->primID];
+  int consecutiveId = launchParams.materialIds[primID];
   int legacyId = launchParams.materialMap[consecutiveId];
 
   if (legacyId == params->etchFrontMaterialId) {
@@ -56,10 +54,10 @@ neutralTransportReflection(const void *sbtData,
   const viennaray::gpu::HitSBTDataBase *baseData =
       reinterpret_cast<const viennaray::gpu::HitSBTDataBase *>(sbtData);
   const float *cellData = (const float *)baseData->cellData;
-  const float theta = cellData[prd->primID];
+  const float theta = cellData[primID];
   float sticking = params->zeroCoverageSticking * fmaxf(1.f - theta, 0.f);
 
   prd->rayWeight -= prd->rayWeight * __saturatef(sticking);
-  auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+  auto geoNormal = viennaray::gpu::getNormal(sbtData, primID);
   viennaray::gpu::diffuseReflection(prd, geoNormal);
 }

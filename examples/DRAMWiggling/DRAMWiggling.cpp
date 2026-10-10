@@ -54,13 +54,13 @@ int main(int argc, char **argv) {
   // Advection parameters
   AdvectionParameters advectionParams;
   advectionParams.spatialScheme =
-      util::convertSpatialScheme(params.get<std::string>("spatialScheme"));
+      util::convert<SpatialScheme>(params.get<std::string>("spatialScheme"));
 
   RayTracingParameters rayParams;
   rayParams.raysPerPoint = params.get<int>("raysPerPoint");
 
   const std::string fluxEngineStr = params.get<std::string>("fluxEngine");
-  const auto fluxEngine = util::convertFluxEngineType(fluxEngineStr);
+  const auto fluxEngine = util::convert<FluxEngineType>(fluxEngineStr);
 
   CoverageParameters coverageParams;
   coverageParams.tolerance = 1e-5;

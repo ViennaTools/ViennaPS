@@ -27,7 +27,7 @@ class MultiParticleProcess(ProcessModelGPU):
     @typing.overload
     def addNeutralParticle(self, materialSticking: viennaps._core.MaterialValueMap, defaultStickingProbability: typing.SupportsFloat | typing.SupportsIndex = 1.0, label: str = 'neutralFlux') -> None:
         ...
-    def setRateFunction(self, arg0: collections.abc.Callable[[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], viennaps._core.Material], float]) -> None:
+    def setRateFunction(self, arg0: collections.abc.Callable[[list[float], viennaps._core.Material], typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
 class ProcessModelGPU(viennaps.d2.ProcessModelBase):
     pass

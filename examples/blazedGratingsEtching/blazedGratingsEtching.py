@@ -26,7 +26,7 @@ geometry = ps.Domain(
     boundary=ps.BoundaryType.PERIODIC_BOUNDARY,
 )
 ps.MakePlane(domain=geometry, height=0.0, material=ps.Material.SiO2).apply()
-mask = ps.ls.Domain(geometry.getGrid())
+mask = ps.LevelSet(geometry.getGrid())
 
 mesh = ps.ls.Mesh()
 offset = -xExtent / 2.0 + bumpSpacing + bumpWidth / 2.0
@@ -40,14 +40,14 @@ for i in range(1, numNodes):
 mesh.insertNextLine([numNodes - 1, 0])
 
 for i in range(numBumps):
-    tip = ps.ls.Domain(geometry.getGrid())
+    tip = ps.LevelSet(geometry.getGrid())
     ps.ls.FromSurfaceMesh(tip, mesh).apply()
     ps.ls.TransformMesh(
         mesh=mesh,
         transform=ps.ls.TransformEnum.TRANSLATION,
         transformVector=[bumpSpacing + bumpWidth, 0, 0],
     ).apply()
-    ps.ls.BooleanOperation(mask, tip, ps.ls.BooleanOperationEnum.UNION).apply()
+    ps.BooleanOperation(mask, tip, ps.BooleanOperationType.UNION).apply()
 
 geometry.insertNextLevelSetAsMaterial(mask, ps.Material.Mask)
 geometry.saveSurfaceMesh("initial", True)

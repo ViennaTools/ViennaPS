@@ -13,12 +13,10 @@
 #       gridDelta=0.1   -> ~384k points (fast 3D test)
 
 numThreads=16
-dimensions=3
+dimensions=2
 
 gridDelta=0.01
 xExtent=0.6
-yMin=-1.0
-yMax=2.0
 zExtent=0.03  # 3D only; defaults to xExtent if omitted
 # maxGridPoints=10000000
 

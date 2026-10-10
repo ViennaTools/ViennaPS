@@ -12,6 +12,7 @@ namespace viennaps {
 VIENNAPS_TEMPLATE_ND(NumericType, D)
 class ALPStrategy final : public ProcessStrategy<NumericType, D> {
   using TranslatorType = std::unordered_map<unsigned long, unsigned long>;
+  using KDTreeType = typename TranslationField<NumericType, D>::KDTreeType;
 
   AdvectionHandler<NumericType, D> advectionHandler_;
   CoverageManager<NumericType, D> coverageManager_;
@@ -20,7 +21,7 @@ class ALPStrategy final : public ProcessStrategy<NumericType, D> {
 
   viennals::ToDiskMesh<NumericType, D> meshGenerator_;
   SmartPointer<TranslatorType> translator_ = nullptr;
-  SmartPointer<KDTree<NumericType, Vec3D<NumericType>>> kdTree_ = nullptr;
+  SmartPointer<KDTreeType> kdTree_ = nullptr;
 
 public:
   DEFINE_CLASS_NAME(ALPStrategy)
@@ -106,7 +107,7 @@ private:
     if (translationMethod == 1) {
       context.translationField->setTranslator(translator_);
     } else if (translationMethod == 2) {
-      kdTree_ = SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
+      kdTree_ = SmartPointer<KDTreeType>::New();
       context.translationField->setKdTree(kdTree_);
     }
 

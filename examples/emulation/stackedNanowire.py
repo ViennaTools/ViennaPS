@@ -30,8 +30,8 @@ ps.Process(domain, growth, 7.0).apply()
 
 # Add double patterning mask
 print("Adding double patterning mask ...")
-mask = ps.ls.Domain(bounds, boundaryConds, gridDelta)
-geo = ps.ls.MakeGeometry(mask, ps.ls.Box([25.0, -10.0, 31.9], [45.0, 110.0, 60.0]))
+mask = ps.LevelSet(bounds, boundaryConds, gridDelta)
+geo = ps.MakeGeometry(mask, ps.Box([25.0, -10.0, 31.9], [45.0, 110.0, 60.0]))
 geo.setIgnoreBoundaryConditions(True)
 geo.apply()
 
@@ -84,8 +84,8 @@ n += 1
 
 # Dummy gate mask addition
 print("Adding dummy gate mask ...")
-mask = ps.ls.Domain(bounds, boundaryConds, gridDelta)
-geo = ps.ls.MakeGeometry(mask, ps.ls.Box([-10, 30, 99], [80, 70, 105]))
+mask = ps.LevelSet(bounds, boundaryConds, gridDelta)
+geo = ps.MakeGeometry(mask, ps.Box([-10, 30, 99], [80, 70, 105]))
 geo.setIgnoreBoundaryConditions(True)
 geo.apply()
 domain.insertNextLevelSetAsMaterial(mask, ps.Material.Mask)

@@ -56,13 +56,19 @@ public:
       return;
     }
 
-    if (fileName.find(".vpsd") != fileName.length() - 5) {
+    if (fileName.length() < 5 ||
+        fileName.find(".vpsd") != fileName.length() - 5) {
       VIENNACORE_LOG_INFO("File name does not end in '.vpsd', appending it.");
       fileName.append(".vpsd");
     }
 
     // Open file for writing and save serialized domain
     std::ofstream fout(fileName, std::ios::binary);
+    if (!fout.is_open()) {
+      VIENNACORE_LOG_ERROR("Could not open file " + fileName +
+                           " for writing. Not writing.");
+      return;
+    }
 
     // Write header identifier
     fout << "psDomain";
