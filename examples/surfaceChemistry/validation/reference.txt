@@ -38,4 +38,4 @@ silane_inputs          theta_SiH3*              1.329944000e-05
 silane_selective       rate_nm_per_s            7.177863000e-02
 silane_selective       theta_H*                 9.159010000e-02
 silane_selective       theta_SiH3*              1.329904000e-05
-toy_cycle              growth_per_cycle_A       2.485200000e+00
+toy_cycle              growth_per_cycle_A       2.479990000e+00

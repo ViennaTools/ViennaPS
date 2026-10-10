@@ -755,7 +755,61 @@ template <typename NumericType> struct ChemicalMechanism {
     constexpr NumericType floor = std::numeric_limits<NumericType>::min();
 
     std::vector<NumericType> q(N * N), L(N), x(N), gain(N), lose(N),
-        A(N * N), rhs(N);
+        A(N * N), rhs(N), rj(reactions.size());
+
+    // How reaction r moves occupancy within site type t: the states it fills
+    // (gain) and empties (lose), with the free fraction taking up what the
+    // tracked states do not balance. Returns the occupancy moved per event.
+    auto balance = [&](const Reaction &r, size_t t) {
+      std::fill(gain.begin(), gain.end(), NumericType(0.));
+      std::fill(lose.begin(), lose.end(), NumericType(0.));
+      NumericType gv = 0., lv = 0.;
+      for (size_t i = 0; i < n; ++i) {
+        if (static_cast<size_t>(coverageSite[i]) != t || r.nu[i] == 0.)
+          continue;
+        const NumericType w = r.nu[i] * scale[i];
+        if (w > 0.) {
+          gain[i] = w;
+          gv += w;
+        } else {
+          lose[i] = -w;
+          lv += -w;
+        }
+      }
+      if (gv > lv) {
+        lose[n + t] += gv - lv;
+        lv = gv;
+      } else if (lv > gv) {
+        gain[n + t] += lv - gv;
+        gv = lv;
+      }
+      return gv;
+    };
+
+    // The states each solid-forming step empties, weighted by their share of
+    // the occupancy it moves. The solid a step forms over a sub-step is taken
+    // from the same implicit outflow of these states that advances the
+    // coverages, so the film grown never exceeds what the coverages give up.
+    std::vector<std::vector<std::pair<size_t, NumericType>>> consumed;
+    if (grown) {
+      consumed.resize(reactions.size());
+      for (size_t j = 0; j < reactions.size(); ++j) {
+        if (reactions[j].solidAtoms == 0.)
+          continue;
+        NumericType sum = 0.;
+        for (size_t t = 0; t < nt; ++t) {
+          if (balance(reactions[j], t) <= 0.)
+            continue;
+          for (size_t c = 0; c < N; ++c)
+            if (lose[c] != 0.) {
+              consumed[j].push_back({c, lose[c]});
+              sum += lose[c];
+            }
+        }
+        for (auto &entry : consumed[j])
+          entry.second /= sum;
+      }
+    }
 
     NumericType elapsed = 0.;
     for (int sub = 0; sub < maxSubSteps && elapsed < dt; ++sub) {
@@ -768,39 +822,16 @@ template <typename NumericType> struct ChemicalMechanism {
       std::fill(q.begin(), q.end(), NumericType(0.));
       for (size_t j = 0; j < reactions.size(); ++j) {
         const auto &r = reactions[j];
-        const NumericType rj = rate(r, k[j], gamma, theta, free);
-        if (rj == 0.)
+        rj[j] = rate(r, k[j], gamma, theta, free);
+        if (rj[j] == 0.)
           continue;
         // one site type at a time: the occupancy of a type is conserved on its
         // own, and a reaction that touches two types moves each separately
         for (size_t t = 0; t < nt; ++t) {
-          std::fill(gain.begin(), gain.end(), NumericType(0.));
-          std::fill(lose.begin(), lose.end(), NumericType(0.));
-          NumericType gv = 0., lv = 0.;
-          for (size_t i = 0; i < n; ++i) {
-            if (static_cast<size_t>(coverageSite[i]) != t || r.nu[i] == 0.)
-              continue;
-            const NumericType w = r.nu[i] * scale[i];
-            if (w > 0.) {
-              gain[i] = w;
-              gv += w;
-            } else {
-              lose[i] = -w;
-              lv += -w;
-            }
-          }
-          // what the tracked states of this type do not balance comes from, or
-          // returns to, the free fraction of the type
-          if (gv > lv) {
-            lose[n + t] += gv - lv;
-            lv = gv;
-          } else if (lv > gv) {
-            gain[n + t] += lv - gv;
-            gv = lv;
-          }
+          const NumericType gv = balance(r, t);
           if (gv <= 0.)
             continue;
-          const NumericType w = rj / gv;
+          const NumericType w = rj[j] / gv;
           for (size_t c = 0; c < N; ++c) {
             if (lose[c] == 0.)
               continue;
@@ -837,16 +868,36 @@ template <typename NumericType> struct ChemicalMechanism {
       if (fastest > 0.)
         h = std::min(h, maxChange / fastest);
 
-      if (grown)
-        *grown += growthRate(gamma, k, theta, material) * h;
-
       for (size_t i = 0; i < N; ++i) {
         for (size_t c = 0; c < N; ++c)
           A[i * N + c] = -h * q[i * N + c];
         A[i * N + i] += NumericType(1.) + h * L[i];
         rhs[i] = x[i];
       }
-      if (solveDense(A, rhs, N)) {
+      const bool solved = solveDense(A, rhs, N);
+
+      // the solid formed over the sub-step: each step's rate times the
+      // fraction of its consumed states left at the end of the sub-step, the
+      // same implicit outflow that empties them in the coverage update
+      if (grown) {
+        NumericType g = 0.;
+        for (size_t j = 0; j < reactions.size(); ++j) {
+          if (reactions[j].solidAtoms == 0. || rj[j] == 0.)
+            continue;
+          NumericType phi = 1.;
+          if (solved && !consumed[j].empty()) {
+            phi = 0.;
+            for (const auto &[c, share] : consumed[j])
+              phi += share * std::max(rhs[c], NumericType(0.)) /
+                     std::max(x[c], floor);
+          }
+          g += reactions[j].solidAtoms * rj[j] * phi /
+               densityOf(reactions[j].solidIndex, material);
+        }
+        *grown += g * h;
+      }
+
+      if (solved) {
         for (size_t i = 0; i < n; ++i)
           theta[i] = std::min(NumericType(1.),
                               std::max(NumericType(0.), rhs[i]));
