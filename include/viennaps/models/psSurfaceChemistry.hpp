@@ -126,6 +126,14 @@ template <typename NumericType> struct ChemicalMechanism {
     // per-material A and Eth, for selectivity to a mask or a stop layer
     MaterialValueMap<NumericType> materialA;
     MaterialValueMap<NumericType> materialEth;
+
+    // the lowest threshold of this channel on any material
+    NumericType lowestEth() const {
+      NumericType m = Eth;
+      for (const auto &entry : materialEth)
+        m = std::min(m, entry.value);
+      return m;
+    }
   };
 
   struct GasSpecies {
@@ -1545,7 +1553,7 @@ public:
         minEth([&] {
           NumericType m = std::numeric_limits<NumericType>::max();
           for (const auto &y : yields)
-            m = std::min(m, y.Eth);
+            m = std::min(m, y.lowestEth());
           return yields.empty() ? NumericType(0.) : m;
         }()) {}
 
@@ -1644,7 +1652,7 @@ struct SurfaceChemistryParamsGPU {
                                           // can adsorb a dozen species
   static constexpr int maxCoverages = 16;
   static constexpr int maxMaterials = 8; // per-channel rate overrides
-  static constexpr int maxChannels = 4;  // reactions consuming one species
+  static constexpr int maxChannels = 8;  // reactions consuming one species
   static constexpr int maxSiteTypes = 4;
   static constexpr int maxChannelFactors = 3; // coverage factors per reaction
 
@@ -1697,7 +1705,7 @@ struct SurfaceChemistryParamsGPU {
 static_assert(SurfaceChemistryParamsGPU::maxParticles == 16 &&
                   SurfaceChemistryParamsGPU::maxCoverages == 16 &&
                   SurfaceChemistryParamsGPU::maxMaterials == 8 &&
-                  SurfaceChemistryParamsGPU::maxChannels == 4 &&
+                  SurfaceChemistryParamsGPU::maxChannels == 8 &&
                   SurfaceChemistryParamsGPU::maxSiteTypes == 4 &&
                   SurfaceChemistryParamsGPU::maxChannelFactors == 3 &&
                   SurfaceChemistryParamsGPU::maxYields == 6,
@@ -1969,7 +1977,7 @@ private:
         deviceParams_.yieldEth[nYield] = static_cast<float>(y.Eth);
         deviceParams_.yieldB[nYield] = static_cast<float>(y.B);
         deviceParams_.yieldEnhanced[nYield] = y.enhanced ? 1 : 0;
-        minEth = std::min(minEth, y.Eth);
+        minEth = std::min(minEth, y.lowestEth());
 
         int nOverride = 0;
 #define PS_GPU_YIELD(id, sym, cat, dens, cond, color)                          \

@@ -23,7 +23,7 @@ struct SurfaceChemistryParamsGPU {
                                           // can adsorb a dozen species
   static constexpr int maxCoverages = 16;
   static constexpr int maxMaterials = 8; // per-channel rate overrides
-  static constexpr int maxChannels = 4;  // reactions consuming one species
+  static constexpr int maxChannels = 8;  // reactions consuming one species
   static constexpr int maxSiteTypes = 4;
   static constexpr int maxChannelFactors = 3; // coverage factors per reaction
 
@@ -74,7 +74,7 @@ struct SurfaceChemistryParamsGPU {
 static_assert(SurfaceChemistryParamsGPU::maxParticles == 16 &&
                   SurfaceChemistryParamsGPU::maxCoverages == 16 &&
                   SurfaceChemistryParamsGPU::maxMaterials == 8 &&
-                  SurfaceChemistryParamsGPU::maxChannels == 4 &&
+                  SurfaceChemistryParamsGPU::maxChannels == 8 &&
                   SurfaceChemistryParamsGPU::maxSiteTypes == 4 &&
                   SurfaceChemistryParamsGPU::maxChannelFactors == 3 &&
                   SurfaceChemistryParamsGPU::maxYields == 6,

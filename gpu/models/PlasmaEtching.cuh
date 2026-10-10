@@ -147,8 +147,13 @@ plasmaIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd,
   viennaps::impl::updateEnergy(prd, params->Ions_inflectAngle, params->Ions_n_l,
                                angle);
 
-  float minEnergy = min(params->Substrate_Eth_ie, params->Substrate_Eth_sp);
-  if (prd->energy > minEnergy) {
+  // the thresholds are stored as square roots; the ion is stopped once it is
+  // below every threshold of its yields
+  float sqrtMinEnergy =
+      min(min(min(params->Substrate_Eth_sp, params->Substrate_Eth_ie),
+              min(params->Passivation_Eth_ie, params->Mask_Eth_sp)),
+          params->Polymer_Eth_sp);
+  if (sqrtf(prd->energy) > sqrtMinEnergy) {
     prd->rayWeight -= prd->rayWeight * sticking;
     viennaray::gpu::conedCosineReflection(
         prd, geomNormal, M_PI_2f - min(angle, params->Ions_minAngle));

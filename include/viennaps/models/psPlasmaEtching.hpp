@@ -275,7 +275,10 @@ public:
         A_energy(1. / (1. + params.Ions.n_l *
                                 (M_PI_2 / params.Ions.inflectAngle - 1.))),
         sqrt_E_th_ie_P(std::sqrt(params.Passivation.Eth_ie)),
-        sqrt_E_th_ie_Sub(std::sqrt(params.Substrate.Eth_ie)) {}
+        sqrt_E_th_ie_Sub(std::sqrt(params.Substrate.Eth_ie)),
+        minEnergy(std::min({params.Substrate.Eth_sp, params.Substrate.Eth_ie,
+                            params.Passivation.Eth_ie, params.Mask.Eth_sp,
+                            params.Polymer.Eth_sp})) {}
 
   void surfaceCollision(NumericType rayWeight, const Vec3D<NumericType> &rayDir,
                         const Vec3D<NumericType> &geomNormal,
@@ -367,8 +370,6 @@ public:
     NumericType newEnergy = updateEnergy(
         Rng, E, incAngle, A_energy, params.Ions.inflectAngle, params.Ions.n_l);
 
-    NumericType minEnergy =
-        std::min(params.Substrate.Eth_ie, params.Substrate.Eth_sp);
     if (newEnergy > minEnergy) {
       E = newEnergy;
       auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
@@ -396,6 +397,8 @@ private:
   // save precomputed square roots
   const NumericType sqrt_E_th_ie_P;
   const NumericType sqrt_E_th_ie_Sub;
+  // the ion is stopped once it is below every threshold of its yields
+  const NumericType minEnergy;
 
   NumericType E = 0.;
 };
