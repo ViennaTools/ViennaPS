@@ -949,8 +949,14 @@ private:
   /// small per-hit reaction probability a particle needs many bounces
   /// to react at all, and the ones that would reach a shadowed region
   /// are the first to be cut off by a low budget.
-  int kMaxBounce = 200;
-  static constexpr int kMaxSideBounce = 8;
+  /// 1e6 is effectively unlimited, as ViennaRay's maxReflections is for the
+  /// level set. The old budget of 200 dropped exactly the particles that
+  /// need many bounces to react, which biased every low-sticking species.
+  int kMaxBounce = 1000000;
+  /// Side-wall mirrors per flight segment. 1000, as ViennaRay's
+  /// maxBoundaryHits for the level set; the old cap of 8 lost 0.4 % of the
+  /// blanket's neutral hits, and more for species that re-emit many times.
+  static constexpr int kMaxSideBounce = 1000;
   ///< real reflections per particle
   /// Pass-throughs are NOT reflections: a ray declining a ledge keeps its
   /// direction and advances only 1.5 dx, so crossing a feature costs O(1/dx)
@@ -1057,6 +1063,37 @@ public:
   bool ionSameIdentity_ = true;   ///< ON: a channel removes only its species
   int ionOnly_ = -1;              ///< species the current ion may remove, -1 any
   void setIonSameIdentity(bool on) { ionSameIdentity_ = on; }
+  /// SPUTTERING ACTS ON EVERY STATE, as in the mechanism (R10, Ar + Si -> Si_s,
+  /// no coverage term): an ion whose reaction site is fluorinated or oxidised
+  /// also sputters Ysp/M atoms from the exposed cells of its footprint,
+  /// whatever their state. A bare site sputters through its own channel, and
+  /// the cells beyond the site come from every state as well.
+  /// Without this the cell set dropped 0.4 % (O 100) and 0.9 % (O 400) of the
+  /// etched area of the 20 nm trench (Meeting13/runs/recal/remlog,
+  /// 2026-10-12). DEFAULT ON since 2026-10-12; PMC_SPUTTERALL=0 sputters bare
+  /// cells only, as before.
+  bool sputterAll_ = true;
+  void setSputterAll(bool on) { sputterAll_ = on; }
+  bool sputterAll() const { return sputterAll_; }
+  void sputterCovered(const std::array<int, D> &rat, NumericType E,
+                      NumericType cosT, NumericType atomsPerCell) {
+    const NumericType Ysp = yieldSputter(E, cosT);
+    const int nsp = drawCount(Ysp / (ionWeight_ * atomsPerCell));
+    if (nsp <= 0)
+      return;
+    size_t *keepTally = removalTally_;
+    const int keepOnly = ionOnly_;
+    removalTally_ = &remSp;
+    ionOnly_ = -1;
+    atomsOwed += nsp * p_.rho * std::pow(delta(), D);
+    for (int c = 0; c < nsp; ++c)
+      if (!removeNearby(rat, damageRadius(Ysp / ionWeight_))) {
+        nIonShort += static_cast<size_t>(nsp - c);
+        break;
+      }
+    ionOnly_ = keepOnly;
+    removalTally_ = keepTally;
+  }
   /// OXIDE CLEARING GETS ITS OWN TALLY. An ion on an SiO cell uses
   /// yieldClearO -- the same A_p as the mechanism's ion + SiO reaction --
   /// and removes the cell. Folding that into remIE made the cell arm look
@@ -2448,6 +2485,33 @@ private:
   }
 
   size_t *removalTally_ = nullptr;
+  /// REMOVAL LOG (diagnostic, off by default; setRemovalLog, PMC_REMLOG): every
+  /// cell a reaction removes, with its lattice index, its channel (0
+  /// ion-enhanced, 1 sputter, 2 thermal, i.e. the F step that releases SiF4,
+  /// 3 oxide clearing, -1 none) and the process time, to see where each
+  /// channel takes material. Settled cells are moved, not removed, and are
+  /// not logged.
+  struct RemovalEvent { int i, j, channel; NumericType t; };
+  bool remLog_ = false;
+  NumericType remLogTime_ = 0;
+  std::vector<RemovalEvent> remLogRows_;
+  /// ION LOG (diagnostic, off by default; setIonLog, PMC_IONLOG): every ion
+  /// super-particle that reaches silicon on the cascade path, with the cell it
+  /// hit, its reaction site, that site's state on arrival (0 bare, 1
+  /// fluorinated, 2 oxidised), the energy, the incidence cosine, the
+  /// ion-enhanced and sputter yields at that energy and angle, the yield of
+  /// the channel the state selects, the cells this ion removed in all
+  /// channels, and the process time. It gives the ions the evolving walls
+  /// receive and the states they meet, for the comparison with the level
+  /// set's yield fluxes and coverages.
+  struct IonEvent {
+    int i, j, si, sj, state, got;
+    float E, cosT, Yie, Ysp, Y;
+    NumericType t;
+  };
+  bool ionLog_ = false;
+  std::vector<IonEvent> ionLogRows_;
+  size_t removedAll() const { return remIE + remSp + remTh + remOx; }
 
   /// exposed sideways but not from above: the same test the wall/floor ion
   /// histogram uses, factored out so the reflection origin is binned the
@@ -2679,6 +2743,14 @@ private:
   void removeCellAt(const std::array<int, D> &at_) {
     if (freeze_) return;
     if (removalTally_) ++(*removalTally_);
+    if (remLog_)
+      remLogRows_.push_back({at_[0], at_[D - 1],
+                             removalTally_ == &remIE   ? 0
+                             : removalTally_ == &remSp ? 1
+                             : removalTally_ == &remTh ? 2
+                             : removalTally_ == &remOx ? 3
+                                                       : -1,
+                             remLogTime_});
     if (removalTally_ == &remIE && !histRem.empty()) ++histRem[at_[0]];
     if (removalTally_ == &remTh && !histTh.empty()) ++histTh[at_[0]];
     std::array<int, D> at = at_;
@@ -3696,6 +3768,10 @@ public:
   void setFacetPlane(bool on) { facetPlane_ = on; }
   void setFacetTol(NumericType t) { facetTol_ = t > 0 ? t : NumericType(1); }
   void setSameFacet(bool on) { sameFacet_ = on; }
+  void setRemovalLog(bool on) { remLog_ = on; }
+  void setIonLog(bool on) { ionLog_ = on; }
+  const std::vector<IonEvent> &ionLog() const { return ionLogRows_; }
+  const std::vector<RemovalEvent> &removalLog() const { return remLogRows_; }
   void setParticleSize(NumericType cells) {
     particleSize_ = cells > NumericType(0) ? cells : NumericType(0);
     interaction_.setParticleRadius(particleSize_ * delta());
@@ -5257,10 +5333,20 @@ public:
       else if (isF) ++nCasIonF;
       else          ++nCasIonSi;
       removalTally_ = isOx ? &remOx : isF ? &remIE : &remSp;
+      const size_t removedBefore = removedAll();
+      if (ionLog_)
+        ionLogRows_.push_back(
+            {hitIdx[0], hitIdx[D - 1], rat[0], rat[D - 1],
+             static_cast<int>(state_[rid]), 0, float(E), float(cosT),
+             float(yieldEnhanced(E, cosT)), float(yieldSputter(E, cosT)),
+             float(Y), remLogTime_});
       const int want = drawCount(Y / (ionWeight_ * atomsPerCell));
       atomsOwed += want * p_.rho * std::pow(delta(), D);
       if (want > 0) {
-        ionOnly_ = static_cast<int>(state_[rid]);
+        // sputtering (a bare site) takes silicon in every state beyond the
+        // site itself, the other channels only their own species
+        ionOnly_ = sputterAll_ && !isOx && !isF ? -1
+                                                : static_cast<int>(state_[rid]);
         removeCellAt(rat);
         ++nIonHitTaken;
         if (removalTally_ == &remIE)      { ++dxIE[0]; ++nDxIE; }
@@ -5272,6 +5358,10 @@ public:
           }
         ionOnly_ = -1;
       }
+      if (sputterAll_ && (isOx || isF))
+        sputterCovered(rat, E, cosT, atomsPerCell);
+      if (ionLog_)
+        ionLogRows_.back().got = static_cast<int>(removedAll() - removedBefore);
     }
 
     nHitN += gpuCtr_[pmcHits];
@@ -5299,6 +5389,7 @@ public:
   /// One step of `dt`: deliver the particles that arrive in that time, then
   /// fire the thermal events that occur in it.
   void step(NumericType dt) {
+    remLogTime_ += dt;
     if (hitTally_)
       sizeHitTally();
     if (fluorocarbon_) {
@@ -5989,6 +6080,14 @@ public:
               else if (isF) ++nCasIonF;
               else          ++nCasIonSi;
               removalTally_ = isOx ? &remOx : isF ? &remIE : &remSp;
+              const size_t removedBefore = removedAll();
+              const bool logThis = ionLog_ && !tallyOnly_;
+              if (logThis)
+                ionLogRows_.push_back(
+                    {h.index[0], h.index[D - 1], rat[0], rat[D - 1],
+                     static_cast<int>(state_[rid]), 0, float(E), float(cosT),
+                     float(yieldEnhanced(E, cosT)), float(yieldSputter(E, cosT)),
+                     float(Y), remLogTime_});
               if (!tallyOnly_) {
                 const int want = drawCount(Y / (ionWeight_ * atomsPerCell));
                 if (ionSameIdentity_) {
@@ -6003,7 +6102,12 @@ public:
                   // fluorinated cell it hit to finish its cascade as SiF4.
                   atomsOwed += want * p_.rho * std::pow(delta(), D);
                   if (want > 0) {
-                    ionOnly_ = static_cast<int>(state_[rid]);
+                    // sputtering (a bare site) takes silicon in every state
+                    // beyond the site itself, the other channels only their
+                    // own species
+                    ionOnly_ = sputterAll_ && !isOx && !isF
+                                   ? -1
+                                   : static_cast<int>(state_[rid]);
                     removeCellAt(rat);
                     ++nIonHitTaken;
                     if (removalTally_ == &remIE)      { ++dxIE[0]; ++nDxIE; }
@@ -6018,7 +6122,12 @@ public:
                 } else {
                   removeCells(h.index, want, damageRadius(Y / ionWeight_));
                 }
+                if (sputterAll_ && (isOx || isF))
+                  sputterCovered(rat, E, cosT, atomsPerCell);
               }
+              if (logThis)
+                ionLogRows_.back().got =
+                    static_cast<int>(removedAll() - removedBefore);
             } else {
               const NumericType Ysp = yieldSputter(E, cosT);
               removalTally_ = &remSp;

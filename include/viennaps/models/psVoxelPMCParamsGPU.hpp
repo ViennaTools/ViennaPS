@@ -64,7 +64,7 @@ struct VoxelPMCParamsGPU {
   int sameFacet = 1;
   int sameFacetCells = 2;
   float cosLim = 0.8660254f;
-  int maxBounce = 200;
+  int maxBounce = 1000000; // set from the CPU's kMaxBounce
 
   // ---- what is being launched: 0 F, 1 O (the ion has its own programs)
   int species = 0;

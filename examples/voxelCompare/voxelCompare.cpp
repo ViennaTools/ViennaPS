@@ -33,6 +33,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <string>
 
 namespace ls = viennals; namespace cs = viennacs; namespace ps = viennaps;
@@ -104,7 +105,11 @@ makeCells(ps::SmartPointer<ps::Domain<T, D>> dom) {
 static T writeSurface(ps::SmartPointer<ps::Domain<T, D>> dom,
                       const std::string &name) {
   auto mesh = ps::SmartPointer<ls::Mesh<T>>::New();
-  ls::ToSurfaceMesh<T, D>(dom->getLevelSets().back(), mesh).apply();
+  // Mesh a COPY: ToSurfaceMesh expands a level set narrower than two layers in
+  // place, and between advection steps the live one is one layer wide, so
+  // meshing it directly changed the domain the next step advects.
+  auto lsCopy = ps::SmartPointer<ls::Domain<T, D>>::New(dom->getLevelSets().back());
+  ls::ToSurfaceMesh<T, D>(lsCopy, mesh).apply();
   ls::VTKWriter<T>(mesh, name).apply();
   // and the same line segments as plain text: the .vtp is polydata, which the
   // usual python readers do not take, and this is what gets plotted
@@ -297,11 +302,56 @@ int main(int argc, char **argv) {
     // LS_DTRATIO scales the advection CFL ratio, to check that a transient
     // coverage result is converged in the time step rather than an artefact
     // of taking one backward-Euler step per advection step.
-    if (const char *e = std::getenv("LS_DTRATIO")) {
+    // LS_SCHEME sets the spatial scheme by its ViennaLS name; the default is
+    // ENGQUIST_OSHER_1ST_ORDER. LS_TEMPORAL sets the time scheme by its
+    // ViennaLS name (FORWARD_EULER default, RUNGE_KUTTA_2ND_ORDER,
+    // RUNGE_KUTTA_3RD_ORDER); LS_INTERVEL=1 recomputes the fluxes and
+    // velocities at the intermediate Runge-Kutta stages. All go into one
+    // parameter set, since a second setParameters call replaces the first.
+    if (std::getenv("LS_DTRATIO") || std::getenv("LS_SCHEME") || std::getenv("LS_TEMPORAL") ||
+        std::getenv("LS_INTERVEL")) {
       ps::AdvectionParameters adv;
-      adv.timeStepRatio = 0.4999 * std::atof(e);
+      if (const char *e = std::getenv("LS_DTRATIO")) {
+        adv.timeStepRatio = 0.4999 * std::atof(e);
+        std::cout << "  [level set: timeStepRatio x" << e << "]\n";
+      }
+      if (const char *e = std::getenv("LS_SCHEME")) {
+        using SS = ps::SpatialScheme;
+        const std::map<std::string, SS> schemes = {
+            {"ENGQUIST_OSHER_1ST_ORDER", SS::ENGQUIST_OSHER_1ST_ORDER},
+            {"ENGQUIST_OSHER_2ND_ORDER", SS::ENGQUIST_OSHER_2ND_ORDER},
+            {"LAX_FRIEDRICHS_1ST_ORDER", SS::LAX_FRIEDRICHS_1ST_ORDER},
+            {"LOCAL_LAX_FRIEDRICHS_1ST_ORDER", SS::LOCAL_LAX_FRIEDRICHS_1ST_ORDER},
+            {"STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER", SS::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER},
+            {"WENO_3RD_ORDER", SS::WENO_3RD_ORDER},
+            {"WENO_5TH_ORDER", SS::WENO_5TH_ORDER}};
+        const auto it = schemes.find(e);
+        if (it == schemes.end()) {
+          std::cerr << "LS_SCHEME: unknown scheme " << e << std::endl;
+          return 2;
+        }
+        adv.spatialScheme = it->second;
+        std::cout << "  [level set: spatial scheme " << e << "]\n";
+      }
+      if (const char *e = std::getenv("LS_TEMPORAL")) {
+        using TS = ps::TemporalScheme;
+        const std::map<std::string, TS> temporal = {
+            {"FORWARD_EULER", TS::FORWARD_EULER},
+            {"RUNGE_KUTTA_2ND_ORDER", TS::RUNGE_KUTTA_2ND_ORDER},
+            {"RUNGE_KUTTA_3RD_ORDER", TS::RUNGE_KUTTA_3RD_ORDER}};
+        const auto it = temporal.find(e);
+        if (it == temporal.end()) {
+          std::cerr << "LS_TEMPORAL: unknown scheme " << e << std::endl;
+          return 2;
+        }
+        adv.temporalScheme = it->second;
+        std::cout << "  [level set: temporal scheme " << e << "]\n";
+      }
+      if (const char *e = std::getenv("LS_INTERVEL"); e && std::atoi(e) != 0) {
+        adv.calculateIntermediateVelocities = true;
+        std::cout << "  [level set: velocities recomputed at intermediate stages]\n";
+      }
       proc.setParameters(adv);
-      std::cout << "  [level set: timeStepRatio x" << e << "]\n";
     }
     if (snapEvery > T(0))
       model->setAdvectionCallback(
@@ -706,6 +756,17 @@ int main(int argc, char **argv) {
     // PMC_HOPVIS=0 restore the earlier transport.
     if (const char *e = std::getenv("PMC_HOPVIS")) pmc.setHopVisible(std::atoi(e) != 0);
     if (const char *e = std::getenv("PMC_PSIZE")) pmc.setParticleSize(std::atof(e));
+    // PMC_REMLOG: log every removed cell (position, channel, time) into
+    // cmp_pmc_removal.csv after the run. Diagnostic, off by default.
+    if (std::getenv("PMC_REMLOG")) pmc.setRemovalLog(true);
+    // PMC_IONLOG: log every ion that reaches silicon (hit cell, reaction site,
+    // its state on arrival, energy, cosine, yields, cells removed, time) into
+    // cmp_pmc_ions.csv after the run. Diagnostic, off by default.
+    if (std::getenv("PMC_IONLOG")) pmc.setIonLog(true);
+    // PMC_SPUTTERALL=0: sputter bare cells only (before 2026-10-12). DEFAULT ON:
+    // an ion on a fluorinated or oxidised cell sputters as well, as R10 says.
+    if (const char *e = std::getenv("PMC_SPUTTERALL")) pmc.setSputterAll(std::atoi(e) != 0);
+    std::cout << "  sputtering acts on " << (pmc.sputterAll() ? "every state" : "bare cells only") << std::endl;
     std::cout << "  particle size " << pmc.particleSize()
               << " cells (seven-point molecule), spreading by line of sight "
               << (pmc.hopVisible() ? "on" : "off") << std::endl;
@@ -1128,6 +1189,29 @@ int main(int argc, char **argv) {
               // apart in a log.
               << ",  ray-smoothing skips " << pmc.nSeeThrough << std::endl;
     dump("cmp_" + tag + "_final.vtu");
+    if (std::getenv("PMC_REMLOG")) {
+      std::ofstream rf("cmp_pmc_removal.csv");
+      rf << "x,z,channel,t\n";
+      for (const auto &ev : pmc.removalLog())
+        rf << lat.minCorner()[0] + DX * (ev.i + T(0.5)) << ','
+           << lat.minCorner()[1] + DX * (ev.j + T(0.5)) << ',' << ev.channel << ','
+           << ev.t << '\n';
+      std::cout << "    wrote cmp_pmc_removal.csv (" << pmc.removalLog().size()
+                << " removals)" << std::endl;
+    }
+    if (std::getenv("PMC_IONLOG")) {
+      std::ofstream rf("cmp_pmc_ions.csv");
+      rf << "x,z,xs,zs,state,E,cosT,Yie,Ysp,Y,got,t\n";
+      for (const auto &ev : pmc.ionLog())
+        rf << lat.minCorner()[0] + DX * (ev.i + T(0.5)) << ','
+           << lat.minCorner()[1] + DX * (ev.j + T(0.5)) << ','
+           << lat.minCorner()[0] + DX * (ev.si + T(0.5)) << ','
+           << lat.minCorner()[1] + DX * (ev.sj + T(0.5)) << ',' << ev.state << ','
+           << ev.E << ',' << ev.cosT << ',' << ev.Yie << ',' << ev.Ysp << ','
+           << ev.Y << ',' << ev.got << ',' << ev.t << '\n';
+      std::cout << "    wrote cmp_pmc_ions.csv (" << pmc.ionLog().size() << " ions)"
+                << std::endl;
+    }
     const auto c = pmc.coverages();
     { long cf = 0, cfd = 0; double cr = 0; pmc.capStats(cf, cfd, cr);
       std::cout << "    curvature cap fired on " << cfd << " of " << cf
