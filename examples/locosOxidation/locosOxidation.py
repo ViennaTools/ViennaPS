@@ -85,8 +85,7 @@ cfg = {
     "maskYoungModulus":          270e9,
     "maskViscosity":             -1.0,
     "maskShearActivationVolume": -1.0,
-    "useGpu":            "cpu",    # cpu | gpu
-    "gpuPreconditioner": "jacobi", # jacobi | ilu0
+    "useGpu":            "cpu",    # cpu | gpu | auto
     "logLevel":          "info",   # debug | timing | intermediate | info | warning | error
 }
 
@@ -242,10 +241,10 @@ model.setMechanicsTolerance(cfg["mechanicsTolerance"])
 use_gpu = cfg["useGpu"].lower()
 if use_gpu == "gpu":
     model.setGpuMode(vps.GpuMode.Gpu)
+elif use_gpu == "auto":
+    model.setGpuMode(vps.GpuMode.Auto)
 elif use_gpu == "cpu":
     model.setGpuMode(vps.GpuMode.Cpu)
-if cfg["gpuPreconditioner"].lower() == "ilu0":
-    model.setGpuPreconditioner(vps.GpuPreconditioner.ILU0)
 
 model.saveSurfaceMesh(domain, f"{output_prefix}_step_000.vtp")
 model.saveVolumeMesh(domain, f"{output_prefix}_step_000")

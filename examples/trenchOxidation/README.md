@@ -110,8 +110,7 @@ All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **
 | `oxidant` | `wet` | `wet` (H₂O) or `dry` (O₂) |
 | `orientation` | `100` | Crystal orientation: `100`, `110`, `111`, or `poly` |
 | `maxGridPoints` | *(5M)* | Optional cap on Cartesian solve grid nodes |
-| `useGpu` | `cpu` | BiCGSTAB back-end: `cpu` or `gpu` (GPU requires `VIENNALS_USE_GPU=ON`) |
-| `gpuPreconditioner` | `jacobi` | GPU preconditioner: `jacobi` or `ilu0` |
+| `useGpu` | `cpu` | Large linear solves on the GPU: `cpu`, `gpu` or `auto` (GPU requires `VIENNALS_USE_GPU=ON`) |
 | `outputPrefix` | `ps_trench_oxidation` | Prefix for all output file names |
 
 ### Grid Sizing Guide
@@ -218,11 +217,11 @@ halves on convergence failure (up to 16 retries).
 
 **GPU acceleration**
 
-If ViennaLS is built with `VIENNALS_USE_GPU=ON`, setting `useGpu=gpu` offloads the
-inner BiCGSTAB linear solves (diffusion, Stokes, pressure, harmonic extension) to
-CUDA via a custom GPU BiCGSTAB implementation. The SIMPLE iteration control, stress
-assembly, and RHS construction always run on the CPU. `gpuPreconditioner=ilu0` uses
-cuSPARSE ILU(0) instead of Jacobi for better convergence on ill-conditioned systems.
+If ViennaLS is built with `VIENNALS_USE_GPU=ON`, `useGpu=gpu` (or `auto`: the GPU
+when one is available) solves the diffusion system and, in 3-D, the velocity-pressure
+system on the GPU, from 20 000 unknowns: the same AMGCL solvers as on the CPU, on
+AMGCL's CUDA backend. Assembly, the AMG setup and the level-set work stay on the CPU;
+the 2-D mechanics (sparse LU) always runs on the CPU.
 
 See [`docs/OxidationSolver.md`](../../ViennaLS/docs/OxidationSolver.md) in the
 ViennaLS repository for the full mathematical and implementation details.

@@ -287,7 +287,9 @@ points inside the nitride join the deformation solve (equations above).
   oxide nodes, mask from nitride nodes).
 - The nitride is supported by the oxide it is bonded to, welded to bare Si
   and held by the symmetry plane; there is no other clamp.
-- The mechanics runs on the CPU; `useGpu=gpu` accelerates the diffusion solve.
+- The mechanics of this 2-D example runs on the CPU (sparse LU); `useGpu=gpu`
+  (or `auto`) moves the diffusion solve to the GPU from 20 000 nodes, and in
+  3-D also the velocity-pressure solve.
 
 On this example (0.1 h) the oxide grown per silicon consumed is 2.32 in the
 bird's beak (−0.3 < x < 0 µm), 2.28 at the edge (0 < x < 0.1 µm) and 2.27 in

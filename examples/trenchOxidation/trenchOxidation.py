@@ -38,7 +38,6 @@ cfg = {
     "outputPrefix":       "ps_trench_oxidation",
     "maxGridPoints":      0,   # 0 = unlimited; set >0 to cap the Cartesian solve grid
     "useGpu":             "auto",   # auto | gpu | cpu
-    "gpuPreconditioner":  "jacobi", # jacobi | ilu0
 }
 
 
@@ -128,10 +127,10 @@ model.setInitialOxideThickness(oxide_thickness)
 use_gpu = cfg["useGpu"].lower()
 if use_gpu == "gpu":
     model.setGpuMode(vps.GpuMode.Gpu)
+elif use_gpu == "auto":
+    model.setGpuMode(vps.GpuMode.Auto)
 elif use_gpu == "cpu":
     model.setGpuMode(vps.GpuMode.Cpu)
-if cfg["gpuPreconditioner"].lower() == "ilu0":
-    model.setGpuPreconditioner(vps.GpuPreconditioner.ILU0)
 
 if cfg["maxGridPoints"] > 0:
     model.setMaxGridPoints(int(cfg["maxGridPoints"]))

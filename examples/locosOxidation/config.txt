@@ -13,7 +13,6 @@
 
 numThreads=16
 useGpu=cpu
-# gpuPreconditioner=jacobi
 
 gridDelta=0.005
 xExtent=1.

@@ -1227,11 +1227,7 @@ template <int D> void bindApi(py::module &module) {
            py::arg("params"),
            "Elastic constants and clamp of the nitride mask.")
       .def("setGpuMode", &Oxidation<T, D>::setGpuMode, py::arg("mode"),
-           "BiCGSTAB solver back-end: GpuMode.Cpu (default) or GpuMode.Gpu.")
-      .def(
-          "setGpuPreconditioner", &Oxidation<T, D>::setGpuPreconditioner,
-          py::arg("preconditioner"),
-          "GPU BiCGSTAB preconditioner (GpuPreconditioner.Jacobi matches CPU).")
+           "GPU for the diffusion and the 3-D mechanics solves: GpuMode.Cpu (default), GpuMode.Gpu or GpuMode.Auto.")
       .def("estimatePlanarOxideThickness",
            &Oxidation<T, D>::estimatePlanarOxideThickness,
            py::arg("initialOxideThickness") = T(0),

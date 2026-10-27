@@ -140,11 +140,10 @@ template <int D> void run(const ps::util::Parameters &params) {
     const auto useGpu = lower(getString(params, "useGpu", "cpu"));
     if (useGpu == "gpu")
       model->setGpuMode(ps::GpuMode::Gpu);
+    else if (useGpu == "auto")
+      model->setGpuMode(ps::GpuMode::Auto);
     else if (useGpu == "cpu")
       model->setGpuMode(ps::GpuMode::Cpu);
-    const auto prec = lower(getString(params, "gpuPreconditioner", "jacobi"));
-    if (prec == "ilu0")
-      model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
   }
 
   {

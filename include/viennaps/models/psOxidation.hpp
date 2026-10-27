@@ -59,7 +59,6 @@ using namespace viennacore;
 enum class OxidantType { Dry, Wet };
 enum class SiliconOrientation { Si100, Si110, Si111, PolySi };
 using GpuMode = viennals::GpuMode;
-using GpuPreconditioner = viennals::GpuPreconditioner;
 
 template <class NumericType, int D>
 class Oxidation : public ProcessModelBase<NumericType, D> {
@@ -136,7 +135,6 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   viennals::OxidationMaskParameters maskParams_{};
   bool maskParamsSet_ = false;
   GpuMode gpuMode_ = GpuMode::Cpu;
-  GpuPreconditioner gpuPreconditioner_ = GpuPreconditioner::Jacobi;
   unsigned mechanicsIterations_ = 200;
   NumericType mechanicsTolerance_ = NumericType(1e-4);
   bool toleranceWarningEmitted_ = false;
@@ -331,14 +329,11 @@ public:
     maskParamsSet_ = true;
   }
 
-  /// Select the BiCGSTAB solver back-end.
+  /// GPU for the diffusion solve and the 3-D mechanics solve (large systems).
   ///   GpuMode::Cpu  — always CPU (default)
   ///   GpuMode::Gpu  — always GPU (throws if unavailable or unsuccessful)
+  ///   GpuMode::Auto — GPU when available, else CPU
   void setGpuMode(GpuMode mode) { gpuMode_ = mode; }
-  /// Select the GPU BiCGSTAB preconditioner. Jacobi matches the CPU solver.
-  void setGpuPreconditioner(GpuPreconditioner preconditioner) {
-    gpuPreconditioner_ = preconditioner;
-  }
 
   void setMechanicsIterations(unsigned iterations) {
     mechanicsIterations_ = std::max(1u, iterations);
@@ -672,7 +667,6 @@ private:
     auto locos =
         ls::Oxidation<NumericType, D>::New(reactionInterface, ambientInterface);
     locos->setGpuMode(gpuMode_);
-    locos->setGpuPreconditioner(gpuPreconditioner_);
     locos->setOxidationParameters(oxParams);
     locos->setCouplingParameters(coupling);
     if (useSolveBounds_)

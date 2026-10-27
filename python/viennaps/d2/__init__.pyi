@@ -779,9 +779,7 @@ class Oxidation(ProcessModelBase):
     def setMaskParameters(self, params: viennals.d2.OxidationMaskParameters) -> None:
         """Viscous-elasticity parameters for the mask layer."""
     def setGpuMode(self, mode: viennaps._core.GpuMode) -> None:
-        """BiCGSTAB solver back-end: GpuMode.Cpu (default) or GpuMode.Gpu."""
-    def setGpuPreconditioner(self, preconditioner: viennaps._core.GpuPreconditioner) -> None:
-        """GPU BiCGSTAB preconditioner (GpuPreconditioner.Jacobi matches CPU)."""
+        """GPU for the diffusion and the 3-D mechanics solves: GpuMode.Cpu (default), GpuMode.Gpu or GpuMode.Auto."""
     def estimatePlanarOxideThickness(self, initialOxideThickness: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> float:
         """Deal-Grove planar oxide thickness estimate in µm."""
     def saveSurfaceMesh(self, domain: Domain, fileName: str) -> None:

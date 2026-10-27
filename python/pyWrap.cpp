@@ -38,12 +38,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   py::native_enum<GpuMode>(module, "GpuMode", "enum.IntEnum")
       .value("Gpu", GpuMode::Gpu)
       .value("Cpu", GpuMode::Cpu)
-      .finalize();
-
-  py::native_enum<GpuPreconditioner>(module, "GpuPreconditioner",
-                                     "enum.IntEnum")
-      .value("Jacobi", GpuPreconditioner::Jacobi)
-      .value("ILU0", GpuPreconditioner::ILU0)
+      .value("Auto", GpuMode::Auto)
       .finalize();
 
   // Logger

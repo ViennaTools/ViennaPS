@@ -74,7 +74,6 @@ struct Config {
   NumericType maskViscosity = -1.;
   NumericType maskShearActivationVolume = -1.;
   std::string useGpu = "cpu";
-  std::string gpuPreconditioner = "jacobi";
   std::string logLevel = "info";
 };
 
@@ -145,8 +144,6 @@ Config parseConfig(const std::string &filename) {
       cfg.maskShearActivationVolume = std::stod(val);
     else if (key == "useGpu")
       cfg.useGpu = val;
-    else if (key == "gpuPreconditioner")
-      cfg.gpuPreconditioner = val;
     else if (key == "logLevel")
       cfg.logLevel = val;
     else
@@ -240,12 +237,10 @@ int main() {
 
   if (cfg.useGpu == "gpu")
     model->setGpuMode(ps::GpuMode::Gpu);
+  else if (cfg.useGpu == "auto")
+    model->setGpuMode(ps::GpuMode::Auto);
   else if (cfg.useGpu == "cpu")
     model->setGpuMode(ps::GpuMode::Cpu);
-  if (cfg.gpuPreconditioner == "ilu0")
-    model->setGpuPreconditioner(ps::GpuPreconditioner::ILU0);
-  else
-    model->setGpuPreconditioner(ps::GpuPreconditioner::Jacobi);
 
   auto maskParams =
       viennals::OxidationPresets::siliconNitrideMask(cfg.temperature);
