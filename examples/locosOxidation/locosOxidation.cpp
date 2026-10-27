@@ -6,8 +6,8 @@
 //   - Si3N4 mask box (covering x < maskEdge, sitting on top of pad oxide)
 //
 // The Oxidation model auto-detects the Si3N4 material and activates LOCOS
-// physics: mask bending + constrained-ambient advection, producing the
-// characteristic bird's-beak oxide profile.
+// physics: the nitride joins the oxide mechanics solve as a linear-elastic
+// body, producing the characteristic bird's-beak oxide profile.
 //
 // Config keys (lengths in µm, time in hours, pressure in atm):
 //   numThreads, gridDelta, xExtent, yMin, yMax,
@@ -20,7 +20,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <fstream>
@@ -64,75 +63,20 @@ struct Config {
   std::string orientation = "100";
   std::size_t maxGridPoints = 5000000;
   std::string outputPrefix = "ps_locos";
-  int mechanicsIterations = 2;
-  NumericType mechanicsTolerance = 1e-7;
-  int pressureIterations = 500;
-  NumericType pressureTolerance = 1e-3;
-  int stokesIterations = 100;
-  NumericType stokesTolerance = 1e-3;
+  int mechanicsIterations = 300;
+  NumericType mechanicsTolerance = 1e-4;
   int couplingIterations = 8;
   NumericType couplingTolerance = 1e-6;
-  int maskCouplingIterations = 8;
-  NumericType maskCouplingTolerance = 0.02;
-  NumericType maskReferenceViscosity = -1.; // Pa·hr; <0 uses preset
-  NumericType maskYoungModulus = -1.;       // Pa;    <0 uses preset (~270e9)
+  NumericType maskYoungModulus = -1.; // Pa; <0 uses preset (270e9)
   NumericType maskPoissonRatio = 0.27;
-  // Mask contact mode: "kinematic"|"oneway"|"elastic"
-  std::string maskContactMode = "oneway";
-  bool maskUnilateralContact = true;
-  int maskTractionIterations = 10000;
-  NumericType maskTractionTolerance = 1e-5;
-  NumericType maskTractionRelaxation = 0.9;
-  NumericType maskContactLoadRelaxation = 0.25;
-  NumericType maskContactReleaseFraction = 5e-3;
-  NumericType maskSmootherOmega = 1.0;
-  int maskAnchorBoundaryDirection = 0;
-  int maskAnchorBoundarySide = -1;
-  unsigned maskAnchorBoundaryLayers = 1;
+  // Pa hr and m^3; <0 uses the Si3N4 preset at the process temperature
+  // (Senez 1996), 0 = linear-elastic mask / linear viscosity
+  NumericType maskViscosity = -1.;
+  NumericType maskShearActivationVolume = -1.;
   std::string useGpu = "cpu";
   std::string gpuPreconditioner = "jacobi";
   std::string logLevel = "info";
 };
-
-bool parseBool(std::string value) {
-  std::transform(
-      value.begin(), value.end(), value.begin(),
-      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-  return value == "1" || value == "true" || value == "yes" || value == "on";
-}
-
-std::string normalizeConfigToken(std::string value) {
-  const auto comment = value.find('#');
-  if (comment != std::string::npos)
-    value.resize(comment);
-  const auto first = value.find_first_not_of(" \t\r\n");
-  if (first == std::string::npos)
-    return {};
-  const auto last = value.find_last_not_of(" \t\r\n");
-  value = value.substr(first, last - first + 1);
-  std::transform(
-      value.begin(), value.end(), value.begin(),
-      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-  return value;
-}
-
-int parseMaskContactMode(const std::string &value) {
-  const auto mode = normalizeConfigToken(value);
-  if (mode == "0" || mode == "kinematic")
-    return 0;
-  if (mode == "1" || mode == "2" || mode == "oneway" || mode == "one-way" ||
-      mode == "traction")
-    return 1;
-  if (mode == "3" || mode == "4" || mode == "elastic" || mode == "twoway" ||
-      mode == "two-way" || mode == "two_way" || mode == "feedback" ||
-      mode == "twoway-elastic" || mode == "two-way-elastic" ||
-      mode == "elastic-feedback")
-    return 2;
-
-  std::cerr << "Warning: unknown maskContactMode='" << value
-            << "', using oneway.\n";
-  return 1;
-}
 
 Config parseConfig(const std::string &filename) {
   Config cfg;
@@ -187,56 +131,26 @@ Config parseConfig(const std::string &filename) {
       cfg.mechanicsIterations = std::stoi(val);
     else if (key == "mechanicsTolerance")
       cfg.mechanicsTolerance = std::stod(val);
-    else if (key == "pressureIterations")
-      cfg.pressureIterations = std::stoi(val);
-    else if (key == "pressureTolerance")
-      cfg.pressureTolerance = std::stod(val);
-    else if (key == "stokesIterations")
-      cfg.stokesIterations = std::stoi(val);
-    else if (key == "stokesTolerance")
-      cfg.stokesTolerance = std::stod(val);
     else if (key == "couplingIterations")
       cfg.couplingIterations = std::stoi(val);
     else if (key == "couplingTolerance")
       cfg.couplingTolerance = std::stod(val);
-    else if (key == "maskCouplingIterations")
-      cfg.maskCouplingIterations = std::stoi(val);
-    else if (key == "maskCouplingTolerance")
-      cfg.maskCouplingTolerance = std::stod(val);
-    else if (key == "maskReferenceViscosity")
-      cfg.maskReferenceViscosity = std::stod(val);
     else if (key == "maskYoungModulus")
       cfg.maskYoungModulus = std::stod(val);
     else if (key == "maskPoissonRatio")
       cfg.maskPoissonRatio = std::stod(val);
-    else if (key == "maskContactMode")
-      cfg.maskContactMode = val;
-    else if (key == "maskUnilateralContact")
-      cfg.maskUnilateralContact = parseBool(val);
-    else if (key == "maskTractionIterations")
-      cfg.maskTractionIterations = std::stoi(val);
-    else if (key == "maskTractionTolerance")
-      cfg.maskTractionTolerance = std::stod(val);
-    else if (key == "maskTractionRelaxation")
-      cfg.maskTractionRelaxation = std::stod(val);
-    else if (key == "maskContactLoadRelaxation")
-      cfg.maskContactLoadRelaxation = std::stod(val);
-    else if (key == "maskContactReleaseFraction")
-      cfg.maskContactReleaseFraction = std::stod(val);
-    else if (key == "maskSmootherOmega")
-      cfg.maskSmootherOmega = std::stod(val);
-    else if (key == "maskAnchorBoundaryDirection")
-      cfg.maskAnchorBoundaryDirection = std::stoi(val);
-    else if (key == "maskAnchorBoundarySide")
-      cfg.maskAnchorBoundarySide = std::stoi(val);
-    else if (key == "maskAnchorBoundaryLayers")
-      cfg.maskAnchorBoundaryLayers = std::stoul(val);
+    else if (key == "maskViscosity")
+      cfg.maskViscosity = std::stod(val);
+    else if (key == "maskShearActivationVolume")
+      cfg.maskShearActivationVolume = std::stod(val);
     else if (key == "useGpu")
       cfg.useGpu = val;
     else if (key == "gpuPreconditioner")
       cfg.gpuPreconditioner = val;
     else if (key == "logLevel")
       cfg.logLevel = val;
+    else
+      std::cerr << "Warning: unknown config key '" << key << "' ignored.\n";
   }
   return cfg;
 }
@@ -292,8 +206,11 @@ int main() {
   if (cfg.maskThickness > NumericType(0)) {
     constexpr NumericType contactEps = 1e-6; // µm
     auto maskLS = ls::Domain<NumericType, D>::New(bounds, bc, cfg.gridDelta);
+    // Overhang the left domain edge: a box ending exactly on the reflective
+    // boundary gives the mask a face on the symmetry plane and leaves
+    // uncovered oxide cells there.
     const ls::VectorType<NumericType, D> minCorner{
-        -cfg.xExtent, cfg.padOxideThickness - contactEps};
+        -2 * cfg.xExtent, cfg.padOxideThickness - contactEps};
     const ls::VectorType<NumericType, D> maxCorner{
         cfg.maskEdge, cfg.padOxideThickness + cfg.maskThickness};
     ls::MakeGeometry<NumericType, D> geom(
@@ -318,14 +235,8 @@ int main() {
   model->setMaxGridPoints(cfg.maxGridPoints);
   model->setMechanicsIterations(cfg.mechanicsIterations);
   model->setMechanicsTolerance(cfg.mechanicsTolerance);
-  model->setPressureIterations(cfg.pressureIterations);
-  model->setPressureTolerance(cfg.pressureTolerance);
-  model->setStokesIterations(cfg.stokesIterations);
-  model->setStokesTolerance(cfg.stokesTolerance);
   model->setCouplingIterations(cfg.couplingIterations);
   model->setCouplingTolerance(cfg.couplingTolerance);
-  model->setMaskCouplingIterations(cfg.maskCouplingIterations);
-  model->setMaskCouplingTolerance(cfg.maskCouplingTolerance);
 
   if (cfg.useGpu == "gpu")
     model->setGpuMode(ps::GpuMode::Gpu);
@@ -336,25 +247,16 @@ int main() {
   else
     model->setGpuPreconditioner(ps::GpuPreconditioner::Jacobi);
 
-  auto maskParams = viennals::OxidationPresets::siliconNitrideMask1000C();
-  if (cfg.maskReferenceViscosity > NumericType(0))
-    maskParams.referenceViscosity = cfg.maskReferenceViscosity;
+  auto maskParams =
+      viennals::OxidationPresets::siliconNitrideMask(cfg.temperature);
   if (cfg.maskYoungModulus > NumericType(0))
     maskParams.youngModulus = cfg.maskYoungModulus;
   maskParams.poissonRatio = cfg.maskPoissonRatio;
-  maskParams.contactMode = parseMaskContactMode(cfg.maskContactMode);
-  maskParams.anchorBoundaryDirection = cfg.maskAnchorBoundaryDirection;
-  maskParams.anchorBoundarySide = cfg.maskAnchorBoundarySide;
-  maskParams.anchorBoundaryLayers = cfg.maskAnchorBoundaryLayers;
+  if (cfg.maskViscosity >= NumericType(0))
+    maskParams.viscosity = cfg.maskViscosity;
+  if (cfg.maskShearActivationVolume >= NumericType(0))
+    maskParams.shearActivationVolume = cfg.maskShearActivationVolume;
   model->setMaskParameters(maskParams);
-  model->setMaskTractionIterations(
-      static_cast<unsigned>(std::max(1, cfg.maskTractionIterations)));
-  model->setMaskTractionTolerance(cfg.maskTractionTolerance);
-  model->setMaskTractionRelaxation(cfg.maskTractionRelaxation);
-  model->setMaskContactLoadRelaxation(cfg.maskContactLoadRelaxation);
-  model->setMaskContactReleaseFraction(cfg.maskContactReleaseFraction);
-  model->setMaskUnilateralContact(cfg.maskUnilateralContact);
-  model->setMaskSmootherOmega(cfg.maskSmootherOmega);
 
   {
     const auto meshWriteStart = Clock::now();
@@ -363,6 +265,7 @@ int main() {
     meshWriteTime += Clock::now() - meshWriteStart;
   }
 
+  model->setTime(cfg.oxidationTime);
   const NumericType est =
       model->estimatePlanarOxideThickness(cfg.padOxideThickness);
   std::cout << "Planar Deal-Grove estimate for " << cfg.oxidationTime

@@ -11,9 +11,9 @@ Geometry (2-D cross-section):
     · Si3N4 mask box covering x < maskEdge, sitting on the pad oxide
 
 The ViennaPS Oxidation model auto-detects Si3N4 and activates LOCOS
-physics: mask-bending + constrained-ambient advection. The example saves a
-surface mesh every timeStep hours; the model may use smaller CFL-limited
-internal physics steps between saved meshes.
+physics: the nitride joins the oxide mechanics solve as a linear-elastic
+body. The example saves a surface mesh every timeStep hours; the model may
+use smaller CFL-limited internal physics steps between saved meshes.
 
 Usage:
     python locosOxidation.py [config.txt]
@@ -53,15 +53,16 @@ cfg = {
     # One-shot persistent regrid: coarsen the whole stack to this delta (um)
     # once the thinnest oxide layer exceeds 2x it.  0 = disabled.
     "regridDelta":         0.0,
-    # Oxide penalty bulk modulus (Pa); 0 = model preset (7.5e8).
-    "bulkModulus":         0.0,
-    # SIMPLE pressure under-relaxation (scale down when raising bulkModulus).
-    "simplePressureRelaxation": 0.0,   # 0 = model default (0.5)
-    # Kao stress feedback: reaction/diffusion activation volumes (m^3).
-    # 0 = model defaults (reaction 1.76e-35 ~ nil, diffusion 0 = off).
-    # Literature (Kao/Akiyama): reaction ~7.9e-30.
+    # Stress-dependent oxidation kinetics (on by default, Kao-calibrated):
+    # false = stress-free Deal-Grove kinetics.
+    "stressDependentOxidation":  True,
+    # Activation volumes (m^3) of the reaction (interface normal stress) and
+    # the diffusivity (pressure); 0 = model defaults (2.5e-29, 4e-29).
     "reactionActivationVolume":  0.0,
     "diffusionActivationVolume": 0.0,
+    # Stress-dependent oxide viscosity (Sutardja-Oldham): shear activation
+    # volume (m^3); < 0 = model default (3e-28 = 300 A^3), 0 = linear.
+    "shearActivationVolume":     -1.0,
     "timeStep":            0.01,
     "temperature":      1000.0,
     "pressure":            1.0,
@@ -69,36 +70,24 @@ cfg = {
     "orientation":       "100",
     "maxGridPoints":          5000000,
     "outputPrefix":           "ps_locos",
-    # SIMPLE mechanics solver parameters (must be generous for convergence)
+    # Mechanics: viscosity iterations of the stress-dependent oxide (one
+    # velocity-pressure solve each) until the relative velocity change is
+    # below mechanicsTolerance.
     "mechanicsIterations":    300,
-    "mechanicsTolerance":     5e-3,
-    "pressureIterations":     500,
-    "pressureTolerance":      1e-3,
-    "stokesIterations":       500,
-    "stokesTolerance":        1e-3,
+    "mechanicsTolerance":     1e-4,
     "couplingIterations":     100,
     "couplingTolerance":      2e-2,
-    "maskCouplingIterations": 30,
-    "maskCouplingTolerance":  1e-2,
-    "maskReferenceViscosity": 5.0e11,
+    # Nitride mask: elastic body with Maxwell creep in the oxide mechanics
+    # solve.  maskViscosity (Pa hr) / maskShearActivationVolume (m^3): < 0
+    # takes the Si3N4 preset at the process temperature (Senez 1996), 0 = a
+    # linear-elastic mask / a linear viscosity.
     "maskPoissonRatio":       0.27,
-    "maskContactMode":           "twoway",
     "maskYoungModulus":          270e9,
-    "maskUnilateralContact":     True,
-    "maskContactLoadRelaxation": 0.25,
-    "maskContactReleaseFraction": 5e-3,
-    "maskTractionIterations":    10000,
-    "maskTractionTolerance":     1.0e-5,
-    "maskTractionRelaxation":    0.9,
-    "maskSmootherOmega":         1.0,
-    "maskAnchorBoundaryDirection": 0,
-    "maskAnchorBoundarySide":   -1,
-    "maskAnchorBoundaryLayers":  1,
-    # Roller anchor: clamp only the boundary-normal component so the mask can
-    # glide vertically at the mirror plane instead of being welded to it.
-    "maskAnchorNormalOnly":      False,
+    "maskViscosity":             -1.0,
+    "maskShearActivationVolume": -1.0,
     "useGpu":            "cpu",    # cpu | gpu
     "gpuPreconditioner": "jacobi", # jacobi | ilu0
+    "logLevel":          "info",   # debug | timing | intermediate | info | warning | error
 }
 
 
@@ -120,8 +109,11 @@ def _parse_config(path: str) -> None:
                         cfg[key] = val.lower() in ("true", "1", "yes")
                     else:
                         cfg[key] = t(val)
+                else:
+                    print(f"Warning: unknown config key '{key}' ignored.",
+                          file=sys.stderr)
     except FileNotFoundError:
-        pass
+        print(f"Warning: could not open {path}, using defaults.", file=sys.stderr)
 
 
 def _parse_oxidant(s: str):
@@ -151,7 +143,14 @@ config_file = sys.argv[1] if len(sys.argv) > 1 else "config.txt"
 _parse_config(config_file)
 
 vps.setNumThreads(cfg["numThreads"])
-vps.Logger.setLogLevel(vps.LogLevel.INFO)
+vps.Logger.setLogLevel({
+    "debug": vps.LogLevel.DEBUG,
+    "timing": vps.LogLevel.TIMING,
+    "intermediate": vps.LogLevel.INTERMEDIATE,
+    "info": vps.LogLevel.INFO,
+    "warning": vps.LogLevel.WARNING,
+    "error": vps.LogLevel.ERROR,
+}.get(cfg["logLevel"].lower(), vps.LogLevel.INFO))
 
 grid_delta          = cfg["gridDelta"]
 x_extent            = cfg["xExtent"]
@@ -219,48 +218,26 @@ model.setTimeStep(time_step)
 model.setInitialTimeStep(cfg["initialTimeStep"])
 if cfg["regridDelta"] > 0.0:
     model.setRegrid(cfg["regridDelta"])
-if cfg["bulkModulus"] > 0.0:
-    model.setBulkModulus(cfg["bulkModulus"])
-if cfg["simplePressureRelaxation"] > 0.0:
-    model.setSimplePressureRelaxation(cfg["simplePressureRelaxation"])
+model.setStressDependentOxidation(cfg["stressDependentOxidation"])
 if cfg["reactionActivationVolume"] > 0.0:
     model.setReactionActivationVolume(cfg["reactionActivationVolume"])
 if cfg["diffusionActivationVolume"] > 0.0:
     model.setDiffusionActivationVolume(cfg["diffusionActivationVolume"])
+if cfg["shearActivationVolume"] >= 0.0:
+    model.setShearActivationVolume(cfg["shearActivationVolume"])
 model.setMaxGridPoints(max_grid_points)
 model.setMechanicsIterations(cfg["mechanicsIterations"])
-model.setPressureIterations(cfg["pressureIterations"])
-model.setStokesIterations(cfg["stokesIterations"])
 model.setCouplingIterations(cfg["couplingIterations"])
 model.setCouplingTolerance(cfg["couplingTolerance"])
-model.setMaskCouplingIterations(cfg["maskCouplingIterations"])
-model.setMaskCouplingTolerance(cfg["maskCouplingTolerance"])
-mask_params = vls.OxidationPresets.siliconNitrideMask1000C()
-mask_params.referenceViscosity = cfg["maskReferenceViscosity"]
+mask_params = vls.OxidationPresets.siliconNitrideMask(temperature)
 mask_params.poissonRatio = cfg["maskPoissonRatio"]
 mask_params.youngModulus = cfg["maskYoungModulus"]
-mask_params.unilateralContact = cfg["maskUnilateralContact"]
-mask_params.contactLoadRelaxation = cfg["maskContactLoadRelaxation"]
-mask_params.contactReleaseFraction = cfg["maskContactReleaseFraction"]
-_mode_str = cfg["maskContactMode"].lower().replace("-", "").replace("_", "")
-mask_params.contactMode = (
-    0 if _mode_str in ("0", "kinematic") else
-    2 if _mode_str in ("2", "3", "4", "elastic", "twoway", "feedback",
-                       "twowayelastic", "elasticfeedback") else
-    1  # default: oneway (aliases: "1", "oneway", "traction")
-)
-mask_params.maxIterations = int(cfg["maskTractionIterations"])
-mask_params.tolerance = cfg["maskTractionTolerance"]
-mask_params.relaxation = cfg["maskTractionRelaxation"]
-mask_params.multigridSmootherOmega = cfg["maskSmootherOmega"]
-mask_params.anchorBoundaryDirection = cfg["maskAnchorBoundaryDirection"]
-mask_params.anchorBoundarySide = cfg["maskAnchorBoundarySide"]
-mask_params.anchorBoundaryLayers = cfg["maskAnchorBoundaryLayers"]
-mask_params.anchorNormalOnly = cfg["maskAnchorNormalOnly"]
+if cfg["maskViscosity"] >= 0.0:
+    mask_params.viscosity = cfg["maskViscosity"]
+if cfg["maskShearActivationVolume"] >= 0.0:
+    mask_params.shearActivationVolume = cfg["maskShearActivationVolume"]
 model.setMaskParameters(mask_params)
 model.setMechanicsTolerance(cfg["mechanicsTolerance"])
-model.setPressureTolerance(cfg["pressureTolerance"])
-model.setStokesTolerance(cfg["stokesTolerance"])
 
 use_gpu = cfg["useGpu"].lower()
 if use_gpu == "gpu":
@@ -273,6 +250,7 @@ if cfg["gpuPreconditioner"].lower() == "ilu0":
 model.saveSurfaceMesh(domain, f"{output_prefix}_step_000.vtp")
 model.saveVolumeMesh(domain, f"{output_prefix}_step_000")
 
+model.setTime(oxidation_time)
 est = model.estimatePlanarOxideThickness(pad_oxide_thickness)
 print(
     f"Planar Deal-Grove estimate for {oxidation_time} hr at {temperature} °C: "

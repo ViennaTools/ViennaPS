@@ -113,15 +113,6 @@ y_extent = 2.0 * z_extent if cfg["dimensions"] == 3 else 0.0
 vps.MakeFin(domain, gridDelta=grid_delta, xExtent=2.0 * x_extent, yExtent=y_extent,
             finWidth=fin_width, finHeight=fin_height).apply()
 
-# ── Oxide seed ────────────────────────────────────────────────────────────────
-# Clamp to at least gridDelta so the Cartesian solve has resolvable nodes.
-import viennals as vls
-
-seed_thickness = max(oxide_thickness, grid_delta)
-ambient_ls = vls.Domain(domain.getLevelSets()[-1])
-vls.GeometricAdvect(ambient_ls, vls.SphereDistribution(seed_thickness)).apply()
-domain.insertNextLevelSetAsMaterial(ambient_ls, vps.Material.SiO2, False)
-
 # ── Oxidation model ───────────────────────────────────────────────────────────
 model = vps.Oxidation()
 model.setTemperature(temperature)
@@ -129,7 +120,10 @@ model.setTime(oxidation_time)
 model.setOxidant(oxidant)
 model.setPressure(pressure)
 model.setOrientation(orientation)
-model.setInitialOxideThickness(seed_thickness)
+# The oxide on the silicon at t = 0 (0 = bare silicon).  The model creates it
+# and, while it is thinner than three grid cells, grows it by the 1-D
+# Deal-Grove law before the 2-D solve starts.
+model.setInitialOxideThickness(oxide_thickness)
 
 use_gpu = cfg["useGpu"].lower()
 if use_gpu == "gpu":
@@ -142,8 +136,8 @@ if cfg["gpuPreconditioner"].lower() == "ilu0":
 if cfg["maxGridPoints"] > 0:
     model.setMaxGridPoints(int(cfg["maxGridPoints"]))
 
-model.saveSurfaceMesh(domain, output_prefix + "_initial.vtp")
-model.saveVolumeMesh(domain, output_prefix + "_initial")
+domain.saveSurfaceMesh(output_prefix + "_initial.vtp")
+domain.saveVolumeMesh(output_prefix + "_initial")
 
 t0 = time.perf_counter()
 vps.Process(domain, model, 0.0).apply()
@@ -155,7 +149,7 @@ model.saveVolumeMesh(domain, output_prefix + "_after")
 print(f"Simulation time: {elapsed_sim:.2f} s")
 print(
     f"Planar Deal-Grove estimate for {oxidation_time} hr at {temperature} °C: "
-    f"{model.estimatePlanarOxideThickness(seed_thickness):.4f} µm oxide."
+    f"{model.estimatePlanarOxideThickness(oxide_thickness):.4f} µm oxide."
 )
 print(
     f"Wrote {output_prefix}_initial.vtp, {output_prefix}_after.vtp, "

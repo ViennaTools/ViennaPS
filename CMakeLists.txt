@@ -158,7 +158,11 @@ CPMAddPackage(
 CPMAddPackage(
   NAME ViennaRay
   VERSION 4.3.1
-  GIT_TAG benchmark
+  # Pinned 2026-10-20: the "benchmark" branch moved to a new Source API
+  # (getOrigin/getDirection, from 82889fe) that this branch's ray sources do
+  # not implement; 6cd664c is the commit the oxide-clean builds of Aug 2026
+  # used.
+  GIT_TAG 6cd664ceddebfa2ef67bda944e68886d880f889e
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")

@@ -36,51 +36,22 @@ orientation=100
 # maxGridPoints=5000000
 outputPrefix=ps_locos
 
-pressureIterations=500
-pressureTolerance=1e-3
-stokesIterations=500
-stokesTolerance=1e-3
 mechanicsIterations=300
-mechanicsTolerance=5e-3
+mechanicsTolerance=1e-4
 couplingIterations=100
 couplingTolerance=2e-2
-maskCouplingIterations=30
-maskCouplingTolerance=1e-2
 
-# Mask mechanics:
-#   maskContactMode=kinematic (0) mask velocity follows oxide velocity (legacy).
-#   maskContactMode=oneway    (1) multigrid-GMRES mask solve driven by oxide
-#                                 stress traction; oxide uses kinematic Dirichlet
-#                                 at mask faces. Alias: "traction".
-#   maskContactMode=elastic   (2) linear elastic multigrid-GMRES (E, nu); oxide
-#                                 contact prescribes displacement (v_oxide * dt);
-#                                 outer coupling loop feeds mask displacement back
-#                                 into oxide solve. Correct for Si3N4.
-#                                 Uses maskYoungModulus (default 270e9 Pa).
-#   maskTractionTolerance controls the inner multigrid-GMRES mask solve residual.
-#   maskAnchorBoundarySide=-1 clamps the far-left mask edge; 0 disables it.
-maskContactMode=twoway
-maskYoungModulus=270e9      # Pa; Si3N4 at 1000 C. Ignored for viscous modes.
+# Mask mechanics: the nitride is part of the oxide mechanics solve (one
+# momentum system): an elastic body (E, nu) whose deviatoric stress creeps
+# (Maxwell, Eyring viscosity), with stress memory, no coupling loop; the oxide
+# pressure enforces continuity, so the oxide volume is conserved under the
+# mask.  maskViscosity (Pa hr) and maskShearActivationVolume (m^3): -1 = the
+# Si3N4 values of Senez et al. (1996) at the process temperature
+# (1.4e11 Pa hr and 170 A^3 at 1000 C), 0 = elastic mask / linear viscosity.
+maskYoungModulus=270e9      # Pa; Si3N4 at 1000 C
 maskPoissonRatio=0.27
-# maskReferenceViscosity=5e11  # Pa·hr; used for oneway/traction modes.
-# true enables unilateral contact/release; bonded=false is experimental.
-maskUnilateralContact=true
-maskTractionIterations=10000
-maskTractionTolerance=1e-5
-# Outer Aitken damping for the mask/oxide coupling residual (0.01–1.0).
-maskTractionRelaxation=0.9
-# Relaxes unilateral contact load activation to prevent active-set flip-flop.
-# Only used when maskUnilateralContact=true.
-maskContactLoadRelaxation=0.25
-# Relative pressure floor for releasing relaxed contact faces.
-# Only used when maskUnilateralContact=true.
-maskContactReleaseFraction=5e-3
-# SOR omega for the multigrid V-cycle smoother (0.2–1.4).
-# 1.0 = Gauss-Seidel; independent of maskTractionRelaxation.
-maskSmootherOmega=1.0
-maskAnchorBoundaryDirection=0
-maskAnchorBoundarySide=-1
-maskAnchorBoundaryLayers=1
+maskViscosity=-1
+maskShearActivationVolume=-1
 
 # Log verbosity: error | warning | info (default) | timing | intermediate | debug
 # Set to "timing" to print per-phase wall-time breakdowns alongside normal output.

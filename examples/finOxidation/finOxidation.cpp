@@ -4,8 +4,6 @@
 #include <psDomain.hpp>
 #include <psUtil.hpp>
 
-#include <lsGeometricAdvect.hpp>
-
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -127,27 +125,16 @@ template <int D> void run(const ps::util::Parameters &params) {
       ps::Domain<NumericType, D>::New(bounds, boundaryCons, gridDelta);
   ps::MakeFin<NumericType, D>(domain, finWidth, finHeight).apply();
 
-  // Clamp the oxide seed to at least gridDelta so the Cartesian solve always
-  // has resolvable nodes between the Si and SiO2 level sets.
-  const NumericType seedThickness = std::max(oxideThickness, gridDelta);
-  {
-    auto ambientInterface =
-        ls::Domain<NumericType, D>::New(domain->getLevelSets().back());
-    auto initialOxide =
-        ps::SmartPointer<ls::SphereDistribution<viennahrle::CoordType, D>>::New(
-            seedThickness);
-    ls::GeometricAdvect<NumericType, D>(ambientInterface, initialOxide).apply();
-    domain->insertNextLevelSetAsMaterial(ambientInterface, ps::Material::SiO2,
-                                         false);
-  }
-
   auto model = ps::SmartPointer<ps::Oxidation<NumericType, D>>::New();
   model->setTemperature(temperature);
   model->setTime(oxidationTime);
   model->setOxidant(oxidant);
   model->setPressure(pressure);
   model->setOrientation(orientation);
-  model->setInitialOxideThickness(seedThickness);
+  // The oxide on the silicon at t = 0 (0 = bare silicon).  The model creates
+  // it and, while it is thinner than three grid cells, grows it by the 1-D
+  // Deal-Grove law before the 2-D solve starts.
+  model->setInitialOxideThickness(oxideThickness);
 
   {
     const auto useGpu = lower(getString(params, "useGpu", "cpu"));
@@ -168,8 +155,8 @@ template <int D> void run(const ps::util::Parameters &params) {
           static_cast<std::size_t>(std::stoull(it->second)));
   }
 
-  model->saveSurfaceMesh(domain, outputPrefix + "_stack_initial.vtp");
-  model->saveVolumeMesh(domain, outputPrefix + "_stack_initial");
+  domain->saveSurfaceMesh(outputPrefix + "_stack_initial.vtp");
+  domain->saveVolumeMesh(outputPrefix + "_stack_initial");
 
   const auto t0 = std::chrono::steady_clock::now();
   ps::Process<NumericType, D>(domain, model, NumericType(0)).apply();
@@ -183,7 +170,7 @@ template <int D> void run(const ps::util::Parameters &params) {
   std::cout << "Simulation time: " << elapsedSim << " s\n";
   std::cout << "Planar Deal-Grove estimate for " << oxidationTime
             << " hr oxidation at " << temperature
-            << " C: " << model->estimatePlanarOxideThickness(seedThickness)
+            << " C: " << model->estimatePlanarOxideThickness(oxideThickness)
             << " um oxide thickness." << std::endl;
 
   std::cout << "Wrote " << outputPrefix << "_stack_initial.vtp and "

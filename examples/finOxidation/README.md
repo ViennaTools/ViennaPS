@@ -103,7 +103,7 @@ All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **
 | `zExtent` | *(= xExtent)* | 3D only: half-depth in Z (µm) |
 | `finWidth` | `0.2` | Width of the Si fin (µm) |
 | `finHeight` | `0.5` | Height of the Si fin above the substrate (µm) |
-| `oxideThickness` | `0.0` | Pre-existing oxide seed thickness (µm); a seed of `gridDelta` is used when zero |
+| `oxideThickness` | `0.0` | Oxide on the silicon at t = 0 (µm); 0 = bare silicon. Thinner than three grid cells, it first grows by the 1-D Deal-Grove law (time charged) until the solver resolves it |
 | `oxidationTime` | `0.2` | Total oxidation time (hr) |
 | `timeStep` | `0.025` | Maximum internal time step (hr); actual steps are CFL-limited |
 | `temperature` | `1000.` | Furnace temperature (°C); valid range 700–1200 °C |

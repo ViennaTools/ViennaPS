@@ -27,8 +27,9 @@ xExtent=1.
 finWidth=0.5       # step wall at x = finWidth/2 = 0.25 µm from domain centre
 finHeight=1.0      # height of the raised platform above the substrate
 
-# oxideThickness: optional. If omitted or 0, a seed of gridDelta thickness is
-# created automatically so the solver always has resolvable oxide nodes.
+# oxideThickness: oxide on the silicon at t = 0 (optional, default 0 = bare
+# silicon).  Thinner than three grid cells, it first grows by the 1-D
+# Deal-Grove law until the solver resolves it.
 oxideThickness=0.0
 
 oxidationTime=0.1

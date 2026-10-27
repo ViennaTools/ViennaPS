@@ -28,8 +28,9 @@ yMax=1.5
 trenchWidth=0.3
 trenchDepth=0.5
 
-# oxideThickness: initial oxide thickness (optional, default 0).
-# If omitted or 0, a seed of gridDelta is created automatically.
+# oxideThickness: oxide on the silicon at t = 0 (optional, default 0 = bare
+# silicon).  Thinner than three grid cells, it first grows by the 1-D
+# Deal-Grove law until the solver resolves it.
 oxideThickness=0.0
 
 oxidationTime=0.2

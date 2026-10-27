@@ -745,13 +745,17 @@ class Oxidation(ProcessModelBase):
     def setCFLFactor(self, factor: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """Courant number for CFL-limited internal stepping (default 0.499)."""
     def setInitialOxideThickness(self, thicknessUm: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Native-oxide seed thickness in µm when no SiO2 layer exists."""
+        """Oxide on bare silicon at t = 0 in µm (used when no SiO2 layer exists, not under a mask; 0 = bare). Oxide thinner than three grid cells first grows by 1-D Deal-Grove until resolved; an impermeable mask blocks it."""
     def setTransferCoefficient(self, coefficient: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """Gas-transfer coefficient in µm/hr."""
+    def setStressDependentOxidation(self, enable: bool) -> None:
+        """Stress-dependent oxidation kinetics (interface normal stress on the reaction, pressure on the diffusivity). On by default with the Kao-calibrated activation volumes; False = stress-free Deal-Grove kinetics."""
     def setReactionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Stress-coupling activation volume for interface reaction rate (m³)."""
+        """Activation volume of the interface reaction on the normal stress (m³). Default 2.5e-29 (25 Å³)."""
+    def setShearActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """Stress-dependent oxide viscosity: shear activation volume (m³); 0 = linear viscosity. Default 3e-28 (300 Å³)."""
     def setDiffusionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Stress-coupling activation volume for oxide diffusivity (m³)."""
+        """Activation volume of the oxide diffusivity on the pressure (m³). Default 4e-29 (40 Å³)."""
     def setMaxGridPoints(self, maxGridPoints: typing.SupportsInt | typing.SupportsIndex) -> None:
         """Maximum Cartesian grid points for the diffusion/mechanics solve."""
     def setCouplingIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
@@ -759,28 +763,12 @@ class Oxidation(ProcessModelBase):
     def setCouplingTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     def setMechanicsIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """Maximum iterations for the viscous mechanics solve."""
+        """Maximum viscosity iterations of the mechanics solve (one velocity-pressure solve each)."""
     def setMechanicsTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Convergence tolerance for the mechanics solve."""
-    def setSimpleVelocityRelaxation(self, alpha: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """SIMPLE velocity under-relaxation factor (0 < alpha <= 1)."""
-    def setSimplePressureRelaxation(self, beta: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """SIMPLE pressure under-relaxation factor (0 < beta <= 1)."""
-    def setPressureIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """Maximum iterations for the pressure Poisson solve."""
-    def setPressureTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Convergence tolerance for the pressure solve."""
-    def setStokesIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """Maximum iterations for the Stokes velocity solve."""
-    def setStokesTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Convergence tolerance for the Stokes solve."""
+        """Relative velocity change at which the viscosity iteration stops."""
     def setSolveBounds(self, minIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], maxIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"]) -> None:
         """Cartesian index bounds for the diffusion/deformation solve."""
     def clearSolveBounds(self) -> None:
-        ...
-    def setMaskBendingBounds(self, minIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], maxIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"]) -> None:
-        """Cartesian index bounds for the mask bending solve."""
-    def clearMaskBendingBounds(self) -> None:
         ...
     def setSiliconMaterial(self, mat: viennaps._core.Material) -> None:
         """Override which material is treated as silicon."""
@@ -790,24 +778,6 @@ class Oxidation(ProcessModelBase):
         """Material treated as the oxidation mask (activates LOCOS physics)."""
     def setMaskParameters(self, params: viennals.d2.OxidationMaskParameters) -> None:
         """Viscous-elasticity parameters for the mask layer."""
-    def setMaskCouplingIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    def setMaskCouplingTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        ...
-    def setMaskTractionIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """Maximum iterations for the inner mask traction solve."""
-    def setMaskTractionTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Convergence tolerance for the inner mask traction solve."""
-    def setMaskTractionRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Outer Aitken relaxation factor for the mask/oxide coupling (0.01–1)."""
-    def setMaskContactLoadRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Under-relaxation for the unilateral contact active-set load (0.02–1)."""
-    def setMaskContactReleaseFraction(self, fraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Relative traction floor for releasing a relaxed contact face (0–0.25)."""
-    def setMaskUnilateralContact(self, enabled: bool) -> None:
-        """Enable unilateral (compression-only) contact at the mask/oxide interface."""
-    def setMaskSmootherOmega(self, omega: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """SOR omega for the mask multigrid smoother (0.2–1.4; 1.0 = Gauss-Seidel)."""
     def setGpuMode(self, mode: viennaps._core.GpuMode) -> None:
         """BiCGSTAB solver back-end: GpuMode.Cpu (default) or GpuMode.Gpu."""
     def setGpuPreconditioner(self, preconditioner: viennaps._core.GpuPreconditioner) -> None:
