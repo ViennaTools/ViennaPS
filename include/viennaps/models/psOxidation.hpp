@@ -87,7 +87,7 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   // First internal substep cap (hr).  0 = model default (0.004): start where
   // the cold coupled solve accepts, ramp recovers full step size.
   NumericType initialTimeStep_ = NumericType(0);
-  // One-shot persistent regrid (TODO.md unified design, Mode 1): when the
+  // One-shot persistent regrid: when the
   // thinnest oxide layer clears regridFactor_ * regridDelta_, resample the
   // ENTIRE level-set stack once onto regridDelta_ and continue coarse.
   // 0 = disabled.  Fine grid is spent only while the thin seed needs it.
@@ -110,7 +110,7 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   NumericType rateBoA_override_ = NumericType(0); // 0 = use Arrhenius table
   // Stress-dependent oxidation kinetics (Kao 1988, Senez 1996): the
   // interface normal stress retards the reaction (V_k), the pressure retards
-  // oxidant diffusion (V_D).  Calibrated 2026-10-22 on the Kao et al. 1987
+  // oxidant diffusion (V_D).  Calibrated on the Kao et al. 1987
   // cylinder data together with the Arrhenius viscosity below (rms 0.065 in
   // t_curved/t_flat over 81 points, wet 800-1200 °C and dry 900-1200 °C):
   // V_k = 25 Å³ (= Ω_SiO2 − Ω_Si, Kao's value), V_D = 40 Å³.
@@ -203,7 +203,7 @@ public:
 
   // One-shot persistent regrid: coarsen the whole level-set stack to
   // coarseDelta (um) once the thinnest oxide layer exceeds factor*coarseDelta.
-  // 0 disables (default).  See TODO.md "unified design", Mode 1.
+  // 0 disables (default).
   void setRegrid(NumericType coarseDelta, NumericType factor = NumericType(2)) {
     regridDelta_ = coarseDelta;
     regridFactor_ = std::max(factor, NumericType(1));
@@ -719,7 +719,7 @@ private:
       if (requestedDt <= NumericType(0))
         break;
 
-      // One-shot persistent regrid (Mode 1): once the thinnest oxide layer
+      // One-shot persistent regrid: once the thinnest oxide layer
       // is comfortably resolvable at the coarse target, resample the whole
       // stack in place and continue on the coarse grid.  In-place deepCopy
       // keeps every held SmartPointer valid; the solvers rebuild from the
@@ -996,7 +996,7 @@ private:
   computeDefParams(NumericType dt) const {
     const NumericType T_K = temperature_ + NumericType(273.15);
     // η(T) = η_ref × exp(Ea/kB × (1/T − 1/T_ref)), T_ref = 1000 °C.
-    // Calibrated 2026-10-22 on the Kao et al. cylinder data (IEEE TED 34,
+    // Calibrated on the Kao et al. cylinder data (IEEE TED 34,
     // 1008 (1987): wet Fig. 7/8 800-1200 °C, dry Fig. 10 900-1200 °C) with
     // this solver's stress model (normal-stress reaction law V_k = 25 Å³,
     // diffusivity V_D = 40 Å³, Eyring V_c = 300 Å³), 1-D cylinder analysis,

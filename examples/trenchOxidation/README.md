@@ -103,33 +103,37 @@ level-set narrow band:
 **1 — Oxidant diffusion** (Deal-Grove model)
 
 ```
-∇·(D_eff(p) ∇C) = 0   inside oxide
+∇·(D(p) ∇C) = 0   inside oxide
 ```
 
 with Robin BCs: transfer coefficient at the gas/oxide surface, reaction rate
-`k_eff(p) · C / N` at the Si/SiO2 interface. Both `D_eff` and `k_eff` are reduced
-by local compressive pressure through an Arrhenius activation-volume coupling. In the
-trench geometry this effect is most pronounced at the floor and sidewall junctions,
-where the oxide is mechanically confined. Solved with BiCGSTAB (Jacobi preconditioned).
+`k(σ_nn) · C / N` at the Si/SiO2 interface. The diffusivity falls with the oxide
+pressure and the reaction rate with the compressive normal stress at the interface
+(activation volumes V_D and V_k). In the trench geometry this effect is most
+pronounced at the floor and sidewall junctions, where the oxide is mechanically
+confined. Solved with BiCGSTAB and a smoothed-aggregation AMG preconditioner (AMGCL), on the
+CPU or the GPU.
 
-**2 — Oxide mechanics** (viscous Stokes flow with Maxwell viscoelasticity)
+**2 — Oxide mechanics** (incompressible Stokes flow with Maxwell viscoelasticity)
 
 ```
-−∇p + η ∇²u = 0       (momentum)
-∇·u = ṡ               (modified continuity; source ṡ at Si/SiO2 interface)
+−∇p + ∇·s = 0         (momentum)
+∇·u = 0               (incompressible oxide)
 ```
 
-Volume expansion β = 2.27 at the Si surface drives oxide toward the trench interior.
-Viscoelastic deviatoric stress is tracked via Maxwell relaxation
-(τ_relaxation = η/G). The SIMPLE algorithm (pressure-velocity coupling) solves this
-unconditionally-stably in up to 200 outer iterations. High compressive pressures in
-the trench corners are visible in the `OxPressure` output field.
+The volume expansion β = 2.27 enters as a velocity boundary condition at the Si/SiO2
+interface and drives the oxide toward the trench interior. The deviatoric stress s is Maxwell viscoelastic (τ_relaxation = η/G) with a
+stress-dependent (Eyring) viscosity. Velocity and pressure are solved together on a
+staggered grid (sparse LU in 2-D, AMGCL in 3-D), repeated until viscosity and flow
+agree.
+High compressive pressures in the trench corners are visible in the
+`OxMechanicsPressure` field of the `*_oxide_fields.vtp` output.
 
 **Coupling loop**
 
-Pressure from the deformation solve feeds back into the diffusion solve via D_eff and
-k_eff; oxidant concentration sets the volume source for Stokes flow. An Aitken Δ²
-outer loop converges the coupling in ~3–5 iterations per time step.
+The oxide stress (pressure and interface normal stress) sets D and k in the diffusion
+solve; the concentration sets the expansion velocity at the interface. An Aitken Δ²
+outer loop iterates the two until they agree.
 
 **Orientation correction**
 

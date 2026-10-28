@@ -120,16 +120,17 @@ Each boundary returns a `(nodeCoefficient, constant)` pair encoding
 | Boundary type | nodeCoefficient | constant |
 |---|---|---|
 | Interior neighbor | 0 | C\_neighbor |
-| Reaction (dist d, g = D/d) | g / (g + k\_eff) | 0 |
+| Reaction (dist d, g = D/d) | g / (g + \|n\_a\| · k\_eff) | 0 |
 | Ambient (dist d, g = D/d) | g / (g + h)      | h · C\* / (g + h) |
 | Mask (h\_m = 0, zero-flux) | 1               | 0 |
 | Out-of-bounds | 1 | 0 |
 
-The stencil contributions update `rhs += α · constant` and
-`diag += α · (1 − nodeCoefficient)`. The Jacobi update is:
-`C_new = rhs / diag`, then relaxed: `C = relax · C_new + (1−relax) · C_old`.
-
-Convergence: `max |C_new − C_old| < tolerance` (default 10⁻⁷).
+On a reaction arm only the axis component of the normal flux is available, so
+`k_eff` is scaled by `|n_a|`, the axis component of the Si normal (exact on
+tilted fronts). The stencil contributions update `rhs += α · constant` and
+`diag += α · (1 − nodeCoefficient)`. The resulting sparse system is solved by
+BiCGSTAB with a smoothed-aggregation AMG preconditioner (AMGCL), on the CPU or,
+with `useGpu=gpu|auto`, on the GPU for systems of at least 20 000 nodes.
 
 **Crystal-orientation reaction rate:**
 
@@ -173,9 +174,9 @@ directed along the outward reaction-interface normal. For γ = 2.27:
 
 After each `apply()` call the concentration field is serialized into a hash map
 from grid index to scalar value. On the next `apply()` call, nodes are
-initialized from this cache instead of the default equilibrium concentration. This
-reduces the Jacobi iteration count for the diffusion solve by 30–50% after the
-first step, since the concentration profile changes little between substeps.
+initialized from this cache instead of the default equilibrium concentration, so
+the iterative solver starts from the previous profile, which changes little
+between substeps.
 
 ---
 
@@ -410,16 +411,9 @@ guess and the stresses are the mechanics' step-start (memory) stresses.
 
 ### OpenMP Parallelism
 
-All inner Jacobi loops are parallelised with OpenMP:
-
-| Loop | Parallelism note |
-|---|---|
-| Diffusion Jacobi | `#pragma omp parallel for reduction(max:residual)` |
-| Mechanics assembly, strain rates, viscosity | `#pragma omp parallel for` (one row per face, point or corner) |
-
-The per-node update reads only from the previous-iteration vector and writes
-to the next-iteration vector — a Jacobi (not Gauss-Seidel) update — so all
-nodes are data-independent and the parallelism is race-free by construction.
+The linear solves run in AMGCL (OpenMP on the CPU, CUDA on the GPU). The
+mechanics assembly, strain rates and viscosity updates are OpenMP loops (one
+row per face, point or corner).
 
 ---
 
@@ -679,7 +673,7 @@ bird's beak profile and the nitride deflection.
 | File | Role |
 |---|---|
 | `lsOxidation.hpp` | Unified oxidation orchestrator (`Oxidation<T,D>`); owns the per-step workflow |
-| `lsOxidationDiffusion.hpp` | Deal-Grove diffusion field (Jacobi, embedded BCs) |
+| `lsOxidationDiffusion.hpp` | Deal-Grove diffusion field (cut-cell stencil, BiCGSTAB with AMG on the CPU or GPU) |
 | `lsOxidationDeformation.hpp` | Maxwell Stokes deformation on a staggered grid (sparse LU in 2-D, AMGCL in 3-D); nitride mask in the same solve |
 | `lsOxidationModel.hpp` | Pressure–concentration coupling loop |
 | `lsOxidationMask.hpp` | Nitride parameters; barrier-only mask carry |
