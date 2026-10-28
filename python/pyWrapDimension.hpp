@@ -1569,11 +1569,14 @@ template <int D> void bindApi(py::module &module) {
            "Courant number for CFL-limited internal stepping (default 0.499).")
       .def("setInitialOxideThickness",
            &Oxidation<T, D>::setInitialOxideThickness, py::arg("thicknessUm"),
-           "Oxide on bare silicon at t = 0 in µm (used when no SiO2 layer exists, not under a mask; 0 = bare). Oxide thinner than three grid cells first grows by 1-D Deal-Grove until resolved; an impermeable mask blocks it.")
+           "Oxide on bare silicon at t = 0 in µm (used when no SiO2 layer "
+           "exists, not under a mask; 0 = bare). Oxide thinner than three grid "
+           "cells first grows by 1-D Deal-Grove until resolved; an impermeable "
+           "mask blocks it.")
       .def("setTransferCoefficient", &Oxidation<T, D>::setTransferCoefficient,
            py::arg("coefficient"), "Gas-transfer coefficient in µm/hr.")
-      .def("setRegrid", &Oxidation<T, D>::setRegrid,
-           py::arg("coarseDelta"), py::arg("factor") = 2.0,
+      .def("setRegrid", &Oxidation<T, D>::setRegrid, py::arg("coarseDelta"),
+           py::arg("factor") = 2.0,
            "One-shot persistent regrid: coarsen the whole level-set stack to "
            "coarseDelta (um) once the thinnest oxide layer exceeds "
            "factor*coarseDelta. 0 = disabled.")
@@ -1596,17 +1599,17 @@ template <int D> void bindApi(py::module &module) {
            "oxidant solve with D_mask = D_SiO2/gamma. The level-set mask "
            "thickness is the physical barrier thickness and must be grid-"
            "resolved. 0 = impermeable (default).")
-      .def("setStressDependentOxidation",
-           &Oxidation<T, D>::setStressDependentOxidation, py::arg("enable"),
-           "Stress-dependent oxidation kinetics (interface normal stress on the "
-           "reaction, pressure on the diffusivity). On by default with the "
-           "Kao-calibrated activation volumes; False = stress-free Deal-Grove "
-           "kinetics.")
       .def(
-          "setReactionActivationVolume",
-          &Oxidation<T, D>::setReactionActivationVolume, py::arg("volume"),
-          "Activation volume of the interface reaction on the normal stress "
-          "(m³). Default 2.5e-29 (25 Å³).")
+          "setStressDependentOxidation",
+          &Oxidation<T, D>::setStressDependentOxidation, py::arg("enable"),
+          "Stress-dependent oxidation kinetics (interface normal stress on the "
+          "reaction, pressure on the diffusivity). On by default with the "
+          "Kao-calibrated activation volumes; False = stress-free Deal-Grove "
+          "kinetics.")
+      .def("setReactionActivationVolume",
+           &Oxidation<T, D>::setReactionActivationVolume, py::arg("volume"),
+           "Activation volume of the interface reaction on the normal stress "
+           "(m³). Default 2.5e-29 (25 Å³).")
       .def("setShearActivationVolume",
            &Oxidation<T, D>::setShearActivationVolume, py::arg("volume"),
            "Stress-dependent oxide viscosity: shear activation volume (m³); "
@@ -1654,13 +1657,16 @@ template <int D> void bindApi(py::module &module) {
       .def("setMaskParameters", &Oxidation<T, D>::setMaskParameters,
            py::arg("params"),
            "Elastic constants and clamp of the nitride mask.")
-      .def("setGpuMode", py::overload_cast<GpuMode>(&Oxidation<T, D>::setGpuMode),
+      .def("setGpuMode",
+           py::overload_cast<GpuMode>(&Oxidation<T, D>::setGpuMode),
            py::arg("mode"),
-           "GPU for the diffusion and the 3-D mechanics solves: GpuMode.Cpu (default), GpuMode.Gpu or GpuMode.Auto.")
+           "GPU for the diffusion and the 3-D mechanics solves: GpuMode.Cpu "
+           "(default), GpuMode.Gpu or GpuMode.Auto.")
       .def("setGpuMode",
            py::overload_cast<std::string>(&Oxidation<T, D>::setGpuMode),
            py::arg("mode"),
-           "GPU for the diffusion and the 3-D mechanics solves: 'cpu' (default), 'gpu' or 'auto'.")
+           "GPU for the diffusion and the 3-D mechanics solves: 'cpu' "
+           "(default), 'gpu' or 'auto'.")
       .def("estimatePlanarOxideThickness",
            &Oxidation<T, D>::estimatePlanarOxideThickness,
            py::arg("initialOxideThickness") = T(0),

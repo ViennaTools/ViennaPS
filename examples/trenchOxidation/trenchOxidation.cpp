@@ -80,8 +80,8 @@ template <int D> void run(const ps::util::Parameters &params) {
       .addInfo("Simulation time: " +
                std::to_string(1e-9 * timer.currentDuration) + " s")
       .addInfo(estimate.str())
-      .addInfo("Wrote " + outputPrefix + "_stack_initial.vtp, " +
-               outputPrefix + "_stack_after.vtp and " + outputPrefix +
+      .addInfo("Wrote " + outputPrefix + "_stack_initial.vtp, " + outputPrefix +
+               "_stack_after.vtp and " + outputPrefix +
                "_stack_after_volume.vtu")
       .print();
 }

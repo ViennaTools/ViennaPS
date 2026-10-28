@@ -210,8 +210,7 @@ template <int Dim> T flatFilmConsumption() {
   ps::Process<T, Dim>(domain, model, T(0)).apply();
 
   auto mesh = viennals::SmartPointer<viennals::Mesh<T>>::New();
-  viennals::ToSurfaceMesh<T, Dim>(domain->getLevelSets().front(), mesh)
-      .apply();
+  viennals::ToSurfaceMesh<T, Dim>(domain->getLevelSets().front(), mesh).apply();
   T height = 0.;
   for (const auto &node : mesh->getNodes())
     height += node[Dim - 1];
@@ -253,8 +252,7 @@ void testStartupFromBareSilicon() {
   const T A = B / (3.71e6 * std::exp(-2.00 / kT)) + B / 100.;
   for (const T time : {T(0.2), T(0.6)}) { // inside / beyond the start-up
     auto domain = ps::Domain<T, D>::New();
-    ps::MakePlane<T, D>(domain, 0.005, 0.04, 0.04, 0., false,
-                        ps::Material::Si)
+    ps::MakePlane<T, D>(domain, 0.005, 0.04, 0.04, 0., false, ps::Material::Si)
         .apply();
     auto model = ps::SmartPointer<ps::Oxidation<T, D>>::New();
     model->setTemperature(1000.);
@@ -288,9 +286,9 @@ void testStartupUnderMask() {
   const T A = B / (3.71e6 * std::exp(-2.00 / kT)) + B / 100.;
   for (const T time : {T(0.2), T(0.5)}) {
     auto siLS = ls::Domain<T, D>::New(bounds, bc, gridDelta);
-    ls::MakeGeometry<T, D>(
-        siLS, ls::Plane<T, D>::New(ls::VectorType<T, D>{0., 0.},
-                                   ls::VectorType<T, D>{0., 1.}))
+    ls::MakeGeometry<T, D>(siLS,
+                           ls::Plane<T, D>::New(ls::VectorType<T, D>{0., 0.},
+                                                ls::VectorType<T, D>{0., 1.}))
         .apply();
     auto maskLS = ls::Domain<T, D>::New(bounds, bc, gridDelta);
     ls::MakeGeometry<T, D> maskGeom(

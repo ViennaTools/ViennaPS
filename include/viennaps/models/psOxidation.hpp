@@ -49,9 +49,9 @@
 #include <array>
 #include <cmath>
 #include <functional>
-#include <unordered_map>
 #include <limits>
 #include <string>
+#include <unordered_map>
 
 namespace viennaps {
 
@@ -639,9 +639,9 @@ private:
     // iteration budget before halving dt.  Start at a step the coupling
     // accepts and let the x2 growth ramp recover full size within a few
     // substeps.  initialTimeStep_ > 0 overrides the default cap.
-    const NumericType coldStartCap =
-        initialTimeStep_ > NumericType(0) ? initialTimeStep_
-                                          : NumericType(0.004);
+    const NumericType coldStartCap = initialTimeStep_ > NumericType(0)
+                                         ? initialTimeStep_
+                                         : NumericType(0.004);
     const NumericType seedStep =
         std::min(cflStep(maxSurfaceVelocity), coldStartCap);
     const NumericType userStepCap =
@@ -732,12 +732,12 @@ private:
         if (minOxide < std::numeric_limits<NumericType>::max() &&
             minOxide >= regridFactor_ * regridDelta_) {
           Logger::getInstance()
-              .addInfo(modeLabel + ": REGRID event at t=" +
-                       std::to_string(time) + " hr — min oxide layer " +
-                       std::to_string(minOxide * 1e3) + " nm; resampling " +
-                       std::to_string(levelSets.size()) +
-                       " level sets from delta=" + std::to_string(gridDelta) +
-                       " to " + std::to_string(regridDelta_) + " um")
+              .addInfo(
+                  modeLabel + ": REGRID event at t=" + std::to_string(time) +
+                  " hr — min oxide layer " + std::to_string(minOxide * 1e3) +
+                  " nm; resampling " + std::to_string(levelSets.size()) +
+                  " level sets from delta=" + std::to_string(gridDelta) +
+                  " to " + std::to_string(regridDelta_) + " um")
               .print();
           for (auto &ls : levelSets) {
             ls::Resample<NumericType, D> resampler(ls, regridDelta_);
@@ -838,10 +838,10 @@ private:
   // the slowest face, k = k_base min(1, ratio), reaches the resolved
   // thickness, or with the process.  On a flat surface this is the solution
   // the 2-D solve continues.  Returns the process time spent.
-  NumericType growResolvedOxide(
-      SmartPointer<viennals::Domain<NumericType, D>> reaction,
-      SmartPointer<viennals::Domain<NumericType, D>> ambient,
-      SmartPointer<viennals::Domain<NumericType, D>> mask) const {
+  NumericType
+  growResolvedOxide(SmartPointer<viennals::Domain<NumericType, D>> reaction,
+                    SmartPointer<viennals::Domain<NumericType, D>> ambient,
+                    SmartPointer<viennals::Domain<NumericType, D>> mask) const {
     namespace ls = viennals;
     const auto rates = computeDealGroveRates();
     const auto params = computeOxParams();
@@ -857,7 +857,9 @@ private:
     auto dealGroveA = [&](NumericType k) {
       return B / k + B / params.transferCoefficient;
     };
-    auto tau = [&](NumericType A, NumericType x) { return (x * x + A * x) / B; };
+    auto tau = [&](NumericType A, NumericType x) {
+      return (x * x + A * x) / B;
+    };
     const NumericType resolved = resolvedOxideCells_ * gridDelta;
     const NumericType aSlowest =
         dealGroveA(rates.BoA * std::min(NumericType(1), ratio));
@@ -868,8 +870,9 @@ private:
       NumericType c = NumericType(0);
       for (unsigned d = 0; d < D; ++d)
         c += normal[d] * NumericType(params.crystalAxis[d]);
-      const NumericType A = dealGroveA(
-          rates.BoA * (NumericType(1) + (ratio - 1) * (NumericType(1) - c * c)));
+      const NumericType A =
+          dealGroveA(rates.BoA *
+                     (NumericType(1) + (ratio - 1) * (NumericType(1) - c * c)));
       return (std::sqrt(A * A + 4 * B * (startup + tau(A, native))) - A) / 2 -
              native;
     };
@@ -899,11 +902,10 @@ private:
       advection.setAdvectionTime(1.);
       advection.apply();
     };
-    advect(ambient,
-           [&](const Vec3D<NumericType> &x, const Vec3D<NumericType> &n) {
-             return covered(x, n) ? NumericType(0)
-                                  : grown(n) * (beta - 1) / beta;
-           });
+    advect(
+        ambient, [&](const Vec3D<NumericType> &x, const Vec3D<NumericType> &n) {
+          return covered(x, n) ? NumericType(0) : grown(n) * (beta - 1) / beta;
+        });
     advect(reaction,
            [&](const Vec3D<NumericType> &x, const Vec3D<NumericType> &n) {
              return covered(x, n) ? NumericType(0) : -grown(n) / beta;
@@ -1008,7 +1010,7 @@ private:
     const bool wet = oxidant_ == OxidantType::WET;
     const NumericType etaRef = wet ? NumericType(3.0e9) : NumericType(6.5e11);
     const NumericType etaEa = wet ? NumericType(3.46) : NumericType(4.56); // eV
-    static constexpr NumericType etaTref = NumericType(1273.15); // K
+    static constexpr NumericType etaTref = NumericType(1273.15);           // K
     const NumericType viscosity =
         etaRef * std::exp(etaEa / kB_ *
                           (NumericType(1) / T_K - NumericType(1) / etaTref));
@@ -1029,7 +1031,6 @@ private:
     p.maxGridPoints = maxGridPoints_;
     return p;
   }
-
 
   // Deal-Grove Arrhenius table.
   // B (parabolic) is orientation-independent. B/A (linear) pre-exponentials

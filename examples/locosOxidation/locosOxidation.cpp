@@ -55,20 +55,32 @@ int main(int argc, char **argv) {
   omp_set_num_threads(params.get<int>("numThreads"));
 
   // Keys this example reads; anything else is a typo or a retired key.
-  const std::set<std::string> knownKeys = {
-      "numThreads",          "logLevel",
-      "useGpu",              "gridDelta",
-      "xExtent",             "yMin",
-      "yMax",                "padOxideThickness",
-      "maskThickness",       "maskEdge",
-      "oxidationTime",       "timeStep",
-      "temperature",         "pressure",
-      "oxidant",             "orientation",
-      "maxGridPoints",       "outputPrefix",
-      "mechanicsIterations", "mechanicsTolerance",
-      "couplingIterations",  "couplingTolerance",
-      "maskYoungModulus",    "maskPoissonRatio",
-      "maskViscosity",       "maskShearActivationVolume"};
+  const std::set<std::string> knownKeys = {"numThreads",
+                                           "logLevel",
+                                           "useGpu",
+                                           "gridDelta",
+                                           "xExtent",
+                                           "yMin",
+                                           "yMax",
+                                           "padOxideThickness",
+                                           "maskThickness",
+                                           "maskEdge",
+                                           "oxidationTime",
+                                           "timeStep",
+                                           "temperature",
+                                           "pressure",
+                                           "oxidant",
+                                           "orientation",
+                                           "maxGridPoints",
+                                           "outputPrefix",
+                                           "mechanicsIterations",
+                                           "mechanicsTolerance",
+                                           "couplingIterations",
+                                           "couplingTolerance",
+                                           "maskYoungModulus",
+                                           "maskPoissonRatio",
+                                           "maskViscosity",
+                                           "maskShearActivationVolume"};
   for (const auto &entry : params.m)
     if (knownKeys.count(entry.first) == 0)
       log.addWarning("Unknown config key '" + entry.first + "' ignored.")
@@ -109,8 +121,8 @@ int main(int argc, char **argv) {
     // uncovered oxide cells there.
     const ls::VectorType<NumericType, D> minCorner{
         -2 * xExtent, padOxideThickness - contactEps};
-    const ls::VectorType<NumericType, D> maxCorner{
-        maskEdge, padOxideThickness + maskThickness};
+    const ls::VectorType<NumericType, D> maxCorner{maskEdge, padOxideThickness +
+                                                                 maskThickness};
     ls::MakeGeometry<NumericType, D> geom(
         maskLS, ls::Box<NumericType, D>::New(minCorner, maxCorner));
     geom.setIgnoreBoundaryConditions(std::array<bool, D>{false, true});
@@ -193,8 +205,8 @@ int main(int argc, char **argv) {
     model->saveSurfaceMesh(domain, filename.str() + ".vtp");
     model->saveVolumeMesh(domain, filename.str());
     meshTimer.finish();
-    log.addInfo("Wrote " + filename.str() + " at t = " +
-                std::to_string(elapsed) + " hr.")
+    log.addInfo("Wrote " + filename.str() +
+                " at t = " + std::to_string(elapsed) + " hr.")
         .print();
   }
 
