@@ -94,6 +94,21 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' && steps.vcpkg-installed-cache.outputs.cache-hit != 'true' }}
         shell: pwsh
         run: |
+          # gl2ps (a VTK dependency) is only published on geuz.org, which times
+          # out. vcpkg uses a file already in its downloads folder when the SHA512
+          # matches, so the identical tarball is taken from the MacPorts mirror;
+          # if that fails, vcpkg downloads as usual. Version and hash are those of
+          # the gl2ps port at VCPKG_COMMIT.
+          $gl2ps = "vcpkg/downloads/gl2ps-1.4.2.tgz"
+          $sha512 = "46652e1b3825ace61dbd77c4b0bf451e7671c248eb18bbd3369e2fac00056ea4cd5d2578561984313c239e3b02f78b9d9a76d963c935af65a13bc2abfc538620"
+          New-Item -ItemType Directory -Force -Path vcpkg/downloads | Out-Null
+          try {
+            Invoke-WebRequest -Uri "https://distfiles.macports.org/gl2ps/gl2ps-1.4.2.tgz" -OutFile $gl2ps
+            if ((Get-FileHash -Algorithm SHA512 $gl2ps).Hash -ne $sha512) { throw "unexpected SHA512" }
+          } catch {
+            Write-Warning "gl2ps mirror: $($_.Exception.Message)"
+            Remove-Item -Force -ErrorAction Ignore $gl2ps
+          }
           ./vcpkg/vcpkg install --triplet x64-windows
 
       - name: 🐍 Build and check Python Module (Windows)
