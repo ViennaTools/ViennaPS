@@ -20,6 +20,7 @@ viennacore_add_optixir(
   "${VIENNAPS_GPU_MODELS}/MultiParticle.cuh"
   "${VIENNAPS_GPU_MODELS}/NeutralTransport.cuh"
   "${VIENNAPS_GPU_MODELS}/PlasmaEtching.cuh"
+  "${VIENNAPS_GPU_MODELS}/FluorocarbonEtching.cuh"
   "${VIENNAPS_GPU_MODELS}/SingleParticle.cuh"
   "${VIENNAPS_GPU_MODELS}/SingleParticleALD.cuh"
   "${VIENNAPS_GPU_MODELS}/TEOSPECVD.cuh")

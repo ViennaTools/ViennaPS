@@ -635,6 +635,8 @@ private:
         return;
       }
     }
+
+    fclose(filePtr);
   }
 };
 

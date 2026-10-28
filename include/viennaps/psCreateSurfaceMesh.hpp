@@ -42,12 +42,13 @@ inline void CopyTriangleMesh(const float gridDelta,
   triangleMesh.normals = *mesh->getNormals();
 }
 
-template <class LsNT, class MeshNT, int D> class CreateSurfaceMesh {
+template <class LsNT, class MeshNT, int D,
+          class kdTreeType = KDTree<LsNT, std::array<LsNT, 3>>>
+class CreateSurfaceMesh {
 
   using lsDomainType = viennals::Domain<LsNT, D>;
   using CellIteratorType = viennahrle::ConstSparseCellIterator<
       typename viennals::Domain<LsNT, D>::DomainType>;
-  using kdTreeType = KDTree<LsNT, std::array<LsNT, 3>>;
 
   SmartPointer<lsDomainType> levelSet = nullptr;
   SmartPointer<viennals::Mesh<MeshNT>> mesh = nullptr;

@@ -5,7 +5,6 @@
 #include "../psConstants.hpp"
 #include "psIonBeamParameters.hpp"
 #include "psIonModelUtil.hpp"
-#include "psPipelineParameters.hpp"
 
 #include <rayParticle.hpp>
 #include <rayReflection.hpp>
@@ -297,39 +296,10 @@ public:
     this->setParticleCallableMap(pMap, cMap);
 
     // Parameters to upload to device
-    impl::IonParams deviceParams;
-    deviceParams.thetaRMin =
-        static_cast<float>(constants::degToRad(params_.thetaRMin));
-    deviceParams.thetaRMax =
-        static_cast<float>(constants::degToRad(params_.thetaRMax));
-    deviceParams.meanEnergy = static_cast<float>(params_.meanEnergy);
-    deviceParams.sigmaEnergy = static_cast<float>(params_.sigmaEnergy);
-    deviceParams.thresholdEnergy = static_cast<float>(
-        std::sqrt(params_.thresholdEnergy)); // precompute sqrt
-    deviceParams.minAngle =
-        static_cast<float>(constants::degToRad(params_.minAngle));
-    deviceParams.inflectAngle =
-        static_cast<float>(constants::degToRad(params_.inflectAngle));
-    deviceParams.n_l = static_cast<float>(params_.n_l);
-    deviceParams.B_sp = 0.f; // not used in IBE
-    if (params_.cos4Yield.isDefined) {
-      deviceParams.a1 = static_cast<float>(params_.cos4Yield.a1);
-      deviceParams.a2 = static_cast<float>(params_.cos4Yield.a2);
-      deviceParams.a3 = static_cast<float>(params_.cos4Yield.a3);
-      deviceParams.a4 = static_cast<float>(params_.cos4Yield.a4);
-      deviceParams.aSum = static_cast<float>(params_.cos4Yield.aSum());
-    }
-    deviceParams.redepositionRate =
-        static_cast<float>(params_.redepositionRate);
-    deviceParams.redepositionThreshold =
-        static_cast<float>(params_.redepositionThreshold);
-
-    deviceParams.tiltAngle =
-        static_cast<float>(constants::degToRad(params_.tiltAngle));
-    deviceParams.rotating = params_.rotatingWafer;
+    IonParams deviceParams(params_);
 
     // upload process params
-    this->processData.alloc(sizeof(impl::IonParams));
+    this->processData.alloc(sizeof(IonParams));
     this->processData.upload(&deviceParams, 1);
 
     // surface model
@@ -345,7 +315,7 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
-    this->processMetaData = params_.toProcessMetaData();
+    this->addProcessMetaData(params_);
     this->hasGPU = true;
   }
 
@@ -389,7 +359,7 @@ public:
     this->setVelocityField(velField);
     this->insertNextParticleType(particle);
     this->setProcessName("IonBeamEtching");
-    this->processMetaData = params_.toProcessMetaData();
+    this->addProcessMetaData(params_);
     this->hasGPU = true;
   }
 

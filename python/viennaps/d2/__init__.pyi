@@ -9,7 +9,7 @@ import viennals._core
 import viennals.d2
 import viennaps._core
 from . import gpu
-__all__: list[str] = ['AdvectionCallback', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'CustomSphereDistribution', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'Interpolation', 'IonBeamEtching', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'NeutralTransport', 'Oxidation', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
+__all__: list[str] = ['AdvectionCallback', 'Anneal', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'CustomSphereDistribution', 'DamageTableModel', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'ImplantDamageHobler', 'ImplantDualPearsonIV', 'ImplantPearsonIV', 'ImplantPearsonIVChanneling', 'ImplantProfileModel', 'ImplantTableModel', 'Interpolation', 'IonBeamEtching', 'IonImplantation', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'NetDoping', 'NeutralTransport', 'Oxidation', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SheetResistance', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
 class AdvectionCallback:
     domain: Domain
     def __init__(self) -> None:
@@ -17,6 +17,148 @@ class AdvectionCallback:
     def applyPostAdvect(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> bool:
         ...
     def applyPreAdvect(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> bool:
+        ...
+class Anneal(ProcessModel):
+    def __init__(self) -> None:
+        ...
+    def addIsothermalStep(self, duration: typing.SupportsFloat | typing.SupportsIndex, temperatureK: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def addRampStep(self, duration: typing.SupportsFloat | typing.SupportsIndex, startT: typing.SupportsFloat | typing.SupportsIndex, endT: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def applyActivation(self, domain: Domain) -> None:
+        """
+        Apply only the solid-activation model without running diffusion.
+        
+        Equivalent to Sentaurus 'diffuse time=0': writes the active-
+        concentration field immediately after implantation so that
+        SheetResistance and NetDoping work before the full thermal anneal.
+        
+        Prerequisites: enableSolidActivation(True) and
+        setSolidSolubilityArrhenius(C0, Ea) must be configured.
+        """
+    def clearDefectDiagnostics(self) -> None:
+        ...
+    def clearEquilibriumArrhenius(self) -> None:
+        ...
+    def clearSourceField(self) -> None:
+        """
+        Remove the previously set source field.
+        """
+    def clearTemperatureSchedule(self) -> None:
+        ...
+    def enableAmorphousLayerFill(self, enable: bool = True) -> None:
+        ...
+    def enableDamageActivation(self, enable: bool = True) -> None:
+        ...
+    def enableDefectClustering(self, enable: bool = True) -> None:
+        ...
+    def enableDefectCoupling(self, enable: bool = True) -> None:
+        ...
+    def enableDefectEquilibrium(self, enable: bool = True) -> None:
+        ...
+    def enableDiagnostics(self, enable: bool = True) -> None:
+        ...
+    def enableFermiEnhancement(self, enable: bool = True) -> None:
+        """
+        Enable Fermi-level concentration-dependent diffusivity.
+        
+        D_eff(z) = D(T) * [f*(p/ni) + (1-f)*(ni/p)]
+        where p is the local hole concentration from the dopant field
+        and ni is the Si intrinsic carrier density (Varshni model).
+        Intended for p-type dopants (B) in Si.
+        """
+    def enableSolidActivation(self, enable: bool = True) -> None:
+        ...
+    def getDefectDiagnostics(self) -> list[..., ...]:
+        ...
+    def resetDefectInitialization(self) -> None:
+        ...
+    def setActivationFloor(self, floor: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setActiveLabel(self, label: str) -> None:
+        ...
+    def setAmorphizationThreshold(self, damageThreshold: typing.SupportsFloat | typing.SupportsIndex, beta: typing.SupportsFloat | typing.SupportsIndex = 2.0) -> None:
+        ...
+    def setArrheniusParameters(self, D0: typing.SupportsFloat | typing.SupportsIndex, Ea_eV: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setBlockingMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+        ...
+    def setClampNonNegative(self, enable: bool = True) -> None:
+        ...
+    def setDamageLabels(self, damageLabel: str, lastDamageLabel: str) -> None:
+        ...
+    def setDefectClusterInitFraction(self, fraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDefectClusterKinetics(self, kfi: typing.SupportsFloat | typing.SupportsIndex, kfc: typing.SupportsFloat | typing.SupportsIndex, kr: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDefectClusterLabel(self, label: str) -> None:
+        ...
+    def setDefectDiffusivities(self, Di: typing.SupportsFloat | typing.SupportsIndex, Dv: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDefectEnhancedDiffusion(self, tedCoefficient: typing.SupportsFloat | typing.SupportsIndex, normalization: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDefectEquilibrium(self, Ieq: typing.SupportsFloat | typing.SupportsIndex, Veq: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDefectEquilibriumArrhenius(self, interstitialC0: typing.SupportsFloat | typing.SupportsIndex, interstitialEa_eV: typing.SupportsFloat | typing.SupportsIndex, vacancyC0: typing.SupportsFloat | typing.SupportsIndex, vacancyEa_eV: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDefectLabels(self, interstitialLabel: str, vacancyLabel: str) -> None:
+        ...
+    def setDefectPartition(self, interstitialFraction: typing.SupportsFloat | typing.SupportsIndex, vacancyFraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDefectPartitionFactors(self, interstitialFactor: typing.SupportsFloat | typing.SupportsIndex, vacancyFactor: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDefectReactionRates(self, kRecombination: typing.SupportsFloat | typing.SupportsIndex, kInterstitialSink: typing.SupportsFloat | typing.SupportsIndex, kVacancySink: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDefectSourceWeights(self, historyWeight: typing.SupportsFloat | typing.SupportsIndex, lastImpWeight: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDiagnosticsMaterialFilter(self, materialId: typing.SupportsInt | typing.SupportsIndex) -> None:
+        ...
+    def setDiffusionCoefficient(self, diffCoeff: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setDiffusionMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+        ...
+    def setDuration(self, seconds: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setFermiChargedFraction(self, chargedFraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Set the fraction of diffusion via negatively-charged interstitials.
+        Typical value for B in Si: 0.9 (default).
+        """
+    def setImplicitSolverOptions(self, maxIterations: typing.SupportsInt | typing.SupportsIndex, relativeTolerance: typing.SupportsFloat | typing.SupportsIndex, relaxation: typing.SupportsFloat | typing.SupportsIndex = 1.0) -> None:
+        ...
+    def setInterfaceSegregation(self, velocity: typing.SupportsFloat | typing.SupportsIndex, width: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
+        ...
+    def setInterfaceTrap(self, velocity: typing.SupportsFloat | typing.SupportsIndex, width: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
+        ...
+    def setMaterialLabel(self, label: str) -> None:
+        ...
+    def setMode(self, mode: viennaps._core.AnnealMode) -> None:
+        ...
+    def setSegregationMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+        ...
+    def setSolidSolubilityArrhenius(self, C0: typing.SupportsFloat | typing.SupportsIndex, Ea_eV: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setSourceField(self, source: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        """
+        Set an external source term (cell-indexed vector) added each time step.
+        """
+    def setSpeciesLabel(self, label: str) -> None:
+        ...
+    def setStabilityFactor(self, factor: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setTEDFromDamageFactor(self, damageFactor: typing.SupportsFloat | typing.SupportsIndex, coefficientScale: typing.SupportsFloat | typing.SupportsIndex = 0.5, normalization: typing.SupportsFloat | typing.SupportsIndex = 1e+20) -> None:
+        ...
+    def setTemperature(self, temperatureK: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setTemperatureSchedule(self, durations: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], temperatures: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        """
+        N durations + N (isothermal) or N+1 (ramp) temperatures.
+        """
+    def setTimeStep(self, dt: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    def setTrapMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+        ...
+    def setTrappedLabel(self, label: str) -> None:
         ...
 class BoxDistribution(ProcessModel):
     @typing.overload
@@ -63,6 +205,11 @@ class CustomSphereDistribution(ProcessModel):
         ...
     def addMaskMaterial(self, material: viennaps._core.Material) -> None:
         ...
+class DamageTableModel(ImplantProfileModel):
+    def __init__(self, fileName: str, species: str, material: str, energyKeV: typing.SupportsFloat | typing.SupportsIndex, tiltDeg: typing.SupportsFloat | typing.SupportsIndex, rotationDeg: typing.SupportsFloat | typing.SupportsIndex, dosePerCm2: typing.SupportsFloat | typing.SupportsIndex = 0.0, screenThickness: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
+        """
+        Table-backed implant-damage profile model. Pass an explicit modeldb CSV path.
+        """
 class DenseCellSet:
     def __init__(self) -> None:
         ...
@@ -190,6 +337,10 @@ class DenseCellSet:
         """
         Enable periodic boundary conditions in specified dimensions.
         """
+    def setScalarData(self, name: str, newData: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex]) -> None:
+        """
+        Overwrite the scalar data associated with 'name' with a new array.
+        """
     def updateMaterials(self) -> None:
         """
         Update the material IDs of the cell set. This function should be called if the level sets, the cell set is made out of, have changed. This does not work if the surface of the volume has changed. In this case, call the function 'updateSurface' first.
@@ -288,7 +439,7 @@ class Domain:
         """
         Enable adding meta data from processes to domain.
         """
-    def generateCellSet(self, arg0: typing.SupportsFloat | typing.SupportsIndex, arg1: viennaps._core.Material, arg2: bool) -> None:
+    def generateCellSet(self, position: typing.SupportsFloat | typing.SupportsIndex, coverMaterial: viennaps._core.Material, isAboveSurface: bool = False, withEmbeddedBoundaries: bool = False) -> None:
         """
         Generate the cell set.
         """
@@ -555,6 +706,46 @@ class HBrO2Etching(ProcessModel):
         ...
     def setParameters(self, arg0: viennaps._core.PlasmaEtchingParameters) -> None:
         ...
+class ImplantDamageHobler(ImplantProfileModel):
+    def __init__(self, projectedRange: typing.SupportsFloat | typing.SupportsIndex, verticalSigma: typing.SupportsFloat | typing.SupportsIndex, lambdaValue: typing.SupportsFloat | typing.SupportsIndex, defectsPerIon: typing.SupportsFloat | typing.SupportsIndex, lateralSigma: typing.SupportsFloat | typing.SupportsIndex, lateralDeltaSigma: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
+        """
+        Hobler damage depth profile with linear-depth-scale lateral spread.
+        """
+class ImplantDualPearsonIV(ImplantProfileModel):
+    @typing.overload
+    def __init__(self, headParams: viennaps._core.PearsonIVParameters, tailParams: viennaps._core.PearsonIVParameters, headFraction: typing.SupportsFloat | typing.SupportsIndex, headLateralMu: typing.SupportsFloat | typing.SupportsIndex, headLateralSigma: typing.SupportsFloat | typing.SupportsIndex, tailLateralMu: typing.SupportsFloat | typing.SupportsIndex, tailLateralSigma: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Weighted sum of two Pearson IV components (head fraction in head).
+        """
+    @typing.overload
+    def __init__(self, headParams: viennaps._core.PearsonIVParameters, tailParams: viennaps._core.PearsonIVParameters, headFraction: typing.SupportsFloat | typing.SupportsIndex, headLateralMu: typing.SupportsFloat | typing.SupportsIndex, headLateralSigma: typing.SupportsFloat | typing.SupportsIndex, tailLateralMu: typing.SupportsFloat | typing.SupportsIndex, tailLateralSigma: typing.SupportsFloat | typing.SupportsIndex, screenModel: viennaps._core.ScreenEnergyLoss, screenThickness: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        As above, but with a screen energy-loss model applied: the projected range is scaled for the given screen thickness (k==1 at the model's reference thickness, leaving shapes untouched there).
+        """
+class ImplantPearsonIV(ImplantProfileModel):
+    def __init__(self, params: viennaps._core.PearsonIVParameters, lateralMu: typing.SupportsFloat | typing.SupportsIndex, lateralSigma: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Construct from PearsonIVParameters and Gaussian lateral spread.
+        """
+class ImplantPearsonIVChanneling(ImplantProfileModel):
+    def __init__(self, params: viennaps._core.PearsonIVParameters, lateralMu: typing.SupportsFloat | typing.SupportsIndex, lateralSigma: typing.SupportsFloat | typing.SupportsIndex, tailFraction: typing.SupportsFloat | typing.SupportsIndex, tailStartDepth: typing.SupportsFloat | typing.SupportsIndex, tailDecayLength: typing.SupportsFloat | typing.SupportsIndex, tailBlendWidth: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> None:
+        """
+        Single Pearson IV plus exponential channeling tail.
+        """
+class ImplantProfileModel:
+    def getDepthProfile(self, depth: typing.SupportsFloat | typing.SupportsIndex) -> float:
+        ...
+    def getLateralProfile(self, offset: typing.SupportsFloat | typing.SupportsIndex, depth: typing.SupportsFloat | typing.SupportsIndex) -> float:
+        ...
+    def getMaxDepth(self) -> float:
+        ...
+    def getMaxLateralRange(self) -> float:
+        ...
+class ImplantTableModel(ImplantProfileModel):
+    def __init__(self, fileName: str, species: str, material: str, substrateType: str, energyKeV: typing.SupportsFloat | typing.SupportsIndex, tiltDeg: typing.SupportsFloat | typing.SupportsIndex, rotationDeg: typing.SupportsFloat | typing.SupportsIndex, dosePerCm2: typing.SupportsFloat | typing.SupportsIndex = 0.0, screenThickness: typing.SupportsFloat | typing.SupportsIndex = 0.0, damageLevel: typing.SupportsFloat | typing.SupportsIndex = 0.0, preferredModel: str = 'auto') -> None:
+        """
+        Table-backed implant profile model. Pass an explicit modeldb CSV path; the selected row is interpolated and converted to a profile.
+        """
 class Interpolation(enum.IntEnum):
     CUSTOM: typing.ClassVar[Interpolation]  # value = <Interpolation.CUSTOM: 2>
     IDW: typing.ClassVar[Interpolation]  # value = <Interpolation.IDW: 1>
@@ -576,6 +767,78 @@ class IonBeamEtching(ProcessModel):
     @typing.overload
     def __init__(self, parameters: viennaps._core.IBEParameters, maskMaterials: collections.abc.Sequence[viennaps._core.Material]) -> None:
         ...
+class IonImplantation(ProcessModel):
+    def __init__(self) -> None:
+        ...
+    def enableBeamHits(self, enable: bool = True) -> None:
+        """
+        Write the optional beam-hit count field.
+        """
+    def enableEmbeddedBoundaries(self, enable: bool = True) -> None:
+        """
+        Rebuild the cell set with embedded boundary points before implanting.
+        Enables sub-grid surface offsets via ray-plane intersection for tilt accuracy.
+        """
+    def setBeamHitsLabel(self, label: str) -> None:
+        """
+        Field name for optional beam-hit counts.
+        """
+    def setConcentrationLabel(self, label: str) -> None:
+        """
+        Cell-set field name for deposited concentration.
+        """
+    def setDamageFactor(self, factor: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Scale factor for damage accumulation across multiple implants.
+        """
+    def setDamageLabel(self, label: str) -> None:
+        """
+        Cell-set field name for accumulated damage.
+        """
+    def setDamageModel(self, model: ImplantProfileModel) -> None:
+        """
+        Set the damage profile model (optional).
+        """
+    def setDose(self, dosePerCm2: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Implant dose in ions/cm².
+        """
+    def setDoseControl(self, mode: viennaps._core.ImplantDoseControl) -> None:
+        """
+        Dose control mode: Off, WaferDose, BeamDose.
+        """
+    def setImplantModel(self, model: ImplantProfileModel) -> None:
+        """
+        Set the dopant concentration profile model.
+        """
+    def setLastDamageLabel(self, label: str) -> None:
+        """
+        Field name for damage from the last step only.
+        """
+    def setLengthUnit(self, lengthUnitInCm: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Length unit in cm (default 1e-7 = nanometres).
+        """
+    def setMaskMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+        """
+        Materials that completely block the beam.
+        """
+    def setOutputConcentrationInCm3(self, enable: bool = True) -> None:
+        """
+        Store concentration in cm⁻³ instead of length-unit⁻³.
+        """
+    def setScreenMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+        """
+        Materials the beam passes through without absorbing dose.
+        """
+    def setTiltAngle(self, angleDeg: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Beam tilt angle in degrees (0 = normal).
+        """
+    def setVoidMaterials(self, materials: collections.abc.Sequence[viennaps._core.Material]) -> None:
+        """
+        Materials ignored by implantation rays; usually set from the domain cover material automatically.
+        """
 class IsotropicProcess(ProcessModel):
     @typing.overload
     def __init__(self, rate: typing.SupportsFloat | typing.SupportsIndex = 1.0, maskMaterial: viennaps._core.Material = ...) -> None:
@@ -714,8 +977,81 @@ class MultiParticleProcess(ProcessModel):
     @typing.overload
     def addNeutralParticle(self, materialSticking: collections.abc.Mapping[viennaps._core.Material, typing.SupportsFloat | typing.SupportsIndex], defaultStickingProbability: typing.SupportsFloat | typing.SupportsIndex = 1.0, label: str = 'neutralFlux') -> None:
         ...
-    def setRateFunction(self, arg0: collections.abc.Callable[[collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex], viennaps._core.Material], float]) -> None:
+    def setRateFunction(self, arg0: collections.abc.Callable[[list[float], viennaps._core.Material], typing.SupportsFloat | typing.SupportsIndex]) -> None:
         ...
+class NetDoping:
+    """
+    Compute net doping (Σ donors − Σ acceptors) and extract the
+    metallurgical junction depth from the domain's cell set.
+    
+    Typical flow after implanting P and B and calling Anneal.applyActivation:
+    
+      nd = NetDoping()
+      nd.setCellSet(domain.getCellSet())
+      nd.addDonorLabel('P_active')
+      nd.addAcceptorLabel('B_active')
+      nd.apply()                      # writes 'net_doping' to cell set
+      xj = nd.junctionDepth()         # nm — metallurgical junction depth
+      print(nd.junctionCount(), 'junction(s)')
+    """
+    def __init__(self) -> None:
+        ...
+    def addAcceptorLabel(self, label: str) -> None:
+        """
+        Append one acceptor (p-type) concentration field name.
+        """
+    def addDonorLabel(self, label: str) -> None:
+        """
+        Append one donor (n-type) concentration field name.
+        """
+    def apply(self) -> None:
+        """
+        Compute net_doping = Σ donors − Σ acceptors and write to the output field in the cell set.
+        """
+    def junctionCount(self) -> int:
+        """
+        Number of metallurgical junctions in the depth profile.
+        """
+    def junctionDepth(self) -> float:
+        """
+        Shallowest depth [nm] where net_doping changes sign. Returns inf if no junction exists or apply() has not been called.
+        """
+    def junctionDepths(self) -> list[float]:
+        """
+        All junction depths [nm], sorted ascending.  Useful for retrograde profiles with multiple crossings.
+        """
+    def lateralJunctionPosition(self, atDepth: typing.SupportsFloat | typing.SupportsIndex) -> float:
+        """
+        Lateral position [nm] where net_doping changes sign at the given depth.  Use for vertical (lateral) PN junctions where P and B are implanted side by side.  Returns inf if no crossing exists.
+        """
+    def lateralJunctionPositions(self, atDepth: typing.SupportsFloat | typing.SupportsIndex) -> list[float]:
+        """
+        All lateral junction positions at the given depth [nm], ascending.
+        """
+    def setAcceptorLabels(self, labels: collections.abc.Sequence[str]) -> None:
+        """
+        Replace the full acceptor label list.
+        """
+    def setCellSet(self, cellSet: DenseCellSet) -> None:
+        """
+        Attach the cell set to analyse.
+        """
+    def setDepthAxis(self, axis: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Cell-centre axis index for depth (default: D−1).
+        """
+    def setDonorLabels(self, labels: collections.abc.Sequence[str]) -> None:
+        """
+        Replace the full donor label list.
+        """
+    def setOutputLabel(self, label: str) -> None:
+        """
+        Name of the output field written by apply() (default: 'net_doping').
+        """
+    def setSurfacePosition(self, surfacePosition: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Wafer-surface coordinate along the depth axis. Depth is computed as surfacePosition minus the cell-centre coordinate.
+        """
 class NeutralTransport(ProcessModel):
     @typing.overload
     def __init__(self) -> None:
@@ -727,65 +1063,153 @@ class NeutralTransport(ProcessModel):
         ...
     def setParameters(self, arg0: viennaps._core.NeutralTransportParameters) -> None:
         ...
-class Oxidation(ProcessModelBase):
+class Oxidation(ProcessModel):
     def __init__(self) -> None:
         ...
-    def setTemperature(self, temperatureC: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Oxidation temperature in °C (800–1200 °C)."""
-    def setTime(self, timeHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Total oxidation time in hours."""
-    def setOxidant(self, oxidant: viennaps._core.OxidantType) -> None:
-        """Oxidant species: OxidantType.Dry (O₂) or OxidantType.Wet (H₂O)."""
-    def setPressure(self, pressureAtm: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Ambient pressure in atm (scales B and B/A linearly)."""
-    def setOrientation(self, orientation: viennaps._core.SiliconOrientation) -> None:
-        """Crystal orientation: SiliconOrientation.Si100, Si110, Si111, or PolySi."""
-    def setTimeStep(self, dtHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Maximum internal step duration in hours (0 = CFL-only)."""
+    def clearSolveBounds(self) -> None:
+        ...
+    def estimatePlanarOxideThickness(self, initialOxideThickness: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> float:
+        """
+        Deal-Grove planar oxide thickness estimate in µm.
+        """
+    def saveSurfaceMesh(self, domain: Domain, fileName: str) -> None:
+        """
+        Extracts and saves a mathematically wrapped surface mesh.
+        """
+    def saveVolumeMesh(self, domain: Domain, baseName: str) -> None:
+        """
+        Extracts and saves a mathematically wrapped volume mesh.
+        """
     def setCFLFactor(self, factor: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Courant number for CFL-limited internal stepping (default 0.499)."""
-    def setInitialOxideThickness(self, thicknessUm: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Oxide on bare silicon at t = 0 in µm (used when no SiO2 layer exists, not under a mask; 0 = bare). Oxide thinner than three grid cells first grows by 1-D Deal-Grove until resolved; an impermeable mask blocks it."""
-    def setTransferCoefficient(self, coefficient: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Gas-transfer coefficient in µm/hr."""
-    def setStressDependentOxidation(self, enable: bool) -> None:
-        """Stress-dependent oxidation kinetics (interface normal stress on the reaction, pressure on the diffusivity). On by default with the Kao-calibrated activation volumes; False = stress-free Deal-Grove kinetics."""
-    def setReactionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Activation volume of the interface reaction on the normal stress (m³). Default 2.5e-29 (25 Å³)."""
-    def setShearActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Stress-dependent oxide viscosity: shear activation volume (m³); 0 = linear viscosity. Default 3e-28 (300 Å³)."""
-    def setDiffusionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Activation volume of the oxide diffusivity on the pressure (m³). Default 4e-29 (40 Å³)."""
-    def setMaxGridPoints(self, maxGridPoints: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """Maximum Cartesian grid points for the diffusion/mechanics solve."""
+        """
+        Courant number for CFL-limited internal stepping (default 0.499).
+        """
     def setCouplingIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
         ...
     def setCouplingTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
-    def setMechanicsIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """Maximum viscosity iterations of the mechanics solve (one velocity-pressure solve each)."""
-    def setMechanicsTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """Relative velocity change at which the viscosity iteration stops."""
-    def setSolveBounds(self, minIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], maxIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"]) -> None:
-        """Cartesian index bounds for the diffusion/deformation solve."""
-    def clearSolveBounds(self) -> None:
-        ...
-    def setSiliconMaterial(self, mat: viennaps._core.Material) -> None:
-        """Override which material is treated as silicon."""
-    def setOxideMaterial(self, mat: viennaps._core.Material) -> None:
-        """Override which material is treated as oxide."""
-    def setMaskMaterial(self, mat: viennaps._core.Material) -> None:
-        """Material treated as the oxidation mask (activates LOCOS physics)."""
-    def setMaskParameters(self, params: viennals.d2.OxidationMaskParameters) -> None:
-        """Viscous-elasticity parameters for the mask layer."""
+    def setDealGroveRates(self, B: typing.SupportsFloat | typing.SupportsIndex, BoA: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Override Deal-Grove B (um^2/hr) and B/A (um/hr); 0 = Arrhenius table.
+        """
+    def setDiffusionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Activation volume of the oxide diffusivity on the pressure (m³). Default 4e-29 (40 Å³).
+        """
+    @typing.overload
     def setGpuMode(self, mode: viennaps._core.GpuMode) -> None:
-        """GPU for the diffusion and the 3-D mechanics solves: GpuMode.Cpu (default), GpuMode.Gpu or GpuMode.Auto."""
-    def estimatePlanarOxideThickness(self, initialOxideThickness: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> float:
-        """Deal-Grove planar oxide thickness estimate in µm."""
-    def saveSurfaceMesh(self, domain: Domain, fileName: str) -> None:
-        """Extracts and saves a mathematically wrapped surface mesh."""
-    def saveVolumeMesh(self, domain: Domain, baseName: str) -> None:
-        """Extracts and saves a mathematically wrapped volume mesh."""
+        """
+        GPU for the diffusion and the 3-D mechanics solves: GpuMode.Cpu (default), GpuMode.Gpu or GpuMode.Auto.
+        """
+    @typing.overload
+    def setGpuMode(self, mode: str) -> None:
+        """
+        GPU for the diffusion and the 3-D mechanics solves: 'cpu' (default), 'gpu' or 'auto'.
+        """
+    def setInitialOxideThickness(self, thicknessUm: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Oxide on bare silicon at t = 0 in µm (used when no SiO2 layer exists, not under a mask; 0 = bare). Oxide thinner than three grid cells first grows by 1-D Deal-Grove until resolved; an impermeable mask blocks it.
+        """
+    def setInitialTimeStep(self, dtHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Cap only the FIRST internal substep (hr); 0 = model default (0.004 hr conservative cold start).
+        """
+    def setMaskBarrierOnly(self, enable: bool) -> None:
+        """
+        Mask acts as a diffusion barrier only; mechanically transparent, carried by the oxide. Exact for a full-width mask.
+        """
+    def setMaskMaterial(self, mat: viennaps._core.Material) -> None:
+        """
+        Material treated as the oxidation mask (activates LOCOS physics).
+        """
+    def setMaskParameters(self, params: ...) -> None:
+        """
+        Elastic constants and clamp of the nitride mask.
+        """
+    def setMaskPermeabilityRatio(self, permeability_ratio: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Diffusion through the mask: the mask body is meshed into the oxidant solve with D_mask = D_SiO2/gamma. The level-set mask thickness is the physical barrier thickness and must be grid-resolved. 0 = impermeable (default).
+        """
+    def setMaxGridPoints(self, maxGridPoints: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Maximum Cartesian grid points for the diffusion/mechanics solve.
+        """
+    def setMechanicsIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Maximum viscosity iterations of the mechanics solve (one velocity-pressure solve each).
+        """
+    def setMechanicsTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Relative velocity change at which the viscosity iteration stops.
+        """
+    @typing.overload
+    def setOrientation(self, orientation: viennaps._core.SiliconOrientation) -> None:
+        """
+        Crystal orientation: SiliconOrientation.Si100, SiliconOrientation.Si111, or SiliconOrientation.PolySi.
+        """
+    @typing.overload
+    def setOrientation(self, orientation: str) -> None:
+        """
+        Crystal orientation: '100', '111', or 'poly'.
+        """
+    @typing.overload
+    def setOxidant(self, oxidant: viennaps._core.OxidantType) -> None:
+        """
+        Oxidant species: OxidantType.DRY (O₂) or OxidantType.WET (H₂O).
+        """
+    @typing.overload
+    def setOxidant(self, oxidant: str) -> None:
+        """
+        Oxidant species: 'dry' (O₂) or 'wet' (H₂O).
+        """
+    def setOxideMaterial(self, mat: viennaps._core.Material) -> None:
+        """
+        Override which material is treated as oxide.
+        """
+    def setPressure(self, pressureAtm: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Ambient pressure in atm (scales B and B/A linearly).
+        """
+    def setReactionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Activation volume of the interface reaction on the normal stress (m³). Default 2.5e-29 (25 Å³).
+        """
+    def setRegrid(self, coarseDelta: typing.SupportsFloat | typing.SupportsIndex, factor: typing.SupportsFloat | typing.SupportsIndex = 2.0) -> None:
+        """
+        One-shot persistent regrid: coarsen the whole level-set stack to coarseDelta (um) once the thinnest oxide layer exceeds factor*coarseDelta. 0 = disabled.
+        """
+    def setShearActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Stress-dependent oxide viscosity: shear activation volume (m³); 0 = linear viscosity. Default 3e-28 (300 Å³).
+        """
+    def setSiliconMaterial(self, mat: viennaps._core.Material) -> None:
+        """
+        Override which material is treated as silicon.
+        """
+    def setSolveBounds(self, minIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"], maxIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(2)"]) -> None:
+        """
+        Cartesian index bounds for the diffusion/deformation solve.
+        """
+    def setStressDependentOxidation(self, enable: bool) -> None:
+        """
+        Stress-dependent oxidation kinetics (interface normal stress on the reaction, pressure on the diffusivity). On by default with the Kao-calibrated activation volumes; False = stress-free Deal-Grove kinetics.
+        """
+    def setTemperature(self, temperatureC: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Oxidation temperature in °C (800-1200 °C).
+        """
+    def setTime(self, timeHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Total oxidation time in hours.
+        """
+    def setTimeStep(self, dtHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Duration of each explicit time step in hours. Default: time/20.
+        """
+    def setTransferCoefficient(self, coefficient: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Gas-transfer coefficient in µm/hr.
+        """
 class OxideRegrowth(ProcessModel):
     def __init__(self, nitrideEtchRate: typing.SupportsFloat | typing.SupportsIndex, oxideEtchRate: typing.SupportsFloat | typing.SupportsIndex, redepositionRate: typing.SupportsFloat | typing.SupportsIndex, redepositionThreshold: typing.SupportsFloat | typing.SupportsIndex, redepositionTimeInt: typing.SupportsFloat | typing.SupportsIndex, diffusionCoefficient: typing.SupportsFloat | typing.SupportsIndex, sinkStrength: typing.SupportsFloat | typing.SupportsIndex, scallopVelocity: typing.SupportsFloat | typing.SupportsIndex, centerVelocity: typing.SupportsFloat | typing.SupportsIndex, topHeight: typing.SupportsFloat | typing.SupportsIndex, centerWidth: typing.SupportsFloat | typing.SupportsIndex, stabilityFactor: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
@@ -993,6 +1417,57 @@ class SelectiveEpitaxy(ProcessModel):
         ...
     def setMaterialRate(self, material: viennaps._core.Material, rate: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
+class SheetResistance:
+    """
+    Compute sheet resistance (Rsh, Ω/□) from an active-concentration
+    field stored in the domain's cell set.
+    
+    Default settings target ViennaPS nm-unit domains:
+      length unit = 1e-7 (nm → cm),  conc unit = 1e21 (nm⁻³ → cm⁻³),
+      depth axis  = D−1  (y for 2-D, z for 3-D),
+      surface position = 0  (depth = surface − coordinate).
+    
+    Example::
+    
+      sr = SheetResistance()
+      sr.setCellSet(domain.getCellSet())
+      sr.setConcentrationLabel("P_active")
+      rsh = sr.computeElectron()   # Masetti n-type (P in Si)
+    """
+    def __init__(self) -> None:
+        ...
+    def computeElectron(self) -> float:
+        """
+        Rsh [Ω/□] using the Masetti-Severi electron mobility model (n-type, e.g. P-doped Si).
+        """
+    def computeHole(self) -> float:
+        """
+        Rsh [Ω/□] using the Masetti-Severi hole mobility model (p-type, e.g. B-doped Si).
+        """
+    def setCellSet(self, cellSet: DenseCellSet) -> None:
+        """
+        Attach the cell set to analyse.
+        """
+    def setConcentrationLabel(self, label: str) -> None:
+        """
+        Name of the scalar field containing the active concentration (default: 'active_concentration').
+        """
+    def setConcentrationUnit(self, unit: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Multiplicative factor to convert the cell-set concentration to cm⁻³ (default: 1e21 for nm⁻³ fields).
+        """
+    def setDepthAxis(self, axis: typing.SupportsInt | typing.SupportsIndex) -> None:
+        """
+        Cell-centre axis index for depth  (default: D−1).
+        """
+    def setLengthUnit(self, lu_cm: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Length-unit → cm conversion factor (default: 1e-7 for nm domains). Also updates the concentration unit to stay consistent.
+        """
+    def setSurfacePosition(self, surfacePosition: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Wafer-surface coordinate along the depth axis. Depth is computed as surfacePosition minus the cell-centre coordinate.
+        """
 class SingleParticleALD(ProcessModel):
     def __init__(self, parameters: viennaps._core.SingleParticleALDParams) -> None:
         ...

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(
   ViennaPS
   LANGUAGES CXX C
-  VERSION 4.6.1)
+  VERSION 4.7.0)
 
 # --------------------------------------------------------------------------------------------------------
 # Include guards
@@ -144,7 +144,7 @@ include("cmake/vtk.cmake")
 
 CPMAddPackage(
   NAME ViennaCore
-  VERSION 2.2.1
+  VERSION 2.4.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCore"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNACORE_FORMAT_EXCLUDE build/" "VIENNACORE_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -157,12 +157,7 @@ CPMAddPackage(
 
 CPMAddPackage(
   NAME ViennaRay
-  VERSION 4.3.1
-  # Pinned 2026-10-20: the "benchmark" branch moved to a new Source API
-  # (getOrigin/getDirection, from 82889fe) that this branch's ray sources do
-  # not implement; 6cd664c is the commit the oxide-clean builds of Aug 2026
-  # used.
-  GIT_TAG 6cd664ceddebfa2ef67bda944e68886d880f889e
+  VERSION 4.5.0
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaRay"
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNARAY_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -182,7 +177,7 @@ endif()
 CPMAddPackage(
   NAME ViennaLS
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-  GIT_TAG v5.8.3
+  VERSION 5.9.0
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON}
   OPTIONS "VIENNALS_PRECOMPILE_HEADERS ${VIENNAPS_PRECOMPILE_HEADERS}"
           "VIENNALS_VTK_RENDERING ${VIENNAPS_VTK_RENDERING}" "VIENNALS_USE_GPU ${VIENNAPS_USE_GPU}")
@@ -197,8 +192,8 @@ unset(_VIENNAPS_PREVIOUS_CMAKE_SKIP_INSTALL_RULES)
 
 CPMAddPackage(
   NAME ViennaCS
-  VERSION 2.0.1
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaCS"
+  GIT_TAG v2.1.2
   EXCLUDE_FROM_ALL ${VIENNAPS_BUILD_PYTHON})
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ViennaCore ViennaLS ViennaRay ViennaCS)

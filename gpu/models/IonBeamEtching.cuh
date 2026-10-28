@@ -6,7 +6,8 @@
 #include "raygLaunchParams.hpp"
 #include "raygReflection.hpp"
 
-#include <models/psPipelineParameters.hpp>
+#include "models/psIonBeamParameters.hpp"
+#include "models/psIonModelUtil.hpp"
 
 extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 
@@ -15,48 +16,46 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 //
 
 __forceinline__ __device__ void IBECollision(const void *sbtData,
-                                             viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
+                                             viennaray::gpu::PerRayData *prd,
+                                             unsigned int primID) {
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
   const bool yieldDefined = abs(params->aSum) > 1e-6f;
   const bool redepositionEnabled = params->redepositionRate > 0.f;
 
-  for (int i = 0; i < prd->ISCount; ++i) {
-    auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
-    auto cosTheta = __saturatef(
-        -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
+  auto geomNormal = viennaray::gpu::getNormal(sbtData, primID);
+  auto cosTheta = __saturatef(
+      -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
 
-    float yield = 1.f;
-    if (yieldDefined) {
-      float cosTheta2 = cosTheta * cosTheta;
-      yield = (params->a1 * cosTheta + params->a2 * cosTheta2 +
-               params->a3 * cosTheta2 * cosTheta +
-               params->a4 * cosTheta2 * cosTheta2) /
-              params->aSum;
-    }
+  float yield = 1.f;
+  if (yieldDefined) {
+    float cosTheta2 = cosTheta * cosTheta;
+    yield = (params->a1 * cosTheta + params->a2 * cosTheta2 +
+             params->a3 * cosTheta2 * cosTheta +
+             params->a4 * cosTheta2 * cosTheta2) /
+            params->aSum;
+  }
 
-    // threshold energy is in sqrt scale
-    yield *= max(sqrtf(prd->energy) - params->thresholdEnergy, 0.f);
+  // threshold energy is in sqrt scale
+  yield *= max(sqrtf(prd->energy) - params->thresholdEnergy, 0.f);
 
-    // flux array
-    atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams) +
-                                         prd->primIDs[i]],
-              (viennaray::gpu::ResultType)prd->rayWeight * yield);
+  // flux array
+  atomicAdd(&launchParams.resultBuffer[getIdxOffset(0, launchParams, primID)],
+            (viennaray::gpu::ResultType)prd->rayWeight * yield);
 
-    if (redepositionEnabled) {
-      // redeposition array
-      atomicAdd(&launchParams.resultBuffer[getIdxOffset(1, launchParams) +
-                                           prd->primIDs[i]],
-                (viennaray::gpu::ResultType)prd->load);
-    }
+  if (redepositionEnabled) {
+    // redeposition array
+    atomicAdd(&launchParams.resultBuffer[getIdxOffset(1, launchParams, primID)],
+              (viennaray::gpu::ResultType)prd->load);
   }
 }
 
 __forceinline__ __device__ void IBEReflection(const void *sbtData,
-                                              viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+                                              viennaray::gpu::PerRayData *prd,
+                                              unsigned int primID) {
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
+  auto geomNormal = viennaray::gpu::getNormal(sbtData, primID);
   auto cosTheta = __saturatef(
       -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
   float theta = acosf(cosTheta);
@@ -87,8 +86,7 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
   }
 
   // Update energy
-  viennaps::gpu::impl::updateEnergy(prd, params->inflectAngle, params->n_l,
-                                    theta);
+  viennaps::impl::updateEnergy(prd, params->inflectAngle, params->n_l, theta);
 
   if (prd->energy > params->thresholdEnergy * params->thresholdEnergy ||
       prd->load > params->redepositionThreshold) {
@@ -101,10 +99,10 @@ __forceinline__ __device__ void IBEReflection(const void *sbtData,
 }
 
 __forceinline__ __device__ void IBEInit(viennaray::gpu::PerRayData *prd) {
-  viennaps::gpu::impl::IonParams *params =
-      (viennaps::gpu::impl::IonParams *)launchParams.customData;
-  viennaps::gpu::impl::initNormalDistEnergy(prd, params->meanEnergy,
-                                            params->sigmaEnergy);
+  viennaps::gpu::IonParams *params =
+      (viennaps::gpu::IonParams *)launchParams.customData;
+  viennaps::impl::initNormalDistEnergy(prd, params->meanEnergy,
+                                       params->sigmaEnergy);
   prd->load = 0.f;
 
   if (params->rotating) {

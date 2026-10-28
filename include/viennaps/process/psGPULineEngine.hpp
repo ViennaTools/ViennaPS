@@ -67,6 +67,15 @@ public:
       rayTracer_.setUseRandomSeeds(context.rayTracingParams.useRandomSeeds);
       if (!context.rayTracingParams.useRandomSeeds)
         rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
+      if (context.rayTracingParams.minRayDistance <
+          context.domain->getGridDelta() * 0.5) {
+        rayTracer_.setTnear(context.rayTracingParams.minRayDistance);
+      } else {
+        VIENNACORE_LOG_WARNING(
+            "Minimum ray distance is too large. Surface hits may be missed. "
+            "Consider reducing the minimum ray distance.");
+      }
+
       for (auto &particle : model_->getParticleTypes()) {
         rayTracer_.insertNextParticle(particle);
       }
@@ -97,7 +106,7 @@ public:
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
 
-    CreateSurfaceMesh<NumericType, float, D>(
+    CreateSurfaceMesh<NumericType, float, D, typename KDTreeType::element_type>(
         context.domain->getSurface(), surfaceMesh_, elementKdTree_, 1e-12,
         context.rayTracingParams.minNodeDistanceFactor)
         .apply();
@@ -134,7 +143,8 @@ public:
       std::vector<int> lineMaterialIds(surfaceMesh_->lines.size());
       auto &pointKdTree = context.translationField->getKdTree();
       if (!pointKdTree) {
-        pointKdTree = KDTreeType::New();
+        pointKdTree = SmartPointer<
+            typename TranslationField<NumericType, D>::KDTreeType>::New();
         context.translationField->setKdTree(pointKdTree);
       }
       if (pointKdTree->getNumberOfPoints() != diskMesh->nodes.size()) {
@@ -182,7 +192,8 @@ public:
       auto numCov = coverages->getScalarDataSize();
       auto &pointKdTree = context.translationField->getKdTree();
       if (!pointKdTree) {
-        pointKdTree = KDTreeType::New();
+        pointKdTree = SmartPointer<
+            typename TranslationField<NumericType, D>::KDTreeType>::New();
         context.translationField->setKdTree(pointKdTree);
       }
       if (pointKdTree->getNumberOfPoints() != diskMesh.nodes.size()) {

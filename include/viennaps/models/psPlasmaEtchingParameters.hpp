@@ -172,55 +172,76 @@ template <typename NumericType> struct PlasmaEtchingParameters {
 };
 
 #ifdef VIENNACORE_COMPILE_GPU
-struct PlasmaEtchingParametersGPU {
-  PlasmaEtchingParametersGPU() = default;
-  template <typename NumericType>
-  PlasmaEtchingParametersGPU(
-      const PlasmaEtchingParameters<NumericType> &parameters) {
-    Mask.A_sp = static_cast<float>(parameters.Mask.A_sp);
-    Mask.B_sp = static_cast<float>(parameters.Mask.B_sp);
-    Mask.Eth_sp = static_cast<float>(parameters.Mask.Eth_sp);
-    Mask.rho = static_cast<float>(parameters.Mask.rho);
+namespace gpu {
+// This struct only contains the parameters that are needed for the GPU kernel.
+// The other parameters are not needed on the GPU and are therefore not included
+// here.
+struct PlasmaEtchingParameters {
 
-    Polymer.A_sp = static_cast<float>(parameters.Polymer.A_sp);
-    Polymer.B_sp = static_cast<float>(parameters.Polymer.B_sp);
-    Polymer.Eth_sp = static_cast<float>(parameters.Polymer.Eth_sp);
-    Polymer.rho = static_cast<float>(parameters.Polymer.rho);
-    Polymer.usePolyCosThetaYield = parameters.Polymer.usePolyCosThetaYield;
-    Polymer.a1 = static_cast<float>(parameters.Polymer.a1);
-    Polymer.a2 = static_cast<float>(parameters.Polymer.a2);
-    Polymer.a3 = static_cast<float>(parameters.Polymer.a3);
-    Polymer.a4 = static_cast<float>(parameters.Polymer.a4);
+  float Mask_B_sp = 0.f;
+  float Mask_Eth_sp = 0.f;
 
-    Substrate.rho = static_cast<float>(parameters.Substrate.rho);
-    Substrate.Eth_sp = static_cast<float>(parameters.Substrate.Eth_sp);
-    Substrate.Eth_ie = static_cast<float>(parameters.Substrate.Eth_ie);
-    Substrate.A_sp = static_cast<float>(parameters.Substrate.A_sp);
-    Substrate.B_sp = static_cast<float>(parameters.Substrate.B_sp);
-    Substrate.A_ie = static_cast<float>(parameters.Substrate.A_ie);
-    Substrate.B_ie = static_cast<float>(parameters.Substrate.B_ie);
-    Substrate.k_sigma = static_cast<float>(parameters.Substrate.k_sigma);
-    Substrate.beta_sigma = static_cast<float>(parameters.Substrate.beta_sigma);
+  float Polymer_B_sp = 0.f;
+  float Polymer_Eth_sp = 0.f;
+  float Polymer_a1 = 0.f;
+  float Polymer_a2 = 0.f;
+  float Polymer_a3 = 0.f;
+  float Polymer_a4 = 0.f;
+  float Polymer_aSum = 0.f;
 
-    Passivation.Eth_ie = static_cast<float>(parameters.Passivation.Eth_ie);
-    Passivation.A_ie = static_cast<float>(parameters.Passivation.A_ie);
+  float Substrate_Eth_sp = 0.f;
+  float Substrate_Eth_ie = 0.f;
+  float Substrate_B_sp = 0.f;
+  float Substrate_B_ie = 0.f;
 
-    Ions.meanEnergy = static_cast<float>(parameters.Ions.meanEnergy);
-    Ions.sigmaEnergy = static_cast<float>(parameters.Ions.sigmaEnergy);
-    Ions.exponent = static_cast<float>(parameters.Ions.exponent);
-    Ions.inflectAngle = static_cast<float>(parameters.Ions.inflectAngle);
-    Ions.n_l = static_cast<float>(parameters.Ions.n_l);
-    Ions.minAngle = static_cast<float>(parameters.Ions.minAngle);
-    Ions.thetaRMin = static_cast<float>(parameters.Ions.thetaRMin);
-    Ions.thetaRMax = static_cast<float>(parameters.Ions.thetaRMax);
+  float Passivation_Eth_ie = 0.f;
+
+  float Ions_meanEnergy = 0.f;
+  float Ions_sigmaEnergy = 0.f;
+  float Ions_exponent = 0.f;
+  float Ions_inflectAngle = 0.f;
+  float Ions_n_l = 0.f;
+  float Ions_minAngle = 0.f;
+  float Ions_thetaRMin = 0.f;
+  float Ions_thetaRMax = 0.f;
+
+  PlasmaEtchingParameters() = default;
+
+  // Precompute the square roots of the threshold energies for the GPU kernel
+  template <typename Parameters>
+  PlasmaEtchingParameters(const Parameters &parameters) {
+    Mask_B_sp = static_cast<float>(parameters.Mask.B_sp);
+    Mask_Eth_sp = static_cast<float>(std::sqrt(parameters.Mask.Eth_sp));
+
+    Polymer_B_sp = static_cast<float>(parameters.Polymer.B_sp);
+    Polymer_Eth_sp = static_cast<float>(std::sqrt(parameters.Polymer.Eth_sp));
+    Polymer_a1 = static_cast<float>(parameters.Polymer.a1);
+    Polymer_a2 = static_cast<float>(parameters.Polymer.a2);
+    Polymer_a3 = static_cast<float>(parameters.Polymer.a3);
+    Polymer_a4 = static_cast<float>(parameters.Polymer.a4);
+    Polymer_aSum = Polymer_a1 + Polymer_a2 + Polymer_a3 + Polymer_a4;
+
+    Substrate_Eth_sp =
+        static_cast<float>(std::sqrt(parameters.Substrate.Eth_sp));
+    Substrate_Eth_ie =
+        static_cast<float>(std::sqrt(parameters.Substrate.Eth_ie));
+    Substrate_B_sp = static_cast<float>(parameters.Substrate.B_sp);
+    Substrate_B_ie = static_cast<float>(parameters.Substrate.B_ie);
+
+    Passivation_Eth_ie =
+        static_cast<float>(std::sqrt(parameters.Passivation.Eth_ie));
+
+    Ions_meanEnergy = static_cast<float>(parameters.Ions.meanEnergy);
+    Ions_sigmaEnergy = static_cast<float>(parameters.Ions.sigmaEnergy);
+    Ions_exponent = static_cast<float>(parameters.Ions.exponent);
+    Ions_inflectAngle = static_cast<float>(parameters.Ions.inflectAngle);
+    Ions_n_l = static_cast<float>(parameters.Ions.n_l);
+    Ions_minAngle = static_cast<float>(parameters.Ions.minAngle);
+    Ions_thetaRMin = static_cast<float>(parameters.Ions.thetaRMin);
+    Ions_thetaRMax = static_cast<float>(parameters.Ions.thetaRMax);
   }
-
-  PlasmaEtchingParameters<float>::MaskType Mask;
-  PlasmaEtchingParameters<float>::PolymerType Polymer;
-  PlasmaEtchingParameters<float>::MaterialType Substrate;
-  PlasmaEtchingParameters<float>::PassivationType Passivation;
-  PlasmaEtchingParameters<float>::IonType Ions;
 };
+} // namespace gpu
 #endif
 
 } // namespace viennaps

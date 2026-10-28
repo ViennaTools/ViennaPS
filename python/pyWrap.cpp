@@ -22,9 +22,18 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
   module.def("gpuAvailable", &gpuAvailable,
              "Check if ViennaPS was compiled with GPU support.");
 
+  module.def("setModelDbRoot", &setModelDbRoot, py::arg("path"),
+             "Set the ViennaPS modeldb root directory.");
+  module.def("getModelDbRoot", &getModelDbRoot,
+             py::return_value_policy::reference,
+             "Get the configured ViennaPS modeldb root directory.");
+  module.def("initModelDbRoot", &initModelDbRoot,
+             "Initialize the ViennaPS modeldb root from the compiled default "
+             "or VIENNAPS_MODELDB_DIR.");
+
   py::native_enum<OxidantType>(module, "OxidantType", "enum.IntEnum")
-      .value("Dry", OxidantType::Dry)
-      .value("Wet", OxidantType::Wet)
+      .value("DRY", OxidantType::DRY)
+      .value("WET", OxidantType::WET)
       .finalize();
 
   py::native_enum<SiliconOrientation>(module, "SiliconOrientation",
@@ -43,7 +52,10 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Logger
   py::class_<Logger, SmartPointer<Logger>>(module, "Logger", py::module_local())
-      .def_static("setLogLevel", &Logger::setLogLevel)
+      .def_static("setLogLevel",
+                  py::overload_cast<LogLevel>(&Logger::setLogLevel))
+      .def_static("setLogLevel",
+                  py::overload_cast<const std::string &>(&Logger::setLogLevel))
       .def_static("getLogLevel", &Logger::getLogLevel)
       .def_static("setLogFile", &Logger::setLogFile)
       .def_static("appendToLogFile", &Logger::appendToLogFile)
@@ -653,6 +665,7 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
                      &RayTracingParameters::smoothingNeighbors)
       .def_readwrite("minNodeDistanceFactor",
                      &RayTracingParameters::minNodeDistanceFactor)
+      .def_readwrite("minRayDistance", &RayTracingParameters::minRayDistance)
       .def_readwrite("maxReflections", &RayTracingParameters::maxReflections)
       .def_readwrite("maxBoundaryHits", &RayTracingParameters::maxBoundaryHits)
       .def("toMetaData", &RayTracingParameters::toMetaData,
@@ -768,14 +781,79 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
 
   // Utility functions
   auto m_util = module.def_submodule("util", "Utility functions.");
-  m_util.def("convertSpatialScheme", &util::convertSpatialScheme,
+  m_util.def("convertSpatialScheme", &util::detail::convertSpatialScheme,
              "Convert a string to an discretization scheme.");
   // convertIntegrationScheme is deprecated
   m_util.attr("convertIntegrationScheme") = m_util.attr("convertSpatialScheme");
-  m_util.def("convertFluxEngineType", &util::convertFluxEngineType,
+  m_util.def("convertFluxEngineType", &util::detail::convertFluxEngineType,
              "Convert a string to a flux engine type.");
-  m_util.def("convertTemporalScheme", &util::convertTemporalScheme,
+  m_util.def("convertTemporalScheme", &util::detail::convertTemporalScheme,
              "Convert a string to a time integration scheme.");
+  m_util.def("convertBoundaryType", &util::detail::convertBoundaryType,
+             "Convert a string to a boundary type.");
+  m_util.def("convertOxidantType", &util::detail::convertOxidantType,
+             "Convert a string to an oxidant type.");
+  m_util.def("convertSiliconOrientation",
+             &util::detail::convertSiliconOrientation,
+             "Convert a string to a silicon orientation.");
+
+  // ***************************************************************************
+  //                         ION IMPLANTATION & ANNEALING
+  // ***************************************************************************
+
+  // Dose control enum (re-exported from ViennaCS via ViennaPS)
+  py::native_enum<ImplantDoseControl>(
+      module, "ImplantDoseControl", "enum.IntEnum", "Implant dose control mode")
+      .value("Off", ImplantDoseControl::Off)
+      .value("WaferDose", ImplantDoseControl::WaferDose)
+      .value("BeamDose", ImplantDoseControl::BeamDose)
+      .finalize();
+
+  // Anneal solver mode (re-exported from ViennaCS via ViennaPS)
+  py::native_enum<AnnealMode>(module, "AnnealMode", "enum.IntEnum",
+                              "Anneal diffusion solver mode")
+      .value("Explicit", AnnealMode::Explicit)
+      .value("GaussSeidel", AnnealMode::GaussSeidel)
+#ifdef VIENNACS_USE_EIGEN
+      .value("EigenSparseLU", AnnealMode::EigenSparseLU)
+#endif
+      .finalize();
+
+  // Pearson IV moment parameter struct
+  py::class_<PearsonIVParameters<T>>(module, "PearsonIVParameters")
+      .def(py::init<>())
+      .def_readwrite("mu", &PearsonIVParameters<T>::mu,
+                     "Projected range / mean depth (length units, e.g. nm)")
+      .def_readwrite("sigma", &PearsonIVParameters<T>::sigma,
+                     "Straggle / standard deviation (same units)")
+      .def_readwrite("beta", &PearsonIVParameters<T>::beta,
+                     "ViennaPS 'skewness' config key → β₂ position in formula")
+      .def_readwrite("gamma", &PearsonIVParameters<T>::gamma,
+                     "ViennaPS 'kurtosis' config key → γ₁ position in formula")
+      .def("__repr__", [](const PearsonIVParameters<T> &p) {
+        return "PearsonIVParameters(mu=" + std::to_string(p.mu) +
+               ", sigma=" + std::to_string(p.sigma) +
+               ", beta=" + std::to_string(p.beta) +
+               ", gamma=" + std::to_string(p.gamma) + ")";
+      });
+
+  // Screen-oxide energy-loss (range-reduction) model — analytic power-law
+  // ranges
+  py::class_<viennacs::ScreenEnergyLoss<T>,
+             SmartPointer<viennacs::ScreenEnergyLoss<T>>>(module,
+                                                          "ScreenEnergyLoss")
+      .def(py::init<T, T, T, T, T>(), py::arg("screenRangePrefactor"),
+           py::arg("screenRangeExponent"), py::arg("substrateRangeExponent"),
+           py::arg("energyKeV"), py::arg("referenceThicknessNm"),
+           "Analytic screen energy-loss model: power-law ranges Rp(E)=a*E^p. "
+           "Returns the projected-range scale factor k relative to the "
+           "reference screen thickness (k==1 at the reference).")
+      .def("rangeScale", &viennacs::ScreenEnergyLoss<T>::rangeScale,
+           py::arg("screenThicknessNm"),
+           "Projected-range scale factor k for the given screen thickness.")
+      .def("residualEnergy", &viennacs::ScreenEnergyLoss<T>::residualEnergy,
+           py::arg("screenThicknessNm"),
+           "Residual ion energy [keV] after passing through the screen.");
 
   //   ***************************************************************************
   //                                  MAIN API

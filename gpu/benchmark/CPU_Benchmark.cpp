@@ -6,21 +6,35 @@
 
 #include "Benchmark.hpp"
 
-int main() {
+int main(int argc, char **argv) {
   omp_set_num_threads(16);
   using NumericType = float;
   constexpr int D = DIM;
 
-  auto particle = makeCPUParticle<NumericType, D>();
+  bool fixedRays = false;
+  int particleType = 0;
+
+  auto args = parseArgs(argc, argv);
+  particleType = std::get<0>(args);
+  fixedRays = std::get<1>(args);
+
+  auto particle = makeCPUParticle<NumericType, D>(particleType);
   std::string fluxLabel = particleType == 0 ? "flux" : "ionFlux";
 
+  auto filePostFix = [&]() {
+    std::string suffix = "";
+    suffix += fixedRays ? "_fixedNumRays" : "_raysPerPoint";
+    suffix += particleType == 0 ? "_Neutral" : "_Ion";
+    return suffix;
+  };
+
   if constexpr (runDisk) { // Disk
-    std::ofstream file("CPU_Benchmark_Disk.txt");
+    std::ofstream file("CPU_Benchmark_Disk" + filePostFix() + ".txt");
     file << "Meshing;Tracing;Postprocessing;GridDelta\n";
 
     viennaray::TraceDisk<NumericType, D> tracer;
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
-    if (FIXED_RAYS)
+    if (fixedRays)
       tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setParticleType(particle);
@@ -75,14 +89,14 @@ int main() {
   }
 
   if constexpr (runTriangle) { // Triangle
-    std::ofstream file("CPU_Benchmark_Triangle.txt");
+    std::ofstream file("CPU_Benchmark_Triangle" + filePostFix() + ".txt");
     file << "Meshing;Tracing;Postprocessing;GridDelta\n";
 
     std::cout << "Starting Triangle Benchmark\n";
 
     viennaray::TraceTriangle<NumericType, D> tracer;
     tracer.setNumberOfRaysPerPoint(raysPerPoint);
-    if (FIXED_RAYS)
+    if (fixedRays)
       tracer.setNumberOfRaysFixed(numRays);
     tracer.setUseRandomSeeds(false);
     tracer.setParticleType(particle);
@@ -99,14 +113,13 @@ int main() {
                                                       diskMesh);
       diskMesher.setTranslator(translator);
 
-      auto elementKdTree =
-          SmartPointer<KDTree<NumericType, Vec3D<NumericType>>>::New();
+      auto elementKdTree = SmartPointer<KDTreeType>::New();
       auto surfMesh = viennals::Mesh<NumericType>::New();
 
       auto velocityField =
           SmartPointer<DefaultVelocityField<NumericType, D>>::New();
       auto translationField =
-          SmartPointer<TranslationField<NumericType, D>>::New(
+          SmartPointer<TranslationField<NumericType, D, KDTreeType>>::New(
               velocityField, domain->getMaterialMap(), 1);
       translationField->setTranslator(translator);
 
@@ -137,14 +150,14 @@ int main() {
         tracer.normalizeFlux(fluxResult);
         std::vector<std::vector<NumericType>> fluxResultVec;
         fluxResultVec.push_back(std::move(fluxResult));
-        if constexpr (particleType == 1) {
+        if (particleType == 1) {
           fluxResult = std::move(*tracer.getLocalData().getScalarData(1));
           tracer.normalizeFlux(fluxResult);
           fluxResultVec.push_back(std::move(fluxResult));
         }
-        ElementToPointData<NumericType, float, float> post(
-            dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
-            domain->getGridDelta() * 2.0f);
+        ElementToPointData<NumericType, float, float, true, D == 3, KDTreeType>
+            post(dataLabels, pointData, elementKdTree, diskMesh, surfMesh,
+                 domain->getGridDelta() * 2.0f);
         post.setElementDataArrays(std::move(fluxResultVec));
         post.apply();
         timer.finish();

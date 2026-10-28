@@ -15,7 +15,7 @@
 ///   auto model = SmartPointer<Oxidation<T, D>>::New();
 ///   model->setTemperature(1000.);               // °C
 ///   model->setTime(0.5);                         // hours
-///   model->setOxidant(OxidantType::Wet);
+///   model->setOxidant(OxidantType::WET);
 ///   model->setOrientation(SiliconOrientation::Si100);
 ///   psProcess<T, D>(domain, model).apply();
 ///
@@ -43,6 +43,7 @@
 
 #include "../materials/psMaterial.hpp"
 #include "../process/psProcessModel.hpp"
+#include "../psUtil.hpp"
 
 #include <algorithm>
 #include <array>
@@ -56,8 +57,6 @@ namespace viennaps {
 
 using namespace viennacore;
 
-enum class OxidantType { Dry, Wet };
-enum class SiliconOrientation { Si100, Si110, Si111, PolySi };
 using GpuMode = viennals::GpuMode;
 
 template <class NumericType, int D>
@@ -80,7 +79,7 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   // settings
   NumericType temperature_ = 1000.;
   NumericType time_ = 1.;
-  OxidantType oxidant_ = OxidantType::Dry;
+  OxidantType oxidant_ = OxidantType::DRY;
   NumericType pressure_ = 1.;
   SiliconOrientation orientation_ = SiliconOrientation::Si100;
   NumericType timeStep_ =
@@ -173,8 +172,12 @@ public:
   // Total oxidation time in hours
   void setTime(NumericType timeHr) { time_ = timeHr; }
 
-  // Oxidant species: OxidantType::Dry (O2) or OxidantType::Wet (H2O)
+  // Oxidant species: OxidantType::DRY (O2) or OxidantType::WET (H2O)
   void setOxidant(OxidantType oxidant) { oxidant_ = oxidant; }
+
+  void setOxidant(const std::string &oxidantStr) {
+    oxidant_ = util::convert<OxidantType>(oxidantStr);
+  }
 
   // Ambient pressure in atm (scales both B and B/A linearly; default 1.0)
   void setPressure(NumericType pressureAtm) { pressure_ = pressureAtm; }
@@ -182,6 +185,10 @@ public:
   // Crystal orientation: Si100, Si111, or PolySi (isotropic, uses <100> rates)
   void setOrientation(SiliconOrientation orientation) {
     orientation_ = orientation;
+  }
+
+  void setOrientation(const std::string &orientationStr) {
+    orientation_ = util::convert<SiliconOrientation>(orientationStr);
   }
 
   // Set the maximum duration of an internal oxidation step in hours.
@@ -334,6 +341,19 @@ public:
   ///   GpuMode::Gpu  — always GPU (throws if unavailable or unsuccessful)
   ///   GpuMode::Auto — GPU when available, else CPU
   void setGpuMode(GpuMode mode) { gpuMode_ = mode; }
+
+  void setGpuMode(std::string mode) {
+    mode = util::detail::lower(mode);
+    if (mode == "cpu")
+      gpuMode_ = GpuMode::Cpu;
+    else if (mode == "gpu")
+      gpuMode_ = GpuMode::Gpu;
+    else if (mode == "auto")
+      gpuMode_ = GpuMode::Auto;
+    else
+      throw std::invalid_argument("Oxidation: invalid gpuMode string '" + mode +
+                                  "'; must be 'cpu', 'gpu', or 'auto'.");
+  }
 
   void setMechanicsIterations(unsigned iterations) {
     mechanicsIterations_ = std::max(1u, iterations);
@@ -634,7 +654,8 @@ private:
 
     if (Logger::hasInfo()) {
       const std::string mode = (maskIdx >= 0) ? "LOCOS" : "standard";
-      const std::string oxStr = (oxidant_ == OxidantType::Wet) ? "wet" : "dry";
+      const std::string oxStr =
+          util::toString(oxidant_) + " (" + util::toString(orientation_) + ")";
       const NumericType initDt = std::min(userStepCap, seedStep);
       Logger::getInstance()
           .addInfo("Oxidation: starting " + mode +
@@ -984,7 +1005,7 @@ private:
     // Table II (calibrated independently on Kao, 800-1100 °C).  The previous
     // single law (Irene 1978: 1e10 Pa·hr, 1.5 eV) was too flat in T: it
     // predicted strong retardation at 1200 °C wet, where Kao measured none.
-    const bool wet = oxidant_ == OxidantType::Wet;
+    const bool wet = oxidant_ == OxidantType::WET;
     const NumericType etaRef = wet ? NumericType(3.0e9) : NumericType(6.5e11);
     const NumericType etaEa = wet ? NumericType(3.46) : NumericType(4.56); // eV
     static constexpr NumericType etaTref = NumericType(1273.15); // K
@@ -1099,7 +1120,7 @@ private:
   }
 
   DealGroveRow dealGroveRow() const {
-    if (oxidant_ == OxidantType::Dry) {
+    if (oxidant_ == OxidantType::DRY) {
       if (temperature_ < NumericType(950)) {
         // Low-T regime (<950 °C): higher activation energy 2.30 eV.
         if (orientation_ == SiliconOrientation::Si111)

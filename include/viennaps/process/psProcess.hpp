@@ -29,8 +29,21 @@ inline bool gpuAvailable() {
   if (deviceContext)
     return deviceContext->foundCuda();
 
-  deviceContext = DeviceContext::createContext();
-  return deviceContext != nullptr && deviceContext->foundCuda();
+  CudaHandle cudaHandle;
+  if (!cudaHandle.isLoaded()) {
+    return false;
+  }
+
+  if (cudaHandle.cuInit_(0) != CUDA_SUCCESS) {
+    return false;
+  }
+
+  int numDevices = 0;
+  if (cudaHandle.cuDeviceGetCount_(&numDevices) != CUDA_SUCCESS) {
+    return false;
+  }
+
+  return numDevices > 0;
 #else
   return false;
 #endif
@@ -109,6 +122,11 @@ public:
     VIENNACORE_LOG_DEBUG("Using strategy: " + std::string(strategy->name()));
 
     if (strategy->requiresFluxEngine()) {
+      if (fluxEngineType_ == FluxEngineType::AUTO) {
+        fluxEngineType_ = FluxEngineType::CPU_DISK;
+        VIENNACORE_LOG_DEBUG("Auto-selected flux engine type: " +
+                             util::toString(fluxEngineType_));
+      }
       VIENNACORE_LOG_DEBUG("Setting up " + util::toString(fluxEngineType_) +
                            " flux engine for strategy.");
       strategy->setFluxEngine(createFluxEngine());
@@ -136,6 +154,8 @@ public:
       return nullptr;
     }
 
+    if (fluxEngineType_ == FluxEngineType::AUTO)
+      fluxEngineType_ = FluxEngineType::CPU_DISK;
     auto strategy = std::make_unique<FluxProcessStrategy<NumericType, D>>(
         createFluxEngine());
     strategy->calculateFlux(context_);
@@ -243,10 +263,21 @@ private:
       return deviceContext;
     }
 
+    if (!gpuAvailable()) {
+      VIENNACORE_LOG_ERROR("No CUDA capable device available.");
+      return nullptr;
+    }
+
     VIENNACORE_LOG_INFO("Auto-generating GPU device context.");
 
-    deviceContext =
-        DeviceContext::createContext(VIENNACORE_KERNELS_PATH, gpuDeviceId_);
+    try {
+      deviceContext =
+          DeviceContext::createContext(VIENNACORE_KERNELS_PATH, gpuDeviceId_);
+    } catch (const std::exception &e) {
+      VIENNACORE_LOG_ERROR("Failed to create GPU device context: " +
+                           std::string(e.what()));
+      return nullptr;
+    }
     if (!deviceContext) {
       VIENNACORE_LOG_ERROR("Failed to create GPU device context.");
     }
@@ -300,18 +331,14 @@ public:
     context_.updateFlags();
     context_.printFlags();
 
-    // Auto-select engine type
-    if (fluxEngineType_ == FluxEngineType::AUTO) {
-      if (gpuAvailable() && context_.model->hasGPUModel()) {
-        // Prefer disks if boundary is periodic in any direction
-        if (context_.flags.domainHasPeriodicBoundaries) {
-          fluxEngineType_ = FluxEngineType::GPU_DISK;
-        } else {
-          fluxEngineType_ = FluxEngineType::GPU_TRIANGLE;
-        }
-      } else {
-        fluxEngineType_ = FluxEngineType::CPU_DISK;
-      }
+    // Resolve AUTO only when GPU is available — CPU fallback is deferred to
+    // apply() so that callback-only and geometric models never touch the flux
+    // engine path at all.
+    if (fluxEngineType_ == FluxEngineType::AUTO && gpuAvailable() &&
+        context_.model->hasGPUModel()) {
+      fluxEngineType_ = context_.flags.domainHasPeriodicBoundaries
+                            ? FluxEngineType::GPU_DISK
+                            : FluxEngineType::GPU_TRIANGLE;
       VIENNACORE_LOG_DEBUG("Auto-selected flux engine type: " +
                            util::toString(fluxEngineType_));
     }

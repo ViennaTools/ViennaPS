@@ -10,9 +10,6 @@ int main(int argc, char *argv[]) {
   using NumericType = double;
   constexpr int D = 2;
 
-  // set process verbosity
-  Logger::setLogLevel(LogLevel::INTERMEDIATE);
-
   // Parse the parameters
   util::Parameters params;
   if (argc > 1) {
@@ -36,8 +33,7 @@ int main(int argc, char *argv[]) {
       params.get("gridDelta"), params.get("xExtent"), params.get("yExtent"));
   MakeStack<NumericType, D>(geometry, params.get<int>("numLayers"),
                             params.get("layerHeight"),
-                            params.get("substrateHeight"),
-                            0.0, // holeRadius
+                            params.get("substrateHeight"), 0.0,
                             params.get("trenchWidth"), params.get("maskHeight"))
       .apply();
 

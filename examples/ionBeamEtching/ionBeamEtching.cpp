@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   ibeParams.exponent = params.get("exponent");
   ibeParams.thetaRMin = 0.;
   ibeParams.thetaRMax = 15.;
-  ibeParams.rotatingWafer = true;
+  ibeParams.rotatingWafer = false;
 
   ibeParams.meanEnergy = params.get("meanEnergy");
   ibeParams.sigmaEnergy = params.get("sigmaEnergy");
@@ -52,8 +52,8 @@ int main(int argc, char *argv[]) {
   auto model = SmartPointer<IonBeamEtching<NumericType, D>>::New(
       ibeParams, std::vector<Material>{Material::Mask});
   Vec3D<NumericType> direction{0., 0., 0.};
-  direction[0] = std::sin(ibeParams.tiltAngle * M_PI / 180.);
-  direction[D - 1] = -std::cos(ibeParams.tiltAngle * M_PI / 180.);
+  direction[0] = std::sin(constants::degToRad(ibeParams.tiltAngle));
+  direction[D - 1] = -std::cos(constants::degToRad(ibeParams.tiltAngle));
   model->setPrimaryDirection(direction);
 
   AdvectionParameters advectionParams;
