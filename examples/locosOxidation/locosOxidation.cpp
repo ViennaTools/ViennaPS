@@ -6,14 +6,11 @@
 //   - Si3N4 mask box (covering x < maskEdge, sitting on top of pad oxide)
 //
 // The Oxidation model auto-detects the Si3N4 material and activates LOCOS
-// physics: mask bending + constrained-ambient advection, producing the
-// characteristic bird's-beak oxide profile.
+// physics: the nitride joins the oxide mechanics solve as an elastic body
+// that creeps, producing the characteristic bird's-beak oxide profile.
 //
-// Config keys (lengths in µm, time in hours, pressure in atm):
-//   numThreads, gridDelta, xExtent, yMin, yMax,
-//   padOxideThickness, maskThickness, maskEdge,
-//   oxidationTime, timeStep, temperature, pressure, oxidant, orientation,
-//   maxGridPoints, outputPrefix
+// Config keys (lengths in µm, time in hours, pressure in atm): see
+// knownKeys below and config.txt.
 //
 // `timeStep` controls the output cadence and the maximum oxidation substep.
 // The model automatically uses smaller CFL-limited physics steps if needed.
@@ -24,6 +21,11 @@
 #include <models/psOxidation.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
+#include <vcTimer.hpp>
+
+#include <iomanip>
+#include <set>
+#include <sstream>
 
 namespace ls = viennals;
 namespace ps = viennaps;
@@ -31,25 +33,9 @@ namespace ps = viennaps;
 using NumericType = double;
 constexpr int D = 2;
 
-int parseMaskContactMode(const std::string &value) {
-  const auto mode = ps::util::detail::lower(value);
-  if (mode == "0" || mode == "kinematic")
-    return 0;
-  if (mode == "1" || mode == "2" || mode == "oneway" || mode == "one-way" ||
-      mode == "traction")
-    return 1;
-  if (mode == "3" || mode == "4" || mode == "elastic" || mode == "twoway" ||
-      mode == "two-way" || mode == "two_way" || mode == "feedback" ||
-      mode == "twoway-elastic" || mode == "two-way-elastic" ||
-      mode == "elastic-feedback")
-    return 2;
-
-  std::cerr << "Warning: unknown maskContactMode='" << value
-            << "', using oneway.\n";
-  return 1;
-}
-
 int main(int argc, char **argv) {
+  ps::Timer<> wallTimer, meshTimer;
+  wallTimer.start();
 
   ps::util::Parameters params;
   if (argc > 1) {
@@ -63,8 +49,42 @@ int main(int argc, char **argv) {
     }
   }
 
-  ps::Logger::setLogLevel(params.get<std::string>("logLevel", "info"));
+  if (params.contains("logLevel"))
+    ps::Logger::setLogLevel(params.get<std::string>("logLevel"));
+  auto &log = ps::Logger::getInstance();
   omp_set_num_threads(params.get<int>("numThreads"));
+
+  // Keys this example reads; anything else is a typo or a retired key.
+  const std::set<std::string> knownKeys = {"numThreads",
+                                           "logLevel",
+                                           "useGpu",
+                                           "gridDelta",
+                                           "xExtent",
+                                           "yMin",
+                                           "yMax",
+                                           "padOxideThickness",
+                                           "maskThickness",
+                                           "maskEdge",
+                                           "oxidationTime",
+                                           "timeStep",
+                                           "temperature",
+                                           "pressure",
+                                           "oxidant",
+                                           "orientation",
+                                           "maxGridPoints",
+                                           "outputPrefix",
+                                           "mechanicsIterations",
+                                           "mechanicsTolerance",
+                                           "couplingIterations",
+                                           "couplingTolerance",
+                                           "maskYoungModulus",
+                                           "maskPoissonRatio",
+                                           "maskViscosity",
+                                           "maskShearActivationVolume"};
+  for (const auto &entry : params.m)
+    if (knownKeys.count(entry.first) == 0)
+      log.addWarning("Unknown config key '" + entry.first + "' ignored.")
+          .print();
 
   // ── Geometry ──────────────────────────────────────────────────────────────
 
@@ -72,9 +92,8 @@ int main(int argc, char **argv) {
   // anticipated oxide height.  MakePlane reuses this setup for all layers.
   const NumericType gridDelta = params.get("gridDelta");
   const NumericType xExtent = params.get("xExtent");
-  const NumericType yMin = params.get("yMin");
-  const NumericType yMax = params.get("yMax");
-  double bounds[2 * D] = {-xExtent, xExtent, yMin, yMax};
+  double bounds[2 * D] = {-xExtent, xExtent, params.get("yMin"),
+                          params.get("yMax")};
   ps::BoundaryType bc[D] = {ps::BoundaryType::REFLECTIVE_BOUNDARY,
                             ps::BoundaryType::INFINITE_BOUNDARY};
 
@@ -96,9 +115,12 @@ int main(int argc, char **argv) {
   const NumericType maskEdge = params.get("maskEdge");
   if (maskThickness > NumericType(0)) {
     constexpr NumericType contactEps = 1e-6; // µm
-    auto maskLS = ls::Domain<NumericType, D>::New(bounds, bc, gridDelta);
-    const ls::VectorType<NumericType, D> minCorner{-xExtent, padOxideThickness -
-                                                                 contactEps};
+    auto maskLS = ls::Domain<NumericType, D>::New(domain->getGrid());
+    // Overhang the left domain edge: a box ending exactly on the reflective
+    // boundary gives the mask a face on the symmetry plane and leaves
+    // uncovered oxide cells there.
+    const ls::VectorType<NumericType, D> minCorner{
+        -2 * xExtent, padOxideThickness - contactEps};
     const ls::VectorType<NumericType, D> maxCorner{maskEdge, padOxideThickness +
                                                                  maskThickness};
     ls::MakeGeometry<NumericType, D> geom(
@@ -111,67 +133,51 @@ int main(int argc, char **argv) {
   // ── Oxidation model ───────────────────────────────────────────────────────
 
   const NumericType temperature = params.get("temperature");
-  const NumericType pressure = params.get("pressure");
   const NumericType oxidationTime = params.get("oxidationTime");
   const NumericType timeStep = params.get("timeStep");
-
-  const std::string outputPrefix =
-      params.get<std::string>("outputPrefix", "locosOxidation");
+  const auto outputPrefix = params.get<std::string>("outputPrefix");
 
   auto model = ps::SmartPointer<ps::Oxidation<NumericType, D>>::New();
   model->setTemperature(temperature);
   model->setOxidant(params.get<std::string>("oxidant"));
-  model->setPressure(pressure);
+  model->setPressure(params.get("pressure"));
   model->setOrientation(params.get<std::string>("orientation"));
   model->setTimeStep(timeStep);
   if (params.contains("maxGridPoints"))
-    model->setMaxGridPoints(params.get<unsigned>("maxGridPoints"));
+    model->setMaxGridPoints(params.get<std::size_t>("maxGridPoints"));
   model->setMechanicsIterations(params.get<unsigned>("mechanicsIterations"));
   model->setMechanicsTolerance(params.get("mechanicsTolerance"));
-  model->setPressureIterations(params.get<unsigned>("pressureIterations"));
-  model->setPressureTolerance(params.get("pressureTolerance"));
-  model->setStokesIterations(params.get<unsigned>("stokesIterations"));
-  model->setStokesTolerance(params.get("stokesTolerance"));
   model->setCouplingIterations(params.get<unsigned>("couplingIterations"));
   model->setCouplingTolerance(params.get("couplingTolerance"));
-  model->setMaskCouplingIterations(
-      params.get<unsigned>("maskCouplingIterations"));
-  model->setMaskCouplingTolerance(params.get("maskCouplingTolerance"));
-
   model->setGpuMode(params.get<std::string>("useGpu", "cpu"));
-  model->setGpuPreconditioner(
-      params.get<std::string>("gpuPreconditioner", "ilu0"));
 
-  auto maskParams = viennals::OxidationPresets::siliconNitrideMask1000C();
-  maskParams.referenceViscosity =
-      std::max(params.get("maskReferenceViscosity"), 0.0);
-  maskParams.youngModulus = std::max(params.get("maskYoungModulus"), 0.0);
+  // Nitride: elastic with Maxwell creep.  maskYoungModulus <= 0 and
+  // maskViscosity / maskShearActivationVolume < 0 take the Si3N4 preset at
+  // the process temperature (Senez 1996); 0 = linear-elastic mask / linear
+  // viscosity.
+  auto maskParams = ls::OxidationPresets::siliconNitrideMask(temperature);
+  if (params.get("maskYoungModulus") > NumericType(0))
+    maskParams.youngModulus = params.get("maskYoungModulus");
   maskParams.poissonRatio = params.get("maskPoissonRatio");
-  maskParams.contactMode =
-      parseMaskContactMode(params.get<std::string>("maskContactMode"));
-  maskParams.anchorBoundaryDirection =
-      params.get<int>("maskAnchorBoundaryDirection");
-  maskParams.anchorBoundarySide = params.get<int>("maskAnchorBoundarySide");
-  maskParams.anchorBoundaryLayers = params.get<int>("maskAnchorBoundaryLayers");
+  if (params.get("maskViscosity") >= NumericType(0))
+    maskParams.viscosity = params.get("maskViscosity");
+  if (params.get("maskShearActivationVolume") >= NumericType(0))
+    maskParams.shearActivationVolume = params.get("maskShearActivationVolume");
   model->setMaskParameters(maskParams);
-  model->setMaskTractionIterations(static_cast<unsigned>(
-      std::max(1, params.get<int>("maskTractionIterations"))));
-  model->setMaskTractionTolerance(params.get("maskTractionTolerance"));
-  model->setMaskTractionRelaxation(params.get("maskTractionRelaxation"));
-  model->setMaskContactLoadRelaxation(params.get("maskContactLoadRelaxation"));
-  model->setMaskContactReleaseFraction(
-      params.get("maskContactReleaseFraction"));
-  model->setMaskUnilateralContact(params.get<bool>("maskUnilateralContact"));
-  model->setMaskSmootherOmega(params.get("maskSmootherOmega"));
 
+  meshTimer.start();
   model->saveSurfaceMesh(domain, outputPrefix + "_stack_step_000.vtp");
   model->saveVolumeMesh(domain, outputPrefix + "_stack_step_000");
+  meshTimer.finish();
 
+  model->setTime(oxidationTime);
   const NumericType est =
       model->estimatePlanarOxideThickness(padOxideThickness);
-  std::cout << "Planar Deal-Grove estimate for " << oxidationTime
-            << " hr oxidation at " << temperature << " C: " << est
-            << " um total oxide thickness.\n";
+  std::ostringstream message;
+  message << "Planar Deal-Grove estimate for " << oxidationTime
+          << " hr oxidation at " << temperature << " C: " << est
+          << " um total oxide thickness.";
+  log.addInfo(message.str()).print();
 
   // ── Time-stepping loop ────────────────────────────────────────────────────
 
@@ -195,18 +201,32 @@ int main(int argc, char **argv) {
     std::ostringstream filename;
     filename << outputPrefix << "_stack_step_" << std::setw(3)
              << std::setfill('0') << step;
+    meshTimer.start();
     model->saveSurfaceMesh(domain, filename.str() + ".vtp");
     model->saveVolumeMesh(domain, filename.str());
-    std::cout << "Wrote " << filename.str() << " at t = " << elapsed
-              << " hr.\n";
+    meshTimer.finish();
+    log.addInfo("Wrote " + filename.str() +
+                " at t = " + std::to_string(elapsed) + " hr.")
+        .print();
   }
 
   // ── Final output ──────────────────────────────────────────────────────────
+  meshTimer.start();
   model->saveVolumeMesh(domain, outputPrefix + "_stack_after");
+  meshTimer.finish();
+  log.addInfo("Wrote " + outputPrefix + "_stack_step_000.vtp, " +
+              std::to_string(step) + " time-step files and " + outputPrefix +
+              "_stack_after_volume.vtu")
+      .print();
 
-  std::cout << "Wrote " << outputPrefix << "_stack_initial.vtp, " << step
-            << " time-step files, " << outputPrefix << "_stack_after.vtp, and "
-            << outputPrefix << "_stack_after_volume.vtu\n";
+  wallTimer.finish();
+  message.str("");
+  message << "Total LOCOS wall time excluding mesh writes: " << std::fixed
+          << std::setprecision(3)
+          << 1e-9 * static_cast<double>(wallTimer.totalDuration -
+                                        meshTimer.totalDuration)
+          << " s";
+  log.addInfo(message.str()).print();
 
   return 0;
 }

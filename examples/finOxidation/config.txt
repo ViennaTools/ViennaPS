@@ -24,8 +24,9 @@ zExtent=0.03  # 3D only; defaults to xExtent if omitted
 finWidth=0.2
 finHeight=0.5
 
-# oxideThickness: optional initial oxide thickness. If omitted or 0, a seed
-# of gridDelta is created automatically so the solver has resolvable nodes.
+# oxideThickness: oxide on the silicon at t = 0 (optional, default 0 = bare
+# silicon).  Thinner than three grid cells, it first grows by the 1-D
+# Deal-Grove law until the solver resolves it.
 oxideThickness=0.0
 
 oxidationTime=0.2
@@ -37,7 +38,5 @@ orientation=100
 outputPrefix=ps_fin_oxidation
 
 # GPU solver backend (requires ViennaLS built with VIENNALS_USE_GPU=ON)
-# useGpu: cpu (default) | gpu
-# gpuPreconditioner: jacobi (default) | ilu0
+# useGpu: cpu (default) | gpu | auto (the GPU when available)
 useGpu=cpu
-# gpuPreconditioner=jacobi

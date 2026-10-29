@@ -33,7 +33,7 @@ All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **
 | `zExtent` | *(= xExtent)* | 3D only: half-depth in Z (µm) |
 | `finWidth` | `0.2` | Width of the Si fin (µm) |
 | `finHeight` | `0.5` | Height of the Si fin above the substrate (µm) |
-| `oxideThickness` | `0.0` | Pre-existing oxide seed thickness (µm); a seed of `gridDelta` is used when zero |
+| `oxideThickness` | `0.0` | Oxide on the silicon at t = 0 (µm); 0 = bare silicon. Thinner than three grid cells, it first grows by the 1-D Deal-Grove law (time charged) until the solver resolves it |
 | `oxidationTime` | `0.2` | Total oxidation time (hr) |
 | `timeStep` | `0.025` | Maximum internal time step (hr); actual steps are CFL-limited |
 | `temperature` | `1000.` | Furnace temperature (°C); valid range 700–1200 °C |
@@ -41,8 +41,7 @@ All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **
 | `oxidant` | `wet` | `wet` (H₂O) or `dry` (O₂) |
 | `orientation` | `100` | Crystal orientation: `100`, `110`, `111`, or `poly` |
 | `maxGridPoints` | *(5M)* | Optional cap on Cartesian solve grid nodes |
-| `useGpu` | `cpu` | BiCGSTAB back-end: `cpu` or `gpu` (GPU requires `VIENNALS_USE_GPU=ON`) |
-| `gpuPreconditioner` | `jacobi` | GPU preconditioner: `jacobi` or `ilu0` |
+| `useGpu` | `cpu` | Large linear solves on the GPU: `cpu`, `gpu` or `auto` (GPU requires `VIENNALS_USE_GPU=ON`) |
 | `outputPrefix` | `ps_fin_oxidation` | Prefix for all output file names |
 
 ### Grid Sizing Guide
@@ -90,31 +89,34 @@ level-set narrow band:
 **1 — Oxidant diffusion** (Deal-Grove model)
 
 ```
-∇·(D_eff(p) ∇C) = 0   inside oxide
+∇·(D(p) ∇C) = 0   inside oxide
 ```
 
 with Robin BCs: transfer coefficient at the gas/oxide surface, reaction rate
-`k_eff(p) · C / N` at the Si/SiO2 interface. `D_eff` and `k_eff` are both reduced
-by compressive pressure through an Arrhenius activation-volume coupling, making growth
-self-limiting in tight geometries. Solved with BiCGSTAB (Jacobi preconditioned).
+`k(σ_nn) · C / N` at the Si/SiO2 interface. The diffusivity falls with the oxide
+pressure and the reaction rate with the compressive normal stress at the interface
+(activation volumes V_D and V_k), making growth self-limiting in tight geometries.
+Solved with BiCGSTAB and a smoothed-aggregation AMG preconditioner (AMGCL), on the
+CPU or the GPU.
 
-**2 — Oxide mechanics** (viscous Stokes flow with Maxwell viscoelasticity)
+**2 — Oxide mechanics** (incompressible Stokes flow with Maxwell viscoelasticity)
 
 ```
-−∇p + η ∇²u = 0       (momentum)
-∇·u = ṡ               (modified continuity; source ṡ at Si/SiO2 interface)
+−∇p + ∇·s = 0         (momentum)
+∇·u = 0               (incompressible oxide)
 ```
 
-Volume expansion β = 2.27 at the Si surface drives the oxide outward while the Si
-recedes. Viscoelastic deviatoric stress is tracked via Maxwell relaxation
-(τ_relaxation = η/G). The SIMPLE algorithm (pressure-velocity coupling) solves this
-unconditionally-stably in up to 200 outer iterations.
+The volume expansion β = 2.27 enters as a velocity boundary condition at the Si/SiO2
+interface and drives the oxide outward while the Si recedes. The deviatoric stress s is Maxwell viscoelastic (τ_relaxation = η/G) with a
+stress-dependent (Eyring) viscosity. Velocity and pressure are solved together on a
+staggered grid (sparse LU in 2-D, AMGCL in 3-D), repeated until viscosity and flow
+agree.
 
 **Coupling loop**
 
-Pressure from the deformation solve modifies D_eff and k_eff in the diffusion solve;
-concentration from diffusion sets the volume source in the Stokes solve. An Aitken Δ²
-outer loop converges the coupling in ~3–5 iterations.
+The oxide stress (pressure and interface normal stress) sets D and k in the diffusion
+solve; the concentration sets the expansion velocity at the interface. An Aitken Δ²
+outer loop iterates the two until they agree.
 
 **Orientation correction**
 
@@ -131,11 +133,11 @@ halves on convergence failure (up to 16 retries).
 
 **GPU acceleration**
 
-If ViennaLS is built with `VIENNALS_USE_GPU=ON`, setting `useGpu=gpu` offloads the
-inner BiCGSTAB linear solves (diffusion, Stokes, pressure, harmonic extension) to
-CUDA via a custom GPU BiCGSTAB implementation. The SIMPLE iteration control, stress
-assembly, and RHS construction always run on the CPU. `gpuPreconditioner=ilu0` uses
-cuSPARSE ILU(0) instead of Jacobi for better convergence on ill-conditioned systems.
+If ViennaLS is built with `VIENNALS_USE_GPU=ON`, `useGpu=gpu` (or `auto`: the GPU
+when one is available) solves the diffusion system and, in 3-D, the velocity-pressure
+system on the GPU, from 20 000 unknowns: the same AMGCL solvers as on the CPU, on
+AMGCL's CUDA backend. Assembly, the AMG setup and the level-set work stay on the CPU;
+the 2-D mechanics (sparse LU) always runs on the CPU.
 
 See [`docs/OxidationSolver.md`](../../ViennaLS/docs/OxidationSolver.md) in the
 ViennaLS repository for the full mathematical and implementation details.
