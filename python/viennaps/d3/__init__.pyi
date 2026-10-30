@@ -559,6 +559,10 @@ class Domain:
         """
     def setMaterialMap(self, arg0: viennaps._core.MaterialMap) -> None:
         ...
+    def setNormalization(self, normalization: viennals._core.NormalizationEnum) -> None:
+        """
+        Normalization of the level sets the geometry makers create. Euclidean level sets keep sharp edges and corners through processes and output.
+        """
     @typing.overload
     def setup(self, arg0: DomainSetup) -> None:
         """
@@ -594,12 +598,20 @@ class DomainSetup:
         ...
     def halveYAxis(self) -> None:
         ...
+    def normalization(self) -> viennals._core.NormalizationEnum:
+        """
+        Normalization of the level sets created for the domain.
+        """
     def hasPeriodicBoundary(self) -> bool:
         ...
     def isValid(self) -> bool:
         ...
     def print(self) -> None:
         ...
+    def setNormalization(self, normalization: viennals._core.NormalizationEnum) -> None:
+        """
+        Set the normalization of the level sets created for the domain.
+        """
     def xExtent(self) -> float:
         ...
     def yExtent(self) -> float:
@@ -634,6 +646,10 @@ class GDSGeometry:
         """
         Get the bounds of the geometry.
         """
+    def getNormalization(self) -> viennals._core.NormalizationEnum:
+        """
+        Normalization of the level sets made from the layers.
+        """
     def getNumberOfStructures(self) -> int:
         """
         Return number of structure definitions.
@@ -655,6 +671,10 @@ class GDSGeometry:
     def setGridDelta(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
         Set the grid spacing.
+        """
+    def setNormalization(self, normalization: viennals._core.NormalizationEnum) -> None:
+        """
+        Normalization of the level sets made from the layers. Euclidean ones keep exact distances with closest points and normals.
         """
 class GDSReader:
     @typing.overload

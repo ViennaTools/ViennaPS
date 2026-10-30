@@ -126,8 +126,17 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
     return model->getProcessName().value_or("default");
   }
 
+  // a Euclidean surface is advected with AdvectHermite, which asks for the
+  // velocity at the surface point of every node of its band
+  bool isEuclidean() const {
+    return domain && !domain->getLevelSets().empty() &&
+           domain->getSurface()->getNormalization() ==
+               viennals::NormalizationEnum::EUCLIDEAN;
+  }
+
   bool needsExtendedVelocities() const {
-    return advectionParams.spatialScheme ==
+    return isEuclidean() ||
+           advectionParams.spatialScheme ==
                SpatialScheme::LAX_FRIEDRICHS_1ST_ORDER ||
            advectionParams.spatialScheme ==
                SpatialScheme::LAX_FRIEDRICHS_2ND_ORDER ||

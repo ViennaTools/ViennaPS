@@ -10,6 +10,7 @@
 #include <lsFromSurfaceMesh.hpp>
 #include <lsGeometries.hpp>
 #include <lsMakeGeometry.hpp>
+#include <lsReinitialize.hpp>
 #include <lsTransformMesh.hpp>
 
 #include <lsToMesh.hpp>
@@ -64,6 +65,17 @@ public:
       boundaryConds_[i] = boundaryConds[i];
   }
 
+  /// Normalization of the level sets made from the layers. Euclidean ones
+  /// keep exact distances with closest points and normals, from the polygons
+  /// of the layout, or with blurring from the blurred contour.
+  void setNormalization(viennals::NormalizationEnum normalization) {
+    normalization_ = normalization;
+  }
+
+  viennals::NormalizationEnum getNormalization() const {
+    return normalization_;
+  }
+
   void print() const {
     std::cout << "======== STRUCTURES ========" << std::endl;
     for (auto &s : structures) {
@@ -104,14 +116,16 @@ public:
 
     // Create bottom substrate
     auto bottomLS = lsDomainType::New(levelSet->getGrid());
-    double originLow[3] = {0., 0., baseHeight};
-    double normalLow[3] = {0., 0., -1.};
+    normalize(bottomLS);
+    NumericType originLow[3] = {0., 0., baseHeight};
+    NumericType normalLow[3] = {0., 0., -1.};
     auto bottomPlane =
         viennals::Plane<NumericType, D>::New(originLow, normalLow);
     viennals::MakeGeometry<NumericType, 3>(bottomLS, bottomPlane).apply();
 
     // Create top cap
     auto topLS = lsDomainType::New(levelSet->getGrid());
+    normalize(topLS);
     NumericType originHigh[3] = {
         0., 0., baseHeight + height}; // Adjust to match extrusion
     NumericType normalHigh[3] = {0., 0., 1.};
@@ -600,6 +614,7 @@ private:
     const bool blurring = blurLayer && blur;
     auto GDSLevelSet = lsDomainType2D::New(bounds_, boundaryConds_.data(),
                                            blurring ? beamDelta : gridDelta_);
+    normalize(GDSLevelSet);
 
     for (auto &str : structures) { // loop over all structures
       if (!str.isRef) {
@@ -687,6 +702,9 @@ private:
       PointType pointData = applyBlur(GDSLevelSet);
       maskLS->insertPoints(pointData);
       maskLS->finalize(2);
+      // exact distances to the dual contouring mesh of the blurred contour
+      if (normalization_ == viennals::NormalizationEnum::EUCLIDEAN)
+        viennals::Reinitialize<NumericType, 2>(maskLS, euclideanWidth).apply();
 
       if (Logger::hasDebug()) {
         auto mesh = viennals::Mesh<NumericType>::New();
@@ -707,6 +725,21 @@ private:
   }
 
 private:
+  // the band of a Euclidean level set, as GeometryFactory makes it for
+  // AdvectHermite
+  static constexpr int euclideanWidth = 12;
+  viennals::NormalizationEnum normalization_ =
+      viennals::NormalizationEnum::MANHATTAN;
+
+  template <int Dim>
+  void
+  normalize(SmartPointer<viennals::Domain<NumericType, Dim>> levelSet) const {
+    if (normalization_ == viennals::NormalizationEnum::EUCLIDEAN) {
+      levelSet->setNormalization(viennals::NormalizationEnum::EUCLIDEAN);
+      levelSet->setLevelSetWidth(euclideanWidth);
+    }
+  }
+
   std::vector<GDS::Structure<NumericType>> structures;
   std::array<NumericType, 2> boundaryPadding = {0., 0.};
   std::array<NumericType, 2> minBounds;

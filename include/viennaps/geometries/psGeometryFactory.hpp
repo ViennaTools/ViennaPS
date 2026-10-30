@@ -30,9 +30,20 @@ public:
 
   void setup(const DomainSetup<D> &domainSetup) { setup_ = domainSetup; }
 
+  // an empty level set on the domain grid with the domain's normalization; a
+  // Euclidean one with the band AdvectHermite rebuilds to
+  lsDomainType newLevelSet() const {
+    auto levelSet = lsDomainType::New(setup_.grid());
+    if (setup_.normalization() == viennals::NormalizationEnum::EUCLIDEAN) {
+      levelSet->setNormalization(viennals::NormalizationEnum::EUCLIDEAN);
+      levelSet->setLevelSetWidth(12);
+    }
+    return levelSet;
+  }
+
   lsDomainType makeSubstrate(NumericType base) const {
 
-    auto substrate = lsDomainType::New(setup_.grid());
+    auto substrate = newLevelSet();
 
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
@@ -53,7 +64,7 @@ public:
   lsDomainType makeMask(NumericType base, NumericType height) const {
     assert(setup_.isValid());
 
-    auto mask = lsDomainType::New(setup_.grid());
+    auto mask = newLevelSet();
 
     NumericType normal[D] = {0.};
     NumericType origin[D] = {0.};
@@ -64,7 +75,7 @@ public:
         mask, viennals::Plane<NumericType, D>::New(origin, normal))
         .apply();
 
-    auto maskAdd = lsDomainType::New(setup_.grid());
+    auto maskAdd = newLevelSet();
     origin[D - 1] = base;
     normal[D - 1] = -1.;
     viennals::MakeGeometry<NumericType, D>(
@@ -87,7 +98,7 @@ public:
                                    NumericType angle = 0.) const {
     assert(setup_.isValid());
 
-    auto cutout = lsDomainType::New(setup_.grid());
+    auto cutout = newLevelSet();
 
     NumericType normal[D] = {0.};
     normal[D - 1] = 1.;
@@ -117,7 +128,7 @@ public:
                            std::to_string(angle));
     }
 
-    auto cutout = lsDomainType::New(setup_.grid());
+    auto cutout = newLevelSet();
     const NumericType yExt =
         length > 0 ? length / 2 : setup_.yExtent() / 2 + setup_.gridDelta();
 

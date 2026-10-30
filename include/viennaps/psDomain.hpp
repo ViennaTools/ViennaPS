@@ -11,8 +11,10 @@
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
 #include <lsExpand.hpp>
+#include <lsMaterialStack.hpp>
 #include <lsRemoveStrayPoints.hpp>
 #include <lsToDiskMesh.hpp>
+#include <lsToDualContouringMesh.hpp>
 #include <lsToHullMesh.hpp>
 #include <lsToMesh.hpp>
 #include <lsToMultiSurfaceMesh.hpp>
@@ -77,6 +79,7 @@ public:
   // Constructor for domain with a single initial Level-Set.
   explicit Domain(lsDomainType levelSet) {
     setup_.init(levelSet->getGrid());
+    setup_.setNormalization(levelSet->getNormalization());
     levelSets_.push_back(levelSet);
     initMetaData();
   }
@@ -84,6 +87,7 @@ public:
   // Constructor for domain with multiple initial Level-Sets.
   explicit Domain(lsDomainsType levelSets) : levelSets_(levelSets) {
     setup_.init(levelSets.back()->getGrid());
+    setup_.setNormalization(levelSets.back()->getNormalization());
     initMetaData();
   }
 
@@ -123,8 +127,16 @@ public:
   void setup(NumericType gridDelta, NumericType xExtent,
              NumericType yExtent = 0,
              BoundaryType boundary = BoundaryType::REFLECTIVE_BOUNDARY) {
+    const auto normalization = setup_.normalization();
     setup_ = Setup(gridDelta, xExtent, yExtent, boundary);
+    setup_.setNormalization(normalization);
     initMetaData();
+  }
+
+  // Normalization of the level sets the geometry makers create. Euclidean
+  // level sets keep sharp edges and corners through processes and output.
+  void setNormalization(viennals::NormalizationEnum normalization) {
+    setup_.setNormalization(normalization);
   }
 
   // Meta data management functions
@@ -184,6 +196,7 @@ public:
                                     bool wrapLowerLevelSet = true) {
     if (levelSets_.empty()) {
       setup_.init(levelSet->getGrid());
+      setup_.setNormalization(levelSet->getNormalization());
       initMetaData();
     }
     if (std::abs(levelSet->getGrid().getGridDelta() - setup_.gridDelta()) >
@@ -570,6 +583,13 @@ public:
   getSurfaceMesh(bool addInterfaces = false, bool sharpCorners = false,
                  double minNodeDistanceFactor = 0.01) const {
     auto mesh = viennals::Mesh<NumericType>::New();
+    // a Euclidean surface goes through dual contouring of its stored planes,
+    // which keeps its sharp edges and corners
+    if (!levelSets_.empty() && levelSets_.back()->getNormalization() ==
+                                   viennals::NormalizationEnum::EUCLIDEAN) {
+      euclideanSurfaceMesh(mesh, addInterfaces);
+      return mesh;
+    }
     if (addInterfaces) {
       viennals::ToMultiSurfaceMesh<NumericType, D> meshConverter(
           mesh, minNodeDistanceFactor);
@@ -600,6 +620,69 @@ public:
     }
 
     return mesh;
+  }
+
+  // dual contouring of the top level set, every element with the material
+  // just behind it; with interfaces, the parts of the surfaces of the level
+  // sets below that lie buried inside the top
+  void euclideanSurfaceMesh(SmartPointer<viennals::Mesh<NumericType>> mesh,
+                            bool addInterfaces) const {
+    using Vec = Vec3D<NumericType>;
+    const NumericType gridDelta = levelSets_.back()->getGrid().getGridDelta();
+    const viennals::MaterialStack<NumericType, D> stack(
+        lsDomainsType(levelSets_.begin(), levelSets_.end() - 1));
+    const viennals::MaterialStack<NumericType, D> top(
+        lsDomainsType{levelSets_.back()});
+    std::vector<NumericType> materials;
+    std::vector<Vec> normals;
+    auto append = [&](const lsDomainType &levelSet, bool interface) {
+      auto part = viennals::Mesh<NumericType>::New();
+      viennals::ToDualContouringMesh<NumericType, D>(levelSet, part).apply();
+      const auto &nodes = part->getNodes();
+      std::vector<long> nodeIds(nodes.size(), -1);
+      for (const auto &element : part->template getElements<D>()) {
+        Vec centre{}, normal{};
+        for (int k = 0; k < D; ++k)
+          for (int i = 0; i < 3; ++i)
+            centre[i] += nodes[element[k]][i] / D;
+        if constexpr (D == 2) {
+          normal = Vec{nodes[element[0]][1] - nodes[element[1]][1],
+                       nodes[element[1]][0] - nodes[element[0]][0], 0.};
+        } else {
+          normal = CrossProduct(Vec(nodes[element[1]] - nodes[element[0]]),
+                                Vec(nodes[element[2]] - nodes[element[0]]));
+        }
+        const NumericType length = Norm(normal);
+        if (length <= NumericType(0))
+          continue;
+        normal = normal / length;
+        Vec behind{};
+        for (int i = 0; i < 3; ++i)
+          behind[i] = centre[i] / gridDelta - NumericType(0.01) * normal[i];
+        if (interface && top.value(0, behind) > NumericType(-0.01))
+          continue;
+        std::array<unsigned, D> ids{};
+        for (int k = 0; k < D; ++k) {
+          if (nodeIds[element[k]] < 0)
+            nodeIds[element[k]] = mesh->insertNextNode(nodes[element[k]]);
+          ids[k] = unsigned(nodeIds[element[k]]);
+        }
+        mesh->insertNextElement(ids);
+        const int index = stack.material(behind);
+        materials.push_back(
+            materialMap_ ? NumericType(materialMap_->getMaterialIdAtIdx(index))
+                         : NumericType(index));
+        normals.push_back(normal);
+      }
+    };
+    append(levelSets_.back(), false);
+    if (addInterfaces)
+      for (std::size_t l = 0; l + 1 < levelSets_.size(); ++l)
+        append(levelSets_[l], true);
+    mesh->cellData.insertNextScalarData(
+        materials, viennals::Mesh<NumericType>::materialIdsLabel);
+    mesh->cellData.insertNextVectorData(
+        normals, viennals::Mesh<NumericType>::normalsLabel);
   }
 
   SmartPointer<viennals::Mesh<NumericType>>

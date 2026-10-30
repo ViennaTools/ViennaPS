@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <hrleGrid.hpp>
+#include <lsDomain.hpp>
 #include <vcLogger.hpp>
 
 #include <istream>
@@ -20,6 +21,11 @@ template <int D> class DomainSetup {
   double bounds_[2 * D] = {0.};
   BoundaryType boundaryCons_[D] = {};
   viennahrle::Grid<D> grid_;
+  // normalization of the level sets the geometry makers create; not
+  // serialized, since every level set stores its own: a domain takes it
+  // from its first level set, as when it is read from a file
+  viennals::NormalizationEnum normalization_ =
+      viennals::NormalizationEnum::MANHATTAN;
 
 public:
   DomainSetup() : gridDelta_(0.0) {
@@ -103,6 +109,15 @@ public:
 
   double yExtent() const { return bounds_[3] - bounds_[2]; }
 
+  /// Normalization of the level sets created for the domain. Euclidean level
+  /// sets carry exact distances with closest points and normals, keep sharp
+  /// edges and corners and are advected with AdvectHermite.
+  viennals::NormalizationEnum normalization() const { return normalization_; }
+
+  void setNormalization(viennals::NormalizationEnum normalization) {
+    normalization_ = normalization;
+  }
+
   bool hasPeriodicBoundary() const {
     return boundaryCons_[0] == BoundaryType::PERIODIC_BOUNDARY ||
            boundaryCons_[1] == BoundaryType::PERIODIC_BOUNDARY;
@@ -121,6 +136,10 @@ public:
       std::cout << "\tY extent: " << yExtent() << std::endl;
     std::cout << "\tPeriodic boundary: "
               << util::boolString(hasPeriodicBoundary()) << std::endl;
+    std::cout << "\tEuclidean: "
+              << util::boolString(normalization_ ==
+                                  viennals::NormalizationEnum::EUCLIDEAN)
+              << std::endl;
   }
 
   void halveXAxis() {

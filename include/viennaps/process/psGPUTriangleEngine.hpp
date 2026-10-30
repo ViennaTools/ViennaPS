@@ -7,6 +7,7 @@
 #include "../psPointToElementData.hpp"
 
 #include "psDesorptionSource.hpp"
+#include "psDualContouringSurface.hpp"
 #include "psFluxEngine.hpp"
 #include "psProcessModel.hpp"
 
@@ -76,7 +77,15 @@ public:
         rayTracer_.setMaxReflections(context.rayTracingParams.maxReflections);
       if (!context.rayTracingParams.useRandomSeeds)
         rayTracer_.setRngSeed(context.rayTracingParams.rngSeed);
-      for (auto &particle : model_->getParticleTypes()) {
+      // a primary direction of the model tilts the source of every particle
+      // without a direction of its own, as the CPU engines tilt the source
+      const auto primaryDirection = model_->getPrimaryDirection();
+      for (auto particle : model_->getParticleTypes()) {
+        if (primaryDirection && !particle.useCustomDirection) {
+          for (int i = 0; i < 3; ++i)
+            particle.direction[i] = (*primaryDirection)[i];
+          particle.useCustomDirection = true;
+        }
         rayTracer_.insertNextParticle(particle);
       }
 
@@ -97,6 +106,11 @@ public:
         context.domain->getGridDelta() *
         (context.rayTracingParams.smoothingNeighbors + 1));
     postProcessing_.setDiskMesh(context.diskMesh);
+    // the faces of a Euclidean surface meet at sharp edges; a point takes
+    // the flux of its own face, fitted over the face's elements
+    postProcessing_.setAlignedElementsOnly(context.isEuclidean());
+    if (context.isEuclidean())
+      postProcessing_.setFitPerFace(2, D, NumericType(20.) * M_PI / 180.);
 
     return ProcessResult::SUCCESS;
   }
@@ -107,10 +121,18 @@ public:
 
     assert(surfaceMesh_ && "Surface mesh not initialized.");
     assert(elementKdTree_ && "Element KDTree not initialized.");
-    CreateSurfaceMesh<NumericType, float, D, typename KDTreeType::element_type>(
-        context.domain->getSurface(), surfaceMesh_, elementKdTree_, 1e-12,
-        context.rayTracingParams.minNodeDistanceFactor)
-        .apply();
+    // a Euclidean surface is traced on its dual contouring mesh, which keeps
+    // its sharp edges and corners, with the material behind each element
+    std::vector<int> elementMaterialIds;
+    if (context.isEuclidean())
+      dualContouringSurface(context, surfaceMesh_, elementKdTree_,
+                            elementMaterialIds);
+    else
+      CreateSurfaceMesh<NumericType, float, D,
+                        typename KDTreeType::element_type>(
+          context.domain->getSurface(), surfaceMesh_, elementKdTree_, 1e-12,
+          context.rayTracingParams.minNodeDistanceFactor)
+          .apply();
     assert(!surfaceMesh_->nodes.empty());
 
     viennaray::TriangleMesh triangleMesh;
@@ -160,13 +182,23 @@ public:
     }
 
     if (model_->useMaterialIds()) {
-      auto const &pointMaterialIds = *context.diskMesh->getMaterialIds();
-      auto pointKdTree = context.getPointKdTree();
-      std::vector<int> elementMaterialIds;
-      PointToElementDataSingle<NumericType, NumericType, int, float,
-                               decltype(*pointKdTree)>(
-          pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
-          .apply();
+      if (elementMaterialIds.empty()) {
+        auto const &pointMaterialIds = *context.diskMesh->getMaterialIds();
+        auto pointKdTree = context.getPointKdTree();
+        PointToElementDataSingle<NumericType, NumericType, int, float,
+                                 decltype(*pointKdTree)>(
+            pointMaterialIds, elementMaterialIds, *pointKdTree, surfaceMesh_)
+            .apply();
+      } else if constexpr (D == 2) {
+        // the two triangles of every line
+        std::vector<int> lineMaterialIds;
+        lineMaterialIds.swap(elementMaterialIds);
+        elementMaterialIds.reserve(2 * lineMaterialIds.size());
+        for (int id : lineMaterialIds) {
+          elementMaterialIds.push_back(id);
+          elementMaterialIds.push_back(id);
+        }
+      }
       rayTracer_.setMaterialIds(elementMaterialIds);
     }
 

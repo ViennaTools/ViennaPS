@@ -333,6 +333,9 @@ private:
 
     // Calculate velocities in surface model
     auto velocities = calculateVelocities(context, fluxes);
+    if (velocities && context.isEuclidean() &&
+        context.translationField->getTranslationMethod() == 2)
+      calculateCrossVelocities(context, fluxes);
     context.model->getVelocityField()->prepare(context.domain, velocities,
                                                context.processTime);
 
@@ -407,6 +410,93 @@ private:
                                                                  materialIds);
   }
 
+  // the velocities of the disks at a junction of materials (a disk of
+  // another material within three grid spacings) for each material across
+  // it, from the disk's own fluxes, for the translation field
+  // (TranslationField::setCrossVelocities). Once an etched floor has dropped
+  // a cell below the edge of a mask, the new wall below the edge has no disk
+  // yet, and the mask wall still has to give its velocity for the substrate.
+  // The surface model keeps the coverages and surface data of all disks,
+  // which stay as they were.
+  void calculateCrossVelocities(ProcessContext<NumericType, D> &context,
+                                SmartPointer<PointData<NumericType>> &fluxes) {
+    const auto &nodes = context.diskMesh->getNodes();
+    const auto &materialIds = *context.diskMesh->getMaterialIds();
+    const NumericType gridDelta = context.domain->getGridDelta();
+    const NumericType radius2 = NumericType(9) * gridDelta * gridDelta;
+    auto tree = context.getPointKdTree();
+    std::vector<unsigned long> disks;
+    std::vector<NumericType> others;
+    for (unsigned long k = 0; k < nodes.size(); ++k) {
+      const auto near = tree->findKNearest(nodes[k], 32);
+      if (!near)
+        continue;
+      std::vector<NumericType> seen;
+      for (const auto &[j, distance2] : *near) {
+        if (distance2 > radius2)
+          break;
+        const NumericType m = materialIds[j];
+        if (m != materialIds[k] &&
+            std::find(seen.begin(), seen.end(), m) == seen.end()) {
+          seen.push_back(m);
+          disks.push_back(k);
+          others.push_back(m);
+        }
+      }
+    }
+    if (disks.empty()) {
+      context.translationField->setCrossVelocities(nodes, {}, {}, {});
+      return;
+    }
+
+    auto subset = PointData<NumericType>::New();
+    for (unsigned i = 0; i < fluxes->getScalarDataSize(); ++i) {
+      const auto *data = fluxes->getScalarData(int(i));
+      std::vector<NumericType> values(disks.size());
+      for (std::size_t j = 0; j < disks.size(); ++j)
+        values[j] = (*data)[disks[j]];
+      subset->insertNextScalarData(std::move(values),
+                                   fluxes->getScalarDataLabel(int(i)));
+    }
+    std::vector<Vec3D<NumericType>> coordinates(disks.size());
+    for (std::size_t j = 0; j < disks.size(); ++j)
+      coordinates[j] = nodes[disks[j]];
+
+    auto surfaceModel = context.model->getSurfaceModel();
+    auto save = [](SmartPointer<PointData<NumericType>> data) {
+      std::vector<std::vector<NumericType>> copy;
+      if (data)
+        for (unsigned i = 0; i < data->getScalarDataSize(); ++i)
+          copy.push_back(*data->getScalarData(int(i)));
+      return copy;
+    };
+    auto restore = [](SmartPointer<PointData<NumericType>> data,
+                      std::vector<std::vector<NumericType>> &copy) {
+      if (data)
+        for (unsigned i = 0; i < data->getScalarDataSize() && i < copy.size();
+             ++i)
+          *data->getScalarData(int(i)) = std::move(copy[i]);
+    };
+    auto coverages = save(surfaceModel->getCoverages());
+    auto surfaceData = save(surfaceModel->getSurfaceData());
+    if (context.flags.useCoverages) {
+      surfaceModel->setSurfaceCoordinates(coordinates);
+      surfaceModel->updateCoverages(subset, others);
+    }
+    auto velocities =
+        surfaceModel->calculateVelocities(subset, coordinates, others);
+    restore(surfaceModel->getCoverages(), coverages);
+    restore(surfaceModel->getSurfaceData(), surfaceData);
+    if (context.flags.useCoverages)
+      surfaceModel->setSurfaceCoordinates(nodes);
+    if (!velocities || velocities->size() != disks.size()) {
+      context.translationField->setCrossVelocities(nodes, {}, {}, {});
+      return;
+    }
+    context.translationField->setCrossVelocities(nodes, disks, others,
+                                                 *velocities);
+  }
+
   ProcessResult updateCoverages(ProcessContext<NumericType, D> &context,
                                 SmartPointer<PointData<NumericType>> &fluxes) {
     auto surfaceModel = context.model->getSurfaceModel();
@@ -435,6 +525,10 @@ private:
     if (context.translationField->getTranslationMethod() == 2) {
       kdTree_->setPoints(context.diskMesh->getNodes());
       kdTree_->build();
+      if (context.isEuclidean())
+        context.translationField->buildMaterialKdTrees(
+            context.diskMesh->getNodes(), *context.diskMesh->getMaterialIds(),
+            context.diskMesh->getNormals(), context.domain->getGridDelta());
     }
   }
 

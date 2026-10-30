@@ -123,7 +123,7 @@ public:
 
     if (strategy->requiresFluxEngine()) {
       if (fluxEngineType_ == FluxEngineType::AUTO) {
-        fluxEngineType_ = FluxEngineType::CPU_DISK;
+        fluxEngineType_ = cpuFluxEngineType();
         VIENNACORE_LOG_DEBUG("Auto-selected flux engine type: " +
                              util::toString(fluxEngineType_));
       }
@@ -155,7 +155,7 @@ public:
     }
 
     if (fluxEngineType_ == FluxEngineType::AUTO)
-      fluxEngineType_ = FluxEngineType::CPU_DISK;
+      fluxEngineType_ = cpuFluxEngineType();
     auto strategy = std::make_unique<FluxProcessStrategy<NumericType, D>>(
         createFluxEngine());
     strategy->calculateFlux(context_);
@@ -225,6 +225,14 @@ private:
   }
 
   // Factory method for creating flux engines
+  // a Euclidean surface is traced on its dual contouring mesh, which keeps
+  // its sharp edges, where disks overhang them, also across periodic
+  // boundaries
+  FluxEngineType cpuFluxEngineType() const {
+    return context_.isEuclidean() ? FluxEngineType::CPU_TRIANGLE
+                                  : FluxEngineType::CPU_DISK;
+  }
+
   std::unique_ptr<FluxEngine<NumericType, D>> createFluxEngine() const {
     assert(fluxEngineType_ != FluxEngineType::AUTO &&
            "Flux engine type must be specified before creation.");
@@ -334,11 +342,14 @@ public:
     // Resolve AUTO only when GPU is available — CPU fallback is deferred to
     // apply() so that callback-only and geometric models never touch the flux
     // engine path at all.
+    // a Euclidean surface is traced on its dual contouring mesh, also across
+    // periodic boundaries
     if (fluxEngineType_ == FluxEngineType::AUTO && gpuAvailable() &&
         context_.model->hasGPUModel()) {
-      fluxEngineType_ = context_.flags.domainHasPeriodicBoundaries
-                            ? FluxEngineType::GPU_DISK
-                            : FluxEngineType::GPU_TRIANGLE;
+      fluxEngineType_ =
+          context_.flags.domainHasPeriodicBoundaries && !context_.isEuclidean()
+              ? FluxEngineType::GPU_DISK
+              : FluxEngineType::GPU_TRIANGLE;
       VIENNACORE_LOG_DEBUG("Auto-selected flux engine type: " +
                            util::toString(fluxEngineType_));
     }
@@ -359,6 +370,20 @@ public:
         auto gpuModel = context_.model->getGPUModel();
         if (gpuModel) {
           VIENNACORE_LOG_DEBUG("Switching to GPU-compatible process model.");
+          // the GPU model is built anew from the model's parameters: the
+          // advection callback, which the flags above count on, and the
+          // primary direction of the source carry over from the model given
+          if (auto callback = context_.model->getAdvectionCallback())
+            gpuModel->setAdvectionCallback(callback);
+          auto cpuModel =
+              std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
+                  context_.model);
+          auto gpuProcessModel =
+              std::dynamic_pointer_cast<gpu::ProcessModelGPU<NumericType, D>>(
+                  gpuModel);
+          if (cpuModel && gpuProcessModel)
+            if (auto direction = cpuModel->getPrimaryDirection())
+              gpuProcessModel->setPrimaryDirection(direction.value());
           context_.model = gpuModel;
         } else {
           VIENNACORE_LOG_WARNING(

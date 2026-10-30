@@ -67,7 +67,15 @@ public:
             "Consider reducing the minimum ray distance.");
       }
 
-      for (auto &particle : model_->getParticleTypes()) {
+      // a primary direction of the model tilts the source of every particle
+      // without a direction of its own, as the CPU engines tilt the source
+      const auto primaryDirection = model_->getPrimaryDirection();
+      for (auto particle : model_->getParticleTypes()) {
+        if (primaryDirection && !particle.useCustomDirection) {
+          for (int i = 0; i < 3; ++i)
+            particle.direction[i] = (*primaryDirection)[i];
+          particle.useCustomDirection = true;
+        }
         rayTracer_.insertNextParticle(particle);
       }
 

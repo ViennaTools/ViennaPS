@@ -3,6 +3,9 @@
 #include "psProcessContext.hpp"
 
 #include <lsAdvect.hpp>
+#include <lsAdvectHermite.hpp>
+#include <lsFromSurfaceMesh.hpp>
+#include <lsMaterialStack.hpp>
 
 #include <vcTimer.hpp>
 
@@ -10,6 +13,10 @@ namespace viennaps {
 
 VIENNAPS_TEMPLATE_ND(NumericType, D) class AdvectionHandler {
   viennals::Advect<NumericType, D> advectionKernel_;
+  // a Euclidean surface keeps its Hermite data through AdvectHermite, one
+  // time step per call as Advect's single step
+  viennals::AdvectHermite<NumericType, D> hermiteKernel_;
+  bool hermite_ = false;
   viennacore::Timer<> timer_;
   unsigned lsVelOutputCounter_ = 0;
   unsigned totalAdvectionSteps_ = 0;
@@ -67,6 +74,16 @@ public:
       advectionKernel_.insertNextLevelSet(dom);
     }
 
+    hermite_ = context.isEuclidean();
+    if (hermite_) {
+      hermiteKernel_.setSingleStep(true);
+      hermiteKernel_.setVelocityField(context.translationField);
+      hermiteKernel_.setTimeStepRatio(context.advectionParams.timeStepRatio);
+      hermiteKernel_.clearLevelSets();
+      for (auto &dom : context.domain->getLevelSets())
+        hermiteKernel_.insertNextLevelSet(dom);
+    }
+
     totalAdvectionSteps_ = 0;
 
     return ProcessResult::SUCCESS;
@@ -74,6 +91,7 @@ public:
 
   void setAdvectionTime(double time) {
     advectionKernel_.setAdvectionTime(time);
+    hermiteKernel_.setAdvectionTime(time);
   }
 
   void setVelocityUpdateCallback(
@@ -84,11 +102,16 @@ public:
 
   auto getTotalAdvectionSteps() const { return totalAdvectionSteps_; }
 
-  void disableSingleStep() { advectionKernel_.setSingleStep(false); }
+  void disableSingleStep() {
+    advectionKernel_.setSingleStep(false);
+    hermiteKernel_.setSingleStep(false);
+  }
 
   void prepareAdvection(const ProcessContext<NumericType, D> &context) {
-    // Prepare for advection step
-    advectionKernel_.prepareLS();
+    // Prepare for advection step; the Euclidean band already holds the
+    // width it needs
+    if (!hermite_)
+      advectionKernel_.prepareLS();
     context.model->initialize(context.domain, context.processTime);
   }
 
@@ -99,10 +122,15 @@ public:
     if (!context.flags.isALP) {
       advectionKernel_.setAdvectionTime(context.processDuration -
                                         context.processTime);
+      hermiteKernel_.setAdvectionTime(context.processDuration -
+                                      context.processTime);
     }
 
     timer_.start();
-    advectionKernel_.apply();
+    if (hermite_)
+      hermiteKernel_.apply();
+    else
+      advectionKernel_.apply();
     timer_.finish();
 
     ++totalAdvectionSteps_;
@@ -116,7 +144,8 @@ public:
           .apply();
     }
 
-    context.timeStep = advectionKernel_.getAdvectedTime();
+    context.timeStep = hermite_ ? hermiteKernel_.getAdvectedTime()
+                                : advectionKernel_.getAdvectedTime();
     if (context.timeStep == std::numeric_limits<double>::max()) {
       VIENNACORE_LOG_WARNING(
           "Process terminated early: Velocities are zero everywhere.");
@@ -141,14 +170,66 @@ public:
     std::vector<std::vector<NumericType>> levelSetCoverages(
         coverages->getScalarDataSize());
 
+    // AdvectHermite moves the surface across nodes that are not on it now,
+    // so every node of the Euclidean band takes the coverages of the disk
+    // nearest to its surface point among the disks of the material behind
+    // that point, as the velocities do
+    std::vector<long> nearestDisk;
+    if (hermite_ && context.translationField->getKdTree()) {
+      const auto gridDelta = topLS->getGrid().getGridDelta();
+      const auto *normals = topLS->getPointData().getVectorData(
+          viennals::FromSurfaceMesh<NumericType, D>::surfaceNormalsLabel, true);
+      const auto &levelSets = context.domain->getLevelSets();
+      const viennals::MaterialStack<NumericType, D> stack(
+          std::vector<SmartPointer<viennals::Domain<NumericType, D>>>(
+              levelSets.begin(), levelSets.end() - 1));
+      const auto &materialMap = context.domain->getMaterialMap();
+      nearestDisk.assign(topLS->getNumberOfPoints(), -1);
+      for (viennahrle::ConstSparseIterator<
+               typename viennals::Domain<NumericType, D>::DomainType>
+               it(topLS->getDomain());
+           !it.isFinished(); it.next()) {
+        if (!it.isDefined())
+          continue;
+        const auto id = it.getPointId();
+        Vec3D<NumericType> point{}, behind{};
+        for (int i = 0; i < D; ++i)
+          point[i] = it.getStartIndices(i) * gridDelta;
+        int material = -1;
+        if (normals != nullptr) {
+          const auto &n = (*normals)[id];
+          const NumericType length =
+              std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+          if (length > NumericType(1e-12)) {
+            for (int i = 0; i < D; ++i) {
+              point[i] -= it.getValue() * gridDelta * n[i] / length;
+              behind[i] =
+                  point[i] / gridDelta - NumericType(0.01) * n[i] / length;
+            }
+            const int index = stack.material(behind);
+            material = materialMap ? int(materialMap->getMaterialIdAtIdx(index))
+                                   : index;
+          }
+        }
+        nearestDisk[id] =
+            context.translationField->findNearestDisk(point, material);
+      }
+    }
+
 #pragma omp parallel for
     for (unsigned i = 0; i < levelSetCoverages.size(); i++) {
       auto covName = coverages->getScalarDataLabel(i);
       std::vector<NumericType> levelSetData(topLS->getNumberOfPoints(), 0);
       auto cov = coverages->getScalarData(covName);
 
-      for (const auto &[lsId, surfaceId] : *translator) {
-        levelSetData[lsId] = cov->at(surfaceId);
+      if (!nearestDisk.empty()) {
+        for (std::size_t lsId = 0; lsId < nearestDisk.size(); ++lsId)
+          if (nearestDisk[lsId] >= 0)
+            levelSetData[lsId] = cov->at(nearestDisk[lsId]);
+      } else {
+        for (const auto &[lsId, surfaceId] : *translator) {
+          levelSetData[lsId] = cov->at(surfaceId);
+        }
       }
 
       levelSetCoverages[i] = std::move(levelSetData);

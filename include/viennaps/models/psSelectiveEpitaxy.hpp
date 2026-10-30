@@ -29,6 +29,10 @@ public:
       : R111(r111), R100(r100), factor((R100 - R111) / (high - low)),
         materialRates(materials), nvFactors(rates) {}
 
+  // whether the advected level set is the inverted layer of the stencil
+  // scheme, on which growth moves the surface inwards
+  bool wrapped = true;
+
   NumericType getScalarVelocity(const Vec3D<NumericType> &, int material,
                                 const Vec3D<NumericType> &nv,
                                 unsigned long) override {
@@ -37,7 +41,8 @@ public:
     if (rate > 0) {
       double vel = MaxElement(Abs(nvFactors * nv));
       vel = (vel - low) * factor + R111;
-      return std::min(-vel * rate, 0.0);
+      const double growth = std::max(vel * rate, 0.0);
+      return wrapped ? -growth : growth;
     }
 
     // not an epitaxy material
@@ -84,6 +89,12 @@ public:
   void initialize(SmartPointer<Domain<NumericType, D>> domain,
                   const NumericType processDuration) final {
     if (firstInit) {
+      // a Euclidean domain advects its material stack with AdvectHermite,
+      // which takes the selectivity from the rates of the materials, without
+      // the layer wrapping of the stencil scheme
+      euclidean = domain->getSurface()->getNormalization() ==
+                  viennals::NormalizationEnum::EUCLIDEAN;
+      velField->wrapped = !euclidean;
       domainCopy = Domain<NumericType, D>::New(domain);
       const auto numLevelSets = domain->getNumberOfLevelSets();
       if (numLevelSets < 2) {
@@ -126,7 +137,8 @@ public:
       domain->insertNextLevelSetAsMaterial(domainCopy->getLevelSets().back(),
                                            topMaterial, false);
       levelSets = domain->getLevelSets();
-      viennals::PrepareStencilLocalLaxFriedrichs(levelSets, {false, true});
+      if (!euclidean)
+        viennals::PrepareStencilLocalLaxFriedrichs(levelSets, {false, true});
 
       firstInit = false;
     }
@@ -135,7 +147,8 @@ public:
   void finalize(SmartPointer<Domain<NumericType, D>> domain,
                 const NumericType processedDuration) final {
     auto levelSets = domain->getLevelSets();
-    viennals::FinalizeStencilLocalLaxFriedrichs(levelSets);
+    if (!euclidean)
+      viennals::FinalizeStencilLocalLaxFriedrichs(levelSets);
     domain->deepCopy(domainCopy);
     firstInit = true;
   }
@@ -144,16 +157,17 @@ private:
   MaterialValueMap<NumericType> materialRates_;
   Vec3D<NumericType> nvFactors_;
   SmartPointer<Domain<NumericType, D>> domainCopy;
+  SmartPointer<impl::EpitaxyVelocityField<NumericType, D>> velField;
   bool firstInit = true;
+  bool euclidean = false;
 
   void setup(const NumericType rate111, const NumericType rate100) {
     // default surface model
     auto surfModel = SmartPointer<SurfaceModel<NumericType>>::New();
 
     // velocity field
-    auto velField =
-        SmartPointer<impl::EpitaxyVelocityField<NumericType, D>>::New(
-            materialRates_, rate111, rate100, nvFactors_);
+    velField = SmartPointer<impl::EpitaxyVelocityField<NumericType, D>>::New(
+        materialRates_, rate111, rate100, nvFactors_);
 
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);

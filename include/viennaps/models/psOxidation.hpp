@@ -24,11 +24,13 @@
 /// automatically and appended to the top of the level-set stack.
 
 #include <lsBooleanOperation.hpp>
+#include <lsFromSurfaceMesh.hpp>
 #include <lsGeometricAdvect.hpp>
 #include <lsOxidation.hpp>
 #include <lsOxidationDeformation.hpp>
 #include <lsOxidationDiffusion.hpp>
 #include <lsOxidationPresets.hpp>
+#include <lsReinitialize.hpp>
 #include <lsToMesh.hpp>
 #include <lsVTKWriter.hpp>
 
@@ -153,7 +155,37 @@ public:
   bool managesOwnPhysics() const override { return true; }
 
   void applyModel(SmartPointer<Domain<NumericType, D>> domain) override {
+    // the solver works on Manhattan bands and fills their interiors in steps
+    // of a grid spacing: a Euclidean domain hands its level sets over without
+    // their closest points and normals, as Advect does with a Euclidean level
+    // set, and gets them back rebuilt at their width
+    namespace ls = viennals;
+    const bool euclidean = !domain->getLevelSets().empty() &&
+                           domain->getSurface()->getNormalization() ==
+                               ls::NormalizationEnum::EUCLIDEAN;
+    int width = 0;
+    if (euclidean) {
+      for (auto &levelSet : domain->getLevelSets()) {
+        width = std::max(width, levelSet->getLevelSetWidth());
+        auto &data = levelSet->getPointData();
+        for (int k = int(data.getScalarDataSize()) - 1; k >= 0; --k)
+          if (data.getScalarDataLabel(k).rfind("Hermite", 0) == 0)
+            data.eraseScalarData(k);
+        for (int k = int(data.getVectorDataSize()) - 1; k >= 0; --k) {
+          const auto label = data.getVectorDataLabel(k);
+          if (label.rfind("Hermite", 0) == 0 ||
+              label ==
+                  ls::FromSurfaceMesh<NumericType, D>::closestPointsLabel ||
+              label == ls::FromSurfaceMesh<NumericType, D>::surfaceNormalsLabel)
+            data.eraseVectorData(k);
+        }
+        levelSet->setNormalization(ls::NormalizationEnum::MANHATTAN);
+      }
+    }
     run(domain);
+    if (euclidean)
+      for (auto &levelSet : domain->getLevelSets())
+        ls::Reinitialize<NumericType, D>(levelSet, width).apply();
   }
 
   // Temperature in °C (valid range: 800–1200 °C)

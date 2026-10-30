@@ -462,6 +462,11 @@ template <int D> void bindApi(py::module &module) {
       .def("xExtent", &DomainSetup<D>::xExtent)
       .def("yExtent", &DomainSetup<D>::yExtent)
       .def("hasPeriodicBoundary", &DomainSetup<D>::hasPeriodicBoundary)
+      .def("normalization", &DomainSetup<D>::normalization,
+           "Normalization of the level sets created for the domain.")
+      .def("setNormalization", &DomainSetup<D>::setNormalization,
+           py::arg("normalization"),
+           "Set the normalization of the level sets created for the domain.")
       .def("isValid", &DomainSetup<D>::isValid)
       .def("print", &DomainSetup<D>::print)
       .def("check", &DomainSetup<D>::check)
@@ -503,6 +508,11 @@ template <int D> void bindApi(py::module &module) {
            py::arg("boundary") = BoundaryType::REFLECTIVE_BOUNDARY,
            "Setup the domain.")
       .def("getSetup", &Domain<T, D>::getSetup, "Get the domain setup.")
+      .def("setNormalization", &Domain<T, D>::setNormalization,
+           py::arg("normalization"),
+           "Normalization of the level sets the geometry makers create. "
+           "Euclidean level sets keep sharp edges and corners through "
+           "processes and output.")
       .def("deepCopy", &Domain<T, D>::deepCopy)
       .def("insertNextLevelSetAsMaterial",
            py::overload_cast<lsDomainType, std::string, bool>(
@@ -2107,6 +2117,12 @@ template <int D> void bindApi(py::module &module) {
       .def("setBoundaryPadding", &GDSGeometry<T, D>::setBoundaryPadding,
            "Set padding between the largest point of the geometry and the "
            "boundary of the domain.")
+      .def("setNormalization", &GDSGeometry<T, D>::setNormalization,
+           py::arg("normalization"),
+           "Normalization of the level sets made from the layers. Euclidean "
+           "ones keep exact distances with closest points and normals.")
+      .def("getNormalization", &GDSGeometry<T, D>::getNormalization,
+           "Normalization of the level sets made from the layers.")
       .def("print", &GDSGeometry<T, D>::print, "Print the geometry contents.")
       .def(
           "getBounds",
