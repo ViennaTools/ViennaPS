@@ -84,8 +84,7 @@ struct AdvectionParameters {
   }
 
   auto toMetaDataString() const {
-    return "\nSpatialScheme: " +
-           util::convertSpatialSchemeToString(spatialScheme) +
+    return "\nSpatialScheme: " + util::toString(spatialScheme) +
            "\nTemporalScheme: " + util::toString(temporalScheme) +
            "\nTimeStepRatio: " + util::toString(timeStepRatio) +
            "\nDissipationAlpha: " + util::toString(dissipationAlpha) +

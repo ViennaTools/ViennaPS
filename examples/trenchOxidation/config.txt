@@ -19,8 +19,6 @@ dimensions=2
 
 gridDelta=0.005
 xExtent=0.6
-yMin=-1.5
-yMax=1.5
 # zExtent=0.6  # 3D only; defaults to xExtent if omitted
 # maxGridPoints=10000000
 
@@ -28,8 +26,9 @@ yMax=1.5
 trenchWidth=0.3
 trenchDepth=0.5
 
-# oxideThickness: initial oxide thickness (optional, default 0).
-# If omitted or 0, a seed of gridDelta is created automatically.
+# oxideThickness: oxide on the silicon at t = 0 (optional, default 0 = bare
+# silicon).  Thinner than three grid cells, it first grows by the 1-D
+# Deal-Grove law until the solver resolves it.
 oxideThickness=0.0
 
 oxidationTime=0.2
@@ -41,7 +40,5 @@ orientation=100
 outputPrefix=ps_trench_oxidation
 
 # GPU solver backend (requires ViennaLS built with VIENNALS_USE_GPU=ON)
-# useGpu: cpu (default) | gpu
-# gpuPreconditioner: jacobi (default) | ilu0
+# useGpu: cpu (default) | gpu | auto (the GPU when available)
 # useGpu=cpu
-# gpuPreconditioner=jacobi

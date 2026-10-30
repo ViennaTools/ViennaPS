@@ -17,32 +17,30 @@ extern "C" __constant__ viennaray::gpu::LaunchParams launchParams;
 //
 
 __forceinline__ __device__ void
-fluorocarbonNeutralCollision(viennaray::gpu::PerRayData *prd) {
-  for (int i = 0; i < prd->ISCount; ++i) {
-    atomicAdd(&launchParams
-                   .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
-                                 prd->primIDs[i]],
-              (viennaray::gpu::ResultType)prd->rayWeight);
-  }
+fluorocarbonNeutralCollision(viennaray::gpu::PerRayData *prd,
+                             unsigned int primID) {
+  atomicAdd(
+      &launchParams.resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
+                                 primID],
+      (viennaray::gpu::ResultType)prd->rayWeight);
 }
 
-__forceinline__ __device__ void
-fluorocarbonNeutralReflection(const void *sbtData,
-                              viennaray::gpu::PerRayData *prd) {
+__forceinline__ __device__ void fluorocarbonNeutralReflection(
+    const void *sbtData, viennaray::gpu::PerRayData *prd, unsigned int primID) {
   const viennaray::gpu::HitSBTDataBase *baseData =
       reinterpret_cast<const viennaray::gpu::HitSBTDataBase *>(sbtData);
 
   float *coverages = (float *)baseData->cellData;
-  float phi_E = coverages[prd->primID];
-  float phi_P = coverages[prd->primID + launchParams.numElements];
+  float phi_E = coverages[primID];
+  float phi_P = coverages[primID + launchParams.numElements];
 
-  int id = launchParams.materialIds[prd->primID]; // consecutive ID, not enum
+  int id = launchParams.materialIds[primID]; // consecutive ID, not enum
   float sticking = launchParams.materialSticking[id];
 
   float Seff = sticking * max(1.f - phi_E - phi_P, 0.f);
   prd->rayWeight -= prd->rayWeight * Seff;
 
-  auto geoNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+  auto geoNormal = viennaray::gpu::getNormal(sbtData, primID);
   viennaray::gpu::diffuseReflection(prd, geoNormal);
 }
 
@@ -51,58 +49,58 @@ fluorocarbonNeutralReflection(const void *sbtData,
 //
 
 __forceinline__ __device__ void
-fluorocarbonIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
+fluorocarbonIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd,
+                         unsigned int primID) {
   using namespace viennaps;
   gpu::FluorocarbonParameters *params =
       reinterpret_cast<gpu::FluorocarbonParameters *>(launchParams.customData);
-  for (int i = 0; i < prd->ISCount; ++i) {
-    int id = launchParams.materialIds[prd->primIDs[i]]; // consecutive ID
-    int material = launchParams.materialMap[id];        // mapped to enum
-    auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
-    auto cosTheta = __saturatef(
-        -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
 
-    auto matParams = params->getMaterialParameters(material);
+  int id = launchParams.materialIds[primID];   // consecutive ID
+  int material = launchParams.materialMap[id]; // mapped to enum
+  auto geomNormal = viennaray::gpu::getNormal(sbtData, primID);
+  auto cosTheta = __saturatef(
+      -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
 
-    float B_sp = matParams.B_sp;
-    float Eth_sp = matParams.Eth_sp;
-    float Eth_ie = matParams.Eth_ie;
+  auto matParams = params->getMaterialParameters(material);
 
-    float f_sp_theta = (1.f + B_sp * (1.f - cosTheta * cosTheta)) * cosTheta;
+  float B_sp = matParams.B_sp;
+  float Eth_sp = matParams.Eth_sp;
+  float Eth_ie = matParams.Eth_ie;
 
-    float sqrtE = sqrtf(prd->energy);
-    float Y_sp = max(sqrtE - Eth_sp, 0.f) * f_sp_theta;
-    float Y_ie = max(sqrtE - Eth_ie, 0.f) * cosTheta;
+  float f_sp_theta = (1.f + B_sp * (1.f - cosTheta * cosTheta)) * cosTheta;
 
-    material = static_cast<int>(Material::Polymer);
-    matParams = params->getMaterialParameters(material);
-    float Y_pe = max(sqrtE - matParams.Eth_ie, 0.f) * cosTheta;
+  float sqrtE = sqrtf(prd->energy);
+  float Y_sp = max(sqrtE - Eth_sp, 0.f) * f_sp_theta;
+  float Y_ie = max(sqrtE - Eth_ie, 0.f) * cosTheta;
 
-    // ionSputterFlux
-    atomicAdd(&launchParams
-                   .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams) +
-                                 prd->primIDs[i]],
-              static_cast<viennaray::gpu::ResultType>(Y_sp));
-    // ionEnhancedFlux
-    atomicAdd(&launchParams
-                   .resultBuffer[viennaray::gpu::getIdxOffset(1, launchParams) +
-                                 prd->primIDs[i]],
-              static_cast<viennaray::gpu::ResultType>(Y_ie));
-    // ionpeFlux
-    atomicAdd(&launchParams
-                   .resultBuffer[viennaray::gpu::getIdxOffset(2, launchParams) +
-                                 prd->primIDs[i]],
-              static_cast<viennaray::gpu::ResultType>(Y_pe));
-  }
+  material = static_cast<int>(Material::Polymer);
+  matParams = params->getMaterialParameters(material);
+  float Y_pe = max(sqrtE - matParams.Eth_ie, 0.f) * cosTheta;
+
+  // ionSputterFlux
+  atomicAdd(
+      &launchParams
+           .resultBuffer[viennaray::gpu::getIdxOffset(0, launchParams, primID)],
+      static_cast<viennaray::gpu::ResultType>(Y_sp));
+  // ionEnhancedFlux
+  atomicAdd(
+      &launchParams
+           .resultBuffer[viennaray::gpu::getIdxOffset(1, launchParams, primID)],
+      static_cast<viennaray::gpu::ResultType>(Y_ie));
+  // ionpeFlux
+  atomicAdd(
+      &launchParams
+           .resultBuffer[viennaray::gpu::getIdxOffset(2, launchParams, primID)],
+      static_cast<viennaray::gpu::ResultType>(Y_pe));
 }
 
 __forceinline__ __device__ void
-fluorocarbonIonReflection(const void *sbtData,
-                          viennaray::gpu::PerRayData *prd) {
+fluorocarbonIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd,
+                          unsigned int primID) {
   viennaps::gpu::FluorocarbonParameters *params =
       reinterpret_cast<viennaps::gpu::FluorocarbonParameters *>(
           launchParams.customData);
-  auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+  auto geomNormal = viennaray::gpu::getNormal(sbtData, primID);
   auto cosTheta = __saturatef(
       -viennacore::DotProduct(prd->dir, geomNormal)); // clamp to [0,1]
   float angle = acosf(cosTheta);

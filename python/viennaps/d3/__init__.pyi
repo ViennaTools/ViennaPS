@@ -8,12 +8,8 @@ import typing
 import viennals._core
 import viennals.d3
 import viennaps._core
-from viennaps._core import GpuMode
-from viennaps._core import GpuPreconditioner
-from viennaps._core import OxidantType
-from viennaps._core import SiliconOrientation
 from . import gpu
-__all__: list[str] = ['AdvectionCallback', 'Anneal', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'CustomSphereDistribution', 'DamageTableModel', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'GpuMode', 'GpuPreconditioner', 'HBrO2Etching', 'ImplantDamageHobler', 'ImplantDualPearsonIV', 'ImplantPearsonIV', 'ImplantPearsonIVChanneling', 'ImplantProfileModel', 'ImplantTableModel', 'Interpolation', 'IonBeamEtching', 'IonImplantation', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'NetDoping', 'NeutralTransport', 'OxidantType', 'Oxidation', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SheetResistance', 'SiliconOrientation', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
+__all__: list[str] = ['AdvectionCallback', 'Anneal', 'BoxDistribution', 'CF4O2Etching', 'CSVFileProcess', 'CustomSphereDistribution', 'DamageTableModel', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'FaradayCageEtching', 'FluorocarbonEtching', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'HBrO2Etching', 'ImplantDamageHobler', 'ImplantDualPearsonIV', 'ImplantPearsonIV', 'ImplantPearsonIVChanneling', 'ImplantProfileModel', 'ImplantTableModel', 'Interpolation', 'IonBeamEtching', 'IonImplantation', 'IsotropicProcess', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'MultiParticleProcess', 'NetDoping', 'NeutralTransport', 'Oxidation', 'OxideRegrowth', 'Planarize', 'Process', 'ProcessModel', 'ProcessModelBase', 'RateGrid', 'Reader', 'SF6C4F8Etching', 'SF6O2Etching', 'SelectiveEpitaxy', 'SheetResistance', 'SingleParticleALD', 'SingleParticleProcess', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'TEOSDeposition', 'TEOSPECVD', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'gpu']
 class AdvectionCallback:
     domain: Domain
     def __init__(self) -> None:
@@ -1070,8 +1066,6 @@ class NeutralTransport(ProcessModel):
 class Oxidation(ProcessModel):
     def __init__(self) -> None:
         ...
-    def clearMaskBendingBounds(self) -> None:
-        ...
     def clearSolveBounds(self) -> None:
         ...
     def estimatePlanarOxideThickness(self, initialOxideThickness: typing.SupportsFloat | typing.SupportsIndex = 0.0) -> float:
@@ -1094,65 +1088,47 @@ class Oxidation(ProcessModel):
         ...
     def setCouplingTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
+    def setDealGroveRates(self, B: typing.SupportsFloat | typing.SupportsIndex, BoA: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Override Deal-Grove B (um^2/hr) and B/A (um/hr); 0 = Arrhenius table.
+        """
     def setDiffusionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        Stress-coupling activation volume for oxide diffusivity (m³).
+        Activation volume of the oxide diffusivity on the pressure (m³). Default 4e-29 (40 Å³).
         """
+    @typing.overload
     def setGpuMode(self, mode: viennaps._core.GpuMode) -> None:
         """
-        BiCGSTAB solver back-end: GpuMode.Cpu (default) or GpuMode.Gpu.
+        GPU for the diffusion and the 3-D mechanics solves: GpuMode.Cpu (default), GpuMode.Gpu or GpuMode.Auto.
         """
-    def setGpuPreconditioner(self, preconditioner: viennaps._core.GpuPreconditioner) -> None:
+    @typing.overload
+    def setGpuMode(self, mode: str) -> None:
         """
-        GPU BiCGSTAB preconditioner (GpuPreconditioner.Jacobi matches CPU).
+        GPU for the diffusion and the 3-D mechanics solves: 'cpu' (default), 'gpu' or 'auto'.
         """
     def setInitialOxideThickness(self, thicknessUm: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        Native-oxide seed thickness in µm when no SiO2 layer exists.
+        Oxide on bare silicon at t = 0 in µm (used when no SiO2 layer exists, not under a mask; 0 = bare). Oxide thinner than three grid cells first grows by 1-D Deal-Grove until resolved; an impermeable mask blocks it.
         """
-    def setMaskBendingBounds(self, minIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"], maxIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"]) -> None:
+    def setInitialTimeStep(self, dtHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        Cartesian index bounds for the mask bending solve.
+        Cap only the FIRST internal substep (hr); 0 = model default (0.004 hr conservative cold start).
         """
-    def setMaskContactLoadRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
+    def setMaskBarrierOnly(self, enable: bool) -> None:
         """
-        Under-relaxation for the unilateral contact active-set load (0.02–1).
+        Mask acts as a diffusion barrier only; mechanically transparent, carried by the oxide. Exact for a full-width mask.
         """
-    def setMaskContactReleaseFraction(self, fraction: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """
-        Relative traction floor for releasing a relaxed contact face (0–0.25).
-        """
-    def setMaskCouplingIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        ...
-    def setMaskCouplingTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        ...
     def setMaskMaterial(self, mat: viennaps._core.Material) -> None:
         """
         Material treated as the oxidation mask (activates LOCOS physics).
         """
     def setMaskParameters(self, params: ...) -> None:
         """
-        Viscous-elasticity parameters for the mask layer.
+        Elastic constants and clamp of the nitride mask.
         """
-    def setMaskSmootherOmega(self, omega: typing.SupportsFloat | typing.SupportsIndex) -> None:
+    def setMaskPermeabilityRatio(self, permeability_ratio: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        SOR omega for the mask multigrid smoother (0.2–1.4; 1.0 = Gauss-Seidel).
-        """
-    def setMaskTractionIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """
-        Maximum iterations for the inner mask traction solve.
-        """
-    def setMaskTractionRelaxation(self, relaxation: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """
-        Outer Aitken relaxation factor for the mask/oxide coupling (0.01–1).
-        """
-    def setMaskTractionTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """
-        Convergence tolerance for the inner mask traction solve.
-        """
-    def setMaskUnilateralContact(self, enabled: bool) -> None:
-        """
-        Enable unilateral (compression-only) contact at the mask/oxide interface.
+        Diffusion through the mask: the mask body is meshed into the oxidant solve with D_mask = D_SiO2/gamma. The level-set mask thickness is the physical barrier thickness and must be grid-resolved. 0 = impermeable (default).
         """
     def setMaxGridPoints(self, maxGridPoints: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
@@ -1160,19 +1136,31 @@ class Oxidation(ProcessModel):
         """
     def setMechanicsIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
         """
-        Maximum iterations for the viscous mechanics solve.
+        Maximum viscosity iterations of the mechanics solve (one velocity-pressure solve each).
         """
     def setMechanicsTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        Convergence tolerance for the mechanics solve.
+        Relative velocity change at which the viscosity iteration stops.
         """
+    @typing.overload
     def setOrientation(self, orientation: viennaps._core.SiliconOrientation) -> None:
         """
-        Crystal orientation: Si100, Si111, or PolySi.
+        Crystal orientation: SiliconOrientation.Si100, SiliconOrientation.Si111, or SiliconOrientation.PolySi.
         """
+    @typing.overload
+    def setOrientation(self, orientation: str) -> None:
+        """
+        Crystal orientation: '100', '111', or 'poly'.
+        """
+    @typing.overload
     def setOxidant(self, oxidant: viennaps._core.OxidantType) -> None:
         """
-        Oxidant species: OxidantType.Dry (O₂) or OxidantType.Wet (H₂O).
+        Oxidant species: OxidantType.DRY (O₂) or OxidantType.WET (H₂O).
+        """
+    @typing.overload
+    def setOxidant(self, oxidant: str) -> None:
+        """
+        Oxidant species: 'dry' (O₂) or 'wet' (H₂O).
         """
     def setOxideMaterial(self, mat: viennaps._core.Material) -> None:
         """
@@ -1182,45 +1170,33 @@ class Oxidation(ProcessModel):
         """
         Ambient pressure in atm (scales B and B/A linearly).
         """
-    def setPressureIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
-        """
-        Maximum iterations for the pressure Poisson solve.
-        """
-    def setPressureTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """
-        Convergence tolerance for the pressure solve.
-        """
     def setReactionActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        Stress-coupling activation volume for interface reaction rate (m³).
+        Activation volume of the interface reaction on the normal stress (m³). Default 2.5e-29 (25 Å³).
+        """
+    def setRegrid(self, coarseDelta: typing.SupportsFloat | typing.SupportsIndex, factor: typing.SupportsFloat | typing.SupportsIndex = 2.0) -> None:
+        """
+        One-shot persistent regrid: coarsen the whole level-set stack to coarseDelta (um) once the thinnest oxide layer exceeds factor*coarseDelta. 0 = disabled.
+        """
+    def setShearActivationVolume(self, volume: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        """
+        Stress-dependent oxide viscosity: shear activation volume (m³); 0 = linear viscosity. Default 3e-28 (300 Å³).
         """
     def setSiliconMaterial(self, mat: viennaps._core.Material) -> None:
         """
         Override which material is treated as silicon.
         """
-    def setSimplePressureRelaxation(self, beta: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """
-        SIMPLE pressure under-relaxation factor (0 < beta <= 1).
-        """
-    def setSimpleVelocityRelaxation(self, alpha: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """
-        SIMPLE velocity under-relaxation factor (0 < alpha <= 1).
-        """
     def setSolveBounds(self, minIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"], maxIndex: typing.Annotated[collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex], "FixedSize(3)"]) -> None:
         """
         Cartesian index bounds for the diffusion/deformation solve.
         """
-    def setStokesIterations(self, iterations: typing.SupportsInt | typing.SupportsIndex) -> None:
+    def setStressDependentOxidation(self, enable: bool) -> None:
         """
-        Maximum iterations for the Stokes velocity solve.
-        """
-    def setStokesTolerance(self, tolerance: typing.SupportsFloat | typing.SupportsIndex) -> None:
-        """
-        Convergence tolerance for the Stokes solve.
+        Stress-dependent oxidation kinetics (interface normal stress on the reaction, pressure on the diffusivity). On by default with the Kao-calibrated activation volumes; False = stress-free Deal-Grove kinetics.
         """
     def setTemperature(self, temperatureC: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """
-        Oxidation temperature in °C (800–1200 °C).
+        Oxidation temperature in °C (800-1200 °C).
         """
     def setTime(self, timeHr: typing.SupportsFloat | typing.SupportsIndex) -> None:
         """

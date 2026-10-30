@@ -86,7 +86,7 @@ public:
         std::vector<NumericType> a;
         int i = 0;
         while (std::getline(iss, tmp, delimiter)) {
-          auto valueOpt = util::safeConvert<NumericType>(tmp);
+          auto valueOpt = util::Parameters::safeConvert<NumericType>(tmp);
           if (valueOpt)
             a.push_back(valueOpt.value());
           else {

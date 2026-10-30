@@ -22,20 +22,11 @@
 
 #include <csNetDoping.hpp>
 #include <csSheetResistance.hpp>
-#include <lsMakeGeometry.hpp>
+#include <geometries/psMakePlane.hpp>
 #include <models/psAnneal.hpp>
 #include <models/psIonImplantation.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
-#include <vcUtil.hpp>
-
-#include <cmath>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <map>
-#include <string>
-#include <vector>
 
 using namespace viennaps;
 using T = double;
@@ -54,40 +45,17 @@ SmartPointer<Domain<T, D>> buildSubstrate(T xExtent, T substrateDepth,
   BoundaryType bc[D] = {BoundaryType::REFLECTIVE_BOUNDARY,
                         BoundaryType::INFINITE_BOUNDARY};
 
-  auto domain = Domain<T, D>::New(bounds, bc, gridDelta);
-  auto makeLS = [&]() {
-    return SmartPointer<viennals::Domain<T, D>>::New(bounds, bc, gridDelta);
-  };
+  auto domain =
+      Domain<T, D>::New(gridDelta, xExtent, BoundaryType::REFLECTIVE_BOUNDARY);
 
   // Si bottom half-space
-  {
-    auto ls = makeLS();
-    T origin[D] = {}, normal[D] = {};
-    origin[D - 1] = -substrateDepth;
-    normal[D - 1] = T(1);
-    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
-        .apply();
-    domain->insertNextLevelSetAsMaterial(ls, Material::Si);
-  }
+  MakePlane<T, D>(domain, -substrateDepth, Material::Si).apply();
+
   // Si surface at y = 0
-  {
-    auto ls = makeLS();
-    T origin[D] = {}, normal[D] = {};
-    normal[D - 1] = T(1);
-    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
-        .apply();
-    domain->insertNextLevelSetAsMaterial(ls, Material::Si);
-  }
+  MakePlane<T, D>(domain, 0., Material::Si, true).apply();
+
   // SiO2 pad oxide top at y = padOxideThickness
-  {
-    auto ls = makeLS();
-    T origin[D] = {}, normal[D] = {};
-    origin[D - 1] = padOxideThickness;
-    normal[D - 1] = T(1);
-    viennals::MakeGeometry<T, D>(ls, viennals::Plane<T, D>::New(origin, normal))
-        .apply();
-    domain->insertNextLevelSetAsMaterial(ls, Material::SiO2);
-  }
+  MakePlane<T, D>(domain, padOxideThickness, Material::SiO2, true).apply();
 
   domain->generateCellSet(domainTop, Material::Air, /*isAboveSurface=*/true);
   domain->getCellSet()->buildNeighborhood();
@@ -232,60 +200,58 @@ int main(int argc, char *argv[]) {
   std::cout << "=== Lateral PN junction (config: " << cfgPath << ") ===\n\n";
 
   // ── Read geometry ─────────────────────────────────────────────────────────
-  const T gridDelta = static_cast<T>(params.get("gridDelta"));
-  const T xExtent = static_cast<T>(params.get("xExtent"));
-  const T topSpace = static_cast<T>(params.get("topSpace"));
-  const T substrateDepth = static_cast<T>(params.get("substrateDepth"));
-  const T padOxideThickness = static_cast<T>(params.get("padOxideThickness"));
+  const T gridDelta = params.get<T>("gridDelta");
+  const T xExtent = params.get<T>("xExtent");
+  const T topSpace = params.get<T>("topSpace");
+  const T substrateDepth = params.get<T>("substrateDepth");
+  const T padOxideThickness = params.get<T>("padOxideThickness");
 
   // ── Read anneal conditions ────────────────────────────────────────────────
-  const T annealTempK =
-      static_cast<T>(params.get("annealTemperatureC")) + T(273.15);
-  const T annealTime = static_cast<T>(params.get("annealTimeS"));
+  const T annealTempK = params.get<T>("annealTemperatureC") + T(273.15);
+  const T annealTime = params.get<T>("annealTimeS");
 
   // ── Read analysis parameters ──────────────────────────────────────────────
-  const T scanDepth =
-      std::abs(static_cast<T>(params.get("junctionScanDepthNm")));
+  const T scanDepth = std::abs(params.get<T>("junctionScanDepthNm"));
 
   // ── Read P implant parameters ─────────────────────────────────────────────
-  const T pDose = static_cast<T>(params.get("pDoseCm2"));
-  const T pTilt = static_cast<T>(params.get("pTiltDeg"));
-  const T pRotation = static_cast<T>(params.get("pRotationDeg"));
-  const T pRp = static_cast<T>(params.get("pProjectedRange"));
-  const T pSigma = static_cast<T>(params.get("pDepthSigma"));
-  const T pSkewness = static_cast<T>(params.get("pSkewness"));
-  const T pKurtosis = static_cast<T>(params.get("pKurtosis"));
-  const T pLatHead = static_cast<T>(params.get("pLateralSigmaHead"));
-  const T pHeadFrac = static_cast<T>(params.get("pHeadFraction"));
-  const T pRpTail = static_cast<T>(params.get("pTailProjectedRange"));
-  const T pSigmaTail = static_cast<T>(params.get("pTailDepthSigma"));
-  const T pSkewnessTail = static_cast<T>(params.get("pTailSkewness"));
-  const T pKurtTail = static_cast<T>(params.get("pTailKurtosis"));
-  const T pLatTail = static_cast<T>(params.get("pTailLateralSigma"));
-  const T pD0 = static_cast<T>(params.get("pAnnealD0"));
-  const T pEa = static_cast<T>(params.get("pAnnealEa"));
-  const T pSolC0 = static_cast<T>(params.get("pSolidSolubilityC0"));
-  const T pSolEa = static_cast<T>(params.get("pSolidSolubilityEa"));
+  const T pDose = params.get<T>("pDoseCm2");
+  const T pTilt = params.get<T>("pTiltDeg");
+  const T pRotation = params.get<T>("pRotationDeg");
+  const T pRp = params.get<T>("pProjectedRange");
+  const T pSigma = params.get<T>("pDepthSigma");
+  const T pSkewness = params.get<T>("pSkewness");
+  const T pKurtosis = params.get<T>("pKurtosis");
+  const T pLatHead = params.get<T>("pLateralSigmaHead");
+  const T pHeadFrac = params.get<T>("pHeadFraction");
+  const T pRpTail = params.get<T>("pTailProjectedRange");
+  const T pSigmaTail = params.get<T>("pTailDepthSigma");
+  const T pSkewnessTail = params.get<T>("pTailSkewness");
+  const T pKurtTail = params.get<T>("pTailKurtosis");
+  const T pLatTail = params.get<T>("pTailLateralSigma");
+  const T pD0 = params.get<T>("pAnnealD0");
+  const T pEa = params.get<T>("pAnnealEa");
+  const T pSolC0 = params.get<T>("pSolidSolubilityC0");
+  const T pSolEa = params.get<T>("pSolidSolubilityEa");
 
   // ── Read B implant parameters ─────────────────────────────────────────────
-  const T bDose = static_cast<T>(params.get("bDoseCm2"));
-  const T bTilt = static_cast<T>(params.get("bTiltDeg"));
-  const T bRotation = static_cast<T>(params.get("bRotationDeg"));
-  const T bRp = static_cast<T>(params.get("bProjectedRange"));
-  const T bSigma = static_cast<T>(params.get("bDepthSigma"));
-  const T bSkewness = static_cast<T>(params.get("bSkewness"));
-  const T bKurtosis = static_cast<T>(params.get("bKurtosis"));
-  const T bLatHead = static_cast<T>(params.get("bLateralSigmaHead"));
-  const T bHeadFrac = static_cast<T>(params.get("bHeadFraction"));
-  const T bRpTail = static_cast<T>(params.get("bTailProjectedRange"));
-  const T bSigmaTail = static_cast<T>(params.get("bTailDepthSigma"));
-  const T bSkewnessTail = static_cast<T>(params.get("bTailSkewness"));
-  const T bKurtTail = static_cast<T>(params.get("bTailKurtosis"));
-  const T bLatTail = static_cast<T>(params.get("bTailLateralSigma"));
-  const T bD0 = static_cast<T>(params.get("bAnnealD0"));
-  const T bEa = static_cast<T>(params.get("bAnnealEa"));
-  const T bSolC0 = static_cast<T>(params.get("bSolidSolubilityC0"));
-  const T bSolEa = static_cast<T>(params.get("bSolidSolubilityEa"));
+  const T bDose = params.get<T>("bDoseCm2");
+  const T bTilt = params.get<T>("bTiltDeg");
+  const T bRotation = params.get<T>("bRotationDeg");
+  const T bRp = params.get<T>("bProjectedRange");
+  const T bSigma = params.get<T>("bDepthSigma");
+  const T bSkewness = params.get<T>("bSkewness");
+  const T bKurtosis = params.get<T>("bKurtosis");
+  const T bLatHead = params.get<T>("bLateralSigmaHead");
+  const T bHeadFrac = params.get<T>("bHeadFraction");
+  const T bRpTail = params.get<T>("bTailProjectedRange");
+  const T bSigmaTail = params.get<T>("bTailDepthSigma");
+  const T bSkewnessTail = params.get<T>("bTailSkewness");
+  const T bKurtTail = params.get<T>("bTailKurtosis");
+  const T bLatTail = params.get<T>("bTailLateralSigma");
+  const T bD0 = params.get<T>("bAnnealD0");
+  const T bEa = params.get<T>("bAnnealEa");
+  const T bSolC0 = params.get<T>("bSolidSolubilityC0");
+  const T bSolEa = params.get<T>("bSolidSolubilityEa");
 
   // ── Build substrate ───────────────────────────────────────────────────────
   auto domain = buildSubstrate(xExtent, substrateDepth, topSpace,

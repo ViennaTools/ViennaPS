@@ -19,74 +19,6 @@ The REFLECTIVE boundary at x = 0 mirrors the domain, so the simulation represent
 a half-trench; output meshes show the full symmetric structure. In 3D the trench
 is extruded uniformly along Z (slot geometry).
 
-## Setup (from scratch)
-
-Clone both libraries on their respective branches and run the install script from
-inside the ViennaPS directory. The script creates a virtual environment, installs
-ViennaLS, and installs ViennaPS. GPU support (requires CUDA 12+) is **enabled by
-default**; pass `--no-gpu` to disable it.
-
-**Option A — local clones of both libraries:**
-
-```bash
-git clone -b oxidation  https://github.com/ViennaTools/ViennaLS.git
-git clone -b oxide-growth https://github.com/ViennaTools/ViennaPS.git
-cd ViennaPS
-python3 python/scripts/install_ViennaPS.py --viennals-dir=../ViennaLS
-source .venv/bin/activate
-```
-
-**Option B — only clone ViennaPS; let the script pull ViennaLS automatically:**
-
-```bash
-git clone -b oxide-growth https://github.com/ViennaTools/ViennaPS.git
-cd ViennaPS
-python3 python/scripts/install_ViennaPS.py --viennals-branch=oxidation
-source .venv/bin/activate
-```
-
-The install step compiles and installs the C++ extension modules; a C++17 compiler
-and CMake ≥ 3.20 are required. Build time is a few minutes per package.
-
-## Building (C++ executable)
-
-```bash
-# From the ViennaPS repository root
-cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON
-cmake --build build --target trenchOxidation
-```
-
-To enable the GPU-accelerated BiCGSTAB solver (requires CUDA), ViennaLS must be
-built with `VIENNALS_USE_GPU=ON` and its build tree made visible to ViennaPS:
-
-```bash
-# Build ViennaLS with GPU support
-cmake -B ViennaLS/build -S ViennaLS -DVIENNALS_USE_GPU=ON
-cmake --build ViennaLS/build
-
-# Build ViennaPS pointing at that ViennaLS build
-cmake -B build -DVIENNAPS_BUILD_EXAMPLES=ON \
-      -DViennaLS_DIR=ViennaLS/build
-cmake --build build --target trenchOxidation
-```
-
-## Running
-
-```bash
-# C++ executable (from the build directory)
-./build/examples/trenchOxidation/trenchOxidation
-
-# Explicit config file
-./build/examples/trenchOxidation/trenchOxidation my_config.txt
-```
-
-The Python version works identically (activate the venv first):
-
-```bash
-python trenchOxidation.py            # reads config.txt
-python trenchOxidation.py my_config.txt
-```
-
 ## Configuration Parameters
 
 All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **atm**.
@@ -97,12 +29,10 @@ All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **
 | `numThreads` | `16` | OpenMP thread count |
 | `gridDelta` | `0.005` | Cartesian grid spacing (µm) |
 | `xExtent` | `0.6` | Half-width of the domain in X (µm) |
-| `yMin` | `-1.5` | Bottom of the domain in Y (µm); must be below `−trenchDepth` |
-| `yMax` | `1.5` | Top of the domain in Y (µm) |
 | `zExtent` | *(= xExtent)* | 3D only: half-depth in Z (µm) |
 | `trenchWidth` | `0.3` | Width of the trench opening (µm) |
 | `trenchDepth` | `0.5` | Depth of the trench below y = 0 (µm) |
-| `oxideThickness` | `0.0` | Pre-existing oxide seed thickness (µm); a seed of `gridDelta` is used when zero |
+| `oxideThickness` | `0.0` | Oxide on the silicon at t = 0 (µm); 0 = bare silicon. Thinner than three grid cells, it first grows by the 1-D Deal-Grove law (time charged) until the solver resolves it |
 | `oxidationTime` | `0.2` | Total oxidation time (hr) |
 | `timeStep` | `0.025` | Maximum internal time step (hr); actual steps are CFL-limited |
 | `temperature` | `1000.` | Furnace temperature (°C); valid range 700–1200 °C |
@@ -110,8 +40,7 @@ All lengths are in **micrometers (µm)**, time in **hours (hr)**, pressure in **
 | `oxidant` | `wet` | `wet` (H₂O) or `dry` (O₂) |
 | `orientation` | `100` | Crystal orientation: `100`, `110`, `111`, or `poly` |
 | `maxGridPoints` | *(5M)* | Optional cap on Cartesian solve grid nodes |
-| `useGpu` | `cpu` | BiCGSTAB back-end: `cpu` or `gpu` (GPU requires `VIENNALS_USE_GPU=ON`) |
-| `gpuPreconditioner` | `jacobi` | GPU preconditioner: `jacobi` or `ilu0` |
+| `useGpu` | `cpu` | Large linear solves on the GPU: `cpu`, `gpu` or `auto` (GPU requires `VIENNALS_USE_GPU=ON`) |
 | `outputPrefix` | `ps_trench_oxidation` | Prefix for all output file names |
 
 ### Grid Sizing Guide
@@ -158,8 +87,6 @@ Open `.vtp` files in ParaView to visualize the surface geometry and per-point fi
 
 ## Tips
 
-- Set `yMin` deep enough that `yMin < −trenchDepth − a few × gridDelta`; the domain
-  boundary clips the level set if the trench floor is too close to `yMin`.
 - For narrow, deep trenches (`depth/width > 3`) reduce `timeStep` or increase
   `pressure` to avoid premature pinch-off artifacts. The CFL limiter handles most
   cases automatically, but very thin oxide shells in a pinched trench can cause the
@@ -176,33 +103,37 @@ level-set narrow band:
 **1 — Oxidant diffusion** (Deal-Grove model)
 
 ```
-∇·(D_eff(p) ∇C) = 0   inside oxide
+∇·(D(p) ∇C) = 0   inside oxide
 ```
 
 with Robin BCs: transfer coefficient at the gas/oxide surface, reaction rate
-`k_eff(p) · C / N` at the Si/SiO2 interface. Both `D_eff` and `k_eff` are reduced
-by local compressive pressure through an Arrhenius activation-volume coupling. In the
-trench geometry this effect is most pronounced at the floor and sidewall junctions,
-where the oxide is mechanically confined. Solved with BiCGSTAB (Jacobi preconditioned).
+`k(σ_nn) · C / N` at the Si/SiO2 interface. The diffusivity falls with the oxide
+pressure and the reaction rate with the compressive normal stress at the interface
+(activation volumes V_D and V_k). In the trench geometry this effect is most
+pronounced at the floor and sidewall junctions, where the oxide is mechanically
+confined. Solved with BiCGSTAB and a smoothed-aggregation AMG preconditioner (AMGCL), on the
+CPU or the GPU.
 
-**2 — Oxide mechanics** (viscous Stokes flow with Maxwell viscoelasticity)
+**2 — Oxide mechanics** (incompressible Stokes flow with Maxwell viscoelasticity)
 
 ```
-−∇p + η ∇²u = 0       (momentum)
-∇·u = ṡ               (modified continuity; source ṡ at Si/SiO2 interface)
+−∇p + ∇·s = 0         (momentum)
+∇·u = 0               (incompressible oxide)
 ```
 
-Volume expansion β = 2.27 at the Si surface drives oxide toward the trench interior.
-Viscoelastic deviatoric stress is tracked via Maxwell relaxation
-(τ_relaxation = η/G). The SIMPLE algorithm (pressure-velocity coupling) solves this
-unconditionally-stably in up to 200 outer iterations. High compressive pressures in
-the trench corners are visible in the `OxPressure` output field.
+The volume expansion β = 2.27 enters as a velocity boundary condition at the Si/SiO2
+interface and drives the oxide toward the trench interior. The deviatoric stress s is Maxwell viscoelastic (τ_relaxation = η/G) with a
+stress-dependent (Eyring) viscosity. Velocity and pressure are solved together on a
+staggered grid (sparse LU in 2-D, AMGCL in 3-D), repeated until viscosity and flow
+agree.
+High compressive pressures in the trench corners are visible in the
+`OxMechanicsPressure` field of the `*_oxide_fields.vtp` output.
 
 **Coupling loop**
 
-Pressure from the deformation solve feeds back into the diffusion solve via D_eff and
-k_eff; oxidant concentration sets the volume source for Stokes flow. An Aitken Δ²
-outer loop converges the coupling in ~3–5 iterations per time step.
+The oxide stress (pressure and interface normal stress) sets D and k in the diffusion
+solve; the concentration sets the expansion velocity at the interface. An Aitken Δ²
+outer loop iterates the two until they agree.
 
 **Orientation correction**
 
@@ -218,11 +149,11 @@ halves on convergence failure (up to 16 retries).
 
 **GPU acceleration**
 
-If ViennaLS is built with `VIENNALS_USE_GPU=ON`, setting `useGpu=gpu` offloads the
-inner BiCGSTAB linear solves (diffusion, Stokes, pressure, harmonic extension) to
-CUDA via a custom GPU BiCGSTAB implementation. The SIMPLE iteration control, stress
-assembly, and RHS construction always run on the CPU. `gpuPreconditioner=ilu0` uses
-cuSPARSE ILU(0) instead of Jacobi for better convergence on ill-conditioned systems.
+If ViennaLS is built with `VIENNALS_USE_GPU=ON`, `useGpu=gpu` (or `auto`: the GPU
+when one is available) solves the diffusion system and, in 3-D, the velocity-pressure
+system on the GPU, from 20 000 unknowns: the same AMGCL solvers as on the CPU, on
+AMGCL's CUDA backend. Assembly, the AMG setup and the level-set work stay on the CPU;
+the 2-D mechanics (sparse LU) always runs on the CPU.
 
 See [`docs/OxidationSolver.md`](../../ViennaLS/docs/OxidationSolver.md) in the
 ViennaLS repository for the full mathematical and implementation details.

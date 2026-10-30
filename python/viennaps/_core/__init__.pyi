@@ -6,14 +6,14 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
+from viennaps import d2
 import viennaps.d3
 from viennaps import d3
 from . import constants
 from . import gpu
 from . import util
-__all__: list[str] = ['AdvectionParameters', 'AnnealMode', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GpuMode', 'GpuPreconditioner', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDoseControl', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'PearsonIVParameters', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'ScreenEnergyLoss', 'SiliconOrientation', 'SingleParticleALDParams', 'Slice', 'SurfaceDiffusionParameters', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
+__all__: list[str] = ['AdvectionParameters', 'AnnealMode', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GpuMode', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDoseControl', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'PearsonIVParameters', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'ScreenEnergyLoss', 'SiliconOrientation', 'SingleParticleALDParams', 'Slice', 'SurfaceDiffusionParameters', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
 class AdvectionParameters:
     adaptiveTimeStepping: bool
     calculateIntermediateVelocities: bool
@@ -686,16 +686,6 @@ class GpuMode(enum.IntEnum):
         """
         Convert to a string according to format_spec.
         """
-class GpuPreconditioner(enum.IntEnum):
-    ILU0: typing.ClassVar[GpuPreconditioner]  # value = <GpuPreconditioner.ILU0: 1>
-    Jacobi: typing.ClassVar[GpuPreconditioner]  # value = <GpuPreconditioner.Jacobi: 0>
-    @classmethod
-    def __new__(cls, value):
-        ...
-    def __format__(self, format_spec):
-        """
-        Convert to a string according to format_spec.
-        """
 class HoleShape(enum.IntEnum):
     FULL: typing.ClassVar[HoleShape]  # value = <HoleShape.FULL: 0>
     HALF: typing.ClassVar[HoleShape]  # value = <HoleShape.HALF: 1>
@@ -901,7 +891,12 @@ class Logger:
     def setLogFile(arg0: str) -> bool:
         ...
     @staticmethod
+    @typing.overload
     def setLogLevel(arg0: ...) -> None:
+        ...
+    @staticmethod
+    @typing.overload
+    def setLogLevel(arg0: str) -> None:
         ...
     def addDebug(self, arg0: str) -> Logger:
         ...
@@ -1256,8 +1251,8 @@ class NormalizationType(enum.IntEnum):
         Convert to a string according to format_spec.
         """
 class OxidantType(enum.IntEnum):
-    Dry: typing.ClassVar[OxidantType]  # value = <OxidantType.Dry: 0>
-    Wet: typing.ClassVar[OxidantType]  # value = <OxidantType.Wet: 1>
+    DRY: typing.ClassVar[OxidantType]  # value = <OxidantType.DRY: 0>
+    WET: typing.ClassVar[OxidantType]  # value = <OxidantType.WET: 1>
     @classmethod
     def __new__(cls, value):
         ...
@@ -1630,6 +1625,12 @@ class RayTracingParameters:
         ...
     @minNodeDistanceFactor.setter
     def minNodeDistanceFactor(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
+        ...
+    @property
+    def minRayDistance(self) -> float:
+        ...
+    @minRayDistance.setter
+    def minRayDistance(self, arg0: typing.SupportsFloat | typing.SupportsIndex) -> None:
         ...
     @property
     def raysPerPoint(self) -> int:

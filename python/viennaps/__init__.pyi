@@ -11,10 +11,19 @@ microelectronic fabrication processes.
 from __future__ import annotations
 import sys as _sys
 import viennals as ls
+from viennals._core import BooleanOperationEnum as BooleanOperationType
 from viennals._core import BoundaryConditionEnum as BoundaryType
 from viennals._core import LogLevel
 from viennals._core import SpatialSchemeEnum as SpatialScheme
 from viennals._core import TemporalSchemeEnum as TemporalScheme
+from viennals._core import VTKWriter
+from viennals.d2 import BooleanOperation
+from viennals.d2 import Box
+from viennals.d2 import Cylinder
+from viennals.d2 import Domain as LevelSet
+from viennals.d2 import MakeGeometry
+from viennals.d2 import Plane
+from viennals.d2 import Sphere
 from viennaps._core import AdvectionParameters
 from viennaps._core import AnnealMode
 from viennaps._core import AtomicLayerProcessParameters
@@ -33,7 +42,6 @@ from viennaps._core import FluorocarbonParameters
 from viennaps._core import FluorocarbonParametersIons
 from viennaps._core import FluxEngineType
 from viennaps._core import GpuMode
-from viennaps._core import GpuPreconditioner
 from viennaps._core import HoleShape
 from viennaps._core import IBEParameters
 from viennaps._core import IBEParametersCos4Yield
@@ -139,7 +147,7 @@ from viennaps.d2 import Writer
 from . import _core
 from . import d2
 from . import d3
-__all__: list[str] = ['AdvectionCallback', 'AdvectionParameters', 'Anneal', 'AnnealMode', 'AtomicLayerProcessParameters', 'BoundaryType', 'BoxDistribution', 'BuiltInMaterial', 'CF4O2Etching', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CSVFileProcess', 'CoverageParameters', 'CustomSphereDistribution', 'DamageTableModel', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'Extrude', 'FaradayCageEtching', 'FaradayCageParameters', 'FluorocarbonEtching', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'GpuMode', 'GpuPreconditioner', 'HBrO2Etching', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDamageHobler', 'ImplantDoseControl', 'ImplantDualPearsonIV', 'ImplantPearsonIV', 'ImplantPearsonIVChanneling', 'ImplantProfileModel', 'ImplantTableModel', 'Interpolation', 'IonBeamEtching', 'IonImplantation', 'IsotropicProcess', 'Length', 'LengthUnit', 'LogLevel', 'Logger', 'MakeFin', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'MultiParticleProcess', 'NetDoping', 'NeutralTransport', 'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'Oxidation', 'OxideRegrowth', 'PROXY_DIM', 'PearsonIVParameters', 'Planarize', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'Process', 'ProcessModel', 'ProcessModelBase', 'ProcessParams', 'RateGrid', 'RateSet', 'RayTracingParameters', 'Reader', 'RenderMode', 'SF6C4F8Etching', 'SF6O2Etching', 'ScreenEnergyLoss', 'SelectiveEpitaxy', 'SheetResistance', 'SiliconOrientation', 'SingleParticleALD', 'SingleParticleALDParams', 'SingleParticleProcess', 'Slice', 'SpatialScheme', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'SurfaceDiffusionParameters', 'TEOSDeposition', 'TEOSPECVD', 'TemporalScheme', 'Time', 'TimeUnit', 'ToDiskMesh', 'VTKRenderWindow', 'WetEtching', 'Writer', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'ls', 'readConfigFile', 'setDimension', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
+__all__: list[str] = ['AdvectionCallback', 'AdvectionParameters', 'Anneal', 'AnnealMode', 'AtomicLayerProcessParameters', 'BooleanOperation', 'BooleanOperationType', 'BoundaryType', 'Box', 'BoxDistribution', 'BuiltInMaterial', 'CF4O2Etching', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CSVFileProcess', 'CoverageParameters', 'CustomSphereDistribution', 'Cylinder', 'DamageTableModel', 'DenseCellSet', 'DirectionalProcess', 'Domain', 'DomainSetup', 'Extrude', 'FaradayCageEtching', 'FaradayCageParameters', 'FluorocarbonEtching', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GDSGeometry', 'GDSReader', 'GeometricTrenchDeposition', 'GeometryFactory', 'GpuMode', 'HBrO2Etching', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDamageHobler', 'ImplantDoseControl', 'ImplantDualPearsonIV', 'ImplantPearsonIV', 'ImplantPearsonIVChanneling', 'ImplantProfileModel', 'ImplantTableModel', 'Interpolation', 'IonBeamEtching', 'IonImplantation', 'IsotropicProcess', 'Length', 'LengthUnit', 'LevelSet', 'LogLevel', 'Logger', 'MakeFin', 'MakeGeometry', 'MakeHole', 'MakePlane', 'MakeStack', 'MakeTrench', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'MultiParticleProcess', 'NetDoping', 'NeutralTransport', 'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'Oxidation', 'OxideRegrowth', 'PROXY_DIM', 'PearsonIVParameters', 'Planarize', 'Plane', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'Process', 'ProcessModel', 'ProcessModelBase', 'ProcessParams', 'RateGrid', 'RateSet', 'RayTracingParameters', 'Reader', 'RenderMode', 'SF6C4F8Etching', 'SF6O2Etching', 'ScreenEnergyLoss', 'SelectiveEpitaxy', 'SheetResistance', 'SiliconOrientation', 'SingleParticleALD', 'SingleParticleALDParams', 'SingleParticleProcess', 'Slice', 'SpatialScheme', 'Sphere', 'SphereDistribution', 'StencilLocalLaxFriedrichsScalar', 'SurfaceDiffusionParameters', 'TEOSDeposition', 'TEOSPECVD', 'TemporalScheme', 'Time', 'TimeUnit', 'ToDiskMesh', 'VTKRenderWindow', 'VTKWriter', 'WetEtching', 'Writer', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'ls', 'readConfigFile', 'setDimension', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
 def __dir__():
     ...
 def __getattr__(name):
@@ -148,19 +156,24 @@ def _module_ptx_path():
     ...
 def _windows_dll_path():
     ...
-def readConfigFile(fileName: str):
+def readConfigFile(fileName: str) -> dict:
     """
     Read a config file in the ViennaPS standard config file format.
     
         Parameters
         ----------
-        fileName: str
-                    Name of the config file.
+        fileName : str
+            Name of the config file.
     
         Returns
         -------
         dict
             A dictionary containing the parameters from the config file.
+            Numeric values are returned as floats, and comma-separated numeric
+            values as lists of floats. Other values are returned as strings or
+            lists of strings, with surrounding whitespace removed. If any list
+            item is nonnumeric, all items in that list are returned as strings.
+            Comments starting with '#' and lines without '=' are ignored.
         
     """
 def setDimension(d: int):
@@ -174,8 +187,7 @@ def setDimension(d: int):
         
     """
 PROXY_DIM: int = 2
-_SHARED_OXIDATION_TYPES: tuple = ('OxidantType', 'SiliconOrientation', 'GpuMode', 'GpuPreconditioner')
+_LS_DIMENSION_ALIASES: dict = {'LevelSet': 'Domain', 'MakeGeometry': 'MakeGeometry', 'Plane': 'Plane', 'Sphere': 'Sphere', 'Cylinder': 'Cylinder', 'Box': 'Box', 'BooleanOperation': 'BooleanOperation'}
 __version__: str = '4.7.0'
-_name: str = 'GpuPreconditioner'
 version: str = '4.7.0'
 _C = _core

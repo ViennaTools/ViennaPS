@@ -32,7 +32,7 @@ public:
         rayBoundaryCondition[i] = viennaray::BoundaryCondition::IGNORE_BOUNDARY;
     } else {
       for (unsigned i = 0; i < D; ++i)
-        rayBoundaryCondition[i] = util::convertBoundaryCondition(
+        rayBoundaryCondition[i] = util::detail::convertBoundaryCondition(
             context.domain->getGrid().getBoundaryConditions(i));
     }
     if constexpr (D == 2) {

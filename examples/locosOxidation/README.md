@@ -59,11 +59,11 @@ The oxide region at any time is:
 ```
 
 During one time step all three interfaces move. Their motion is governed by the
-four coupled physics solves described below.
+coupled physics solves described below.
 
 ---
 
-## LOCOS Physics — Four Coupled Solves Per Time Step
+## LOCOS Physics — Coupled Solves Per Time Step
 
 ### Solve 1 — Oxidant Diffusion (Steady-State Deal-Grove PDE)
 
@@ -120,16 +120,17 @@ Each boundary returns a `(nodeCoefficient, constant)` pair encoding
 | Boundary type | nodeCoefficient | constant |
 |---|---|---|
 | Interior neighbor | 0 | C\_neighbor |
-| Reaction (dist d, g = D/d) | g / (g + k\_eff) | 0 |
+| Reaction (dist d, g = D/d) | g / (g + \|n\_a\| · k\_eff) | 0 |
 | Ambient (dist d, g = D/d) | g / (g + h)      | h · C\* / (g + h) |
 | Mask (h\_m = 0, zero-flux) | 1               | 0 |
 | Out-of-bounds | 1 | 0 |
 
-The stencil contributions update `rhs += α · constant` and
-`diag += α · (1 − nodeCoefficient)`. The Jacobi update is:
-`C_new = rhs / diag`, then relaxed: `C = relax · C_new + (1−relax) · C_old`.
-
-Convergence: `max |C_new − C_old| < tolerance` (default 10⁻⁷).
+On a reaction arm only the axis component of the normal flux is available, so
+`k_eff` is scaled by `|n_a|`, the axis component of the Si normal (exact on
+tilted fronts). The stencil contributions update `rhs += α · constant` and
+`diag += α · (1 − nodeCoefficient)`. The resulting sparse system is solved by
+BiCGSTAB with a smoothed-aggregation AMG preconditioner (AMGCL), on the CPU or,
+with `useGpu=gpu|auto`, on the GPU for systems of at least 20 000 nodes.
 
 **Crystal-orientation reaction rate:**
 
@@ -173,102 +174,139 @@ directed along the outward reaction-interface normal. For γ = 2.27:
 
 After each `apply()` call the concentration field is serialized into a hash map
 from grid index to scalar value. On the next `apply()` call, nodes are
-initialized from this cache instead of the default equilibrium concentration. This
-reduces the Jacobi iteration count for the diffusion solve by 30–50% after the
-first step, since the concentration profile changes little between substeps.
+initialized from this cache instead of the default equilibrium concentration, so
+the iterative solver starts from the previous profile, which changes little
+between substeps.
 
 ---
 
-### Solve 2 — Oxide Deformation (Quasi-Static Stokes Flow)
+### Solve 2 — Oxide and Nitride Deformation (Quasi-Static Stokes Flow)
 
-The growing oxide is treated as a viscous material. The solve has three stages:
-
-**Stage 1 — Harmonic Extension (predictor velocity)**
-
-At each Si/SiO₂ crossing the expansion velocity `v_exp` is set as a Dirichlet
-condition directed along the local reaction-interface normal. This is harmonically
-extended through the oxide band by iteratively averaging each interior node over
-its Cartesian neighbors until convergence (`harmonicIterations`, `tolerance`).
-
-At mask/oxide contact crossings the current mask velocity from Solve 4 is used
-as the Dirichlet value; without an attached mask field the fallback is
-stationary (no-slip) at the mask face.
-
-The result serves as the predictor velocity for Stages 2–3.
-
-**Stage 2 — Pressure solve**
-
-From the current velocity field the divergence `div(v)` is computed at each node
-with central-difference stencils using sub-grid boundary distances. The pressure
-Poisson equation
+The growing oxide is treated as an incompressible Maxwell viscoelastic fluid;
+the nitride mask joins the same solve as a compressible Maxwell body (see
+below). One
+quasi-static Stokes problem is solved for both materials:
 
 ```
-∇²p = −K · div(v)
+oxide:    ∇·(2 η_impl dev(D)) − ∇p = −∇·(d s_start),   ∇·v = 0
+nitride:  ∇·σ = 0,   σ = σ_start + Δt (μ (∇v + ∇vᵀ) + λ (∇·v) I)
 ```
 
-is solved with `K = bulkModulus`. Boundary conditions:
+with the Maxwell quantities defined below.
 
-- **Free surface (φ_amb):** Dirichlet from the traction-free condition:
-  `p_surface ≈ p_ambient + n̂ · s_dev · n̂` (where `s_dev` is the
-  deviatoric stress from the previous mechanics iteration; zero on the first).
-- **Reaction interface (φ_Si):** Zero-normal-gradient Neumann; the velocity is
-  prescribed by oxidation kinematics so no pressure penalty spring is applied.
-- **Mask contact (φ_mask):** Zero-normal-gradient Neumann; mask resistance
-  enters through the coupled mask mechanics solve.
+**Staggered (MAC) grid.** The pressure sits at the oxide grid points of the
+level-set grid, each velocity component on the midpoint of the grid edge along
+its direction, and the shear stress on the cell corners (edges in 3-D). A
+pressure difference between neighbouring points drives the velocity between
+them directly, so there is no checkerboard pressure mode (a collocated grid has
+one, which a thick, stiff nitride drives to tens of GPa).
 
-Solved by point-Jacobi iteration (`pressureIterations`, `pressureTolerance`).
+**Boundary conditions** (the interfaces come from the signed-distance
+functions and do not follow the grid):
 
-**Stage 3 — Stokes velocity update**
+- **Reaction interface:** a velocity in Si takes a ghost value, linear through
+  the crossing where the oxide moves with the expansion velocity `v_exp` along
+  the interface normal.
+- **Free surface:** zero traction. The stress is extrapolated to its
+  traction-free (purely tangential) value at the sub-grid crossing, with the
+  surface normal from the level set.
+- **Symmetry planes** (reflective domain boundaries): no normal velocity, no
+  shear.
 
-The quasi-static Stokes momentum equation is:
-```
-η · ∇²v = ∇p − ∇ · s_dev
-```
-(`η = viscosity`). The right-hand side `∇p − ∇ · s_dev` is computed with
-central-difference stencils at each node. Boundary conditions:
-
-- **Reaction interface:** Dirichlet `v = v_exp` (from Stage 1).
-- **Free surface:** Ghost velocity from the traction-free condition:
-  `v_ghost = 2 · v_surface_analytical − v_node`
-  (second-order one-sided estimate of the traction gradient).
-- **Mask contact:** Dirichlet velocity from the current mask mechanics solve.
-
-Solved by point-Jacobi iteration (`stokesIterations`, `stokesTolerance`).
-
-**Mechanics outer loop:**
-
-Stages 2 and 3 are repeated for `mechanicsIterations` outer iterations
-until the relative change in both pressure and velocity falls below
-`mechanicsTolerance`.
+**Solve.** The velocity–pressure system is solved coupled and exactly: sparse
+LU (Eigen) in 2-D, AMGCL (FGMRES with a Schur-complement pressure-correction
+preconditioner) in 3-D. With the stress-dependent viscosity the solve is
+repeated with updated viscosities (Anderson-accelerated) until the largest
+velocity change, relative to the largest velocity, is below
+`mechanicsTolerance` (default 10⁻⁴), at most `mechanicsIterations` times.
 
 **Maxwell viscoelastic deviatoric stress:**
 
-After each velocity update the symmetric strain-rate tensor is:
+The symmetric strain-rate tensor is:
 ```
 D_ij = 0.5 · (∂v_i/∂x_j + ∂v_j/∂x_i)
 ```
 
-The deviatoric stress evolves with a Maxwell relaxation law:
+Over one substep Δt the deviatoric stress follows the Maxwell law
+`ds/dt + s/τ = 2G·dev(D)`, integrated exactly for constant D:
 ```
-s_new = exp(−Δt/τ) · s_old + (1 − exp(−Δt/τ)) · 2η · dev(D)
+s_new = d · s_start + (1 − d) · 2η · dev(D),     d = exp(−Δt/τ)
 ```
 
 where `Δt = stressTimeStep` and `τ = viscosity / shearModulus` (or
-`stressRelaxationTime` if specified directly). Without a shear modulus (`τ → ∞`)
-the oxide is purely viscous and `s_dev = 0`. The full Cauchy stress is
-`σ = −p I + s_dev`.
+`stressRelaxationTime` if specified directly). With neither set the oxide is
+purely viscous (`s = 2η·dev(D)`). The full Cauchy stress is `σ = −p I + s`.
 
-The stress history `s_old` is persisted to the `ambientInterface` level-set
-`pointData` by `writeFieldsToLevelSet()` before advection. After advection and
-`lsInterior` the field is remapped to the new geometry, providing a warm-start
-for the next step's deformation solve without a separate in-memory cache.
+`s_start` is the stored stress at the start of the substep and stays fixed for
+the whole mechanics solve. The momentum solve treats the instantaneous part
+implicitly, with modulus `η_impl = (1 − d)·η` (about `G·Δt` when `Δt ≪ τ`), and
+the decayed memory `d·s_start` explicitly. At the end of the substep `s_new` is
+carried with the oxide velocity (semi-Lagrangian) and stored on the
+`ambientInterface` level-set `pointData` by `writeFieldsToLevelSet()` (the
+shear components on the corners of the staggered grid, as `OxCornerShear` and,
+in the nitride, `NitCornerShear` on the mask); the next substep starts from it.
+
+**Stress-dependent viscosity** (`setShearActivationVolume`, config `shearActivationVolume` V_c > 0; the presets use
+300 Å³, the common TCAD default):
+
+```
+η(τ) = η₀ · x / sinh(x),     x = τ · V_c / (2 k T),     τ = √J₂ of the deviatoric stress
+```
+
+(Sutardja & Oldham, IEEE Trans. Electron Devices 36, 2415 (1989)). Below the
+critical shear stress 2kT/V_c (0.117 GPa at 1000 °C) the viscosity stays near
+η₀; above it, it falls exponentially, and the relaxation time η/G with it. A
+linear viscous incompressible oxide has a pressure singularity at sharp concave
+corners that grows as the grid is refined; the stress-dependent viscosity
+bounds it. The viscosity lives where the stress is evaluated: at the grid
+points (normal stress) and on the corners of the staggered grid (shear stress).
+Each solves η = η₀ f(|s_end(η)|) for its current strain rate (bisection in
+log η; unique root), and the viscosity iteration repeats the velocity–pressure
+solve until viscosities and flow agree. The momentum equation carries the full
+∇·(2ηε̇') with the local viscosity. The viscosity factor η/η₀ is written as
+`OxViscosity`, the pressure (Pa, compression positive) as
+`OxMechanicsPressure`.
+
+**Nitride mask (monolithic oxide + nitride mechanics):**
+
+There is no separate mask solve and no oxide/mask coupling loop: the grid
+points inside the nitride join the deformation solve (equations above).
+
+- Oxide and nitride share one velocity field, so velocity and traction are
+  continuous across their interface by construction: the expanding oxide
+  pushes and drags the nitride, and the nitride's stiffness pushes back.
+- The nitride has no pressure unknown (compressible, ν = 0.27).
+- The nitride creeps (Senez et al., IEEE TED 43, 720 (1996)): its mean
+  stress is elastic, its deviatoric stress relaxes over τ = η_N/μ (about
+  1.3 h at 1000 °C) with an Eyring viscosity η_N·x/sinh x (V_N = 170 Å³ at
+  1000 °C), like the oxide's.
+- `σ_start` is the nitride stress at the start of the substep (memory).
+  It is stored on the mask level set (`NitStressR0..2`), carried with the
+  moving nitride, and written for visualisation as `MaskStressR0..2` and
+  `MaskVelocity` in `*_mask_fields.vtp`.
+- Each surface is advected with its own material's velocity (oxide top from
+  oxide nodes, mask from nitride nodes).
+- The nitride is supported by the oxide it is bonded to, welded to bare Si
+  and held by the symmetry plane; there is no other clamp.
+- The mechanics of this 2-D example runs on the CPU (sparse LU); `useGpu=gpu`
+  (or `auto`) moves the diffusion solve to the GPU from 20 000 nodes, and in
+  3-D also the velocity-pressure solve.
+
+On this example (0.1 h) the oxide grown per silicon consumed is 2.32 in the
+bird's beak (−0.3 < x < 0 µm), 2.28 at the edge (0 < x < 0.1 µm) and 2.27 in
+the open window, 2.275 overall (target 2.27): oxide flows from the edge into
+the beak. The oxide pressure stays within about ±2 GPa; the nitride carries
+−5.3 to +1.9 GPa in bending.
+
+With `maskBarrierOnly=true` the mask is withheld from the mechanics: the oxide
+expands as at a free surface and carries the mask along (exact for a
+full-width mask; the mode for flat barrier-coating validation).
 
 **Parallelism:**
 
-The harmonic extension, pressure Jacobi, and Stokes Jacobi inner loops are all
-parallelised with `#pragma omp parallel for reduction(max:residual)`. The
-iteration-free (per-face boundary cache) design allows all nodes to be updated
-simultaneously without race conditions.
+The assembly of the velocity–pressure system, the strain rates and the
+viscosity update are parallelised with OpenMP (one row per face, point or
+corner; all data-independent).
 
 **Free-surface velocity — local projection:**
 
@@ -296,7 +334,7 @@ for up to couplingParams.maxIterations:
     for each deformation node:
         p_relaxed = relax * p_new + (1−relax) * p_old
         diffusionField->setPressure(index, p_relaxed)
-    residual = max|Δp| / max|p|
+    residual = max|Δp| / max(max|p|, k_B T / V)
     if residual < couplingParams.tolerance: break
 diffusionField->apply()            // one final solve at converged state
 deformationField->apply()
@@ -308,137 +346,18 @@ this coupling the bird's beak profile would be overestimated.
 
 ---
 
-### Solve 4 — Mask Bending (Quasi-Static Lamé Elasticity)
-
-The nitride mask is modeled as a viscous elastic solid with temperature-dependent
-creep viscosity. The Lamé momentum equation is solved inside the mask domain:
-
-```
-μ ∇²v_mask + (λ + μ) ∇(∇ · v_mask) = 0
-```
-
-The Lamé viscosity parameters are derived from the Arrhenius mask viscosity
-`η(T)` and Poisson's ratio ν:
-
-```
-η(T) = η_ref · exp(E_a/R · (1/T − 1/T_ref))
-
-μ_v = η(T) / (2(1 + ν))
-λ_v = η(T) · ν / ((1 + ν)(1 − 2ν))
-```
-
-**Solve domain:**
-
-All Cartesian grid nodes inside the mask level set (`φ_mask < 0`) within the
-user-specified mask bending bounds are included.
-
-**Contact nodes:**
-
-A mask node is a contact node when at least one of its Cartesian faces exits
-the mask toward the oxide side AND that neighbor location is inside the oxide
-band (below the ambient surface, above the Si surface). The contact side is
-detected from the signed gradient of φ\_mask using central differences. HRLE
-far-field sentinels are clamped before differencing.
-
-The additional ambient-band check (using the cached ambient phi) prevents mask
-nodes above the oxide surface from being falsely classified as contact nodes.
-
-**Contact boundary condition — traction from oxide stress:**
-
-Contact nodes participate in the interior Jacobi solve, but their out-of-mask
-neighbor velocities are replaced by ghosts derived from the oxide Cauchy stress
-tensor at the contact face. For a contact face with outward normal n̂ (pointing
-from mask into oxide):
-
-```
-t_i = Σ_j σ_oxide_ij · n̂_j       (σ_oxide = s_dev − p·I)
-```
-
-The ghost velocity is obtained from the first-order Neumann condition:
-
-```
-v_ghost_normal     = v_node_normal     + h / (λ + 2μ) · t_n          (normal)
-v_ghost_tangential = v_node_tangential + h / μ        · t_tangential  (shear)
-```
-
-where `t_n = t · n̂` and `t_tangential = t − t_n · n̂`.
-
-The contact is unilateral by default: if `t_n ≥ 0` (tensile), the ghost falls
-back to the current mask-node velocity and the oxide does not pull the mask.
-
-**Physical interpretation:**
-- Larger oxide pressure → larger traction → larger ghost offset → contact node
-  accelerates in the normal direction.
-- Larger η(T) → larger μ and λ → smaller ghost offset for the same traction
-  → stiffer mask bends more slowly.
-- A thicker mask has more nodes between the contact face and the anchor, so the
-  traction-driven velocity decays before reaching the top — no explicit
-  compliance scaling is needed.
-
-**Interior node update — Jacobi relaxation of the Lamé equation:**
-
-Each iteration applies:
-
-1. **Laplacian average** (resolves μ ∇²v):
-   `v_avg = (1/count) · Σ_neighbors v_neighbor`
-   Contact ghost velocities substitute for out-of-mask faces; zero-flux Neumann
-   at out-of-bounds faces.
-
-2. **Grad-div correction** (resolves (λ + μ) ∇(∇ · v)):
-   `v_update += gradDivWeight · h² / (2D) · ∇(∇ · v)`
-   where `gradDivWeight = (λ + μ) / max(λ + 2μ, ε)`. This term enforces
-   volumetric compatibility and distinguishes the Lamé equation from pure
-   Laplace smoothing.
-
-The relaxed update is: `v = relaxation · v_update + (1 − relaxation) · v_old`.
-
-Convergence: `max |Δv_component| < tolerance` over all nodes.
-
-**Warm-start:**
-
-The mask velocity field is persisted to the `maskInterface` level-set
-`pointData` by `writeFieldsToLevelSet()` before advection, then remapped and
-filled by `lsAdvect + lsInterior`. The `seedFromLevelSet()` call at the start
-of the next `apply()` initializes node velocities from this saved field,
-reducing the Jacobi iteration count significantly across time steps.
-
----
-
-### The Constrained Ambient Velocity Field
-
-`OxidationConstrainedAmbient` adapts the ambient-interface advection velocity
-depending on whether a query point is under the mask or in the open window:
-
-```
-if φ_mask(x) ≤ 0  (inside nitride):
-    v_amb(x) = V_mask(x)     (moves with nitride, no free oxidation)
-else:
-    v_amb(x) = V_oxide(x)    (moves with free oxide surface)
-```
-
-Additionally, for gap-zone points just outside the mask surface
-(`−3Δx < φ_mask < 0`), a no-separation correction boosts the oxide velocity
-in the interface-normal direction to match the mask, preventing a persistent
-sub-grid void from opening at the bird's beak corner.
-
-The mask phi values are cached in a flat hash map before advection begins
-(`buildMaskPhiCache`), making each velocity query O(1) without per-call HRLE
-iterator traversal.
-
----
-
 ### Mandatory Boolean Clips
 
-Before and after the three level-set advections, a boolean RELATIVE_COMPLEMENT
+Before and after the level-set advections, a boolean RELATIVE_COMPLEMENT
 clips the ambient interface against the mask:
 
 ```
 ambientInterface = ambientInterface \ maskInterface
 ```
 
-**Pre-advection clip:** The ambient and mask level sets must not overlap when
-the constrained velocity field queries φ\_mask. Overlap makes the inside/outside
-test ambiguous and corrupts the velocity field.
+**Pre-advection clip:** Removes any overlap of the ambient level set with the
+mask before the interfaces are advected, so each grid point belongs to one
+material.
 
 **Post-advection clip:** The ambient interface can drift slightly into the mask
 volume during the advection step, especially near the bird's beak where the
@@ -456,13 +375,13 @@ conditional on interface proximity.
 
 Each call to `applyCFLLimited(requestedTime, cflFactor)` performs:
 
-1. **Solve at `requestedTime`** (predictor solve): run all four coupled solves
+1. **Solve at `requestedTime`** (predictor solve): run the coupled solves
    with `stressTimeStep = requestedTime`.
-2. **Compute max velocity** across all three velocity fields
-   (diffusion, deformation, mask bending).
+2. **Compute max velocity** across the diffusion and deformation velocity
+   fields (the deformation field includes the nitride).
 3. **Compute CFL step:**
    `actual_dt = min(requestedTime, cflFactor · Δx / max_velocity)`
-4. **If CFL reduced the step**: re-run all four solves with
+4. **If CFL reduced the step**: re-run the solves with
    `stressTimeStep = actual_dt` (corrector solve) to get the correct
    viscoelastic stress at the actual step size.
 5. **Advect** the three interfaces by `actual_dt`.
@@ -484,45 +403,17 @@ remapped by `lsAdvect + lsInterior`:
 |---|---|---|
 | Oxidant concentration C(x) | `ambientInterface` | `"OxConcentration"` |
 | Oxide pressure p(x) | `ambientInterface` | `"OxPressure"` |
-| Oxide velocity V(x) + stress s_dev(x) | `ambientInterface` | `"OxVelocity"`, `"OxStress"` |
-| Mask velocity V\_mask(x) | `maskInterface` | `"MaskVelocity"` |
+| Oxide velocity V(x) + stress s(x) | `ambientInterface` | `"OxVelocity"`, `"OxStressR0..2"` |
+| Nitride stress σ\_start(x) | `maskInterface` | `"NitStressR0..2"` |
 
-On the following substep `seedFromLevelSet()` restores these fields as the
-initial guess for each solver, eliminating the cold-start cost from the second
-substep onward.
-
-### Aitken Acceleration for the Oxide/Mask Interface Loop
-
-The oxide/mask coupling loop is a fixed-point iteration: oxide solve → mask
-solve → oxide solve → ... After the first iteration, Aitken's Δ² method
-is applied to the contact-velocity residual vector to extrapolate toward the
-fixed point. The relaxation factor ω is updated each iteration:
-
-```
-ω_new = −ω_old · (r_old · Δr) / (Δr · Δr)
-ω     = clamp(ω_new, 0.05, 1.5)
-```
-
-where `Δr = r_new − r_old` is the residual increment. This typically achieves
-convergence in 3–7 iterations instead of the 10–20 without acceleration.
-The initial ω is 1 (no relaxation); subsequent values adapt based on the
-curvature of the residual sequence.
+On the following substep the concentration is the diffusion solver's initial
+guess and the stresses are the mechanics' step-start (memory) stresses.
 
 ### OpenMP Parallelism
 
-All inner Jacobi loops are parallelised with OpenMP:
-
-| Loop | Parallelism note |
-|---|---|
-| Diffusion Jacobi | `#pragma omp parallel for reduction(max:residual)` |
-| Harmonic extension | `#pragma omp parallel for reduction(max:residual)` |
-| Pressure Jacobi | `#pragma omp parallel for` (divergence) + Jacobi |
-| Stokes Jacobi | `#pragma omp parallel for reduction(max:residual)` |
-| Mask bending Jacobi | `#pragma omp parallel for reduction(max:residual)` |
-
-The per-node update reads only from the previous-iteration vector and writes
-to the next-iteration vector — a Jacobi (not Gauss-Seidel) update — so all
-nodes are data-independent and the parallelism is race-free by construction.
+The linear solves run in AMGCL (OpenMP on the CPU, CUDA on the GPU). The
+mechanics assembly, strain rates and viscosity updates are OpenMP loops (one
+row per face, point or corner).
 
 ---
 
@@ -530,28 +421,18 @@ nodes are data-independent and the parallelism is race-free by construction.
 
 ```
 1.  Create OxidationDiffusion with mask exclusion, concentration warm-start
-2.  Create OxidationDeformation with mask contact velocity, velocity warm-start
+2.  Create OxidationDeformation with the nitride as part of the solve and
+    the stress history of the last step
 3.  OxidationModel::apply()            (diffusion + deformation coupling loop)
-4.  Create OxidationMaskBending with ambient phi cache, velocity warm-start
-5.  OxidationMaskBending::apply()      (first mask bending solve)
-
-6.  Oxide/mask interface coupling (Aitken-accelerated fixed-point):
-      for iteration in 1..maskCouplingIterations:
-          deformationField->setMaskVelocityField(maskBendingField)
-          OxidationModel::apply()        (oxide re-solve with mask velocity BC)
-          OxidationMaskBending::apply()  (mask re-solve with oxide traction BC)
-          Aitken-relax the contact-velocity update
-          if contact-velocity change < maskCouplingTolerance: break
-
-7.  Create OxidationConstrainedAmbient (mask phi cache built once)
-8.  diffusionField->markSolved()        (prevents parallel re-entry from lsAdvect)
-9.  BooleanOperation(ambient \ mask)    pre-clip
-10. Persist fields to pointData         (warm-start for next substep)
-11. Advect φ_amb with constrained ambient velocity
-12. Advect φ_Si with diffusion velocity
-13. Advect φ_mask with mask bending velocity
-14. lsInterior(φ_amb), lsInterior(φ_mask)   (fill interior for warm-start)
-15. BooleanOperation(ambient \ mask)    post-clip
+4.  CFL check; re-solve at the CFL-limited step if needed
+5.  diffusionField->markSolved()        (prevents parallel re-entry from lsAdvect)
+6.  BooleanOperation(ambient \ mask)    pre-clip
+7.  Persist fields to pointData         (warm-start for next substep)
+8.  Advect φ_amb with the oxide nodes' velocity
+9.  Advect φ_Si with diffusion velocity
+10. Advect φ_mask with the nitride nodes' velocity
+11. lsInterior(φ_mask), BooleanOperation(ambient \ mask)   post-clip
+12. lsInterior(φ_amb)                   (fill interior for warm-start)
 ```
 
 ---
@@ -577,9 +458,7 @@ model->setPressure(1.0);               // atm
 model->setOrientation(ps::SiliconOrientation::Si100);
 model->setTimeStep(0.1);               // hr; max internal step and output cadence
 model->setMaskParameters(
-    ls::lsOxidationPresets<double>::siliconNitrideMask1000C());
-model->setMaskCouplingIterations(30);
-model->setMaskCouplingTolerance(0.04);
+    viennals::OxidationPresets::siliconNitrideMask1000C());
 
 // Run one time step at a time to save intermediate shapes
 double elapsed = 0., total = 1.0;
@@ -605,9 +484,7 @@ model.setOxidant(vps.OxidantType.Wet)
 model.setPressure(1.0)
 model.setOrientation(vps.SiliconOrientation.Si100)
 model.setTimeStep(0.1)
-model.setMaskParameters(ls.OxidationProcessPresets.siliconNitrideMask1000C())
-model.setMaskCouplingIterations(30)
-model.setMaskCouplingTolerance(0.04)
+model.setMaskParameters(ls.OxidationPresets.siliconNitrideMask1000C())
 
 elapsed = 0.0
 while elapsed < 1.0:
@@ -675,42 +552,33 @@ ratios.
 | `equilibriumConcentration` C\* | 1 | Normalized; scales with pressure |
 | `expansionCoefficient` γ | 2.27 | SiO₂/Si molar volume ratio |
 | `velocitySign` | −1 | Interface moves into silicon |
-| `reactionActivationVolume` V_k | 1.76×10⁻³⁵ m³ | Sutardja–Oldham stress correction |
-| `diffusionActivationVolume` V_D | 0 | Massoud–Plummer; 0 = off |
+| `stressDependentOxidation` | true | Stress-dependent kinetics on/off (`setStressDependentOxidation`) |
+| `reactionActivationVolume` V_k | 2.5×10⁻²⁹ m³ (25 Å³) | Reaction rate vs interface normal stress, `k = k₀ exp(σ_nn V_k / k_BT)`, retarding only; Kao-calibrated |
+| `diffusionActivationVolume` V_D | 4×10⁻²⁹ m³ (40 Å³) | Diffusivity vs pressure, `D = D₀ exp(−p V_D / k_BT)`; Kao-calibrated |
 | `maskTransferCoefficient` | 0 | Nitride is a perfect oxidant block |
 
 ### Deformation parameters (inside ViennaLS)
 
 | Parameter | Value | Meaning |
 |---|---|---|
-| `viscosity` η | Arrhenius; 10¹⁰ Pa·hr at 1000 °C | Effective oxide viscosity, using `E_a = 1.5 eV` |
-| `bulkModulus` K | 7.5×10⁸ Pa | p ← divergence coupling coefficient |
+| `viscosity` η | Arrhenius per oxidant; wet 3.0×10⁹ Pa·hr, dry 6.5×10¹¹ Pa·hr at 1000 °C | Low-stress oxide viscosity, `E_a` = 3.46 eV (wet) / 4.56 eV (dry); calibrated on Kao et al. 1987 cylinders with V_k = 25, V_D = 40, V_c = 300 Å³ |
 | `shearModulus` G | 3×10¹⁰ Pa | Maxwell deviatoric relaxation |
 | `stressTimeStep` Δt | per substep | Maxwell relaxation time step |
-| `mechanicsIterations` | 30 (config) | Pressure/velocity outer iterations |
-| `pressureIterations` | 2000 (config) | Inner pressure Jacobi iterations |
-| `stokesIterations` | 1000 (config) | Inner Stokes Jacobi iterations |
-| `mechanicsTolerance` | 10⁻⁷ | Relative change threshold for mechanics outer loop |
+| `shearActivationVolume` V_c | 3×10⁻²⁸ m³ (300 Å³) | Stress-dependent viscosity η₀·x/sinh x; 0 = linear |
+| `mechanicsIterations` | 300 (config) | Maximum viscosity iterations (one velocity–pressure solve each) |
+| `mechanicsTolerance` | 10⁻⁴ | Relative velocity change at which the viscosity iteration stops |
 
 ### Mask parameters (`setMaskParameters` on `ps::Oxidation`)
 
 | Parameter | Value | Meaning |
 |---|---|---|
-| `referenceViscosity` η\_ref | 5×10¹¹ Pa·hr | Creep viscosity at referenceTemperature |
-| `referenceTemperature` | 1273.15 K | Reference temperature for Arrhenius law |
-| `creepActivationEnergy` E\_a | 3.86×10⁵ J/mol | Arrhenius exponent, approximately 4 eV |
-| `poissonRatio` ν | 0.27 | Si₃N₄ Poisson's ratio; sets λ/μ in Lamé equation |
-| `unilateralContact` | true | Oxide can push but not pull the mask |
-| `relaxation` | 1.0 | Bending Jacobi under-relaxation |
-| `tolerance` | 10⁻⁸ | Bending Jacobi convergence threshold |
-| `maxIterations` | 10000 | Max Jacobi iterations for bending solve |
+| `youngModulus` E | 270 GPa | Si₃N₄ at 1000 °C |
+| `poissonRatio` ν | 0.27 | Si₃N₄ Poisson's ratio; sets λ/μ of the nitride |
+| `viscosity` η_N | 1.4×10¹¹ Pa·hr at 1000 °C | Maxwell creep of the deviatoric stress (Senez 1996, Table II: 800-1100 °C); 0 = elastic |
+| `shearActivationVolume` V_N | 1.7×10⁻²⁸ m³ (170 Å³) at 1000 °C | Eyring η_N·x/sinh x; 0 = linear |
 
-### Mask coupling parameters (outer oxide/mask loop)
-
-| Parameter | Value (config) | Meaning |
-|---|---|---|
-| `maskCouplingIterations` | 30 | Max Aitken-accelerated iterations per step |
-| `maskCouplingTolerance` | 0.04 | Relative contact-velocity change threshold |
+Without `setMaskParameters` the mask takes the Si₃N₄ values at the process
+temperature (`OxidationPresets::siliconNitrideMask`).
 
 ---
 
@@ -735,9 +603,10 @@ open-window thickness to within ~5%, serving as a consistency check.
 ## Time-Stepping Considerations
 
 LOCOS requires multiple physical updates because:
-1. The geometry changes substantially over the oxidation time, so coupled
-   diffusion/mechanics/contact fields must be refreshed as interfaces move.
-2. Each internal step re-solves the mask bending with the current oxide geometry.
+1. The geometry changes substantially over the oxidation time, so the coupled
+   diffusion/mechanics fields must be refreshed as interfaces move.
+2. Each internal step re-solves the oxide and nitride mechanics with the current
+   geometry.
 
 The `timeStep` parameter caps the maximum internal substep and sets the output
 cadence. If larger than the CFL limit, the model automatically subcycles. The
@@ -774,13 +643,14 @@ temperature=1000.
 pressure=1.0
 oxidant=wet
 orientation=100
-mechanicsIterations=30
-pressureIterations=2000
-stokesIterations=1000
-couplingIterations=30
-couplingTolerance=1e-4
-maskCouplingIterations=30
-maskCouplingTolerance=0.04
+mechanicsIterations=300
+mechanicsTolerance=1e-4
+couplingIterations=100
+couplingTolerance=2e-2
+maskYoungModulus=270e9
+maskPoissonRatio=0.27
+maskViscosity=-1
+maskShearActivationVolume=-1
 ```
 
 ---
@@ -803,10 +673,10 @@ bird's beak profile and the nitride deflection.
 | File | Role |
 |---|---|
 | `lsOxidation.hpp` | Unified oxidation orchestrator (`Oxidation<T,D>`); owns the per-step workflow |
-| `lsOxidationDiffusion.hpp` | Deal-Grove diffusion field (Jacobi, embedded BCs) |
-| `lsOxidationDeformation.hpp` | Stokes deformation field (harmonic + pressure + Stokes) |
+| `lsOxidationDiffusion.hpp` | Deal-Grove diffusion field (cut-cell stencil, BiCGSTAB with AMG on the CPU or GPU) |
+| `lsOxidationDeformation.hpp` | Maxwell Stokes deformation on a staggered grid (sparse LU in 2-D, AMGCL in 3-D); nitride mask in the same solve |
 | `lsOxidationModel.hpp` | Pressure–concentration coupling loop |
-| `lsOxidationMask.hpp` | Mask bending solver and constrained ambient velocity |
+| `lsOxidationMask.hpp` | Nitride parameters; barrier-only mask carry |
 | `lsOxidationPresets.hpp` | Calibrated material presets (wet/dry 1000 °C) |
 | `psOxidation.hpp` | ViennaPS wrapper; Deal-Grove Arrhenius lookup; material detection |
 

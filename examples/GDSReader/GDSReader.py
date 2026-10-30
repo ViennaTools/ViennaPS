@@ -27,8 +27,8 @@ geometry = ps.Domain()
 # Substrate plane
 origin = [0.0, 0.0, 0.0]
 normal = [0.0, 0.0, 1.0]
-substrate = ps.ls.Domain(bounds, boundaryConds, gridDelta)
-ps.ls.MakeGeometry(substrate, ps.ls.Plane(origin, normal)).apply()
+substrate = ps.LevelSet(bounds, boundaryConds, gridDelta)
+ps.MakeGeometry(substrate, ps.Plane(origin, normal)).apply()
 geometry.insertNextLevelSetAsMaterial(substrate, ps.Material.Si)
 
 # Insert GDS layers

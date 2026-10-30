@@ -90,7 +90,7 @@ This [example](./finOxidation) simulates thermal oxidation of a silicon fin, cap
 
 ## LOCOS Oxidation
 
-This [example](./locosOxidation) simulates Local Oxidation of Silicon (LOCOS), including the characteristic **bird's beak** beneath the nitride mask. The model couples oxidant diffusion, viscous oxide flow, and mask bending. The image shows the oxidized material stack on the left and nitride stress and oxide pressure on the right.
+This [example](./locosOxidation) simulates Local Oxidation of Silicon (LOCOS), including the characteristic **bird's beak** beneath the nitride mask. The model couples oxidant diffusion with a viscoelastic Stokes flow of the oxide, solved together with the nitride mask (elastic, with creep). The image shows the oxidized material stack on the left and nitride stress and oxide pressure on the right.
 
 <div align="center">
   <img src="../assets/locos.png" width=700 style="background-color:white;">
