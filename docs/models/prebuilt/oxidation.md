@@ -17,37 +17,61 @@ nav_order: 14
 `Oxidation` models thermal silicon oxidation using the coupled oxidation solver
 provided by ViennaLS. The model exposes process-level controls such as furnace
 temperature, oxidation time, oxidant species, pressure, and crystal orientation,
-while the underlying solver handles oxidant diffusion, interface motion, and
-oxide deformation.
+while the underlying solver handles oxidant diffusion, the reaction at the
+Si/SiO2 interface, and the flow of the growing oxide.
 
 Unlike most particle- or velocity-field-based process models, `Oxidation`
 manages its own physics. It is applied through the normal `Process` interface,
 but the model internally performs the required coupled diffusion and deformation
-steps.
+steps. The oxidation time is set with `setTime`; a duration passed to `Process`
+is not used.
 
 ## Physical Model
 
-The built-in rate constants follow a Deal-Grove style thermal oxidation model.
-The model supports dry oxidation (`O2`) and wet oxidation (`H2O`) and includes
-crystal-orientation-dependent reaction-rate corrections for silicon.
+The growth rate follows the Deal-Grove linear-parabolic model. Built-in
+Arrhenius rate constants cover dry oxidation (`O2`) and wet oxidation (`H2O`) of
+lightly doped silicon at 1 atm, and `setDealGroveRates` replaces them with
+measured values. The linear rate depends on the wafer orientation and on the
+local direction of the silicon surface, so sidewalls and corners oxidize at
+their own rates.
 
 During each internal time step, the solver computes:
 
 * oxidant diffusion through the oxide,
 * reaction at the Si/SiO2 interface,
-* oxide volume expansion,
-* deformation and pressure inside the oxide, and
-* stress feedback on diffusion and reaction rates.
+* oxide volume expansion (2.27 volumes of oxide per volume of consumed silicon),
+* the flow of the oxide as an incompressible viscoelastic (Maxwell) material on
+  a staggered grid, with a viscosity that decreases with the shear stress
+  (Sutardja and Oldham, 1989), and
+* stress feedback on the reaction rate and the oxidant diffusivity.
+
+The stress feedback is on by default. Compressive stress normal to the Si/SiO2
+interface slows the reaction, and pressure in the oxide slows the diffusion of
+the oxidant. The default activation volumes and the oxide viscosity were
+calibrated together on the oxidation of curved silicon surfaces measured by Kao
+et al. (1987), for wet oxidation at 800–1200 °C and dry oxidation at
+900–1200 °C.
 
 If a Si3N4 mask is present in the material stack, the model activates LOCOS
-physics. In that mode, oxidant transport below the nitride mask, mask bending,
-and constrained oxide expansion produce the characteristic bird's-beak shape.
+physics. The mask blocks the oxidant and becomes part of the same mechanics
+solve as an elastic body with creep, using silicon nitride properties at the
+process temperature (Senez et al., 1996). Oxide and nitride share one velocity
+field, so the mask bends as the oxide grows under its edge and forms the
+characteristic bird's-beak shape.
+
+The numerical method is described in the ViennaLS
+[Thermal Oxidation Solver](https://github.com/ViennaTools/ViennaLS/blob/master/docs/OxidationSolver.md)
+documentation.
 
 ## Domain Requirements
 
 The domain must contain a silicon material level set, typically `Material::Si`
-or `Material::BulkSi`. If no SiO2 level set is present, the model can create a
-thin native oxide seed internally.
+or `Material::BulkSi`. If no SiO2 level set is present, the model creates an
+initial oxide of `setInitialOxideThickness` (default 2 nm) on top of the stack,
+except where a mask covers the silicon; a thickness of 0 starts from bare
+silicon. While the oxide is thinner than three grid cells, it grows by the
+one-dimensional Deal-Grove law, and the full solve takes over once the grid
+resolves it.
 
 Common material roles are:
 
@@ -64,33 +88,32 @@ The material roles can be overridden with `setSiliconMaterial`,
 
 | Method | Description |
 |--------|-------------|
-| `setTemperature(temperatureC)` | Furnace temperature in degrees Celsius. |
-| `setTime(timeHr)` | Total oxidation time in hours. |
-| `setOxidant(oxidant)` | Oxidant species: `OxidantType::Dry` or `OxidantType::Wet`. |
-| `setPressure(pressureAtm)` | Ambient pressure in atm; scales both linear and parabolic rates. |
-| `setOrientation(orientation)` | Silicon orientation: `Si100`, `Si110`, `Si111`, or `PolySi`. |
-| `setTimeStep(dtHr)` | Optional maximum internal time step in hours. The actual step remains CFL-limited. |
-| `setCFLFactor(factor)` | CFL factor for internal interface motion, clamped below 0.5. |
-| `setInitialOxideThickness(thicknessUm)` | Native oxide seed thickness in micrometers if no oxide layer exists. |
-| `setTransferCoefficient(coefficient)` | Gas-transfer coefficient at the oxide/ambient interface. |
-| `setMaxGridPoints(maxGridPoints)` | Caps the Cartesian grid size used by the ViennaLS solves. |
+| `setTemperature(temperatureC)` | Furnace temperature in degrees Celsius, 800–1200 °C (default 1000). |
+| `setTime(timeHr)` | Total oxidation time in hours (default 1). |
+| `setOxidant(oxidant)` | Oxidant species: `OxidantType::DRY` (default) or `OxidantType::WET`. Also accepts `"dry"`, `"O2"`, `"wet"`, or `"H2O"`. |
+| `setPressure(pressureAtm)` | Ambient pressure in atm; scales both linear and parabolic rates (default 1). |
+| `setOrientation(orientation)` | Silicon orientation: `Si100` (default), `Si110`, `Si111`, or `PolySi` (isotropic, with the `<100>` rates). Also accepts `"100"`, `"110"`, `"111"`, or `"poly"`. |
+| `setDealGroveRates(B, BoA)` | Replaces the built-in parabolic rate B (µm²/hr) and linear rate B/A (µm/hr). A value of 0 keeps the built-in rate. |
+| `setInitialOxideThickness(thicknessUm)` | Initial oxide in micrometers, created if the domain has no oxide (default 0.002; 0 = bare silicon). |
+| `setTransferCoefficient(coefficient)` | Gas-transfer coefficient at the oxide/ambient interface in µm/hr (default 100). Large values hold the surface at the equilibrium oxidant concentration. |
+| `setTimeStep(dtHr)` | Optional maximum internal time step in hours (default 0: no limit). The actual step remains CFL-limited. |
+| `setInitialTimeStep(dtHr)` | Maximum length of the first internal time step in hours (0 = default of 0.004). |
+| `setCFLFactor(factor)` | CFL factor for internal interface motion, between 0.001 and 0.499 (default 0.499). |
+| `setMaxGridPoints(maxGridPoints)` | Caps the Cartesian grid size used by the ViennaLS solves (default 5,000,000). |
+| `setRegrid(coarseDelta, factor)` | Resamples all level sets once to the coarser grid spacing `coarseDelta` (µm) when the thinnest oxide exceeds `factor` × `coarseDelta` (`factor` defaults to 2). A spacing of 0 disables it (default). |
 
 ## Stress and Solver Controls
 
 | Method | Description |
 |--------|-------------|
-| `setReactionActivationVolume(volume)` | Stress coupling for the interface reaction rate. |
-| `setDiffusionActivationVolume(volume)` | Stress coupling for oxide diffusivity. |
-| `setCouplingIterations(iterations)` | Maximum outer diffusion-deformation coupling iterations. |
-| `setCouplingTolerance(tolerance)` | Convergence tolerance for the outer coupling loop. |
-| `setMechanicsIterations(iterations)` | Maximum oxide mechanics iterations. |
-| `setPressureIterations(iterations)` | Maximum pressure-solve iterations. |
-| `setStokesIterations(iterations)` | Maximum Stokes velocity iterations. |
-| `setPressureTolerance(tolerance)` | Pressure-solve tolerance. |
-| `setStokesTolerance(tolerance)` | Stokes-solve tolerance. |
-| `setMechanicsTolerance(tolerance)` | Mechanics coupling tolerance. |
-| `setSimpleVelocityRelaxation(alpha)` | SIMPLE velocity relaxation factor. |
-| `setSimplePressureRelaxation(beta)` | SIMPLE pressure relaxation factor. |
+| `setStressDependentOxidation(enable)` | Turns the stress feedback on the reaction and diffusion on (default) or off. The oxide mechanics, including the stress-dependent viscosity, are unaffected. |
+| `setReactionActivationVolume(volume)` | Activation volume in m³ for the effect of the interface normal stress on the reaction rate (default 2.5e-29, i.e. 25 Å³). |
+| `setDiffusionActivationVolume(volume)` | Activation volume in m³ for the effect of the oxide pressure on the oxidant diffusivity (default 4e-29, i.e. 40 Å³). |
+| `setShearActivationVolume(volume)` | Shear activation volume in m³ of the stress-dependent oxide viscosity (default 300 Å³; 0 = linear viscosity). |
+| `setCouplingIterations(iterations)` | Maximum outer diffusion-deformation coupling iterations (default 30). |
+| `setCouplingTolerance(tolerance)` | Convergence tolerance for the outer coupling loop (default 0.05). It should not be tighter than the mechanics tolerance. |
+| `setMechanicsIterations(iterations)` | Maximum mechanics solves in the viscosity iteration of the stress-dependent oxide (default 200). |
+| `setMechanicsTolerance(tolerance)` | Relative velocity change at which the viscosity iteration stops (default 1e-4). |
 | `setSolveBounds(minIndex, maxIndex)` | Restricts the solve to explicit Cartesian index bounds. |
 | `clearSolveBounds()` | Clears explicit solve bounds. |
 
@@ -102,18 +125,9 @@ by default `Material::Si3N4`.
 | Method | Description |
 |--------|-------------|
 | `setMaskMaterial(material)` | Selects the material treated as the oxidation mask. |
-| `setMaskParameters(params)` | Replaces the full ViennaLS mask parameter object. |
-| `setMaskTractionIterations(iterations)` | Maximum mask-traction iterations. |
-| `setMaskTractionTolerance(tolerance)` | Mask-traction convergence tolerance. |
-| `setMaskTractionRelaxation(relaxation)` | Outer mask-traction relaxation factor. |
-| `setMaskContactLoadRelaxation(relaxation)` | Contact-load relaxation factor. |
-| `setMaskContactReleaseFraction(fraction)` | Fraction used for contact release. |
-| `setMaskUnilateralContact(enabled)` | Enables or disables unilateral contact. |
-| `setMaskSmootherOmega(omega)` | Multigrid smoother over-relaxation for mask mechanics. |
-| `setMaskBendingBounds(minIndex, maxIndex)` | Restricts mask bending to explicit bounds. |
-| `clearMaskBendingBounds()` | Clears explicit mask bending bounds. |
-| `setMaskCouplingIterations(iterations)` | Maximum mask/deformation coupling iterations. |
-| `setMaskCouplingTolerance(tolerance)` | Mask/deformation coupling tolerance. |
+| `setMaskParameters(params)` | Replaces the elastic constants and creep of the mask (`viennals::OxidationMaskParameters`). The default is silicon nitride at the process temperature. |
+| `setMaskPermeabilityRatio(ratio)` | Lets the oxidant diffuse through the mask with the diffusivity of the oxide divided by `ratio` (default 0: impermeable). The mask thickness must span at least about three grid cells. |
+| `setMaskBarrierOnly(enable)` | Treats the mask as a diffusion barrier only: it is carried by the oxide and takes no part in the mechanics. This is exact for a mask covering the whole surface. |
 
 ## GPU Controls
 
@@ -122,22 +136,24 @@ built with GPU support.
 
 | Method | Description |
 |--------|-------------|
-| `setGpuMode(mode)` | Selects `GpuMode::Cpu` (default), `GpuMode::Gpu`, or `GpuMode::Auto`. |
-| `setGpuPreconditioner(preconditioner)` | Selects the GPU BiCGSTAB preconditioner, such as Jacobi or ILU0. |
+| `setGpuMode(mode)` | Selects `GpuMode::Cpu` (default), `GpuMode::Gpu`, or `GpuMode::Auto`. Also accepts `"cpu"`, `"gpu"`, or `"auto"`. |
 
-`GpuMode::Auto` tries the GPU and falls back to CPU if the GPU solver is
-unavailable or fails. `GpuMode::Gpu` requires GPU execution and reports an
-error on failure. In Python use `vps.GpuMode.Auto`, `vps.GpuMode.Cpu`, or
-`vps.GpuMode.Gpu`. This selection controls the oxidation solver independently
-of the process ray-tracing `FluxEngineType`.
+On the GPU, systems of at least 20,000 unknowns are solved with AMGCL's CUDA
+backend: the oxidant diffusion and, in 3D, the mechanics. Smaller systems and
+the assembly stay on the CPU. `GpuMode::Auto` uses the GPU when one is usable and
+otherwise warns and continues on the CPU; a GPU that fails during a solve is
+reported as an error. `GpuMode::Gpu` requires the GPU. In Python use
+`vps.GpuMode.Auto`, `vps.GpuMode.Cpu`, or `vps.GpuMode.Gpu`. This selection
+controls the oxidation solver independently of the process ray-tracing
+`FluxEngineType`.
 
 ## Output Helpers
 
 | Method | Description |
 |--------|-------------|
-| `estimatePlanarOxideThickness(initialOxideThickness)` | Returns the planar Deal-Grove oxide thickness estimate for the current settings. |
+| `estimatePlanarOxideThickness(initialOxideThickness)` | Returns the planar, stress-free Deal-Grove oxide thickness in µm for the current settings. |
 | `saveSurfaceMesh(domain, fileName)` | Writes a wrapped surface mesh without mutating the active simulation state. |
-| `saveVolumeMesh(domain, baseName)` | Writes a wrapped volume mesh and associated oxide-field output. |
+| `saveVolumeMesh(domain, baseName)` | Writes a wrapped volume mesh and the solver fields (velocity, pressure, oxidant concentration, stress) to `<baseName>_oxide_fields.vtp`, plus `<baseName>_mask_fields.vtp` if a mask is present. |
 
 ## Example Usage
 
@@ -152,10 +168,9 @@ using namespace viennaps;
 auto model = SmartPointer<Oxidation<double, 2>>::New();
 model->setTemperature(1000.0);
 model->setTime(0.2);
-model->setOxidant(OxidantType::Wet);
+model->setOxidant(OxidantType::WET);
 model->setPressure(1.0);
 model->setOrientation(SiliconOrientation::Si100);
-model->setMaxGridPoints(5000000);
 
 Process<double, 2>(domain, model).apply();
 ```
@@ -172,10 +187,9 @@ import viennaps as vps
 model = vps.Oxidation()
 model.setTemperature(1000.0)
 model.setTime(0.2)
-model.setOxidant(vps.OxidantType.Wet)
+model.setOxidant(vps.OxidantType.WET)
 model.setPressure(1.0)
 model.setOrientation(vps.SiliconOrientation.Si100)
-model.setMaxGridPoints(5_000_000)
 
 vps.Process(domain, model).apply()
 ```
@@ -187,11 +201,13 @@ vps.Process(domain, model).apply()
   the diffusion/deformation grid scales strongly with dimension.
 * `setTimeStep` is an upper bound. The accepted internal step is still limited
   by the CFL condition.
+* If a thin initial oxide needs a fine grid but the final oxide is thick,
+  `setRegrid` switches to a coarser grid once the oxide is thick enough.
 * LOCOS simulations need enough vertical space above the mask and oxide so that
   the growing oxide and bent mask are not clipped by the domain bounds.
 * In narrow or confined geometries, stress feedback can strongly reduce the
-  local reaction rate. Inspect pressure and stress fields in the oxide-field
-  output to understand growth suppression.
+  local reaction rate. Inspect the pressure and stress fields written by
+  `saveVolumeMesh` to understand growth suppression.
 
 ## Related Examples
 

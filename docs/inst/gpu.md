@@ -26,7 +26,7 @@ The GPU ray tracing module is implemented using [**OptiX 8.0**](https://develope
 
 The Python package can be built with GPU support using helper scripts in
 `python/scripts`. GPU support enables GPU ray tracing in ViennaPS and the GPU
-BiCGSTAB solver used by the oxidation model.
+solves of the oxidation model.
 
 ### Existing ViennaPS Checkout
 
@@ -117,11 +117,12 @@ based on the model, hardware, and domain boundaries. CPU triangle tracing is
 also available through `CPU_TRIANGLE`. See
 [Running a Process]({% link process/index.md %}).
 
-For thermal oxidation, set `Oxidation::setGpuMode` instead. `GpuMode::Cpu` is
-the default, `GpuMode::Auto` allows CPU fallback, and `GpuMode::Gpu` requires
-successful GPU execution. See [Thermal Oxidation]({% link models/prebuilt/oxidation.md %}).
+For thermal oxidation, set `Oxidation::setGpuMode` instead (`"cpu"`, `"gpu"`,
+or `"auto"`). `GpuMode::Cpu` is the default, `GpuMode::Auto` uses the GPU when
+one is usable and falls back to the CPU otherwise, and `GpuMode::Gpu` requires
+the GPU. See [Thermal Oxidation]({% link models/prebuilt/oxidation.md %}).
 
-ViennaPS uses ViennaLS 5.8.5 in its CMake dependency configuration. GPU Python
+ViennaPS uses ViennaLS 5.10.0 in its CMake dependency configuration. GPU Python
 builds package the required ViennaLS GPU library (`libViennaLS_GPU.so` on
 Linux) alongside the extension. Keep locally built ViennaLS and ViennaPS
 packages compatible when updating an installation.
