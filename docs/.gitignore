@@ -1,0 +1,3 @@
+# Local Jekyll builds; the Pages workflow builds the site itself.
+_site/
+.jekyll-cache/

@@ -53,6 +53,8 @@ examples also provide a Python script using the ViennaPS bindings.
 
 More Examples:
 * [Custom Example Process](https://github.com/ViennaTools/ViennaPS/tree/master/examples/exampleProcess)
+* [Custom Particle Distribution](https://github.com/ViennaTools/ViennaPS/tree/master/examples/customParticleDistribution)
+* [Simple Etching](https://github.com/ViennaTools/ViennaPS/tree/master/examples/simpleEtching)
 * [GDS Reader](https://github.com/ViennaTools/ViennaPS/tree/master/examples/GDSReader)
 * [Interpolation Demo](https://github.com/ViennaTools/ViennaPS/tree/master/examples/interpolationDemo)
 * [Oxide Regrowth](https://github.com/ViennaTools/ViennaPS/tree/master/examples/oxideRegrowth)
@@ -67,3 +69,4 @@ More Examples:
 * [Ion Implantation and Anneal](https://github.com/ViennaTools/ViennaPS/tree/master/examples/ionImplantation)
 * [Manual Phosphorus Implant and Anneal](https://github.com/ViennaTools/ViennaPS/tree/master/examples/pImplantManual)
 * [PN Junction](https://github.com/ViennaTools/ViennaPS/tree/master/examples/pnJunction)
+* [Photodiode (FDTD)](https://github.com/ViennaTools/ViennaPS/tree/master/examples/photodiode)
