@@ -56,7 +56,9 @@
   on the normal, wet etching of (100) silicon through the opening gives the
   groove of {111} walls through the edges of the mask, and selective
   epitaxy grows the film on the floor of the opening, flat up to the walls
-  of the mask.
+  of the mask. Oxidation of a silicon step under an oxide layer, from the
+  native oxide, from bare silicon and with a regrid gives the oxide of the
+  usual domain.
 */
 
 namespace viennacore {
@@ -605,14 +607,16 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(deviation / gridDelta < (epitaxy ? 0.05 : 0.1));
   }
 
-  // oxidation (wet, 1000 C, 0.1 h) of a silicon step under a native oxide of
-  // one grid spacing, on a Euclidean and on the usual domain, compared by the
-  // heights of the oxide surface and of the interface on the substrate; the
-  // solver runs on Manhattan bands, and the Euclidean domain gets its level
-  // sets back Euclidean at their width. The solver is 2D and double only here.
+  // oxidation (wet, 1000 C) of a silicon step on a Euclidean and on the usual
+  // domain, compared by the heights of the oxide surface and of the interface
+  // on the substrate: for 0.1 h under an oxide layer of one grid spacing,
+  // from the native oxide the model adds without a layer (2 nm) and from bare
+  // silicon, and for 0.3 h under the layer with a regrid to twice the grid
+  // spacing; the solver runs on Manhattan bands, and the Euclidean domain
+  // gets its level sets back Euclidean at their width, on the coarse grid
+  // after the regrid. The solver is 2D and double only here.
   if constexpr (D == 2 && std::is_same_v<NumericType, double>) {
     const NumericType delta = 0.02;
-    NumericType surface[2] = {0., 0.}, interface[2] = {0., 0.};
     // the height of a level set's surface over x = 0.9
     auto heightAt =
         [](SmartPointer<viennals::Domain<NumericType, D>> levelSet) {
@@ -635,42 +639,57 @@ template <class NumericType, int D> void RunTest() {
           }
           return height;
         };
-    for (bool euclidean : {false, true}) {
-      auto domain = Domain<NumericType, D>::New(
-          delta, 2., 2., BoundaryType::REFLECTIVE_BOUNDARY);
-      if (euclidean)
-        domain->setNormalization(viennals::NormalizationEnum::EUCLIDEAN);
-      MakeFin<NumericType, D>(domain, 0.5, 1., 0., 0., 0., true).apply();
-      domain->duplicateTopLevelSet(Material::SiO2);
-      Process<NumericType, D>(
-          domain, SmartPointer<SphereDistribution<NumericType, D>>::New(delta))
-          .apply();
-      auto model = SmartPointer<Oxidation<NumericType, D>>::New();
-      model->setTemperature(1000.);
-      model->setTime(0.1);
-      model->setOxidant("wet");
-      model->setPressure(1.);
-      model->setOrientation("100");
-      model->setInitialOxideThickness(delta);
-      Process<NumericType, D>(domain, model, 0.).apply();
-      for (auto &levelSet : domain->getLevelSets()) {
-        if (euclidean) {
-          VC_TEST_ASSERT(levelSet->getNormalization() ==
-                         viennals::NormalizationEnum::EUCLIDEAN);
-          VC_TEST_ASSERT(levelSet->getLevelSetWidth() == 12);
+    for (const std::string oxide :
+         {"layer", "native oxide", "bare silicon", "regrid"}) {
+      const bool layer = oxide == "layer" || oxide == "regrid";
+      const NumericType finalDelta = oxide == "regrid" ? 2. * delta : delta;
+      NumericType surface[2] = {0., 0.}, interface[2] = {0., 0.};
+      for (bool euclidean : {false, true}) {
+        auto domain = Domain<NumericType, D>::New(
+            delta, 2., 2., BoundaryType::REFLECTIVE_BOUNDARY);
+        if (euclidean)
+          domain->setNormalization(viennals::NormalizationEnum::EUCLIDEAN);
+        MakeFin<NumericType, D>(domain, 0.5, 1., 0., 0., 0., true).apply();
+        if (layer) {
+          domain->duplicateTopLevelSet(Material::SiO2);
+          Process<NumericType, D>(
+              domain,
+              SmartPointer<SphereDistribution<NumericType, D>>::New(delta))
+              .apply();
         }
-        LSTEST_ASSERT_VALID_LS(levelSet, NumericType, D);
+        auto model = SmartPointer<Oxidation<NumericType, D>>::New();
+        model->setTemperature(1000.);
+        model->setTime(oxide == "regrid" ? 0.3 : 0.1);
+        model->setOxidant("wet");
+        model->setPressure(1.);
+        model->setOrientation("100");
+        if (oxide == "bare silicon")
+          model->setInitialOxideThickness(0.);
+        if (oxide == "regrid")
+          model->setRegrid(2. * delta);
+        Process<NumericType, D>(domain, model, 0.).apply();
+        VC_TEST_ASSERT(domain->getNumberOfLevelSets() == 2);
+        for (auto &levelSet : domain->getLevelSets()) {
+          if (euclidean) {
+            VC_TEST_ASSERT(levelSet->getNormalization() ==
+                           viennals::NormalizationEnum::EUCLIDEAN);
+            VC_TEST_ASSERT(levelSet->getLevelSetWidth() == 12);
+          }
+          VC_TEST_ASSERT(levelSet->getGrid().getGridDelta() == finalDelta);
+          LSTEST_ASSERT_VALID_LS(levelSet, NumericType, D);
+        }
+        surface[euclidean] = heightAt(domain->getLevelSets().back());
+        interface[euclidean] = heightAt(domain->getLevelSets().front());
       }
-      surface[euclidean] = heightAt(domain->getLevelSets().back());
-      interface[euclidean] = heightAt(domain->getLevelSets().front());
+      std::cout << "2D oxidation of a step"
+                << (oxide == "layer" ? std::string() : " (" + oxide + ")")
+                << ", oxide on the substrate from " << interface[0] << " to "
+                << surface[0] << " (Manhattan), " << interface[1] << " to "
+                << surface[1] << " (Euclidean)" << std::endl;
+      VC_TEST_ASSERT(surface[1] - interface[1] > 2. * delta);
+      VC_TEST_ASSERT(std::abs(surface[1] - surface[0]) < 0.25 * delta);
+      VC_TEST_ASSERT(std::abs(interface[1] - interface[0]) < 0.25 * delta);
     }
-    std::cout << "2D oxidation of a step, oxide on the substrate from "
-              << interface[0] << " to " << surface[0] << " (Manhattan), "
-              << interface[1] << " to " << surface[1] << " (Euclidean)"
-              << std::endl;
-    VC_TEST_ASSERT(surface[1] - interface[1] > 2. * delta);
-    VC_TEST_ASSERT(std::abs(surface[1] - surface[0]) < 0.25 * delta);
-    VC_TEST_ASSERT(std::abs(interface[1] - interface[0]) < 0.25 * delta);
   }
 
   // a process of duration 0 with only a callback, which joins a box of height
