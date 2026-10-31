@@ -15,14 +15,19 @@
 ///   auto model = SmartPointer<Oxidation<T, D>>::New();
 ///   model->setTemperature(1000.);               // °C
 ///   model->setTime(0.5);                         // hours
-///   model->setOxidant(OxidantType::Wet);
+///   model->setOxidant(OxidantType::WET);
 ///   model->setOrientation(SiliconOrientation::Si100);
 ///   psProcess<T, D>(domain, model).apply();
 ///
 /// The domain must contain a level set mapped to Material::Si (or BulkSi).
-/// If no SiO2 level set is present, a thin native-oxide layer is created
-/// automatically and appended to the top of the level-set stack.
+/// If no SiO2 level set is present, the native oxide (setInitialOxideThickness)
+/// is created and appended to the top of the level-set stack (only where no
+/// mask covers the silicon).  An oxide thinner than three grid cells first
+/// grows by the 1-D Deal-Grove law until the grid resolves it (the time is
+/// charged to the process; an impermeable mask on the silicon blocks it);
+/// the 2-D solve continues from there.
 
+#include <lsAdvect.hpp>
 #include <lsBooleanOperation.hpp>
 #include <lsFromSurfaceMesh.hpp>
 #include <lsGeometricAdvect.hpp>
@@ -31,8 +36,10 @@
 #include <lsOxidationDiffusion.hpp>
 #include <lsOxidationPresets.hpp>
 #include <lsReinitialize.hpp>
+#include <lsResample.hpp>
 #include <lsToMesh.hpp>
 #include <lsVTKWriter.hpp>
+#include <lsVelocityField.hpp>
 
 #include <hrleSparseIterator.hpp>
 
@@ -43,15 +50,16 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <string>
+#include <unordered_map>
 
 namespace viennaps {
 
 using namespace viennacore;
 
 using GpuMode = viennals::GpuMode;
-using GpuPreconditioner = viennals::GpuPreconditioner;
 
 template <class NumericType, int D>
 class Oxidation : public ProcessModelBase<NumericType, D> {
@@ -78,11 +86,42 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   SiliconOrientation orientation_ = SiliconOrientation::Si100;
   NumericType timeStep_ =
       0.; // 0 = no user cap; internal steps remain CFL-limited
+  // First internal substep cap (hr).  0 = model default (0.004): start where
+  // the cold coupled solve accepts, ramp recovers full step size.
+  NumericType initialTimeStep_ = NumericType(0);
+  // One-shot persistent regrid: when the
+  // thinnest oxide layer clears regridFactor_ * regridDelta_, resample the
+  // ENTIRE level-set stack once onto regridDelta_ and continue coarse.
+  // 0 = disabled.  Fine grid is spent only while the thin seed needs it.
+  NumericType regridDelta_ = NumericType(0);
+  NumericType regridFactor_ = NumericType(2);
   NumericType cflFactor_ = NumericType(0.499);
   NumericType initialOxideThickness_ = NumericType(0.002); // µm (2 nm)
+  // The 2-D solve needs the oxide to span this many grid cells: diffusion and
+  // mechanics live on the grid points between the Si and the oxide surface.
+  // Every validated run started from three (Drob 2025: 1.8 nm on 0.6 nm,
+  // Senez 1996: 15 nm on 5 nm, Kao 1987: 30 nm on 10 nm).
+  static constexpr NumericType resolvedOxideCells_ = NumericType(3);
   NumericType transferCoefficient_ = NumericType(100);
-  NumericType reactionActivationVolume_ = NumericType(1.76e-35);
-  NumericType diffusionActivationVolume_ = NumericType(0);
+  // Meshed mask diffusion: gamma = D_SiO2/D_mask.  The mask body joins the
+  // oxidant diffusion solve with D/gamma; its resistance follows the actual
+  // level-set geometry.  0 = impermeable mask (upstream default).
+  NumericType maskBarrierPermeabilityRatio_ = NumericType(0);
+  bool maskBarrierOnly_ = false;
+  NumericType rateB_override_ = NumericType(0);   // 0 = use Arrhenius table
+  NumericType rateBoA_override_ = NumericType(0); // 0 = use Arrhenius table
+  // Stress-dependent oxidation kinetics (Kao 1988, Senez 1996): the
+  // interface normal stress retards the reaction (V_k), the pressure retards
+  // oxidant diffusion (V_D).  Calibrated on the Kao et al. 1987
+  // cylinder data together with the Arrhenius viscosity below (rms 0.065 in
+  // t_curved/t_flat over 81 points, wet 800-1200 °C and dry 900-1200 °C):
+  // V_k = 25 Å³ (= Ω_SiO2 − Ω_Si, Kao's value), V_D = 40 Å³.
+  bool stressDependentOxidation_ = true;
+  NumericType reactionActivationVolume_ = NumericType(2.5e-29);
+  // Shear activation volume of the stress-dependent oxide viscosity (m^3);
+  // < 0 = preset (300 A^3), 0 = linear viscosity.
+  NumericType shearActivationVolume_ = NumericType(-1);
+  NumericType diffusionActivationVolume_ = NumericType(4.0e-29);
   std::size_t maxGridPoints_ = 5000000;
   unsigned couplingIterations_ = 30;
   NumericType couplingTolerance_ = NumericType(5e-2);
@@ -92,23 +131,13 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
   Material siliconMaterial_ = Material::Si;
   Material oxideMaterial_ = Material::SiO2;
   Material maskMaterial_ = Material::Si3N4;
-  viennals::OxidationMaskParameters maskParams_ =
-      viennals::OxidationPresets::siliconNitrideMask1000C();
-  bool useMaskBendingBounds_ = false;
-  viennahrle::Index<D> maskBendingMinIndex_{};
-  viennahrle::Index<D> maskBendingMaxIndex_{};
-  unsigned maskCouplingIterations_ = 8;
-  NumericType maskCouplingTolerance_ = NumericType(2e-2);
+  // Mask parameters; unset: Si3N4 at the process temperature
+  // (OxidationPresets::siliconNitrideMask).
+  viennals::OxidationMaskParameters maskParams_{};
+  bool maskParamsSet_ = false;
   GpuMode gpuMode_ = GpuMode::Cpu;
-  GpuPreconditioner gpuPreconditioner_ = GpuPreconditioner::Jacobi;
   unsigned mechanicsIterations_ = 200;
-  unsigned pressureIterations_ = 500;
-  unsigned stokesIterations_ = 500;
-  NumericType pressureTolerance_ = NumericType(1e-3);
-  NumericType stokesTolerance_ = NumericType(1e-3);
-  NumericType mechanicsTolerance_ = NumericType(1e-2);
-  NumericType simpleVelocityRelaxation_ = NumericType(0.7);
-  NumericType simplePressureRelaxation_ = NumericType(0.5);
+  NumericType mechanicsTolerance_ = NumericType(1e-4);
   bool toleranceWarningEmitted_ = false;
 
   void validateTolerances() {
@@ -117,25 +146,6 @@ class Oxidation : public ProcessModelBase<NumericType, D> {
     toleranceWarningEmitted_ = true;
 
     // Each outer loop can only converge as tightly as the loop beneath it.
-    // The mechanics coupling residual is contaminated by solver noise at the
-    // level of max(pressureTolerance, stokesTolerance).  mechanicsTolerance
-    // must be at least 5× looser to avoid the solver stagnating at the noise
-    // floor (which causes hundreds of wasted iterations with no progress).
-    const NumericType solverFloor =
-        std::max(pressureTolerance_, stokesTolerance_);
-    if (mechanicsTolerance_ < NumericType(5) * solverFloor)
-      Logger::getInstance()
-          .addWarning(
-              "Oxidation: mechanicsTolerance (" +
-              std::to_string(mechanicsTolerance_) +
-              ") is less than 5× max(pressureTolerance, stokesTolerance) (" +
-              std::to_string(solverFloor) +
-              "). The mechanics coupling residual cannot go below the "
-              "solver noise floor — solveMechanics will stall without "
-              "converging. Set mechanicsTolerance >= " +
-              std::to_string(NumericType(5) * solverFloor) + ".")
-          .print();
-
     if (couplingTolerance_ < mechanicsTolerance_)
       Logger::getInstance()
           .addWarning(
@@ -194,7 +204,7 @@ public:
   // Total oxidation time in hours
   void setTime(NumericType timeHr) { time_ = timeHr; }
 
-  // Oxidant species: OxidantType::Dry (O2) or OxidantType::Wet (H2O)
+  // Oxidant species: OxidantType::DRY (O2) or OxidantType::WET (H2O)
   void setOxidant(OxidantType oxidant) { oxidant_ = oxidant; }
 
   void setOxidant(const std::string &oxidantStr) {
@@ -220,13 +230,27 @@ public:
   // Default (0): no user cap, only the CFL limit and remaining process time.
   void setTimeStep(NumericType dtHr) { timeStep_ = dtHr; }
 
+  // Cap only the FIRST internal substep (hr); 0 = model default (0.004 hr).
+  void setInitialTimeStep(NumericType dtHr) { initialTimeStep_ = dtHr; }
+
+  // One-shot persistent regrid: coarsen the whole level-set stack to
+  // coarseDelta (um) once the thinnest oxide layer exceeds factor*coarseDelta.
+  // 0 disables (default).
+  void setRegrid(NumericType coarseDelta, NumericType factor = NumericType(2)) {
+    regridDelta_ = coarseDelta;
+    regridFactor_ = std::max(factor, NumericType(1));
+  }
+
   // Courant number used for CFL-limited internal stepping (default 0.499).
   // The actual internal step is min(user timeStep cap, CFL step, remaining).
   void setCFLFactor(NumericType factor) {
     cflFactor_ = std::clamp(factor, NumericType(1e-3), NumericType(0.499));
   }
 
-  // Thickness of the auto-created native oxide if no SiO2 layer exists (µm)
+  // Oxide on the silicon at t = 0 (µm; default 2 nm native oxide), created
+  // when the domain has no SiO2 layer, not under a mask; 0 = bare silicon.
+  // An oxide thinner than three grid cells grows by the 1-D Deal-Grove law
+  // until the 2-D solve resolves it (growResolvedOxide).
   void setInitialOxideThickness(NumericType thicknessUm) {
     initialOxideThickness_ = thicknessUm;
   }
@@ -236,12 +260,53 @@ public:
     transferCoefficient_ = coefficient;
   }
 
-  // Stress-coupling activation volume for interface reaction rate (m^3).
+  // Diffusion THROUGH the mask: the mask body is meshed into the oxidant
+  // diffusion solve with D_mask = D_SiO2/gamma, so the oxidant enters the
+  // film's outer surface, diffuses across it, and continues through the oxide
+  // to react at the Si interface.  The film's resistance follows its actual
+  // geometry — the level-set mask thickness IS the barrier thickness e_c, and
+  // it must be resolved by the grid (>= ~3 cells).  For a uniform flat film
+  // this reproduces Deal-Grove A_coated = A + 2*gamma*e_c (Drob et al. 2025).
+  //   permeabilityRatio: gamma = D_SiO2/D_mask (dimensionless).
+  // 0 (default) = impermeable mask (upstream zero-flux behaviour).
+  void setMaskPermeabilityRatio(NumericType permeabilityRatio) {
+    maskBarrierPermeabilityRatio_ = permeabilityRatio;
+  }
+
+  // Mask as diffusion barrier only: mechanically transparent, carried by the
+  // oxide.  Exact for a full-width mask (uniform growth = pure translation).
+  void setMaskBarrierOnly(bool enable) { maskBarrierOnly_ = enable; }
+
+  // Override Deal-Grove parabolic rate B (um^2/hr) and linear rate B/A
+  // (um/hr), e.g. to match measured kinetics (Drob 2025 p-type substrate).
+  // Pass 0 for either to revert to the built-in Arrhenius table.
+  void setDealGroveRates(NumericType B, NumericType BoA) {
+    rateB_override_ = std::max(B, NumericType(0));
+    rateBoA_override_ = std::max(BoA, NumericType(0));
+  }
+
+  // Stress-dependent oxidation kinetics on (default) or off.  Off = the
+  // stress-free Deal-Grove kinetics (both activation volumes zero); the oxide
+  // mechanics, including the stress-dependent viscosity, are unaffected.
+  void setStressDependentOxidation(bool enable) {
+    stressDependentOxidation_ = enable;
+  }
+
+  // Stress-coupling activation volume for interface reaction rate (m^3),
+  // acting on the interface normal stress.  Default 2.5e-29 (25 Å³).
   void setReactionActivationVolume(NumericType volume) {
     reactionActivationVolume_ = volume;
   }
 
-  // Stress-coupling activation volume for oxide diffusivity (m^3).
+  // Stress-dependent oxide viscosity eta = eta0 x / sinh(x),
+  // x = tau Vc / 2kT (Sutardja & Oldham 1989): shear activation volume Vc in
+  // m^3; 0 = linear viscosity.  Default: the preset's 300 A^3.
+  void setShearActivationVolume(NumericType volume) {
+    shearActivationVolume_ = std::max(volume, NumericType(0));
+  }
+
+  // Stress-coupling activation volume for oxide diffusivity (m^3), acting on
+  // the pressure.  Default 4e-29 (40 Å³).
   void setDiffusionActivationVolume(NumericType volume) {
     diffusionActivationVolume_ = volume;
   }
@@ -291,77 +356,22 @@ public:
 
   // Material treated as the oxidation mask (default: Material::Si3N4).
   // If a level set with this material is present in the domain, LOCOS physics
-  // are activated: mask bending + constrained-ambient advection.
+  // are activated: the mask joins the oxide mechanics solve as an elastic
+  // body with Maxwell creep (or, with setMaskBarrierOnly, is a diffusion
+  // barrier only).
   void setMaskMaterial(Material mat) { maskMaterial_ = mat; }
 
-  // Viscous-elasticity parameters for the mask layer (default: SiN at 1000 °C).
+  // Elastic constants and creep of the mask (default: Si3N4 at the process
+  // temperature, OxidationPresets::siliconNitrideMask: Senez et al. 1996).
   void setMaskParameters(viennals::OxidationMaskParameters params) {
     maskParams_ = params;
+    maskParamsSet_ = true;
   }
 
-  // Inner traction-mask solve controls.  These update the stored mask
-  // parameters directly; call them after setMaskParameters() when overriding a
-  // complete parameter object.
-  void setMaskTractionIterations(unsigned iterations) {
-    maskParams_.maxIterations = std::max(1u, iterations);
-  }
-
-  void setMaskTractionTolerance(NumericType tolerance) {
-    maskParams_.tolerance = std::max(tolerance, NumericType(1e-12));
-  }
-
-  void setMaskTractionRelaxation(NumericType relaxation) {
-    maskParams_.relaxation =
-        std::clamp(relaxation, NumericType(0.01), NumericType(1));
-  }
-
-  void setMaskContactLoadRelaxation(NumericType relaxation) {
-    maskParams_.contactLoadRelaxation =
-        std::clamp(relaxation, NumericType(0.02), NumericType(1));
-  }
-
-  void setMaskContactReleaseFraction(NumericType fraction) {
-    maskParams_.contactReleaseFraction =
-        std::clamp(fraction, NumericType(0), NumericType(0.25));
-  }
-
-  void setMaskUnilateralContact(bool enabled) {
-    maskParams_.unilateralContact = enabled;
-  }
-
-  /// SOR omega for the multigrid V-cycle smoother used by the mask mechanics
-  /// solves (contactMode=1/2/3/4).  1.0 = Gauss-Seidel; values in (1, 1.4]
-  /// add over-relaxation.  Separate from the outer Aitken relaxation set by
-  /// setMaskTractionRelaxation().
-  void setMaskSmootherOmega(NumericType omega) {
-    maskParams_.multigridSmootherOmega =
-        std::clamp(omega, NumericType(0.2), NumericType(1.4));
-  }
-
-  // Explicit Cartesian index bounds for the mask bending solve.
-  // When not set, bounds are auto-computed from the mask level-set narrow band.
-  void setMaskBendingBounds(const viennahrle::Index<D> &minIdx,
-                            const viennahrle::Index<D> &maxIdx) {
-    maskBendingMinIndex_ = minIdx;
-    maskBendingMaxIndex_ = maxIdx;
-    useMaskBendingBounds_ = true;
-  }
-
-  void clearMaskBendingBounds() { useMaskBendingBounds_ = false; }
-
-  // Number of outer mask-bending / deformation coupling iterations per step.
-  void setMaskCouplingIterations(unsigned iterations) {
-    maskCouplingIterations_ = std::max(1u, iterations);
-  }
-
-  // Convergence tolerance for the mask-deformation coupling loop.
-  void setMaskCouplingTolerance(NumericType tolerance) {
-    maskCouplingTolerance_ = tolerance;
-  }
-
-  /// Select the BiCGSTAB solver back-end.
+  /// GPU for the diffusion solve and the 3-D mechanics solve (large systems).
   ///   GpuMode::Cpu  — always CPU (default)
   ///   GpuMode::Gpu  — always GPU (throws if unavailable or unsuccessful)
+  ///   GpuMode::Auto — GPU when available, else CPU
   void setGpuMode(GpuMode mode) { gpuMode_ = mode; }
 
   void setGpuMode(std::string mode) {
@@ -377,54 +387,13 @@ public:
                                   "'; must be 'cpu', 'gpu', or 'auto'.");
   }
 
-  /// Select the GPU BiCGSTAB preconditioner. Jacobi matches the CPU solver.
-  void setGpuPreconditioner(GpuPreconditioner preconditioner) {
-    gpuPreconditioner_ = preconditioner;
-  }
-
-  void setGpuPreconditioner(std::string preconditioner) {
-    preconditioner = util::detail::lower(preconditioner);
-    if (preconditioner == "jacobi")
-      gpuPreconditioner_ = GpuPreconditioner::Jacobi;
-    else if (preconditioner == "ilu0")
-      gpuPreconditioner_ = GpuPreconditioner::ILU0;
-    else
-      throw std::invalid_argument(
-          "Oxidation: invalid gpuPreconditioner string '" + preconditioner +
-          "'; must be 'jacobi' or 'ilu0'.");
-  }
-
   void setMechanicsIterations(unsigned iterations) {
     mechanicsIterations_ = std::max(1u, iterations);
   }
 
-  void setPressureIterations(unsigned iterations) {
-    pressureIterations_ = std::max(1u, iterations);
-  }
-
-  void setPressureTolerance(NumericType tol) {
-    pressureTolerance_ = tol;
-    toleranceWarningEmitted_ = false;
-  }
-  void setStokesTolerance(NumericType tol) {
-    stokesTolerance_ = tol;
-    toleranceWarningEmitted_ = false;
-  }
   void setMechanicsTolerance(NumericType tol) {
     mechanicsTolerance_ = tol;
     toleranceWarningEmitted_ = false;
-  }
-  void setSimpleVelocityRelaxation(NumericType alpha) {
-    simpleVelocityRelaxation_ =
-        std::min(NumericType(1), std::max(NumericType(0.01), alpha));
-  }
-  void setSimplePressureRelaxation(NumericType beta) {
-    simplePressureRelaxation_ =
-        std::min(NumericType(1), std::max(NumericType(0.01), beta));
-  }
-
-  void setStokesIterations(unsigned iterations) {
-    stokesIterations_ = std::max(1u, iterations);
   }
 
   // Extracts and saves a mathematically wrapped surface mesh.
@@ -549,9 +518,10 @@ public:
     // files alongside the volume mesh.  Uses the pre-Boolean-op level sets so
     // the pointData arrays are intact; lsToMesh + lsVTKWriter propagate them
     // faithfully, unlike lsWriteVisualizationMesh which strips all point data.
-    const auto &oxLS = levelSets[sio2Idx];
-    if (oxLS->getPointData().getScalarDataSize() > 0 ||
-        oxLS->getPointData().getVectorDataSize() > 0) {
+    // Written unconditionally: at step 0 (before any solve) the meshes carry
+    // geometry + LSValues only; solver fields appear from the first solve on.
+    {
+      const auto &oxLS = levelSets[sio2Idx];
       auto oxFieldMesh = ls::SmartPointer<ls::Mesh<NumericType>>::New();
       ls::ToMesh<NumericType, D>(oxLS, oxFieldMesh).apply();
       ls::VTKWriter<NumericType>(oxFieldMesh, baseName + "_oxide_fields.vtp")
@@ -559,12 +529,10 @@ public:
     }
     if (maskIdx >= 0) {
       const auto &maskLS = levelSets[maskIdx];
-      if (maskLS->getPointData().getVectorDataSize() > 0) {
-        auto maskFieldMesh = ls::SmartPointer<ls::Mesh<NumericType>>::New();
-        ls::ToMesh<NumericType, D>(maskLS, maskFieldMesh).apply();
-        ls::VTKWriter<NumericType>(maskFieldMesh, baseName + "_mask_fields.vtp")
-            .apply();
-      }
+      auto maskFieldMesh = ls::SmartPointer<ls::Mesh<NumericType>>::New();
+      ls::ToMesh<NumericType, D>(maskLS, maskFieldMesh).apply();
+      ls::VTKWriter<NumericType>(maskFieldMesh, baseName + "_mask_fields.vtp")
+          .apply();
     }
   }
 
@@ -631,8 +599,10 @@ private:
 
     auto reactionInterface = levelSets[siIdx];
 
-    // If no oxide layer exists, create a thin native oxide on top of Si.
+    // If no oxide layer exists, start from the native oxide on top of the
+    // open Si and grow it in 1-D until the grid resolves it.
     SmartPointer<ls::Domain<NumericType, D>> ambientInterface;
+    NumericType startupTime = NumericType(0);
     if (sio2Idx >= 0) {
       ambientInterface = levelSets[sio2Idx];
     } else {
@@ -650,15 +620,33 @@ private:
         ls::GeometricAdvect<NumericType, D>(ambientInterface, sphere).apply();
       } else {
         Logger::getInstance()
-            .addInfo("Oxidation: no SiO₂ layer found; inserting "
-                     "zero-thickness oxide seed.")
+            .addInfo("Oxidation: no SiO₂ layer found; starting from bare "
+                     "silicon.")
             .print();
       }
+      SmartPointer<ls::Domain<NumericType, D>> mask = nullptr;
+      if (maskIdx >= 0) {
+        // The mask rests on the silicon: no oxide under it.
+        mask = levelSets[maskIdx];
+        ls::BooleanOperation<NumericType, D>(
+            ambientInterface, mask,
+            ls::BooleanOperationEnum::RELATIVE_COMPLEMENT)
+            .apply();
+        if (maskBarrierPermeabilityRatio_ > NumericType(0))
+          Logger::getInstance()
+              .addWarning("Oxidation: a permeable mask on bare silicon.  The "
+                          "1-D start-up treats it as impermeable, and the 2-D "
+                          "solve has no reaction where the film rests on the "
+                          "silicon; give the film an oxide to rest on.")
+              .print();
+      }
+      startupTime =
+          growResolvedOxide(reactionInterface, ambientInterface, mask);
       domain.insertNextLevelSetAsMaterial(ambientInterface, oxideMaterial_,
                                           false);
     }
 
-    const NumericType gridDelta = reactionInterface->getGrid().getGridDelta();
+    NumericType gridDelta = reactionInterface->getGrid().getGridDelta();
 
     auto cflStep = [&](NumericType maxVel) -> NumericType {
       if (maxVel <= NumericType(0))
@@ -678,7 +666,16 @@ private:
         (rates.BoA > NumericType(0) && beta > NumericType(1))
             ? rates.BoA * (beta - NumericType(1)) / beta
             : (rates.BoA > NumericType(0) ? rates.BoA : NumericType(0));
-    const NumericType seedStep = cflStep(maxSurfaceVelocity);
+    // Conservative cold start: the first coupled solve is the most fragile
+    // (no warm start), and each rejected attempt burns the full coupling
+    // iteration budget before halving dt.  Start at a step the coupling
+    // accepts and let the x2 growth ramp recover full size within a few
+    // substeps.  initialTimeStep_ > 0 overrides the default cap.
+    const NumericType coldStartCap = initialTimeStep_ > NumericType(0)
+                                         ? initialTimeStep_
+                                         : NumericType(0.004);
+    const NumericType seedStep =
+        std::min(cflStep(maxSurfaceVelocity), coldStartCap);
     const NumericType userStepCap =
         timeStep_ > NumericType(0) ? timeStep_
                                    : std::numeric_limits<NumericType>::max();
@@ -723,7 +720,6 @@ private:
     auto locos =
         ls::Oxidation<NumericType, D>::New(reactionInterface, ambientInterface);
     locos->setGpuMode(gpuMode_);
-    locos->setGpuPreconditioner(gpuPreconditioner_);
     locos->setOxidationParameters(oxParams);
     locos->setCouplingParameters(coupling);
     if (useSolveBounds_)
@@ -732,27 +728,14 @@ private:
     if (maskIdx >= 0) {
       auto maskLS = levelSets[maskIdx];
       locos->setMaskInterface(maskLS);
-      // Sync simulation temperature so OxidationMaskBending's Arrhenius
-      // viscosity scaling uses the correct temperature, not the preset's
-      // default.
-      auto activeMaskParams = maskParams_;
-      activeMaskParams.temperature = temperature_ + NumericType(273.15);
-      locos->setMaskParameters(activeMaskParams);
-      {
-        viennahrle::Index<D> mbMin{}, mbMax{};
-        if (useMaskBendingBounds_) {
-          mbMin = maskBendingMinIndex_;
-          mbMax = maskBendingMaxIndex_;
-        } else {
-          std::tie(mbMin, mbMax) = computeLevelSetBounds(maskLS, 4);
-        }
-        locos->setMaskBendingBounds(mbMin, mbMax);
-      }
-      locos->setMaskCouplingIterations(maskCouplingIterations_);
-      locos->setMaskCouplingTolerance(maskCouplingTolerance_);
+      locos->setMaskParameters(
+          maskParamsSet_
+              ? maskParams_
+              : viennals::OxidationPresets::siliconNitrideMask(temperature_));
+      locos->setMaskBarrierOnly(maskBarrierOnly_);
     }
 
-    NumericType time = 0.;
+    NumericType time = startupTime;
     unsigned substep = 0;
     NumericType nextStepEstimate = seedStep;
     NumericType lastAcceptedDt = seedStep;
@@ -767,6 +750,38 @@ private:
           std::min({userStepCap, growthLimitedStep, time_ - time});
       if (requestedDt <= NumericType(0))
         break;
+
+      // One-shot persistent regrid: once the thinnest oxide layer
+      // is comfortably resolvable at the coarse target, resample the whole
+      // stack in place and continue on the coarse grid.  In-place deepCopy
+      // keeps every held SmartPointer valid; the solvers rebuild from the
+      // current grids each substep; the index-keyed concentration warm-start
+      // cannot survive a grid change and is cleared (one cold-started
+      // substep, recovered by the quasi-steady solve).
+      if (regridDelta_ > gridDelta) {
+        const NumericType minOxide =
+            minOxideLayerUm(reactionInterface, ambientInterface, gridDelta);
+        if (minOxide < std::numeric_limits<NumericType>::max() &&
+            minOxide >= regridFactor_ * regridDelta_) {
+          Logger::getInstance()
+              .addInfo(
+                  modeLabel + ": REGRID event at t=" + std::to_string(time) +
+                  " hr — min oxide layer " + std::to_string(minOxide * 1e3) +
+                  " nm; resampling " + std::to_string(levelSets.size()) +
+                  " level sets from delta=" + std::to_string(gridDelta) +
+                  " to " + std::to_string(regridDelta_) + " um")
+              .print();
+          for (auto &ls : levelSets) {
+            ls::Resample<NumericType, D> resampler(ls, regridDelta_);
+            resampler.apply();
+            if (resampler.getResult())
+              ls->deepCopy(resampler.getResult());
+          }
+          locos->setConcentrationCache({});
+          gridDelta = regridDelta_;
+          regridDelta_ = NumericType(0); // one-shot: disarm
+        }
+      }
 
       locos->setDeformationParameters(computeDefParams(requestedDt));
 
@@ -823,6 +838,131 @@ private:
         .print();
   }
 
+  // Normal speed of one surface during the 1-D start-up, by position and
+  // normal.
+  using StartupSpeed = std::function<NumericType(const Vec3D<NumericType> &,
+                                                 const Vec3D<NumericType> &)>;
+  class StartupVelocity : public viennals::VelocityField<NumericType> {
+    StartupSpeed speed_;
+
+  public:
+    explicit StartupVelocity(StartupSpeed speed) : speed_(std::move(speed)) {}
+
+    NumericType getScalarVelocity(const Vec3D<NumericType> &coordinate, int,
+                                  const Vec3D<NumericType> &normal,
+                                  unsigned long) override {
+      return speed_(coordinate, normal);
+    }
+  };
+
+  // 1-D start-up from bare silicon.  Oxide thinner than resolvedOxideCells_
+  // has no grid points of its own, and on this grid it carries no lateral
+  // diffusion or stress anyway.  Until it is resolved, every point of the Si
+  // surface grows by the 1-D Deal-Grove law with its own linear rate k(n)
+  // (the per-face rate of OxidationDiffusion), from the native oxide x_n:
+  //   x^2 + A(n) x = B (t + tau(n)),   A(n) = B/k(n) + B/h,
+  //   tau(n) = (x_n^2 + A(n) x_n) / B,
+  // with h the gas transfer coefficient.  The Si surface recedes by 1/beta
+  // of the grown oxide and the oxide surface rises by the rest.  A point
+  // whose next grid point along its normal lies inside the mask is covered
+  // (the Si under the mask, the oxide surface against its bottom) and does
+  // not grow: no oxidant passes an impermeable mask.  The stage ends when
+  // the slowest face, k = k_base min(1, ratio), reaches the resolved
+  // thickness, or with the process.  On a flat surface this is the solution
+  // the 2-D solve continues.  Returns the process time spent.
+  NumericType
+  growResolvedOxide(SmartPointer<viennals::Domain<NumericType, D>> reaction,
+                    SmartPointer<viennals::Domain<NumericType, D>> ambient,
+                    SmartPointer<viennals::Domain<NumericType, D>> mask) const {
+    namespace ls = viennals;
+    const auto rates = computeDealGroveRates();
+    const auto params = computeOxParams();
+    const NumericType gridDelta = reaction->getGrid().getGridDelta();
+    const NumericType native = std::max(initialOxideThickness_, NumericType(0));
+    if (rates.B <= NumericType(0) || rates.BoA <= NumericType(0) ||
+        time_ <= NumericType(0) ||
+        native >= (resolvedOxideCells_ - NumericType(1e-6)) * gridDelta)
+      return NumericType(0);
+
+    const NumericType B = rates.B;
+    const NumericType ratio = params.reactionRateRatio111;
+    auto dealGroveA = [&](NumericType k) {
+      return B / k + B / params.transferCoefficient;
+    };
+    auto tau = [&](NumericType A, NumericType x) {
+      return (x * x + A * x) / B;
+    };
+    const NumericType resolved = resolvedOxideCells_ * gridDelta;
+    const NumericType aSlowest =
+        dealGroveA(rates.BoA * std::min(NumericType(1), ratio));
+    const NumericType startup =
+        std::min(time_, tau(aSlowest, resolved) - tau(aSlowest, native));
+
+    auto grown = [&, startup](const Vec3D<NumericType> &normal) {
+      NumericType c = NumericType(0);
+      for (unsigned d = 0; d < D; ++d)
+        c += normal[d] * NumericType(params.crystalAxis[d]);
+      const NumericType A =
+          dealGroveA(rates.BoA *
+                     (NumericType(1) + (ratio - 1) * (NumericType(1) - c * c)));
+      return (std::sqrt(A * A + 4 * B * (startup + tau(A, native))) - A) / 2 -
+             native;
+    };
+    // Read-only lookups with an iterator of their own: Advect evaluates the
+    // velocity in parallel.
+    auto covered = [&](const Vec3D<NumericType> &x,
+                       const Vec3D<NumericType> &n) {
+      if (mask == nullptr)
+        return false;
+      viennahrle::Index<D> next;
+      for (unsigned d = 0; d < D; ++d)
+        next[d] = static_cast<viennahrle::IndexType>(
+            std::llround(x[d] / gridDelta + n[d]));
+      viennahrle::ConstSparseIterator<
+          typename ls::Domain<NumericType, D>::DomainType>
+          it(mask->getDomain());
+      it.goToIndices(next);
+      return it.getValue() < NumericType(0);
+    };
+    const NumericType beta = params.expansionCoefficient;
+    auto advect = [](SmartPointer<ls::Domain<NumericType, D>> levelSet,
+                     StartupSpeed distance) {
+      ls::Advect<NumericType, D> advection;
+      advection.insertNextLevelSet(levelSet);
+      advection.setVelocityField(
+          SmartPointer<StartupVelocity>::New(std::move(distance)));
+      advection.setAdvectionTime(1.);
+      advection.apply();
+    };
+    advect(
+        ambient, [&](const Vec3D<NumericType> &x, const Vec3D<NumericType> &n) {
+          return covered(x, n) ? NumericType(0) : grown(n) * (beta - 1) / beta;
+        });
+    advect(reaction,
+           [&](const Vec3D<NumericType> &x, const Vec3D<NumericType> &n) {
+             return covered(x, n) ? NumericType(0) : -grown(n) / beta;
+           });
+    if (mask != nullptr)
+      ls::BooleanOperation<NumericType, D>(
+          ambient, mask, ls::BooleanOperationEnum::RELATIVE_COMPLEMENT)
+          .apply();
+
+    const NumericType reached =
+        (std::sqrt(aSlowest * aSlowest +
+                   4 * B * (startup + tau(aSlowest, native))) -
+         aSlowest) /
+        2;
+    Logger::getInstance()
+        .addInfo("Oxidation: 1-D start-up from " +
+                 std::to_string(native * 1e3) + " to " +
+                 std::to_string(reached * 1e3) +
+                 " nm on the slowest face (resolved: three cells, " +
+                 std::to_string(resolved * 1e3) + " nm) in " +
+                 std::to_string(startup) + " hr.")
+        .print();
+    return startup;
+  }
+
   // Map process conditions → OxidationParameters.
   // With C* = N = 1 (normalised): B = 2D, so diffusionCoefficient = B/2.
   viennals::OxidationParameters computeOxParams() const {
@@ -834,20 +974,31 @@ private:
     p.reactionRate = rates.BoA;
     p.transferCoefficient = transferCoefficient_;
     p.equilibriumConcentration = 1.;
+    // Meshed mask diffusion: the mask body joins the diffusion domain with
+    // D_mask = D/gamma.  Oxidant enters the film's outer surface at the
+    // ambient Robin BC, diffuses through it, crosses into the oxide, and
+    // reacts at the Si interface.  The film's resistance comes from its
+    // actual level-set geometry, so the LS mask thickness IS the physical
+    // barrier thickness e_c.
+    if (maskBarrierPermeabilityRatio_ > NumericType(0))
+      p.maskPermeabilityRatio = maskBarrierPermeabilityRatio_;
     p.oxidantMoleculeDensity = 1.;
     p.expansionCoefficient = 2.27; // V_SiO2 / V_Si
     p.velocitySign = -1.;          // reaction interface moves inward
     p.temperature = T_K;
-    p.reactionActivationVolume = reactionActivationVolume_;
-    p.diffusionActivationVolume = diffusionActivationVolume_;
+    p.reactionActivationVolume =
+        stressDependentOxidation_ ? reactionActivationVolume_ : NumericType(0);
+    p.diffusionActivationVolume =
+        stressDependentOxidation_ ? diffusionActivationVolume_ : NumericType(0);
     // Continuous crystal-axis correction applied per-face by
     // OxidationDiffusion:
     //   k(n) = k_base × [1 + (ratio − 1) × (1 − (n · axis)²)]
     // k_base is the B/A for the chosen bulk orientation; ratio is the B/A of
     // faces perpendicular to the wafer normal divided by k_base. crystalAxis
-    // points along the wafer normal (y = surface-normal convention in 2D).
+    // points along the wafer normal, the last axis (y in 2-D, z in 3-D).
     // Ratios derived from the (100):(110):(111) = 1 : 1.45 : 1.68 ladder.
-    p.crystalAxis = {0., 1., 0.};
+    p.crystalAxis = {0., 0., 0.};
+    p.crystalAxis[D - 1] = 1.;
     switch (orientation_) {
     case SiliconOrientation::Si100:
       // Perpendicular faces are (110)-like: 1.45× faster than (100).
@@ -871,17 +1022,27 @@ private:
     return p;
   }
 
-  // Oxide mechanics: viscosity follows Arrhenius (Irene, J. Electrochem. Soc.
-  // 125, 1708 (1978)); bulk and shear moduli treated as
-  // temperature-independent.
+  // Oxide mechanics: Arrhenius low-stress viscosity per oxidant; the shear
+  // modulus is treated as temperature-independent.
   viennals::OxidationDeformationParameters
   computeDefParams(NumericType dt) const {
     const NumericType T_K = temperature_ + NumericType(273.15);
-    // η(T) = η_ref × exp(Ea/kB × (1/T − 1/T_ref))
-    // η_ref = 1×10¹⁰ Pa·hr at T_ref = 1000 °C, Ea = 1.5 eV (Irene 1978)
-    static constexpr NumericType etaRef = NumericType(1e10);
-    static constexpr NumericType etaEa = NumericType(1.5);       // eV
-    static constexpr NumericType etaTref = NumericType(1273.15); // K
+    // η(T) = η_ref × exp(Ea/kB × (1/T − 1/T_ref)), T_ref = 1000 °C.
+    // Calibrated on the Kao et al. cylinder data (IEEE TED 34,
+    // 1008 (1987): wet Fig. 7/8 800-1200 °C, dry Fig. 10 900-1200 °C) with
+    // this solver's stress model (normal-stress reaction law V_k = 25 Å³,
+    // diffusivity V_D = 40 Å³, Eyring V_c = 300 Å³), 1-D cylinder analysis,
+    // rms 0.065 in t_curved/t_flat over 81 points:
+    //   wet: η_ref = 3.0e9 Pa·hr, Ea = 3.46 eV
+    //   dry: η_ref = 6.5e11 Pa·hr, Ea = 4.56 eV
+    // Wet agrees within ×2.5 with Senez et al., IEEE TED 43, 720 (1996),
+    // Table II (calibrated independently on Kao, 800-1100 °C).  The previous
+    // single law (Irene 1978: 1e10 Pa·hr, 1.5 eV) was too flat in T: it
+    // predicted strong retardation at 1200 °C wet, where Kao measured none.
+    const bool wet = oxidant_ == OxidantType::WET;
+    const NumericType etaRef = wet ? NumericType(3.0e9) : NumericType(6.5e11);
+    const NumericType etaEa = wet ? NumericType(3.46) : NumericType(4.56); // eV
+    static constexpr NumericType etaTref = NumericType(1273.15);           // K
     const NumericType viscosity =
         etaRef * std::exp(etaEa / kB_ *
                           (NumericType(1) / T_K - NumericType(1) / etaTref));
@@ -892,63 +1053,15 @@ private:
         viennals::OxidationPresets::oxideMechanics1000C(1.0);
     viennals::OxidationDeformationParameters p;
     p.viscosity = viscosity;
-    p.bulkModulus = basePreset.bulkModulus;
     p.shearModulus = basePreset.shearModulus;
+    p.shearActivationVolume = (shearActivationVolume_ < NumericType(0))
+                                  ? basePreset.shearActivationVolume
+                                  : shearActivationVolume_;
     p.stressTimeStep = dt;
     p.mechanicsIterations = mechanicsIterations_;
     p.mechanicsTolerance = mechanicsTolerance_;
-    p.pressureIterations = pressureIterations_;
-    p.stokesIterations = stokesIterations_;
-    p.pressureTolerance = pressureTolerance_;
-    p.stokesTolerance = stokesTolerance_;
-    p.tolerance = 1e-7;
-    p.relaxation = simpleVelocityRelaxation_;
-    p.pressureRelaxation = simplePressureRelaxation_;
     p.maxGridPoints = maxGridPoints_;
     return p;
-  }
-
-  // Compute Cartesian index bounding box of the defined (active) points in a
-  // level-set narrow band, padded by `padding` cells.  Same pattern as
-  // OxidationSolverBase::definedPointBounds().
-  static std::pair<viennahrle::Index<D>, viennahrle::Index<D>>
-  computeLevelSetBounds(SmartPointer<viennals::Domain<NumericType, D>> ls,
-                        int padding) {
-    using DomType = typename viennals::Domain<NumericType, D>::DomainType;
-    viennahrle::Index<D> lo{}, hi{};
-    bool found = false;
-    for (viennahrle::ConstSparseIterator<DomType> it(ls->getDomain());
-         !it.isFinished(); ++it) {
-      if (!it.isDefined())
-        continue;
-      const auto &idx = it.getStartIndices();
-      if (!found) {
-        lo = hi = idx;
-        found = true;
-      } else {
-        for (int d = 0; d < D; ++d) {
-          lo[d] = std::min(lo[d], idx[d]);
-          hi[d] = std::max(hi[d], idx[d]);
-        }
-      }
-    }
-    if (found) {
-      for (int d = 0; d < D; ++d) {
-        if (lo[d] <
-            std::numeric_limits<viennahrle::IndexType>::min() + padding) {
-          lo[d] = std::numeric_limits<viennahrle::IndexType>::min();
-        } else {
-          lo[d] -= padding;
-        }
-        if (hi[d] >
-            std::numeric_limits<viennahrle::IndexType>::max() - padding) {
-          hi[d] = std::numeric_limits<viennahrle::IndexType>::max();
-        } else {
-          hi[d] += padding;
-        }
-      }
-    }
-    return {lo, hi};
   }
 
   // Deal-Grove Arrhenius table.
@@ -970,12 +1083,73 @@ private:
     NumericType BoA = 0.; // µm/hr
   };
 
+  /// Minimum oxide-layer thickness (um): per-column difference between the
+  /// ambient (oxide top) and reaction (Si) interface heights along the
+  /// growth axis.  Column heights come from each level set's near-surface
+  /// defined points (y_surf = (i_y - phi) * delta), so the measure is not
+  /// limited by narrow-band width.  Returns max() when no column has both
+  /// interfaces measurable — callers must treat that as "unknown", never as
+  /// "thick".
+  NumericType
+  minOxideLayerUm(SmartPointer<viennals::Domain<NumericType, D>> reaction,
+                  SmartPointer<viennals::Domain<NumericType, D>> ambient,
+                  NumericType delta) const {
+    using It = viennahrle::ConstSparseIterator<
+        typename viennals::Domain<NumericType, D>::DomainType>;
+    auto columnKey = [](const viennahrle::Index<D> &idx) -> long long {
+      if constexpr (D == 2)
+        return static_cast<long long>(idx[0]);
+      else
+        return (static_cast<long long>(idx[0]) << 32) ^
+               static_cast<long long>(static_cast<unsigned int>(idx[1]));
+    };
+    // column -> (best |phi|, surface height) from the tightest defined point
+    auto columnHeights = [&](SmartPointer<viennals::Domain<NumericType, D>>
+                                 ls) {
+      std::unordered_map<long long, std::pair<NumericType, NumericType>> cols;
+      for (It it(ls->getDomain()); !it.isFinished(); ++it) {
+        if (!it.isDefined())
+          continue;
+        const NumericType v = it.getValue();
+        if (std::abs(v) > NumericType(0.9))
+          continue;
+        const auto idx = it.getStartIndices();
+        const NumericType ySurf =
+            (NumericType(idx[D - 1]) - v) * delta; // phi positive above
+        auto [entry, inserted] =
+            cols.try_emplace(columnKey(idx), std::abs(v), ySurf);
+        if (!inserted && std::abs(v) < entry->second.first)
+          entry->second = {std::abs(v), ySurf};
+      }
+      return cols;
+    };
+    const auto reacCols = columnHeights(reaction);
+    const auto ambCols = columnHeights(ambient);
+    NumericType minTh = std::numeric_limits<NumericType>::max();
+    for (const auto &[key, rc] : reacCols) {
+      const auto found = ambCols.find(key);
+      if (found == ambCols.end())
+        continue;
+      const NumericType th = found->second.second - rc.second;
+      if (th > NumericType(0))
+        minTh = std::min(minTh, th);
+    }
+    return minTh;
+  }
+
   DealGroveRates computeDealGroveRates() const {
     const NumericType T_K = temperature_ + NumericType(273.15);
     const auto row = dealGroveRow();
     const NumericType pressure = std::max(pressure_, NumericType(0));
-    return {pressure * row.B0 * std::exp(-row.EB / (kB_ * T_K)),
-            pressure * row.BoA0 * std::exp(-row.EBoA / (kB_ * T_K))};
+    const NumericType B =
+        (rateB_override_ > NumericType(0))
+            ? rateB_override_
+            : pressure * row.B0 * std::exp(-row.EB / (kB_ * T_K));
+    const NumericType BoA =
+        (rateBoA_override_ > NumericType(0))
+            ? rateBoA_override_
+            : pressure * row.BoA0 * std::exp(-row.EBoA / (kB_ * T_K));
+    return {B, BoA};
   }
 
   DealGroveRow dealGroveRow() const {

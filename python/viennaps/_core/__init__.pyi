@@ -6,14 +6,14 @@ import collections.abc
 import enum
 import typing
 import viennals._core
-from viennaps import d2
 import viennaps.d2
+from viennaps import d2
 import viennaps.d3
 from viennaps import d3
 from . import constants
 from . import gpu
 from . import util
-__all__: list[str] = ['AdvectionParameters', 'AnnealMode', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GpuMode', 'GpuPreconditioner', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDoseControl', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'PearsonIVParameters', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'ScreenEnergyLoss', 'SiliconOrientation', 'SingleParticleALDParams', 'Slice', 'SurfaceDiffusionParameters', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
+__all__: list[str] = ['AdvectionParameters', 'AnnealMode', 'AtomicLayerProcessParameters', 'BuiltInMaterial', 'CF4O2Parameters', 'CF4O2ParametersIons', 'CF4O2ParametersMask', 'CF4O2ParametersPassivation', 'CF4O2ParametersSi', 'CF4O2ParametersSiGe', 'CoverageParameters', 'Extrude', 'FaradayCageParameters', 'FluorocarbonMaterialParameters', 'FluorocarbonParameters', 'FluorocarbonParametersIons', 'FluxEngineType', 'GpuMode', 'HoleShape', 'IBEParameters', 'IBEParametersCos4Yield', 'ImplantDoseControl', 'Length', 'LengthUnit', 'Logger', 'Material', 'MaterialCategory', 'MaterialInfo', 'MaterialKind', 'MaterialMap', 'MaterialRegistry', 'MaterialValueMap', 'MetaDataLevel', 'NeutralTransportParameters', 'NormalizationType', 'OxidantType', 'PearsonIVParameters', 'PlasmaEtchingParameters', 'PlasmaEtchingParametersIons', 'PlasmaEtchingParametersMask', 'PlasmaEtchingParametersPassivation', 'PlasmaEtchingParametersPolymer', 'PlasmaEtchingParametersSubstrate', 'ProcessParams', 'RateSet', 'RayTracingParameters', 'RenderMode', 'ScreenEnergyLoss', 'SiliconOrientation', 'SingleParticleALDParams', 'Slice', 'SurfaceDiffusionParameters', 'Time', 'TimeUnit', 'constants', 'd2', 'd3', 'getModelDbRoot', 'gpu', 'gpuAvailable', 'initModelDbRoot', 'setModelDbRoot', 'setNumThreads', 'util', 'version']
 class AdvectionParameters:
     adaptiveTimeStepping: bool
     calculateIntermediateVelocities: bool
@@ -679,16 +679,6 @@ class GpuMode(enum.IntEnum):
     Auto: typing.ClassVar[GpuMode]  # value = <GpuMode.Auto: 2>
     Cpu: typing.ClassVar[GpuMode]  # value = <GpuMode.Cpu: 0>
     Gpu: typing.ClassVar[GpuMode]  # value = <GpuMode.Gpu: 1>
-    @classmethod
-    def __new__(cls, value):
-        ...
-    def __format__(self, format_spec):
-        """
-        Convert to a string according to format_spec.
-        """
-class GpuPreconditioner(enum.IntEnum):
-    ILU0: typing.ClassVar[GpuPreconditioner]  # value = <GpuPreconditioner.ILU0: 1>
-    Jacobi: typing.ClassVar[GpuPreconditioner]  # value = <GpuPreconditioner.Jacobi: 0>
     @classmethod
     def __new__(cls, value):
         ...

@@ -28,9 +28,10 @@ cfg = ps.readConfigFile(config_file)
 
 ps.setDimension(int(cfg["dimensions"]))
 ps.setNumThreads(int(cfg["numThreads"]))
-ps.Logger.setLogLevel(ps.LogLevel.ERROR)
+ps.Logger.setLogLevel(cfg.get("logLevel", "info"))
+log = ps.Logger.getInstance()
 
-oxide_thickness = cfg["oxideThickness"]
+oxide_thickness = cfg.get("oxideThickness", 0.0)
 oxidation_time = cfg["oxidationTime"]
 temperature = cfg["temperature"]
 pressure = cfg["pressure"]
@@ -55,11 +56,6 @@ ps.MakeFin(
     halfFin=True,
 ).apply()
 
-# ── Oxide seed ────────────────────────────────────────────────────────────────
-seed_thickness = max(oxide_thickness, cfg["gridDelta"])
-domain.duplicateTopLevelSet(ps.Material.SiO2)
-ps.Process(domain, ps.SphereDistribution(radius=seed_thickness)).apply()
-
 # ── Oxidation model ───────────────────────────────────────────────────────────
 model = ps.Oxidation()
 model.setTemperature(temperature)
@@ -67,15 +63,17 @@ model.setTime(oxidation_time)
 model.setOxidant(oxidant)
 model.setPressure(pressure)
 model.setOrientation(str(int(orientation)))
-model.setInitialOxideThickness(seed_thickness)
+# The oxide on the silicon at t = 0 (0 = bare silicon).  The model creates it
+# and, while it is thinner than three grid cells, grows it by the 1-D
+# Deal-Grove law before the 2-D solve starts.
+model.setInitialOxideThickness(oxide_thickness)
 
 model.setGpuMode(cfg.get("useGpu", "cpu"))
-model.setGpuPreconditioner(cfg.get("gpuPreconditioner", "jacobi"))
 
 if cfg.get("maxGridPoints", 0) > 0:
     model.setMaxGridPoints(int(cfg["maxGridPoints"]))
 
-model.saveSurfaceMesh(domain, output_prefix + "_initial.vtp")
+domain.saveSurfaceMesh(output_prefix + "_initial.vtp")
 
 t0 = time.perf_counter()
 ps.Process(domain, model, 0.0).apply()
@@ -84,12 +82,12 @@ elapsed_sim = time.perf_counter() - t0
 model.saveSurfaceMesh(domain, output_prefix + "_after.vtp")
 model.saveVolumeMesh(domain, output_prefix + "_after")
 
-print(f"Simulation time: {elapsed_sim:.2f} s")
-print(
+log.addInfo(f"Simulation time: {elapsed_sim:.2f} s").print()
+log.addInfo(
     f"Planar Deal-Grove estimate for {oxidation_time} hr at {temperature} °C: "
-    f"{model.estimatePlanarOxideThickness(seed_thickness):.4f} µm oxide."
-)
-print(
+    f"{model.estimatePlanarOxideThickness(oxide_thickness):.4f} µm oxide."
+).print()
+log.addInfo(
     f"Wrote {output_prefix}_initial.vtp, {output_prefix}_after.vtp, "
     f"and {output_prefix}_after_volume.vtu"
-)
+).print()

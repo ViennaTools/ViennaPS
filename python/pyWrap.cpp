@@ -50,12 +50,6 @@ PYBIND11_MODULE(VIENNAPS_MODULE_NAME, module) {
       .value("Auto", GpuMode::Auto)
       .finalize();
 
-  py::native_enum<GpuPreconditioner>(module, "GpuPreconditioner",
-                                     "enum.IntEnum")
-      .value("Jacobi", GpuPreconditioner::Jacobi)
-      .value("ILU0", GpuPreconditioner::ILU0)
-      .finalize();
-
   // Logger
   py::class_<Logger, SmartPointer<Logger>>(module, "Logger", py::module_local())
       .def_static("setLogLevel",

@@ -42,8 +42,10 @@ int main(int argc, char *argv[]) {
     geometry->saveSurfaceMesh("spEtching_" + util::toString(fluxEngine));
   };
 
+#ifdef VIENNACORE_COMPILE_GPU
   run(FluxEngineType::GPU_TRIANGLE);
   run(FluxEngineType::GPU_DISK);
+#endif
   run(FluxEngineType::CPU_TRIANGLE);
   run(FluxEngineType::CPU_DISK);
 }

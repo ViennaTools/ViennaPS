@@ -1579,16 +1579,55 @@ template <int D> void bindApi(py::module &module) {
            "Courant number for CFL-limited internal stepping (default 0.499).")
       .def("setInitialOxideThickness",
            &Oxidation<T, D>::setInitialOxideThickness, py::arg("thicknessUm"),
-           "Native-oxide seed thickness in µm when no SiO2 layer exists.")
+           "Oxide on bare silicon at t = 0 in µm (used when no SiO2 layer "
+           "exists, not under a mask; 0 = bare). Oxide thinner than three grid "
+           "cells first grows by 1-D Deal-Grove until resolved; an impermeable "
+           "mask blocks it.")
       .def("setTransferCoefficient", &Oxidation<T, D>::setTransferCoefficient,
            py::arg("coefficient"), "Gas-transfer coefficient in µm/hr.")
+      .def("setRegrid", &Oxidation<T, D>::setRegrid, py::arg("coarseDelta"),
+           py::arg("factor") = 2.0,
+           "One-shot persistent regrid: coarsen the whole level-set stack to "
+           "coarseDelta (um) once the thinnest oxide layer exceeds "
+           "factor*coarseDelta. 0 = disabled.")
+      .def("setInitialTimeStep", &Oxidation<T, D>::setInitialTimeStep,
+           py::arg("dtHr"),
+           "Cap only the FIRST internal substep (hr); 0 = model default "
+           "(0.004 hr conservative cold start).")
+      .def("setMaskBarrierOnly", &Oxidation<T, D>::setMaskBarrierOnly,
+           py::arg("enable"),
+           "Mask acts as a diffusion barrier only; mechanically transparent, "
+           "carried by the oxide. Exact for a full-width mask.")
+      .def("setDealGroveRates", &Oxidation<T, D>::setDealGroveRates,
+           py::arg("B"), py::arg("BoA"),
+           "Override Deal-Grove B (um^2/hr) and B/A (um/hr); 0 = Arrhenius "
+           "table.")
+      .def("setMaskPermeabilityRatio",
+           &Oxidation<T, D>::setMaskPermeabilityRatio,
+           py::arg("permeability_ratio"),
+           "Diffusion through the mask: the mask body is meshed into the "
+           "oxidant solve with D_mask = D_SiO2/gamma. The level-set mask "
+           "thickness is the physical barrier thickness and must be grid-"
+           "resolved. 0 = impermeable (default).")
       .def(
-          "setReactionActivationVolume",
-          &Oxidation<T, D>::setReactionActivationVolume, py::arg("volume"),
-          "Stress-coupling activation volume for interface reaction rate (m³).")
+          "setStressDependentOxidation",
+          &Oxidation<T, D>::setStressDependentOxidation, py::arg("enable"),
+          "Stress-dependent oxidation kinetics (interface normal stress on the "
+          "reaction, pressure on the diffusivity). On by default with the "
+          "Kao-calibrated activation volumes; False = stress-free Deal-Grove "
+          "kinetics.")
+      .def("setReactionActivationVolume",
+           &Oxidation<T, D>::setReactionActivationVolume, py::arg("volume"),
+           "Activation volume of the interface reaction on the normal stress "
+           "(m³). Default 2.5e-29 (25 Å³).")
+      .def("setShearActivationVolume",
+           &Oxidation<T, D>::setShearActivationVolume, py::arg("volume"),
+           "Stress-dependent oxide viscosity: shear activation volume (m³); "
+           "0 = linear viscosity. Default 3e-28 (300 Å³).")
       .def("setDiffusionActivationVolume",
            &Oxidation<T, D>::setDiffusionActivationVolume, py::arg("volume"),
-           "Stress-coupling activation volume for oxide diffusivity (m³).")
+           "Activation volume of the oxide diffusivity on the pressure (m³). "
+           "Default 4e-29 (40 Å³).")
       .def("setMaxGridPoints", &Oxidation<T, D>::setMaxGridPoints,
            py::arg("maxGridPoints"),
            "Maximum Cartesian grid points for the diffusion/mechanics solve.")
@@ -1598,27 +1637,11 @@ template <int D> void bindApi(py::module &module) {
            py::arg("tolerance"))
       .def("setMechanicsIterations", &Oxidation<T, D>::setMechanicsIterations,
            py::arg("iterations"),
-           "Maximum iterations for the viscous mechanics solve.")
+           "Maximum viscosity iterations of the mechanics solve (one "
+           "velocity-pressure solve each).")
       .def("setMechanicsTolerance", &Oxidation<T, D>::setMechanicsTolerance,
            py::arg("tolerance"),
-           "Convergence tolerance for the mechanics solve.")
-      .def("setSimpleVelocityRelaxation",
-           &Oxidation<T, D>::setSimpleVelocityRelaxation, py::arg("alpha"),
-           "SIMPLE velocity under-relaxation factor (0 < alpha <= 1).")
-      .def("setSimplePressureRelaxation",
-           &Oxidation<T, D>::setSimplePressureRelaxation, py::arg("beta"),
-           "SIMPLE pressure under-relaxation factor (0 < beta <= 1).")
-      .def("setPressureIterations", &Oxidation<T, D>::setPressureIterations,
-           py::arg("iterations"),
-           "Maximum iterations for the pressure Poisson solve.")
-      .def("setPressureTolerance", &Oxidation<T, D>::setPressureTolerance,
-           py::arg("tolerance"),
-           "Convergence tolerance for the pressure solve.")
-      .def("setStokesIterations", &Oxidation<T, D>::setStokesIterations,
-           py::arg("iterations"),
-           "Maximum iterations for the Stokes velocity solve.")
-      .def("setStokesTolerance", &Oxidation<T, D>::setStokesTolerance,
-           py::arg("tolerance"), "Convergence tolerance for the Stokes solve.")
+           "Relative velocity change at which the viscosity iteration stops.")
       .def(
           "setSolveBounds",
           [](Oxidation<T, D> &model,
@@ -1635,22 +1658,6 @@ template <int D> void bindApi(py::module &module) {
           py::arg("minIndex"), py::arg("maxIndex"),
           "Cartesian index bounds for the diffusion/deformation solve.")
       .def("clearSolveBounds", &Oxidation<T, D>::clearSolveBounds)
-      .def(
-          "setMaskBendingBounds",
-          [](Oxidation<T, D> &model,
-             std::array<viennahrle::IndexType, D> passedMinIndex,
-             std::array<viennahrle::IndexType, D> passedMaxIndex) {
-            viennahrle::Index<D> minIndex{};
-            viennahrle::Index<D> maxIndex{};
-            for (unsigned i = 0; i < D; ++i) {
-              minIndex[i] = passedMinIndex[i];
-              maxIndex[i] = passedMaxIndex[i];
-            }
-            model.setMaskBendingBounds(minIndex, maxIndex);
-          },
-          py::arg("minIndex"), py::arg("maxIndex"),
-          "Cartesian index bounds for the mask bending solve.")
-      .def("clearMaskBendingBounds", &Oxidation<T, D>::clearMaskBendingBounds)
       .def("setSiliconMaterial", &Oxidation<T, D>::setSiliconMaterial,
            py::arg("mat"), "Override which material is treated as silicon.")
       .def("setOxideMaterial", &Oxidation<T, D>::setOxideMaterial,
@@ -1659,58 +1666,17 @@ template <int D> void bindApi(py::module &module) {
            "Material treated as the oxidation mask (activates LOCOS physics).")
       .def("setMaskParameters", &Oxidation<T, D>::setMaskParameters,
            py::arg("params"),
-           "Viscous-elasticity parameters for the mask layer.")
-      .def("setMaskCouplingIterations",
-           &Oxidation<T, D>::setMaskCouplingIterations, py::arg("iterations"))
-      .def("setMaskCouplingTolerance",
-           &Oxidation<T, D>::setMaskCouplingTolerance, py::arg("tolerance"))
-      .def("setMaskTractionIterations",
-           &Oxidation<T, D>::setMaskTractionIterations, py::arg("iterations"),
-           "Maximum iterations for the inner mask traction solve.")
-      .def("setMaskTractionTolerance",
-           &Oxidation<T, D>::setMaskTractionTolerance, py::arg("tolerance"),
-           "Convergence tolerance for the inner mask traction solve.")
-      .def("setMaskTractionRelaxation",
-           &Oxidation<T, D>::setMaskTractionRelaxation, py::arg("relaxation"),
-           "Outer Aitken relaxation factor for the mask/oxide coupling "
-           "(0.01-1).")
-      .def("setMaskContactLoadRelaxation",
-           &Oxidation<T, D>::setMaskContactLoadRelaxation,
-           py::arg("relaxation"),
-           "Under-relaxation for the unilateral contact active-set load "
-           "(0.02-1).")
-      .def("setMaskContactReleaseFraction",
-           &Oxidation<T, D>::setMaskContactReleaseFraction, py::arg("fraction"),
-           "Relative traction floor for releasing a relaxed contact face "
-           "(0-0.25).")
-      .def("setMaskUnilateralContact",
-           &Oxidation<T, D>::setMaskUnilateralContact, py::arg("enabled"),
-           "Enable unilateral (compression-only) contact at the mask/oxide "
-           "interface.")
-      .def("setMaskSmootherOmega", &Oxidation<T, D>::setMaskSmootherOmega,
-           py::arg("omega"),
-           "SOR omega for the mask multigrid smoother (0.2-1.4; 1.0 = "
-           "Gauss-Seidel).")
+           "Elastic constants and clamp of the nitride mask.")
       .def("setGpuMode",
            py::overload_cast<GpuMode>(&Oxidation<T, D>::setGpuMode),
            py::arg("mode"),
-           "BiCGSTAB solver back-end: GpuMode.Cpu (default) or GpuMode.Gpu.")
+           "GPU for the diffusion and the 3-D mechanics solves: GpuMode.Cpu "
+           "(default), GpuMode.Gpu or GpuMode.Auto.")
       .def("setGpuMode",
            py::overload_cast<std::string>(&Oxidation<T, D>::setGpuMode),
            py::arg("mode"),
-           "BiCGSTAB solver back-end: 'cpu' (default) or 'gpu'.")
-      .def(
-          "setGpuPreconditioner",
-          py::overload_cast<GpuPreconditioner>(
-              &Oxidation<T, D>::setGpuPreconditioner),
-          py::arg("preconditioner"),
-          "GPU BiCGSTAB preconditioner (GpuPreconditioner.Jacobi matches CPU).")
-      .def("setGpuPreconditioner",
-           py::overload_cast<std::string>(
-               &Oxidation<T, D>::setGpuPreconditioner),
-           py::arg("preconditioner"),
-           "GPU BiCGSTAB preconditioner: 'jacobi' (matches CPU), "
-           "'ilu0', or 'ilu'.")
+           "GPU for the diffusion and the 3-D mechanics solves: 'cpu' "
+           "(default), 'gpu' or 'auto'.")
       .def("estimatePlanarOxideThickness",
            &Oxidation<T, D>::estimatePlanarOxideThickness,
            py::arg("initialOxideThickness") = T(0),

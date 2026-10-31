@@ -1,9 +1,11 @@
 #include <geometries/psMakeFin.hpp>
-#include <models/psGeometricDistributionModels.hpp>
 #include <models/psOxidation.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
 #include <psUtil.hpp>
+#include <vcTimer.hpp>
+
+#include <sstream>
 
 namespace ps = viennaps;
 
@@ -18,7 +20,8 @@ using NumericType = double;
 
 template <int D> void run(const ps::util::Parameters &params) {
   omp_set_num_threads(params.get<int>("numThreads"));
-  ps::Logger::setLogLevel(ps::LogLevel::ERROR);
+  if (params.contains("logLevel"))
+    ps::Logger::setLogLevel(params.get<std::string>("logLevel"));
 
   const NumericType gridDelta = params.get("gridDelta");
   const NumericType xExtent = 2 * params.get("xExtent");
@@ -40,51 +43,46 @@ template <int D> void run(const ps::util::Parameters &params) {
       gridDelta, xExtent, yExtent, ps::BoundaryType::REFLECTIVE_BOUNDARY);
   ps::MakeFin<NumericType, D>(domain, finWidth, finHeight).apply();
 
-  // Clamp the oxide seed to at least gridDelta so the Cartesian solve always
-  // has resolvable nodes between the Si and SiO2 level sets.
-  const NumericType seedThickness = std::max(oxideThickness, gridDelta);
-  domain->duplicateTopLevelSet(ps::Material::SiO2);
-  ps::Process<NumericType, D>(
-      domain, ps::SmartPointer<ps::SphereDistribution<NumericType, D>>::New(
-                  seedThickness))
-      .apply();
-
   auto model = ps::SmartPointer<ps::Oxidation<NumericType, D>>::New();
   model->setTemperature(temperature);
   model->setTime(oxidationTime);
   model->setOxidant(oxidant);
   model->setPressure(pressure);
   model->setOrientation(orientation);
-  model->setInitialOxideThickness(seedThickness);
+  // The oxide on the silicon at t = 0 (0 = bare silicon).  The model creates
+  // it and, while it is thinner than three grid cells, grows it by the 1-D
+  // Deal-Grove law before the 2-D solve starts.
+  model->setInitialOxideThickness(oxideThickness);
 
   model->setGpuMode(params.get<std::string>("useGpu", "cpu"));
-  model->setGpuPreconditioner(
-      params.get<std::string>("gpuPreconditioner", "jacobi"));
 
   if (params.contains("maxGridPoints"))
     model->setMaxGridPoints(params.get<unsigned>("maxGridPoints"));
 
-  model->saveSurfaceMesh(domain, outputPrefix + "_stack_initial.vtp");
-  model->saveVolumeMesh(domain, outputPrefix + "_stack_initial");
+  domain->saveSurfaceMesh(outputPrefix + "_stack_initial.vtp");
+  domain->saveVolumeMesh(outputPrefix + "_stack_initial");
 
-  const auto t0 = std::chrono::steady_clock::now();
+  ps::Timer<> timer;
+  timer.start();
   ps::Process<NumericType, D>(domain, model, NumericType(0)).apply();
-  const double elapsedSim =
-      std::chrono::duration<double>(std::chrono::steady_clock::now() - t0)
-          .count();
+  timer.finish();
 
   model->saveSurfaceMesh(domain, outputPrefix + "_stack_after.vtp");
   model->saveVolumeMesh(domain, outputPrefix + "_stack_after");
 
-  std::cout << "Simulation time: " << elapsedSim << " s\n";
-  std::cout << "Planar Deal-Grove estimate for " << oxidationTime
-            << " hr oxidation at " << temperature
-            << " C: " << model->estimatePlanarOxideThickness(seedThickness)
-            << " um oxide thickness." << std::endl;
-
-  std::cout << "Wrote " << outputPrefix << "_stack_initial.vtp and "
-            << outputPrefix << "_stack_after.vtp and " << outputPrefix
-            << "_stack_after_volume.vtu" << std::endl;
+  std::ostringstream estimate;
+  estimate << "Planar Deal-Grove estimate for " << oxidationTime
+           << " hr oxidation at " << temperature
+           << " C: " << model->estimatePlanarOxideThickness(oxideThickness)
+           << " um oxide thickness.";
+  ps::Logger::getInstance()
+      .addInfo("Simulation time: " +
+               std::to_string(1e-9 * timer.currentDuration) + " s")
+      .addInfo(estimate.str())
+      .addInfo("Wrote " + outputPrefix + "_stack_initial.vtp, " + outputPrefix +
+               "_stack_after.vtp and " + outputPrefix +
+               "_stack_after_volume.vtu")
+      .print();
 }
 
 // ---------------------------------------------------------------------------
