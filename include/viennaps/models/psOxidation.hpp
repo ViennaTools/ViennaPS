@@ -777,6 +777,11 @@ private:
             if (resampler.getResult())
               ls->deepCopy(resampler.getResult());
           }
+          // the domain takes the coarse grid too, so that later steps add
+          // their level sets on it
+          auto setup = domain.getSetup();
+          setup.init(levelSets.front()->getGrid());
+          domain.setup(setup);
           locos->setConcentrationCache({});
           gridDelta = regridDelta_;
           regridDelta_ = NumericType(0); // one-shot: disarm

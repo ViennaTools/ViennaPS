@@ -1,4 +1,5 @@
 #include <geometries/psMakePlane.hpp>
+#include <models/psGeometricDistributionModels.hpp>
 #include <models/psOxidation.hpp>
 #include <process/psProcess.hpp>
 #include <psDomain.hpp>
@@ -333,6 +334,33 @@ void testStartupUnderMask() {
   }
 }
 
+// A regrid moves the domain to the coarse grid with its level sets, so that a
+// later step adds its level set there: a nitride deposited on the oxide.
+void testProcessAfterRegrid() {
+  auto domain = ps::Domain<T, D>::New();
+  ps::MakePlane<T, D>(domain, 0.005, 0.04, 0.04, 0., false, ps::Material::Si)
+      .apply();
+  auto model = ps::SmartPointer<ps::Oxidation<T, D>>::New();
+  model->setTemperature(1000.);
+  model->setTime(0.6);
+  model->setOxidant(ps::OxidantType::DRY);
+  model->setOrientation(ps::SiliconOrientation::Si100);
+  model->setRegrid(0.01);
+  ps::Process<T, D>(domain, model, T(0)).apply();
+
+  VC_TEST_ASSERT_ISCLOSE(domain->getGridDelta(), T(0.01), T(1e-12))
+  for (const auto &levelSet : domain->getLevelSets())
+    VC_TEST_ASSERT_ISCLOSE(levelSet->getGrid().getGridDelta(), T(0.01),
+                           T(1e-12))
+  const T oxide = flatSurfaces(domain)[1];
+  domain->duplicateTopLevelSet(ps::Material::Si3N4);
+  ps::Process<T, D>(domain,
+                    ps::SmartPointer<ps::SphereDistribution<T, D>>::New(0.02))
+      .apply();
+  VC_TEST_ASSERT(domain->getNumberOfLevelSets() == 3)
+  VC_TEST_ASSERT_ISCLOSE(flatSurfaces(domain)[1] - oxide, T(0.02), T(1e-4))
+}
+
 int main() {
   testDealGroveEstimateWet1000C();
   testDealGroveEstimateDryHighT();
@@ -343,4 +371,5 @@ int main() {
   testFlatFilm3DMatches2D();
   testStartupFromBareSilicon();
   testStartupUnderMask();
+  testProcessAfterRegrid();
 }

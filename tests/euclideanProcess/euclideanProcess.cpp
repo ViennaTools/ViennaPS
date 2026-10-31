@@ -669,6 +669,7 @@ template <class NumericType, int D> void RunTest() {
           model->setRegrid(2. * delta);
         Process<NumericType, D>(domain, model, 0.).apply();
         VC_TEST_ASSERT(domain->getNumberOfLevelSets() == 2);
+        VC_TEST_ASSERT(domain->getGridDelta() == finalDelta);
         for (auto &levelSet : domain->getLevelSets()) {
           if (euclidean) {
             VC_TEST_ASSERT(levelSet->getNormalization() ==
