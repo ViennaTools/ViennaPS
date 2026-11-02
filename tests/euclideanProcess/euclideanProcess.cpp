@@ -58,7 +58,9 @@
   epitaxy grows the film on the floor of the opening, flat up to the walls
   of the mask. Oxidation of a silicon step under an oxide layer, from the
   native oxide, from bare silicon and with a regrid gives the oxide of the
-  usual domain.
+  usual domain. A directional process with visibilities etches a rotated box
+  into the exact result, with sharp corners where faces that see the source
+  meet shadowed ones.
 */
 
 namespace viennacore {
@@ -725,6 +727,93 @@ template <class NumericType, int D> void RunTest() {
               << " grid spacings" << std::endl;
     VC_TEST_ASSERT(onTop > 0);
     VC_TEST_ASSERT(deviation / gridDelta < 1e-5);
+  }
+
+  // a directional process with visibilities etching a rotated box (30
+  // degrees, in 3D then 20 degrees about x) straight down by 2.25 grid
+  // spacings: the faces looking up move, the shadowed ones stay, and the
+  // result is the box cut by itself moved down, with sharp corners where a
+  // moving face meets a shadowed one. There AdvectHermite asks for the
+  // velocity of directions facing away from the source, which the
+  // visibility of the node does not cover
+  {
+    const double ra = 30. * M_PI / 180., rb = (D == 3) ? 20. * M_PI / 180. : 0.;
+    const double ca = std::cos(ra), sa = std::sin(ra), cb = std::cos(rb),
+                 sb = std::sin(rb);
+    const double R[3][3] = {
+        {ca, -sa, 0.}, {cb * sa, cb * ca, -sb}, {sb * sa, sb * ca, cb}};
+    const double half[3] = {2.575, (D == 2) ? 1.925 : 2.175, 1.775};
+    const double centre[3] = {0.155, -0.135, (D == 2) ? 0. : 0.215};
+    auto boxDistance = [&](const std::array<double, 3> &p) {
+      double outside = 0., inside = -1e300;
+      for (int j = 0; j < D; ++j) {
+        double l = 0.;
+        for (int i = 0; i < 3; ++i)
+          l += R[i][j] * (p[i] - centre[i]);
+        const double q = std::abs(l) - half[j];
+        outside += (q > 0.) ? q * q : 0.;
+        inside = std::max(inside, q);
+      }
+      return std::sqrt(outside) + std::min(inside, 0.);
+    };
+    auto boxMesh = viennals::Mesh<NumericType>::New();
+    for (int n = 0; n < (1 << D); ++n) {
+      Vec3D<NumericType> corner{};
+      for (int i = 0; i < 3; ++i) {
+        double x = centre[i];
+        for (int j = 0; j < D; ++j)
+          x += R[i][j] * (((n >> j) & 1) ? half[j] : -half[j]);
+        corner[i] = NumericType(x);
+      }
+      boxMesh->insertNextNode(corner);
+    }
+    if constexpr (D == 2) {
+      for (const auto &l : {std::array<unsigned, 2>{0, 2},
+                            std::array<unsigned, 2>{2, 3},
+                            std::array<unsigned, 2>{3, 1},
+                            std::array<unsigned, 2>{1, 0}})
+        boxMesh->insertNextLine(l);
+    } else {
+      const std::array<unsigned, 3> triangles[12] = {
+          {0, 3, 1}, {0, 2, 3}, {0, 1, 5}, {0, 5, 4}, {0, 4, 2}, {4, 6, 2},
+          {7, 6, 4}, {7, 4, 5}, {7, 2, 6}, {7, 3, 2}, {1, 3, 5}, {3, 7, 5}};
+      for (const auto &t : triangles)
+        boxMesh->insertNextTriangle(t);
+    }
+    viennahrle::CoordType bounds[2 * D];
+    BoundaryType boundaries[D];
+    for (int i = 0; i < D; ++i) {
+      bounds[2 * i] = -18 * gridDelta;
+      bounds[2 * i + 1] = 18 * gridDelta;
+      boundaries[i] = BoundaryType::REFLECTIVE_BOUNDARY;
+    }
+    auto box = viennals::Domain<NumericType, D>::New(bounds, boundaries,
+                                                     gridDelta);
+    box->setNormalization(viennals::NormalizationEnum::EUCLIDEAN);
+    box->setLevelSetWidth(12);
+    viennals::FromSurfaceMesh<NumericType, D> mesher(box, boxMesh);
+    mesher.setUseWindingNumber(true);
+    mesher.apply();
+    auto domain = Domain<NumericType, D>::New();
+    domain->insertNextLevelSetAsMaterial(box, Material::Si);
+    Vec3D<NumericType> direction{0., 0., 0.};
+    direction[D - 1] = -1.;
+    auto model = SmartPointer<DirectionalProcess<NumericType, D>>::New(
+        direction, -1., 0., Material::Mask);
+    Process<NumericType, D>(domain, model, time).apply();
+    LSTEST_ASSERT_VALID_LS(domain->getSurface(), NumericType, D);
+    auto mesh = domain->getSurfaceMesh(false);
+    VC_TEST_ASSERT(!mesh->getNodes().empty());
+    double deviation = 0.;
+    for (const auto &n : mesh->getNodes()) {
+      std::array<double, 3> p{n[0], n[1], n[2]}, moved = p;
+      moved[D - 1] += time;
+      deviation = std::max(
+          deviation, std::abs(std::max(boxDistance(p), boxDistance(moved))));
+    }
+    std::cout << D << "D directional etching of a rotated box: worst vertex "
+              << deviation / gridDelta << " grid spacings" << std::endl;
+    VC_TEST_ASSERT(deviation / gridDelta < 1e-3);
   }
 }
 

@@ -56,6 +56,10 @@ public:
         (pointId >= visibilities.size() || visibilities[pointId] == 0.))
       return 0.;
 
+    if (calculateVisibility && facingOnly &&
+        DotProduct(direction, normalVector) >= 0.)
+      return 0.;
+
     return rateGrid.interpolate(coordinate) * isotropicScale;
   }
 
@@ -68,6 +72,10 @@ public:
 
     if (calculateVisibility &&
         (pointId >= visibilities.size() || visibilities[pointId] == 0.))
+      return {0., 0., 0.};
+
+    if (calculateVisibility && facingOnly &&
+        DotProduct(direction, normalVector) >= 0.)
       return {0., 0., 0.};
 
     auto potentialVelocity =
@@ -88,6 +96,8 @@ public:
     visibilities.clear();
 
     auto surfaceLS = domain->getLevelSets().back();
+    facingOnly =
+        surfaceLS->getNormalization() == viennals::NormalizationEnum::EUCLIDEAN;
     if (calculateVisibility) {
       std::string label = "Visibilities";
       viennals::CalculateVisibilities<NumericType, D>(surfaceLS, direction,
@@ -122,6 +132,11 @@ private:
   Vec3D<NumericType> direction;
   bool calculateVisibility;
   std::vector<NumericType> visibilities;
+  // on a Euclidean domain AdvectHermite asks for the velocity of directions
+  // other than a node's own normal, as those of a fan around an edge, while
+  // the visibility belongs to the node: a direction facing away from the
+  // source sees nothing of it
+  bool facingOnly = false;
   std::vector<Material> maskMaterials;
   NumericType isotropicScale;
   NumericType directionalScale;

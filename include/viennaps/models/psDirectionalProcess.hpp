@@ -52,6 +52,12 @@ class DirectionalVelocityField : public VelocityField<NumericType, D> {
   const std::vector<RateSet<NumericType>> rateSets_;
   std::vector<std::vector<NumericType>>
       visibilities_; // Indexed by rateSetID and pointId
+  // on a Euclidean domain AdvectHermite asks for the velocity of directions
+  // other than a node's own normal, as those of a fan around an edge, while
+  // the visibility belongs to the node: a direction facing away from the
+  // source sees nothing of it, which the node's visibility says only for its
+  // own normal
+  bool facingOnly_ = false;
 
 public:
   DirectionalVelocityField(std::vector<RateSet<NumericType>> &&rateSets)
@@ -90,6 +96,10 @@ public:
           visibilities_[rateSetID].at(pointId) == 0.) {
         continue; // Skip if visibility check fails
       }
+      if (rateSet.calculateVisibility && facingOnly_ &&
+          DotProduct(rateSet.direction, normalVector) >= 0) {
+        continue; // Skip directions facing away from the source
+      }
 
       // Calculate the potential velocity vector for this rate set
       Vec3D<NumericType> potentialVelocity =
@@ -113,6 +123,8 @@ public:
 
     // Calculate visibilities for each rate set
     auto surfaceLS = domain->getLevelSets().back();
+    facingOnly_ = surfaceLS->getNormalization() ==
+                  viennals::NormalizationEnum::EUCLIDEAN;
     for (unsigned rateSetID = 0; rateSetID < rateSets_.size(); ++rateSetID) {
       auto &rateSet = rateSets_[rateSetID];
       if (rateSet.calculateVisibility) {
