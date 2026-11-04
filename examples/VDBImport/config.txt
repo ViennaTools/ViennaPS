@@ -1,0 +1,17 @@
+# Config file for importing a structure from an OpenVDB file and depositing
+# a liner on it
+
+# Structure: a grid of integer material IDs, as written by FLOOPS
+vdbFile=structure.vdb
+# the grid axis behind each level set axis, the vertical one last; "-" flips
+# an axis. FLOOPS's x axis points down into the substrate, and its 2D
+# structures are extruded along z
+axes2D=y,-x
+axes3D=z,y,-x
+# ID of the empty space above the structure
+ambient=0
+# material of each ID as ID:material
+materials=1:SiO2,5:Si3N4,6:Si,10:PolySi,22:Dielectric,24:BulkSi,25:SiN_HM,26:SiGe
+
+# Process
+linerThickness=0.003

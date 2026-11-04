@@ -80,6 +80,10 @@ This [example](./GDSReader) tests the full GDS mask import, blurring, rotation, 
   <img src="../assets/masks.png" width=1200 style="background-color:white;">
 </div>
 
+## OpenVDB Structure Import
+
+This [example](./VDBImport) imports a structure stored as a grid of integer material IDs in an OpenVDB file, for example written by FLOOPS, and deposits a thin liner on it. Set the file, the axes, and the material of each ID in `config.txt`, then run `python VDBImport.py -D 3 config.txt` (`-D 2` for 2D structures). Reading `.vdb` files needs `pip install numpy blosc`.
+
 ## Fin Oxidation
 
 This [example](./finOxidation) simulates thermal oxidation of a silicon fin, capturing non-uniform oxide growth and corner rounding due to crystallographic anisotropy. The image shows the initial fin on the left and the oxidized structure with its pressure field on the right.
