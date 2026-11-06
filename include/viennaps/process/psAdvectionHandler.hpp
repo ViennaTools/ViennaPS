@@ -79,6 +79,8 @@ public:
       hermiteKernel_.setSingleStep(true);
       hermiteKernel_.setVelocityField(context.translationField);
       hermiteKernel_.setTimeStepRatio(context.advectionParams.timeStepRatio);
+      // ray-traced fluxes give speeds only for the surface's own normals
+      hermiteKernel_.setSurfaceSpeedsOnly(context.flags.useFluxEngine);
       hermiteKernel_.clearLevelSets();
       for (auto &dom : context.domain->getLevelSets())
         hermiteKernel_.insertNextLevelSet(dom);

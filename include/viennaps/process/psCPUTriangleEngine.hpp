@@ -95,10 +95,10 @@ public:
     postProcessing_.setElementKdTree(elementKdTree_);
     postProcessing_.setDiskMesh(context.diskMesh);
     // the faces of a Euclidean surface meet at sharp edges; a point takes
-    // the flux of its own face, fitted over the face's elements
+    // the average flux of the elements that face the same side as it does.
+    // With only the elements of its own face, as a fit per face takes them,
+    // the turn of the faces tapers the walls at the bottom of a hole
     postProcessing_.setAlignedElementsOnly(context.isEuclidean());
-    if (context.isEuclidean())
-      postProcessing_.setFitPerFace(2, D, NumericType(20.) * M_PI / 180.);
 
     return ProcessResult::SUCCESS;
   }
