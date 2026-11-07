@@ -483,6 +483,9 @@ class PlasmaModelCPU : public ProcessModelCPU<NumericType, D> {
   double initialPosition;
 
 public:
+  // plasma etching advects Euclidean domains with the upwind update
+  PlasmaModelCPU() { this->setEuclideanUpwind(true); }
+
   void initialize(SmartPointer<Domain<NumericType, D>> domain,
                   const NumericType processDuration) override {
     if (initialized) {
@@ -532,6 +535,9 @@ class PlasmaModelGPU : public viennaps::gpu::ProcessModelGPU<NumericType, D> {
   double initialPosition;
 
 public:
+  // plasma etching advects Euclidean domains with the upwind update
+  PlasmaModelGPU() { this->setEuclideanUpwind(true); }
+
   void initialize(SmartPointer<Domain<NumericType, D>> domain,
                   const NumericType processDuration) override {
     if (initialized) {

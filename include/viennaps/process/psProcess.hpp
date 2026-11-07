@@ -371,10 +371,12 @@ public:
         if (gpuModel) {
           VIENNACORE_LOG_DEBUG("Switching to GPU-compatible process model.");
           // the GPU model is built anew from the model's parameters: the
-          // advection callback, which the flags above count on, and the
-          // primary direction of the source carry over from the model given
+          // advection callback, which the flags above count on, the
+          // advection of Euclidean domains and the primary direction of the
+          // source carry over from the model given
           if (auto callback = context_.model->getAdvectionCallback())
             gpuModel->setAdvectionCallback(callback);
+          gpuModel->setEuclideanUpwind(context_.model->getEuclideanUpwind());
           auto cpuModel =
               std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
                   context_.model);

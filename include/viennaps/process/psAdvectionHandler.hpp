@@ -81,6 +81,15 @@ public:
       hermiteKernel_.setTimeStepRatio(context.advectionParams.timeStepRatio);
       // ray-traced fluxes give speeds only for the surface's own normals
       hermiteKernel_.setSurfaceSpeedsOnly(context.flags.useFluxEngine);
+      // the upwind update of the moving material where the model asks for
+      // it (plasma etching), with the advection parameters' schemes
+      hermiteKernel_.setUpwind(context.model->getEuclideanUpwind());
+      hermiteKernel_.setSpatialScheme(context.advectionParams.spatialScheme);
+      hermiteKernel_.setTemporalScheme(context.advectionParams.temporalScheme);
+      hermiteKernel_.setDissipationAlpha(
+          context.advectionParams.dissipationAlpha);
+      hermiteKernel_.setCheckDissipation(
+          context.advectionParams.checkDissipation);
       hermiteKernel_.clearLevelSets();
       for (auto &dom : context.domain->getLevelSets())
         hermiteKernel_.insertNextLevelSet(dom);

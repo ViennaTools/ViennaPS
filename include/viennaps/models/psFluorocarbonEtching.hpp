@@ -555,6 +555,8 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("FluorocarbonEtching");
+    // plasma etching advects Euclidean domains with the upwind update
+    this->setEuclideanUpwind(true);
     this->getParticleTypes().clear();
 
     this->insertNextParticleType(ion);
@@ -659,6 +661,8 @@ private:
     this->setSurfaceModel(surfModel);
     this->setVelocityField(velField);
     this->setProcessName("FluorocarbonEtching");
+    // plasma etching advects Euclidean domains with the upwind update
+    this->setEuclideanUpwind(true);
     this->particles.clear();
     this->insertNextParticleType(ion);
     this->insertNextParticleType(etchant);

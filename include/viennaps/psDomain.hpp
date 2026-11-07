@@ -9,6 +9,8 @@
 #include "psVersion.hpp"
 
 #include <lsBooleanOperation.hpp>
+
+#include <cmath>
 #include <lsDomain.hpp>
 #include <lsExpand.hpp>
 #include <lsMaterialStack.hpp>
@@ -22,6 +24,7 @@
 #include <lsVTKWriter.hpp>
 #include <lsWriteVisualizationMesh.hpp>
 #include <lsWriter.hpp>
+#include <map>
 
 #include <csDenseCellSet.hpp>
 
@@ -638,6 +641,61 @@ public:
     auto append = [&](const lsDomainType &levelSet, bool interface) {
       auto part = viennals::Mesh<NumericType>::New();
       viennals::ToDualContouringMesh<NumericType, D>(levelSet, part).apply();
+      // a vertex of the top surface takes the position of the nearest vertex
+      // of a lower level set's own surface within half a grid spacing where
+      // that vertex lies on the top surface (|top value| < 0.05 grid
+      // spacings): the corners of a material that does not advect, as a
+      // mask, as its own level set holds them. Where another material covers
+      // such a corner, its vertex lies inside the top and stays out
+      if (!interface && levelSets_.size() > 1) {
+        auto key = [&](const Vec &x) {
+          std::array<long, 3> k{0, 0, 0};
+          for (int i = 0; i < D; ++i)
+            k[i] = long(std::floor(x[i] / gridDelta));
+          return k;
+        };
+        std::map<std::array<long, 3>, std::vector<Vec>> lowerVertices;
+        for (std::size_t l = 0; l + 1 < levelSets_.size(); ++l) {
+          auto lower = viennals::Mesh<NumericType>::New();
+          viennals::ToDualContouringMesh<NumericType, D>(levelSets_[l], lower)
+              .apply();
+          for (const auto &w : lower->getNodes()) {
+            const Vec wv{w[0], w[1], w[2]};
+            Vec g{};
+            for (int i = 0; i < 3; ++i)
+              g[i] = wv[i] / gridDelta;
+            if (std::abs(top.value(0, g)) < NumericType(0.05))
+              lowerVertices[key(wv)].push_back(wv);
+          }
+        }
+        for (auto &v : part->nodes) {
+          const Vec vv{v[0], v[1], v[2]};
+          const auto k = key(vv);
+          NumericType best = NumericType(0.5) * gridDelta;
+          const Vec *nearest = nullptr;
+          for (int dx = -1; dx <= 1; ++dx)
+            for (int dy = -1; dy <= 1; ++dy)
+              for (int dz = (D == 3 ? -1 : 0); dz <= (D == 3 ? 1 : 0); ++dz) {
+                auto q = k;
+                q[0] += dx;
+                q[1] += dy;
+                q[2] += dz;
+                auto found = lowerVertices.find(q);
+                if (found == lowerVertices.end())
+                  continue;
+                for (const auto &w : found->second) {
+                  const NumericType d = Norm(w - vv);
+                  if (d < best) {
+                    best = d;
+                    nearest = &w;
+                  }
+                }
+              }
+          if (nearest != nullptr)
+            for (int i = 0; i < 3; ++i)
+              v[i] = (*nearest)[i];
+        }
+      }
       const auto &nodes = part->getNodes();
       std::vector<long> nodeIds(nodes.size(), -1);
       for (const auto &element : part->template getElements<D>()) {

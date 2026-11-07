@@ -37,6 +37,9 @@ protected:
 
   bool hasGPU = false; // indicates whether a GPU version of the model exists
   bool isALP = false;  // indicates whether the model is an atomic layer process
+  // whether a Euclidean domain advects its moving material with the upwind
+  // update (setEuclideanUpwind)
+  bool euclideanUpwind = false;
 
 public:
   virtual ~ProcessModelBase() = default;
@@ -67,6 +70,16 @@ public:
   auto hasGPUModel() const { return hasGPU; }
 
   void setProcessName(const std::string &name) { processName = name; }
+
+  /// Whether on a Euclidean domain AdvectHermite advects the moving material
+  /// with the upwind update (AdvectHermite::setUpwind, with the spatial
+  /// scheme and time integration of the advection parameters) and the
+  /// triangle flux engines weigh the elements around a point by the 16th
+  /// power of their alignment with its normal. The plasma etching models set
+  /// it, since their rates change sharply along the surface and over its
+  /// corners; the other models keep the Hermite update and the plain average.
+  auto getEuclideanUpwind() const { return euclideanUpwind; }
+  void setEuclideanUpwind(bool passed) { euclideanUpwind = passed; }
 
   void
   setSurfaceModel(SmartPointer<SurfaceModel<NumericType>> passedSurfaceModel) {

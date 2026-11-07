@@ -563,6 +563,8 @@ public:
 
 private:
   void initializeModel() {
+    // plasma etching advects Euclidean domains with the upwind update
+    this->setEuclideanUpwind(true);
     // check if units have been set
     if (units::Length::getUnit() == units::Length::UNDEFINED ||
         units::Time::getUnit() == units::Time::UNDEFINED) {

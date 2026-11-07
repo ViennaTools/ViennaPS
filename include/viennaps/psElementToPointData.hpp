@@ -26,6 +26,8 @@ class ElementToPointData {
   SmartPointer<viennals::Mesh<MeshNT>> surfaceMesh_;
   NumericType conversionRadius_;
   bool alignedOnly_ = false;
+  // power of the alignment in the weights, 0 for the plain sum
+  double alignmentPower_ = 0.;
   std::string postFix_ = "";
 
   struct CloseElements {
@@ -81,6 +83,16 @@ public:
   /// so that a point next to a sharp edge does not take the flux of the face
   /// across it. Default false.
   void setAlignedElementsOnly(bool alignedOnly) { alignedOnly_ = alignedOnly; }
+
+  /// The weight of an element is its alignment with the point's normal plus
+  /// its closeness (1 at the point, 0 at the conversion radius); with a power
+  /// k > 0 it is alignment^k (1 + closeness) instead, so that an element
+  /// tilted against the point's normal, as one of a rounded corner beside a
+  /// wall's point, counts little (0.707^16 = 0.004 at 45 degrees, 0.94^16 =
+  /// 0.37 at 20) and the point takes the flux of its own normal. A point
+  /// whose elements all fall below the weight threshold takes the plain
+  /// weights. Default 0.
+  void setAlignmentPower(double power) { alignmentPower_ = power; }
 
   /// Each point takes the value at its position of a least-squares fit in
   /// its tangent plane over the elements of its face, those within the
@@ -159,13 +171,35 @@ public:
             DotProductNT(normals->at(i), elementNormals->at(idx));
         if (alignedOnly_ && !(alignment > 0.))
           continue;
-        const double weight =
-            alignment +
+        const double closeness =
             (lookupRadiusSquared_ - distanceSquared) / lookupRadiusSquared_;
+        const double weight =
+            alignmentPower_ > 0.
+                ? std::pow(std::max(alignment, 0.), alignmentPower_) *
+                      (1. + closeness)
+                : alignment + closeness;
 
         if (!std::isnan(weight) && weight > weightThreshold) {
           weights.push_back(weight);
           elementIndices.push_back(idx);
+        }
+      }
+      // with an alignment power, a point whose elements all fall below the
+      // threshold takes them with the plain weights
+      if (weights.empty() && alignmentPower_ > 0.) {
+        for (std::size_t n = 0; n < closeElements.size(); ++n) {
+          const auto &[idx, distanceSquared] = closeElements[n];
+          const double alignment =
+              DotProductNT(normals->at(i), elementNormals->at(idx));
+          if (alignedOnly_ && !(alignment > 0.))
+            continue;
+          const double weight =
+              alignment +
+              (lookupRadiusSquared_ - distanceSquared) / lookupRadiusSquared_;
+          if (!std::isnan(weight) && weight > weightThreshold) {
+            weights.push_back(weight);
+            elementIndices.push_back(idx);
+          }
         }
       }
 

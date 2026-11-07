@@ -111,6 +111,12 @@ public:
     // With only the elements of its own face, as a fit per face takes them,
     // the turn of the faces tapers the walls at the bottom of a hole
     postProcessing_.setAlignedElementsOnly(context.isEuclidean());
+    // with the upwind update of plasma etching a point weighs the elements by
+    // the 16th power of their alignment with its normal, so that at a corner
+    // the upwind update rounds it takes the rate of its own normal
+    postProcessing_.setAlignmentPower(
+        context.isEuclidean() && context.model->getEuclideanUpwind() ? 16.
+                                                                     : 0.);
 
     return ProcessResult::SUCCESS;
   }
