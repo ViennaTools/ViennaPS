@@ -376,7 +376,9 @@ public:
           // source carry over from the model given
           if (auto callback = context_.model->getAdvectionCallback())
             gpuModel->setAdvectionCallback(callback);
-          gpuModel->setEuclideanUpwind(context_.model->getEuclideanUpwind());
+          gpuModel->setEuclideanUpwind(
+              context_.model->getEuclideanUpwind(),
+              context_.model->getEuclideanUpwindAfter());
           auto cpuModel =
               std::dynamic_pointer_cast<ProcessModelCPU<NumericType, D>>(
                   context_.model);

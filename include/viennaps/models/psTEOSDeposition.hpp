@@ -189,6 +189,10 @@ public:
     // velocity field
     auto velField = SmartPointer<DefaultVelocityField<NumericType, D>>::New();
     this->setVelocityField(velField);
+    // on a Euclidean domain the Hermite update opens the corners the
+    // deposition starts with, and the upwind update follows the arcs that
+    // the ray-traced rate bends once the surface has moved 5 grid spacings
+    this->setEuclideanUpwind(true, 5.);
 
     if (rateP2 == 0.) {
       // single particle model

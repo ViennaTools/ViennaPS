@@ -38,8 +38,9 @@ protected:
   bool hasGPU = false; // indicates whether a GPU version of the model exists
   bool isALP = false;  // indicates whether the model is an atomic layer process
   // whether a Euclidean domain advects its moving material with the upwind
-  // update (setEuclideanUpwind)
+  // update (setEuclideanUpwind), and after how many grid spacings of motion
   bool euclideanUpwind = false;
+  double euclideanUpwindAfter = 0.;
 
 public:
   virtual ~ProcessModelBase() = default;
@@ -78,8 +79,18 @@ public:
   /// power of their alignment with its normal. The plasma etching models set
   /// it, since their rates change sharply along the surface and over its
   /// corners; the other models keep the Hermite update and the plain average.
+  /// With afterGridSpacings the Hermite update and the plain average hold
+  /// until the fastest point of the surface has moved that many grid
+  /// spacings in the process, and the upwind update takes over from there:
+  /// the Hermite update opens the corners the process starts with exactly,
+  /// where the first-order upwind update lags, and the upwind update follows
+  /// the arcs that a ray-traced rate bends (TEOS deposition sets 5).
   auto getEuclideanUpwind() const { return euclideanUpwind; }
-  void setEuclideanUpwind(bool passed) { euclideanUpwind = passed; }
+  auto getEuclideanUpwindAfter() const { return euclideanUpwindAfter; }
+  void setEuclideanUpwind(bool passed, double afterGridSpacings = 0.) {
+    euclideanUpwind = passed;
+    euclideanUpwindAfter = afterGridSpacings;
+  }
 
   void
   setSurfaceModel(SmartPointer<SurfaceModel<NumericType>> passedSurfaceModel) {

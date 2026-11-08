@@ -99,12 +99,7 @@ public:
     // With only the elements of its own face, as a fit per face takes them,
     // the turn of the faces tapers the walls at the bottom of a hole
     postProcessing_.setAlignedElementsOnly(context.isEuclidean());
-    // with the upwind update of plasma etching a point weighs the elements by
-    // the 16th power of their alignment with its normal, so that at a corner
-    // the upwind update rounds it takes the rate of its own normal
-    postProcessing_.setAlignmentPower(
-        context.isEuclidean() && context.model->getEuclideanUpwind() ? 16.
-                                                                     : 0.);
+    // the alignment power follows the update of every step (setPointData)
 
     return ProcessResult::SUCCESS;
   }
@@ -218,6 +213,12 @@ public:
     auto elementFluxes = runRayTracer(context);
 
     // post-process fluxes
+    // with the upwind update of plasma etching a point weighs the elements
+    // by the 16th power of their alignment with its normal, so that at a
+    // corner the upwind update rounds it takes the rate of its own normal;
+    // the update can change during a process (setEuclideanUpwind)
+    postProcessing_.setAlignmentPower(
+        context.isEuclidean() && context.euclideanUpwind ? 16. : 0.);
     postProcessing_.setPointData(fluxes);
     postProcessing_.setElementDataArrays(std::move(elementFluxes));
     postProcessing_.apply();
@@ -286,6 +287,12 @@ public:
 
     // post-process fluxes
     fluxes->clear();
+    // with the upwind update of plasma etching a point weighs the elements
+    // by the 16th power of their alignment with its normal, so that at a
+    // corner the upwind update rounds it takes the rate of its own normal;
+    // the update can change during a process (setEuclideanUpwind)
+    postProcessing_.setAlignmentPower(
+        context.isEuclidean() && context.euclideanUpwind ? 16. : 0.);
     postProcessing_.setPointData(fluxes);
     postProcessing_.setElementDataArrays(std::move(elementFluxes));
     postProcessing_.setPostFix("_surface");

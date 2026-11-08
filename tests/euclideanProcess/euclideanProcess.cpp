@@ -522,22 +522,33 @@ template <class NumericType, int D> void RunTest() {
 
   // models with coverages: plasma etching (SF6/O2) and a deposition by two
   // particles (TEOS) on the Euclidean and on the usual domain, compared by
-  // the depth of the opening or the thickness of the film on its floor
-  for (bool deposition : {false, true}) {
+  // the depth of the opening or the thickness of the film on its floor. The
+  // deposition by one TEOS particle keeps coverages: right after the top
+  // level set was duplicated the disks of both materials meet, and the
+  // surface model gets the fluxes of a subset of the disks for their cross
+  // velocities (it read past them into the coverages of all disks before);
+  // here the upwind update takes over after one grid spacing (five by
+  // default)
+  for (int kind : {0, 1, 2}) {
     NumericType level[2] = {0., 0.};
     for (bool euclidean : {false, true}) {
       auto domain = makeDomain(euclidean);
       SmartPointer<ProcessModelBase<NumericType, D>> model;
-      NumericType duration;
-      if (deposition) {
-        domain->duplicateTopLevelSet(Material::SiO2);
-        model = SmartPointer<TEOSDeposition<NumericType, D>>::New(
-            0.1, 0.5, 1., 1e-4, 0.5, 1.);
-        duration = 2.;
-      } else {
+      NumericType duration = 2.;
+      if (kind == 0) {
         model = SmartPointer<SF6O2Etching<NumericType, D>>::New(
             SF6O2Etching<NumericType, D>::defaultParameters());
         duration = 10.;
+      } else {
+        domain->duplicateTopLevelSet(Material::SiO2);
+        if (kind == 1)
+          model = SmartPointer<TEOSDeposition<NumericType, D>>::New(
+              0.1, 0.5, 1., 1e-4, 0.5, 1.);
+        else {
+          model =
+              SmartPointer<TEOSDeposition<NumericType, D>>::New(0.1, 0.5, 1.);
+          model->setEuclideanUpwind(true, 1.);
+        }
       }
       Process<NumericType, D> process(domain, model, duration);
       RayTracingParameters rays;
@@ -558,8 +569,10 @@ template <class NumericType, int D> void RunTest() {
       level[euclidean] = lowest;
     }
     std::cout << D << "D "
-              << (deposition ? "TEOS deposition, film on the floor"
-                             : "SF6/O2 etching, depth below the opening")
+              << (kind == 0   ? "SF6/O2 etching, depth below the opening"
+                  : kind == 1 ? "TEOS deposition, film on the floor"
+                              : "single-particle TEOS deposition on the "
+                                "duplicated top, film on the floor")
               << ": " << level[0] - base << " (Manhattan), " << level[1] - base
               << " (Euclidean)" << std::endl;
     VC_TEST_ASSERT(std::abs(level[1] - base) > 0.5 * gridDelta);

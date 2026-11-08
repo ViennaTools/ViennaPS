@@ -333,6 +333,13 @@ private:
 
     // Calculate velocities in surface model
     auto velocities = calculateVelocities(context, fluxes);
+    // the largest speed of the step, for the switch to the upwind update
+    // (AdvectionHandler::performAdvection)
+    context.stepMaxSpeed = 0.;
+    if (velocities)
+      for (const auto v : *velocities)
+        context.stepMaxSpeed =
+            std::max(context.stepMaxSpeed, double(std::abs(v)));
     if (velocities && context.isEuclidean() &&
         context.translationField->getTranslationMethod() == 2)
       calculateCrossVelocities(context, fluxes);
@@ -417,7 +424,8 @@ private:
   // a cell below the edge of a mask, the new wall below the edge has no disk
   // yet, and the mask wall still has to give its velocity for the substrate.
   // The surface model keeps the coverages and surface data of all disks,
-  // which stay as they were.
+  // which stay as they were; for the call it gets those of the junction's
+  // disks.
   void calculateCrossVelocities(ProcessContext<NumericType, D> &context,
                                 SmartPointer<PointData<NumericType>> &fluxes) {
     const auto &nodes = context.diskMesh->getNodes();
@@ -477,8 +485,25 @@ private:
              ++i)
           *data->getScalarData(int(i)) = std::move(copy[i]);
     };
+    // during the call the surface model sees the coverages and surface data
+    // of the subset, so that every array it reads has the subset's size, as
+    // the fluxes do
+    auto select = [&](SmartPointer<PointData<NumericType>> data) {
+      if (data)
+        for (unsigned i = 0; i < data->getScalarDataSize(); ++i) {
+          auto *values = data->getScalarData(int(i));
+          if (values->size() != nodes.size())
+            continue;
+          std::vector<NumericType> picked(disks.size());
+          for (std::size_t j = 0; j < disks.size(); ++j)
+            picked[j] = (*values)[disks[j]];
+          *values = std::move(picked);
+        }
+    };
     auto coverages = save(surfaceModel->getCoverages());
     auto surfaceData = save(surfaceModel->getSurfaceData());
+    select(surfaceModel->getCoverages());
+    select(surfaceModel->getSurfaceData());
     if (context.flags.useCoverages) {
       surfaceModel->setSurfaceCoordinates(coordinates);
       surfaceModel->updateCoverages(subset, others);

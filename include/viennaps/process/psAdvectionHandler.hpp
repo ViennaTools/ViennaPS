@@ -17,6 +17,9 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) class AdvectionHandler {
   // time step per call as Advect's single step
   viennals::AdvectHermite<NumericType, D> hermiteKernel_;
   bool hermite_ = false;
+  // the distance after which the upwind update takes over, and the distance
+  // the fastest point of the surface has moved in the process
+  double upwindAfter_ = 0., frontDistance_ = 0.;
   viennacore::Timer<> timer_;
   unsigned lsVelOutputCounter_ = 0;
   unsigned totalAdvectionSteps_ = 0;
@@ -82,8 +85,15 @@ public:
       // ray-traced fluxes give speeds only for the surface's own normals
       hermiteKernel_.setSurfaceSpeedsOnly(context.flags.useFluxEngine);
       // the upwind update of the moving material where the model asks for
-      // it (plasma etching), with the advection parameters' schemes
-      hermiteKernel_.setUpwind(context.model->getEuclideanUpwind());
+      // it (plasma etching, TEOS deposition), with the advection parameters'
+      // schemes, from the start or once the front has moved the model's
+      // distance (performAdvection)
+      upwindAfter_ = context.model->getEuclideanUpwindAfter() *
+                     context.domain->getGridDelta();
+      frontDistance_ = 0.;
+      context.euclideanUpwind =
+          context.model->getEuclideanUpwind() && upwindAfter_ <= 0.;
+      hermiteKernel_.setUpwind(context.euclideanUpwind);
       hermiteKernel_.setSpatialScheme(context.advectionParams.spatialScheme);
       hermiteKernel_.setTemporalScheme(context.advectionParams.temporalScheme);
       hermiteKernel_.setDissipationAlpha(
@@ -138,9 +148,10 @@ public:
     }
 
     timer_.start();
-    if (hermite_)
+    if (hermite_) {
+      hermiteKernel_.setUpwind(context.euclideanUpwind);
       hermiteKernel_.apply();
-    else
+    } else
       advectionKernel_.apply();
     timer_.finish();
 
@@ -163,6 +174,13 @@ public:
       context.processTime = context.processDuration;
     } else {
       context.processTime += context.timeStep;
+      // the upwind update takes over once the fastest point of the surface
+      // has moved the model's distance
+      if (hermite_ && !context.euclideanUpwind &&
+          context.model->getEuclideanUpwind()) {
+        frontDistance_ += context.stepMaxSpeed * context.timeStep;
+        context.euclideanUpwind = frontDistance_ >= upwindAfter_;
+      }
     }
 
     return ProcessResult::SUCCESS;
