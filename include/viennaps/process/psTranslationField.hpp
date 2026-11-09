@@ -12,6 +12,7 @@
 #include <vcVectorType.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <unordered_map>
 #include <utility>
@@ -59,6 +60,8 @@ public:
                                        int material,
                                        const Vec3D<NumericType> &normalVector,
                                        unsigned long pointId) override {
+    if (!modelVelocityField_->hasVectorVelocity())
+      return Vec3D<NumericType>{0., 0., 0.};
     material = materialMap_->getMaterialIdAtIdx(material);
     assert(material >= 0);
     translateLsId(pointId, coordinate, material);
@@ -219,9 +222,21 @@ public:
       Vec3D<NumericType> normal;
       NumericType angle;
     };
-    std::vector<Candidate> chosen;
+    // the nearest disks of each of the two trees, at most one candidate
+    // each, kept on the stack
+    constexpr int nearest = 16;
+    struct Chosen {
+      std::array<Candidate, 2 * nearest> items;
+      std::size_t count = 0;
+      void push_back(const Candidate &c) { items[count++] = c; }
+      bool empty() const { return count == 0; }
+      std::size_t size() const { return count; }
+      const Candidate &operator[](std::size_t k) const { return items[k]; }
+      const Candidate *begin() const { return items.data(); }
+      const Candidate *end() const { return items.data() + count; }
+    } chosen;
     auto gather = [&](const KDTreeType &tree, auto diskOf, auto acrossOf) {
-      const auto found = tree.findKNearest(coordinate, 16);
+      const auto found = tree.findKNearest(coordinate, nearest);
       if (!found)
         return;
       for (const auto &[k, distance2] : *found) {

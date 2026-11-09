@@ -659,16 +659,29 @@ public:
           auto lower = viennals::Mesh<NumericType>::New();
           viennals::ToDualContouringMesh<NumericType, D>(levelSets_[l], lower)
               .apply();
-          for (const auto &w : lower->getNodes()) {
+          // the vertices on the top surface, asked for in parallel and kept
+          // in their order
+          const auto &lowerNodes = lower->getNodes();
+          std::vector<char> onTop(lowerNodes.size(), 0);
+#pragma omp parallel for
+          for (long q = 0; q < long(lowerNodes.size()); ++q) {
+            const auto &w = lowerNodes[q];
             const Vec wv{w[0], w[1], w[2]};
             Vec g{};
             for (int i = 0; i < 3; ++i)
               g[i] = wv[i] / gridDelta;
-            if (std::abs(top.value(0, g)) < NumericType(0.05))
-              lowerVertices[key(wv)].push_back(wv);
+            onTop[q] = std::abs(top.value(0, g)) < NumericType(0.05);
           }
+          for (std::size_t q = 0; q < lowerNodes.size(); ++q)
+            if (onTop[q]) {
+              const auto &w = lowerNodes[q];
+              const Vec wv{w[0], w[1], w[2]};
+              lowerVertices[key(wv)].push_back(wv);
+            }
         }
-        for (auto &v : part->nodes) {
+#pragma omp parallel for
+        for (long vertex = 0; vertex < long(part->nodes.size()); ++vertex) {
+          auto &v = part->nodes[vertex];
           const Vec vv{v[0], v[1], v[2]};
           const auto k = key(vv);
           NumericType best = NumericType(0.5) * gridDelta;
@@ -697,8 +710,16 @@ public:
         }
       }
       const auto &nodes = part->getNodes();
-      std::vector<long> nodeIds(nodes.size(), -1);
-      for (const auto &element : part->template getElements<D>()) {
+      const auto &elements = part->template getElements<D>();
+      // every element's normal and the material just behind it, in
+      // parallel; the mesh is then put together in the elements' order
+      const long count = long(elements.size());
+      std::vector<char> taken(count, 0);
+      std::vector<Vec> elementNormals(count);
+      std::vector<int> elementMaterials(count, 0);
+#pragma omp parallel for
+      for (long e = 0; e < count; ++e) {
+        const auto &element = elements[e];
         Vec centre{}, normal{};
         for (int k = 0; k < D; ++k)
           for (int i = 0; i < 3; ++i)
@@ -719,6 +740,15 @@ public:
           behind[i] = centre[i] / gridDelta - NumericType(0.01) * normal[i];
         if (interface && top.value(0, behind) > NumericType(-0.01))
           continue;
+        taken[e] = 1;
+        elementNormals[e] = normal;
+        elementMaterials[e] = stack.material(behind);
+      }
+      std::vector<long> nodeIds(nodes.size(), -1);
+      for (long e = 0; e < count; ++e) {
+        if (!taken[e])
+          continue;
+        const auto &element = elements[e];
         std::array<unsigned, D> ids{};
         for (int k = 0; k < D; ++k) {
           if (nodeIds[element[k]] < 0)
@@ -726,11 +756,11 @@ public:
           ids[k] = unsigned(nodeIds[element[k]]);
         }
         mesh->insertNextElement(ids);
-        const int index = stack.material(behind);
+        const int index = elementMaterials[e];
         materials.push_back(
             materialMap_ ? NumericType(materialMap_->getMaterialIdAtIdx(index))
                          : NumericType(index));
-        normals.push_back(normal);
+        normals.push_back(elementNormals[e]);
       }
     };
     append(levelSets_.back(), false);

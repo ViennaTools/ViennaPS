@@ -24,6 +24,11 @@ public:
     return Vec3D<NumericType>{0., 0., 0.};
   }
 
+  // whether getVectorVelocity can return anything but zero; where it cannot,
+  // the translation field looks up no disk for the vector velocity of a
+  // point
+  virtual bool hasVectorVelocity() const { return true; }
+
   virtual NumericType
   getDissipationAlpha(int direction, int material,
                       const Vec3D<NumericType> &centralDifferences) {
@@ -48,6 +53,9 @@ public:
                                 unsigned long pointId) override {
     return velocities_->at(pointId);
   }
+
+  // scalar velocities only, from the surface model
+  bool hasVectorVelocity() const override { return false; }
 
   void prepare(SmartPointer<Domain<NumericType, D>> domain,
                SmartPointer<std::vector<NumericType>> velocities,

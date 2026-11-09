@@ -214,16 +214,30 @@ public:
               levelSets.begin(), levelSets.end() - 1));
       const auto &materialMap = context.domain->getMaterialMap();
       nearestDisk.assign(topLS->getNumberOfPoints(), -1);
+      // the defined points of the band first, so that their queries run in
+      // parallel
+      std::vector<unsigned long> ids;
+      std::vector<viennahrle::Index<D>> indices;
+      std::vector<NumericType> values;
+      ids.reserve(topLS->getNumberOfPoints());
+      indices.reserve(topLS->getNumberOfPoints());
+      values.reserve(topLS->getNumberOfPoints());
       for (viennahrle::ConstSparseIterator<
                typename viennals::Domain<NumericType, D>::DomainType>
                it(topLS->getDomain());
            !it.isFinished(); it.next()) {
         if (!it.isDefined())
           continue;
-        const auto id = it.getPointId();
+        ids.push_back(it.getPointId());
+        indices.push_back(it.getStartIndices());
+        values.push_back(it.getValue());
+      }
+#pragma omp parallel for
+      for (long q = 0; q < long(ids.size()); ++q) {
+        const auto id = ids[q];
         Vec3D<NumericType> point{}, behind{};
         for (int i = 0; i < D; ++i)
-          point[i] = it.getStartIndices(i) * gridDelta;
+          point[i] = indices[q][i] * gridDelta;
         int material = -1;
         if (normals != nullptr) {
           const auto &n = (*normals)[id];
@@ -231,7 +245,7 @@ public:
               std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
           if (length > NumericType(1e-12)) {
             for (int i = 0; i < D; ++i) {
-              point[i] -= it.getValue() * gridDelta * n[i] / length;
+              point[i] -= values[q] * gridDelta * n[i] / length;
               behind[i] =
                   point[i] / gridDelta - NumericType(0.01) * n[i] / length;
             }
