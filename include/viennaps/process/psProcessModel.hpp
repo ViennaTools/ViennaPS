@@ -72,19 +72,18 @@ public:
 
   void setProcessName(const std::string &name) { processName = name; }
 
-  /// Whether on a Euclidean domain AdvectHermite advects the moving material
-  /// with the upwind update (AdvectHermite::setUpwind, with the spatial
-  /// scheme and time integration of the advection parameters) and the
-  /// triangle flux engines weigh the elements around a point by the 16th
-  /// power of their alignment with its normal. The plasma etching models set
-  /// it, since their rates change sharply along the surface and over its
-  /// corners; the other models keep the Hermite update and the plain average.
-  /// With afterGridSpacings the Hermite update and the plain average hold
-  /// until the fastest point of the surface has moved that many grid
-  /// spacings in the process, and the upwind update takes over from there:
-  /// the Hermite update opens the corners the process starts with exactly,
-  /// where the first-order upwind update lags, and the upwind update follows
-  /// the arcs that a ray-traced rate bends (TEOS deposition sets 5).
+  /// Whether on a Euclidean domain the surface advects with the upwind
+  /// update, Advect with setEuclideanRenormalization (values only, with the
+  /// spatial scheme and time integration of the advection parameters), in
+  /// place of the Hermite update of AdvectHermite. The plasma etching models
+  /// set it, since their rates change sharply along the surface and over its
+  /// corners; the other models keep the Hermite update. With
+  /// afterGridSpacings the Hermite update holds until the fastest point of
+  /// the surface has moved that many grid spacings in the process, and the
+  /// upwind update takes over from there. The Hermite update opens the
+  /// corners the process starts with exactly, where the first-order upwind
+  /// update lags, and the upwind update follows the arcs that a ray-traced
+  /// rate bends (TEOS deposition sets 5).
   auto getEuclideanUpwind() const { return euclideanUpwind; }
   auto getEuclideanUpwindAfter() const { return euclideanUpwindAfter; }
   void setEuclideanUpwind(bool passed, double afterGridSpacings = 0.) {

@@ -102,13 +102,6 @@ public:
       frontDistance_ = 0.;
       context.euclideanUpwind =
           context.model->getEuclideanUpwind() && upwindAfter_ <= 0.;
-      hermiteKernel_.setUpwind(false);
-      hermiteKernel_.setSpatialScheme(context.advectionParams.spatialScheme);
-      hermiteKernel_.setTemporalScheme(context.advectionParams.temporalScheme);
-      hermiteKernel_.setDissipationAlpha(
-          context.advectionParams.dissipationAlpha);
-      hermiteKernel_.setCheckDissipation(
-          context.advectionParams.checkDissipation);
       hermiteKernel_.clearLevelSets();
       for (auto &dom : context.domain->getLevelSets())
         hermiteKernel_.insertNextLevelSet(dom);
