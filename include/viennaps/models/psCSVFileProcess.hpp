@@ -96,6 +96,9 @@ public:
     visibilities.clear();
 
     auto surfaceLS = domain->getLevelSets().back();
+    // the visibility of a Euclidean band, from its values, also lets points
+    // inside the solid next to a face turned away from the source see it:
+    // the direction of a point's own normal decides there (values only)
     facingOnly =
         surfaceLS->getNormalization() == viennals::NormalizationEnum::EUCLIDEAN;
     if (calculateVisibility) {

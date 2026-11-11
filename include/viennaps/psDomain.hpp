@@ -586,10 +586,10 @@ public:
   getSurfaceMesh(bool addInterfaces = false, bool sharpCorners = false,
                  double minNodeDistanceFactor = 0.01) const {
     auto mesh = viennals::Mesh<NumericType>::New();
-    // a Euclidean surface goes through dual contouring of its stored planes,
-    // which keeps its sharp edges and corners
-    if (!levelSets_.empty() && levelSets_.back()->getNormalization() ==
-                                   viennals::NormalizationEnum::EUCLIDEAN) {
+    // a surface with Hermite data goes through dual contouring of its
+    // stored planes, which keeps its sharp edges and corners; a Euclidean
+    // surface with values only, as a Manhattan one
+    if (!levelSets_.empty() && viennals::storesHermiteData(levelSets_.back())) {
       euclideanSurfaceMesh(mesh, addInterfaces);
       return mesh;
     }

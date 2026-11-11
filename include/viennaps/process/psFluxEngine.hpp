@@ -10,6 +10,9 @@ namespace viennaps {
 VIENNAPS_TEMPLATE_ND(NumericType, D) class FluxEngine {
 protected:
   viennacore::Timer<> timer_;
+  // the extraction of the traced surface mesh from the level sets, a part of
+  // timer_
+  viennacore::Timer<> extractionTimer_;
   unsigned fluxCalculationsCount_ = 0;
 
 public:
@@ -35,7 +38,11 @@ public:
       viennacore::SmartPointer<PointData<NumericType>> &fluxes) = 0;
 
   auto &getTimer() const { return timer_; }
-  void resetTimer() { timer_.reset(); }
+  auto &getExtractionTimer() const { return extractionTimer_; }
+  void resetTimer() {
+    timer_.reset();
+    extractionTimer_.reset();
+  }
   auto getFluxCalculationsCount() const { return fluxCalculationsCount_; }
 };
 

@@ -182,6 +182,10 @@ public:
     }
   }
 
+  /// Without the trees of the materials, as for a surface without Hermite
+  /// data, a point takes the velocity of the nearest disk of any material.
+  void clearMaterialKdTrees() { materialTrees_.clear(); }
+
   /// Index of the disk nearest to a point among the disks of the material
   /// asked for, or among all disks where that material has none; -1 without
   /// disks.

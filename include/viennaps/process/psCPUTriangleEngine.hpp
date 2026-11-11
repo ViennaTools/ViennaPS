@@ -94,12 +94,6 @@ public:
     postProcessing_.setSurfaceMesh(surfaceMesh_);
     postProcessing_.setElementKdTree(elementKdTree_);
     postProcessing_.setDiskMesh(context.diskMesh);
-    // the faces of a Euclidean surface meet at sharp edges; a point takes
-    // the average flux of the elements that face the same side as it does.
-    // With only the elements of its own face, as a fit per face takes them,
-    // the turn of the faces tapers the walls at the bottom of a hole
-    postProcessing_.setAlignedElementsOnly(context.isEuclidean());
-    // the alignment power follows the update of every step (setPointData)
 
     return ProcessResult::SUCCESS;
   }
@@ -110,10 +104,16 @@ public:
     assert(surfaceMesh_ != nullptr);
     assert(elementKdTree_ != nullptr);
 
-    // a Euclidean surface is traced on its dual contouring mesh, which keeps
-    // its sharp edges and corners, with the material behind each element
+    // a surface with Hermite data is traced on its dual contouring mesh,
+    // which keeps its sharp edges and corners, with the material behind each
+    // element; the faces meet at sharp edges, and a point takes the average
+    // flux of the elements that face the same side as it does (with only the
+    // elements of its own face, as a fit per face takes them, the turn of the
+    // faces tapers the walls at the bottom of a hole)
     std::vector<int> elementMaterialIds;
-    if (context.isEuclidean())
+    this->extractionTimer_.start();
+    postProcessing_.setAlignedElementsOnly(context.isHermite());
+    if (context.isHermite())
       dualContouringSurface(context, surfaceMesh_, elementKdTree_,
                             elementMaterialIds);
     else
@@ -122,6 +122,7 @@ public:
           context.domain->getLevelSets().back(), surfaceMesh_, elementKdTree_,
           1e-12, context.rayTracingParams.minNodeDistanceFactor)
           .apply();
+    this->extractionTimer_.finish();
 
     viennaray::TriangleMesh triangleMesh;
 
@@ -213,12 +214,6 @@ public:
     auto elementFluxes = runRayTracer(context);
 
     // post-process fluxes
-    // with the upwind update of plasma etching a point weighs the elements
-    // by the 16th power of their alignment with its normal, so that at a
-    // corner the upwind update rounds it takes the rate of its own normal;
-    // the update can change during a process (setEuclideanUpwind)
-    postProcessing_.setAlignmentPower(
-        context.isEuclidean() && context.euclideanUpwind ? 16. : 0.);
     postProcessing_.setPointData(fluxes);
     postProcessing_.setElementDataArrays(std::move(elementFluxes));
     postProcessing_.apply();
@@ -287,12 +282,6 @@ public:
 
     // post-process fluxes
     fluxes->clear();
-    // with the upwind update of plasma etching a point weighs the elements
-    // by the 16th power of their alignment with its normal, so that at a
-    // corner the upwind update rounds it takes the rate of its own normal;
-    // the update can change during a process (setEuclideanUpwind)
-    postProcessing_.setAlignmentPower(
-        context.isEuclidean() && context.euclideanUpwind ? 16. : 0.);
     postProcessing_.setPointData(fluxes);
     postProcessing_.setElementDataArrays(std::move(elementFluxes));
     postProcessing_.setPostFix("_surface");

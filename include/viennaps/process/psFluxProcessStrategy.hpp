@@ -27,6 +27,14 @@ class FluxProcessStrategy final : public ProcessStrategy<NumericType, D> {
 
   Timer<> callbackTimer_{};
   Timer<> diffusionTimer_{};
+  // the surface model (coverages and velocities) and the transfer of
+  // velocities and coverages between the surface and the level set
+  Timer<> surfaceModelTimer_{};
+  Timer<> transferTimer_{};
+  // the surface points of the velocities and coverages (ToDiskMesh and the
+  // trees of the translation) and the preparation of the advection
+  Timer<> pointsTimer_{};
+  Timer<> preparationTimer_{};
 
 public:
   DEFINE_CLASS_NAME(FluxProcessStrategy)
@@ -225,6 +233,10 @@ private:
     // reset timers
     callbackTimer_.reset();
     diffusionTimer_.reset();
+    surfaceModelTimer_.reset();
+    transferTimer_.reset();
+    pointsTimer_.reset();
+    preparationTimer_.reset();
     fluxEngine_->resetTimer();
     advectionHandler_.resetTimer();
 
@@ -302,7 +314,9 @@ private:
 
   ProcessResult processTimeStep(ProcessContext<NumericType, D> &context) {
     // Prepare advection (expand level set based on discretization scheme)
+    preparationTimer_.start();
     advectionHandler_.prepareAdvection(context);
+    preparationTimer_.finish();
 
     // Update surface mesh for flux calculation
     updateState(context);
@@ -327,6 +341,7 @@ private:
     }
 
     // Update coverages in surface model
+    surfaceModelTimer_.start();
     if (context.flags.useCoverages) {
       PROCESS_CHECK(updateCoverages(context, fluxes));
     }
@@ -340,11 +355,14 @@ private:
       for (const auto v : *velocities)
         context.stepMaxSpeed =
             std::max(context.stepMaxSpeed, double(std::abs(v)));
-    if (velocities && context.isEuclidean() &&
+    if (velocities && context.isHermite() &&
         context.translationField->getTranslationMethod() == 2)
       calculateCrossVelocities(context, fluxes);
+    surfaceModelTimer_.finish();
+    transferTimer_.start();
     context.model->getVelocityField()->prepare(context.domain, velocities,
                                                context.processTime);
+    transferTimer_.finish();
 
     // Apply advection callbacks (pre)
     if (context.flags.useAdvectionCallback) {
@@ -355,8 +373,10 @@ private:
 
     // Move coverages to level set to propagate them during advection
     if (context.flags.useCoverages) {
+      transferTimer_.start();
       PROCESS_CHECK(
           advectionHandler_.copyCoveragesToLevelSet(context, translator_));
+      transferTimer_.finish();
     }
 
     if (Logger::hasIntermediate()) {
@@ -368,9 +388,11 @@ private:
 
     // Update coverages from advected surface
     if (context.flags.useCoverages) {
+      transferTimer_.start();
       meshGenerator_.apply();
       PROCESS_CHECK(advectionHandler_.updateCoveragesFromAdvectedSurface(
           context, translator_));
+      transferTimer_.finish();
     }
 
     // Apply advection callbacks (post)
@@ -545,16 +567,20 @@ private:
   }
 
   void updateState(ProcessContext<NumericType, D> &context) {
+    pointsTimer_.start();
     meshGenerator_.apply();
 
     if (context.translationField->getTranslationMethod() == 2) {
       kdTree_->setPoints(context.diskMesh->getNodes());
       kdTree_->build();
-      if (context.isEuclidean())
+      if (context.isHermite())
         context.translationField->buildMaterialKdTrees(
             context.diskMesh->getNodes(), *context.diskMesh->getMaterialIds(),
             context.diskMesh->getNormals(), context.domain->getGridDelta());
+      else
+        context.translationField->clearMaterialKdTrees();
     }
+    pointsTimer_.finish();
   }
 
   ProcessResult
@@ -717,7 +743,27 @@ private:
         .addTiming("Flux engine total time",
                    fluxEngine_->getTimer().totalDuration * 1e-9,
                    processTimer.totalDuration * 1e-9)
+        .addTiming("Surface model total time",
+                   surfaceModelTimer_.totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .addTiming("Velocity transfer total time",
+                   transferTimer_.totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .addTiming("Flux engine extraction total time",
+                   fluxEngine_->getExtractionTimer().totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .addTiming("Surface points total time",
+                   pointsTimer_.totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .addTiming("Advection preparation total time",
+                   preparationTimer_.totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
         .print();
+    for (const auto &phase : advectionHandler_.getPhaseTimes())
+      Logger::getInstance()
+          .addTiming("Advection phase " + phase.first, phase.second,
+                     processTimer.totalDuration * 1e-9)
+          .print();
     if (context.flags.useAdvectionCallback) {
       Logger::getInstance()
           .addTiming("Advection callback total time",

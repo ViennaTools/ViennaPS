@@ -11,6 +11,9 @@ class AnalyticProcessStrategy final : public ProcessStrategy<NumericType, D> {
   viennals::ToDiskMesh<NumericType, D> meshConverter_;
   AdvectionHandler<NumericType, D> advectionHandler_;
   Timer<> callbackTimer_{};
+  // the preparation of the advection and of the velocity field
+  Timer<> preparationTimer_{};
+  Timer<> transferTimer_{};
 
 public:
   DEFINE_CLASS_NAME(AnalyticProcessStrategy)
@@ -109,7 +112,9 @@ private:
   ProcessResult processTimeStep(ProcessContext<NumericType, D> &context) {
     // Prepare advection based on discretization scheme
     // Initialize model
+    preparationTimer_.start();
     advectionHandler_.prepareAdvection(context);
+    preparationTimer_.finish();
 
     // Apply advection callbacks (pre)
     if (context.flags.useAdvectionCallback) {
@@ -119,8 +124,10 @@ private:
     }
 
     // Prepare velocity field (no fluxes for analytic processes)
+    transferTimer_.start();
     context.model->getVelocityField()->prepare(context.domain, nullptr,
                                                context.processTime);
+    transferTimer_.finish();
 
     if (Logger::hasIntermediate()) {
       auto const name = context.getProcessName();
@@ -184,7 +191,18 @@ private:
         .addTiming("Surface advection total time",
                    advectionHandler_.getTimer().totalDuration * 1e-9,
                    processTimer.totalDuration * 1e-9)
+        .addTiming("Velocity transfer total time",
+                   transferTimer_.totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
+        .addTiming("Advection preparation total time",
+                   preparationTimer_.totalDuration * 1e-9,
+                   processTimer.totalDuration * 1e-9)
         .print();
+    for (const auto &phase : advectionHandler_.getPhaseTimes())
+      Logger::getInstance()
+          .addTiming("Advection phase " + phase.first, phase.second,
+                     processTimer.totalDuration * 1e-9)
+          .print();
     if (context.flags.useAdvectionCallback) {
       Logger::getInstance()
           .addTiming("Advection callback total time",

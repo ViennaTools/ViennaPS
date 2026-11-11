@@ -111,6 +111,7 @@ public:
 
     if (!checkInputUpdateContext())
       return;
+    valuesOnlyForUpwind();
 
     // Find appropriate strategy
     auto strategy = findStrategy();
@@ -146,6 +147,7 @@ public:
   SmartPointer<viennals::Mesh<NumericType>> calculateFlux() {
     if (!checkInputUpdateContext())
       return nullptr;
+    valuesOnlyForUpwind();
 
     const auto name = context_.getProcessName();
     if (!context_.flags.useFluxEngine) {
@@ -225,12 +227,27 @@ private:
   }
 
   // Factory method for creating flux engines
-  // a Euclidean surface is traced on its dual contouring mesh, which keeps
-  // its sharp edges, where disks overhang them, also across periodic
-  // boundaries
+  // a surface with Hermite data is traced on its dual contouring mesh, which
+  // keeps its sharp edges, where disks overhang them, also across periodic
+  // boundaries; a Euclidean surface with the upwind update from the start
+  // holds values only and takes the engines of a Manhattan surface
+  bool hermiteSurface() const {
+    return context_.isEuclidean() &&
+           !(context_.model->getEuclideanUpwind() &&
+             context_.model->getEuclideanUpwindAfter() <= 0.);
+  }
   FluxEngineType cpuFluxEngineType() const {
-    return context_.isEuclidean() ? FluxEngineType::CPU_TRIANGLE
-                                  : FluxEngineType::CPU_DISK;
+    return hermiteSurface() ? FluxEngineType::CPU_TRIANGLE
+                            : FluxEngineType::CPU_DISK;
+  }
+
+  // a Euclidean surface with the upwind update from the start holds values
+  // only: the Hermite data of its level sets go before any model, engine or
+  // mesh sees them
+  void valuesOnlyForUpwind() {
+    if (context_.isEuclidean() && !hermiteSurface())
+      for (auto &levelSet : context_.domain->getLevelSets())
+        viennals::dropHermiteData(levelSet);
   }
 
   std::unique_ptr<FluxEngine<NumericType, D>> createFluxEngine() const {
@@ -347,7 +364,7 @@ public:
     if (fluxEngineType_ == FluxEngineType::AUTO && gpuAvailable() &&
         context_.model->hasGPUModel()) {
       fluxEngineType_ =
-          context_.flags.domainHasPeriodicBoundaries && !context_.isEuclidean()
+          context_.flags.domainHasPeriodicBoundaries && !hermiteSurface()
               ? FluxEngineType::GPU_DISK
               : FluxEngineType::GPU_TRIANGLE;
       VIENNACORE_LOG_DEBUG("Auto-selected flux engine type: " +

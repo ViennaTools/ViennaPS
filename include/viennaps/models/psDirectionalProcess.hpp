@@ -123,6 +123,10 @@ public:
 
     // Calculate visibilities for each rate set
     auto surfaceLS = domain->getLevelSets().back();
+    // the visibility of a Euclidean band, from its values, also lets points
+    // inside the solid next to a face turned away from the source see it
+    // (their ray leaves the solid through the far side): the direction of a
+    // point's own normal decides there (values only, no Hermite data)
     facingOnly_ = surfaceLS->getNormalization() ==
                   viennals::NormalizationEnum::EUCLIDEAN;
     for (unsigned rateSetID = 0; rateSetID < rateSets_.size(); ++rateSetID) {

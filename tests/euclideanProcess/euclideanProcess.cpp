@@ -558,7 +558,10 @@ template <class NumericType, int D> void RunTest() {
       if (euclidean) {
         VC_TEST_ASSERT(domain->getSurface()->getNormalization() ==
                        viennals::NormalizationEnum::EUCLIDEAN);
-        VC_TEST_ASSERT(domain->getSurface()->getLevelSetWidth() == 12);
+        // the band of AdvectHermite (12), or with the upwind update the band
+        // Advect needs for its update with values only (7 for the first-order
+        // Engquist-Osher scheme)
+        VC_TEST_ASSERT(domain->getSurface()->getLevelSetWidth() >= 7);
       }
       LSTEST_ASSERT_VALID_LS(domain->getSurface(), NumericType, D);
       NumericType lowest = 1e30;

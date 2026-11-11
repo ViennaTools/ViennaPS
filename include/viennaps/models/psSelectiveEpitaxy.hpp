@@ -89,12 +89,13 @@ public:
   void initialize(SmartPointer<Domain<NumericType, D>> domain,
                   const NumericType processDuration) final {
     if (firstInit) {
-      // a Euclidean domain advects its material stack with AdvectHermite,
-      // which takes the selectivity from the rates of the materials, without
-      // the layer wrapping of the stencil scheme
-      euclidean = domain->getSurface()->getNormalization() ==
-                  viennals::NormalizationEnum::EUCLIDEAN;
-      velField->wrapped = !euclidean;
+      // a domain with Hermite data advects its material stack with
+      // AdvectHermite, which takes the selectivity from the rates of the
+      // materials, without the layer wrapping of the stencil scheme; a
+      // Euclidean domain with values only (the upwind update) wraps the
+      // layers as a Manhattan one
+      hermite = viennals::storesHermiteData(domain->getSurface());
+      velField->wrapped = !hermite;
       domainCopy = Domain<NumericType, D>::New(domain);
       const auto numLevelSets = domain->getNumberOfLevelSets();
       if (numLevelSets < 2) {
@@ -137,7 +138,7 @@ public:
       domain->insertNextLevelSetAsMaterial(domainCopy->getLevelSets().back(),
                                            topMaterial, false);
       levelSets = domain->getLevelSets();
-      if (!euclidean)
+      if (!hermite)
         viennals::PrepareStencilLocalLaxFriedrichs(levelSets, {false, true});
 
       firstInit = false;
@@ -147,7 +148,7 @@ public:
   void finalize(SmartPointer<Domain<NumericType, D>> domain,
                 const NumericType processedDuration) final {
     auto levelSets = domain->getLevelSets();
-    if (!euclidean)
+    if (!hermite)
       viennals::FinalizeStencilLocalLaxFriedrichs(levelSets);
     domain->deepCopy(domainCopy);
     firstInit = true;
@@ -159,7 +160,7 @@ private:
   SmartPointer<Domain<NumericType, D>> domainCopy;
   SmartPointer<impl::EpitaxyVelocityField<NumericType, D>> velField;
   bool firstInit = true;
-  bool euclidean = false;
+  bool hermite = false;
 
   void setup(const NumericType rate111, const NumericType rate100) {
     // default surface model

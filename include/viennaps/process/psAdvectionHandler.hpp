@@ -9,12 +9,19 @@
 
 #include <vcTimer.hpp>
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 namespace viennaps {
 
 VIENNAPS_TEMPLATE_ND(NumericType, D) class AdvectionHandler {
+  // Advect, on a Euclidean surface with values only for the upwind update
+  // (setEuclideanRenormalization)
   viennals::Advect<NumericType, D> advectionKernel_;
-  // a Euclidean surface keeps its Hermite data through AdvectHermite, one
-  // time step per call as Advect's single step
+  // a Euclidean surface keeps its Hermite data through AdvectHermite with the
+  // Hermite update, one time step per call as Advect's single step
   viennals::AdvectHermite<NumericType, D> hermiteKernel_;
   bool hermite_ = false;
   // the distance after which the upwind update takes over, and the distance
@@ -67,6 +74,7 @@ public:
         context.advectionParams.adaptiveTimeStepSubdivisions);
 
     advectionKernel_.setVelocityUpdateCallback(nullptr);
+    advectionKernel_.setEuclideanRenormalization(true);
 
     // normals vectors are only necessary for analytical velocity fields
     if (translationMethod > 0)
@@ -84,16 +92,17 @@ public:
       hermiteKernel_.setTimeStepRatio(context.advectionParams.timeStepRatio);
       // ray-traced fluxes give speeds only for the surface's own normals
       hermiteKernel_.setSurfaceSpeedsOnly(context.flags.useFluxEngine);
-      // the upwind update of the moving material where the model asks for
-      // it (plasma etching, TEOS deposition), with the advection parameters'
-      // schemes, from the start or once the front has moved the model's
-      // distance (performAdvection)
+      // the upwind update where the model asks for it (plasma etching, TEOS
+      // deposition), from the start (the Process drops the Hermite data
+      // first) or once the front has moved the model's distance
+      // (performAdvection): Advect with values only and the advection
+      // parameters' schemes
       upwindAfter_ = context.model->getEuclideanUpwindAfter() *
                      context.domain->getGridDelta();
       frontDistance_ = 0.;
       context.euclideanUpwind =
           context.model->getEuclideanUpwind() && upwindAfter_ <= 0.;
-      hermiteKernel_.setUpwind(context.euclideanUpwind);
+      hermiteKernel_.setUpwind(false);
       hermiteKernel_.setSpatialScheme(context.advectionParams.spatialScheme);
       hermiteKernel_.setTemporalScheme(context.advectionParams.temporalScheme);
       hermiteKernel_.setDissipationAlpha(
@@ -129,9 +138,9 @@ public:
   }
 
   void prepareAdvection(const ProcessContext<NumericType, D> &context) {
-    // Prepare for advection step; the Euclidean band already holds the
-    // width it needs
-    if (!hermite_)
+    // Prepare for advection step; the band of AdvectHermite already holds
+    // the width it needs
+    if (!context.isHermite())
       advectionKernel_.prepareLS();
     context.model->initialize(context.domain, context.processTime);
   }
@@ -148,10 +157,10 @@ public:
     }
 
     timer_.start();
-    if (hermite_) {
-      hermiteKernel_.setUpwind(context.euclideanUpwind);
+    const bool hermiteStep = context.isHermite();
+    if (hermiteStep)
       hermiteKernel_.apply();
-    } else
+    else
       advectionKernel_.apply();
     timer_.finish();
 
@@ -166,8 +175,8 @@ public:
           .apply();
     }
 
-    context.timeStep = hermite_ ? hermiteKernel_.getAdvectedTime()
-                                : advectionKernel_.getAdvectedTime();
+    context.timeStep = hermiteStep ? hermiteKernel_.getAdvectedTime()
+                                   : advectionKernel_.getAdvectedTime();
     if (context.timeStep == std::numeric_limits<double>::max()) {
       VIENNACORE_LOG_WARNING(
           "Process terminated early: Velocities are zero everywhere.");
@@ -180,6 +189,9 @@ public:
           context.model->getEuclideanUpwind()) {
         frontDistance_ += context.stepMaxSpeed * context.timeStep;
         context.euclideanUpwind = frontDistance_ >= upwindAfter_;
+        if (context.euclideanUpwind)
+          for (auto &levelSet : context.domain->getLevelSets())
+            viennals::dropHermiteData(levelSet);
       }
     }
 
@@ -199,19 +211,27 @@ public:
     std::vector<std::vector<NumericType>> levelSetCoverages(
         coverages->getScalarDataSize());
 
-    // AdvectHermite moves the surface across nodes that are not on it now,
-    // so every node of the Euclidean band takes the coverages of the disk
-    // nearest to its surface point among the disks of the material behind
-    // that point, as the velocities do
+    // a Euclidean band moves nodes that are not on the surface now, so every
+    // node of it takes the coverages of a disk, as the velocities do: with
+    // AdvectHermite the disk nearest to the node's surface point among the
+    // disks of the material behind that point (Hermite data); with Advect's
+    // values only, the disk nearest to the node
     std::vector<long> nearestDisk;
-    if (hermite_ && context.translationField->getKdTree()) {
+    if (context.isEuclidean() && context.translationField->getKdTree()) {
       const auto gridDelta = topLS->getGrid().getGridDelta();
-      const auto *normals = topLS->getPointData().getVectorData(
-          viennals::FromSurfaceMesh<NumericType, D>::surfaceNormalsLabel, true);
+      const auto *normals =
+          context.isHermite()
+              ? topLS->getPointData().getVectorData(
+                    viennals::FromSurfaceMesh<NumericType,
+                                              D>::surfaceNormalsLabel,
+                    true)
+              : nullptr;
       const auto &levelSets = context.domain->getLevelSets();
-      const viennals::MaterialStack<NumericType, D> stack(
-          std::vector<SmartPointer<viennals::Domain<NumericType, D>>>(
-              levelSets.begin(), levelSets.end() - 1));
+      std::unique_ptr<const viennals::MaterialStack<NumericType, D>> stack;
+      if (normals != nullptr)
+        stack = std::make_unique<const viennals::MaterialStack<NumericType, D>>(
+            std::vector<SmartPointer<viennals::Domain<NumericType, D>>>(
+                levelSets.begin(), levelSets.end() - 1));
       const auto &materialMap = context.domain->getMaterialMap();
       nearestDisk.assign(topLS->getNumberOfPoints(), -1);
       // the defined points of the band first, so that their queries run in
@@ -249,7 +269,7 @@ public:
               behind[i] =
                   point[i] / gridDelta - NumericType(0.01) * n[i] / length;
             }
-            const int index = stack.material(behind);
+            const int index = stack->material(behind);
             material = materialMap ? int(materialMap->getMaterialIdAtIdx(index))
                                    : index;
           }
@@ -311,7 +331,23 @@ public:
     return ProcessResult::SUCCESS;
   }
   auto &getTimer() const { return timer_; }
-  void resetTimer() { timer_.reset(); }
+  void resetTimer() {
+    timer_.reset();
+    advectionKernel_.resetPhaseTimes();
+    hermiteKernel_.resetPhaseTimes();
+  }
+  // the phases of the advection kernels that took time, named after the
+  // kernel (Advect or AdvectHermite) and the phase
+  std::vector<std::pair<std::string, double>> getPhaseTimes() const {
+    std::vector<std::pair<std::string, double>> times;
+    for (const auto &phase : advectionKernel_.getPhaseTimes())
+      if (phase.second > 0.)
+        times.emplace_back("Advect " + phase.first, phase.second);
+    for (const auto &phase : hermiteKernel_.getPhaseTimes())
+      if (phase.second > 0.)
+        times.emplace_back("AdvectHermite " + phase.first, phase.second);
+    return times;
+  }
 };
 
 } // namespace viennaps

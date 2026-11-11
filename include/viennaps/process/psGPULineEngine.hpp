@@ -114,10 +114,12 @@ public:
     if (!elementKdTree_)
       elementKdTree_ = KDTreeType::New();
 
+    this->extractionTimer_.start();
     CreateSurfaceMesh<NumericType, float, D, typename KDTreeType::element_type>(
         context.domain->getSurface(), surfaceMesh_, elementKdTree_, 1e-12,
         context.rayTracingParams.minNodeDistanceFactor)
         .apply();
+    this->extractionTimer_.finish();
 
     viennaray::LineMesh lineMesh(
         surfaceMesh_->nodes, surfaceMesh_->lines,

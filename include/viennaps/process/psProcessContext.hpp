@@ -131,13 +131,20 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
     return model->getProcessName().value_or("default");
   }
 
-  // a Euclidean surface is advected with AdvectHermite, which asks for the
-  // velocity at the surface point of every node of its band
+  // a Euclidean surface: AdvectHermite with the Hermite update, Advect with
+  // values only with the upwind update; either moves the points of a band
+  // beyond the surface, which need velocities
   bool isEuclidean() const {
     return domain && !domain->getLevelSets().empty() &&
            domain->getSurface()->getNormalization() ==
                viennals::NormalizationEnum::EUCLIDEAN;
   }
+
+  // a Euclidean surface advected with AdvectHermite in this step, which
+  // takes the paths of its Hermite data; with the upwind update a Euclidean
+  // surface holds values only (Advect, setEuclideanRenormalization) and takes
+  // the paths of a Manhattan surface
+  bool isHermite() const { return isEuclidean() && !euclideanUpwind; }
 
   bool needsExtendedVelocities() const {
     return isEuclidean() ||
