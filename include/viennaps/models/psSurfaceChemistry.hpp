@@ -1864,7 +1864,27 @@ public:
     return surfModel_->getFieldGrowth() / surfModel_->getCyclesRun();
   }
 
+  // The CPU tracer draws the source directions of every particle about the
+  // primary direction, the neutrals as well as the ion, so the device gives
+  // each particle the same direction. Without it a tilted beam arrives along
+  // -y (2D) or -z (3D).
+  void setPrimaryDirection(
+      const std::array<NumericType, 3> passedPrimaryDirection) override {
+    ProcessModelGPU<NumericType, D>::setPrimaryDirection(passedPrimaryDirection);
+    applyPrimaryDirection();
+  }
+
 private:
+  void applyPrimaryDirection() {
+    const auto direction = this->getPrimaryDirection();
+    if (!direction.has_value())
+      return;
+    for (auto &particle : this->getParticleTypes()) {
+      particle.direction = direction.value();
+      particle.useCustomDirection = true;
+    }
+  }
+
   NumericType sourceFluxOf(const std::string &label) const {
     for (const auto &entry : stageMechanisms_)
       for (const auto &g : entry.second.gas)
@@ -2065,6 +2085,9 @@ private:
       this->insertNextParticleType(ion);
       ++p;
     }
+    // addMechanism rebuilds the particles, so a direction set before the last
+    // mechanism was added stays set
+    applyPrimaryDirection();
 
     this->setParticleCallableMap(pMap, cMap);
     // the shader resolves the material under every hit, for both the sticking
@@ -2237,6 +2260,10 @@ public:
       for (const auto &entry : stageMechanisms_)
         model->addMechanism(entry.first, entry.second);
     }
+    // the beam direction of a tilted source, which the device model would
+    // otherwise not know
+    if (const auto direction = this->getPrimaryDirection())
+      model->setPrimaryDirection(direction.value());
     model->setProcessName(this->getProcessName().value());
     return model;
   }
