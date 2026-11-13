@@ -19,6 +19,8 @@
 #include <process/psProcess.hpp>
 
 #include <csDenseCellSet.hpp>
+#include <lsBooleanOperation.hpp>
+#include <lsFromSurfaceMesh.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsToDiskMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
@@ -37,7 +39,14 @@
 #include <string>
 
 namespace ls = viennals; namespace cs = viennacs; namespace ps = viennaps;
-using T = double; constexpr int D = 2;
+// VC_DIM: the dimension, 2 unless the build sets it (target voxelCompare3D sets
+// 3). In 3D the trench runs along y over PMC_YEXT nm (default 4), with the same
+// reflective sides as in x, so a 3D run of a long trench can be set against
+// the 2D one.
+#ifndef VC_DIM
+#define VC_DIM 2
+#endif
+using T = double; constexpr int D = VC_DIM;
 #ifndef VIENNAPS_MECHANISM_DIR
 #define VIENNAPS_MECHANISM_DIR "."
 #endif
@@ -53,7 +62,10 @@ static ps::SmartPointer<ps::Domain<T, D>> makeDomain() {
   // rather than an isolated one.
   T ext = T(4) * W;
   if (const char *e = std::getenv("PMC_EXTENT")) ext = std::atof(e);
-  auto dom = ps::SmartPointer<ps::Domain<T, D>>::New(DX, ext, ext);
+  // the length along the trench, used in 3D only (2D ignores the y extent)
+  T extY = D == 3 ? T(4) : ext;
+  if (const char *e = std::getenv("PMC_YEXT"); e && D == 3) extY = std::atof(e);
+  auto dom = ps::SmartPointer<ps::Domain<T, D>>::New(DX, ext, extY);
   // PRETRENCH carves a PERFECT trench of the given depth, vertical walls, in
   // BOTH arms -- the cells are built from these same level sets. With the
   // surface then frozen, the two arms are compared on identical, static,
@@ -70,6 +82,65 @@ static ps::SmartPointer<ps::Domain<T, D>> makeDomain() {
   if (const char *e = std::getenv("PRETAPER")) taper = std::atof(e);
   ps::MakeTrench<T, D>(dom, W, depth, taper, MASKH, T(0), false,
                        ps::Material::Si, ps::Material::Mask).apply();
+  // GEO_FROM=<cmp_ls_snap_*.csv>: replace the trench by a surface written by
+  // an earlier run, so that both methods start from the same evolved
+  // geometry. The file holds the outer surface of silicon and mask together,
+  // which becomes the top level set; the mask level set keeps the part of
+  // MakeTrench's mask inside it. W, PMC_MASK and PMC_EXTENT must be those of
+  // the run that wrote the file. The segments are read from the .csv, in the
+  // order and orientation ToSurfaceMesh gave them; VTK does not read back the
+  // .vtp of the same surface.
+  // The written surface is an open chain whose two ends lie just outside the
+  // reflective side boundaries (x = +-20.04 nm for PMC_EXTENT = 40). Read as
+  // it is, FromSurfaceMesh leaves the level set defective at those boundaries,
+  // and the first RK2 stage then crashed in Expand (point data read out of
+  // range, 2026-11-04/05, level set only; the cell set was unaffected). Each
+  // open end within 0.5 nm of a side boundary is therefore extended outward
+  // by 1 nm along x, keeping the orientation of the chain.
+  if (const char *e = std::getenv("GEO_FROM")) {
+    auto mesh = ls::SmartPointer<ls::Mesh<T>>::New();
+    std::ifstream in(e);
+    std::string row;
+    std::getline(in, row);                   // x0,y0,x1,y1
+    std::vector<std::array<T, 4>> seg;
+    while (std::getline(in, row)) {
+      std::array<T, 4> s{};
+      if (std::sscanf(row.c_str(), "%lf,%lf,%lf,%lf", &s[0], &s[1], &s[2], &s[3]) != 4)
+        continue;
+      seg.push_back(s);
+    }
+    std::map<std::pair<long, long>, int> ends;
+    auto key = [](T x, T y) { return std::make_pair(std::lround(x * 1e4), std::lround(y * 1e4)); };
+    for (const auto &s : seg) { ++ends[key(s[0], s[1])]; ++ends[key(s[2], s[3])]; }
+    const T half = ext / 2;
+    std::vector<std::array<T, 4>> extra;
+    for (const auto &s : seg) {
+      if (ends[key(s[0], s[1])] == 1 && std::abs(s[0]) > half - T(0.5))
+        extra.push_back({s[0] + (s[0] > 0 ? T(1) : T(-1)), s[1], s[0], s[1]});
+      if (ends[key(s[2], s[3])] == 1 && std::abs(s[2]) > half - T(0.5))
+        extra.push_back({s[2], s[3], s[2] + (s[2] > 0 ? T(1) : T(-1)), s[3]});
+    }
+    seg.insert(seg.end(), extra.begin(), extra.end());
+    for (const auto &s : seg) {
+      const unsigned i = mesh->insertNextNode(ls::Vec3D<T>{s[0], s[1], T(0)});
+      mesh->insertNextLine({i, mesh->insertNextNode(ls::Vec3D<T>{s[2], s[3], T(0)})});
+    }
+    if (!extra.empty())
+      std::cout << "  [geometry: " << extra.size()
+                << " open ends extended by 1 nm past the side boundaries]\n";
+    if (mesh->lines.empty()) {
+      std::cerr << "GEO_FROM: no segments in " << e << std::endl;
+      std::exit(2);
+    }
+    auto outer = ls::SmartPointer<ls::Domain<T, D>>::New(dom->getGrid());
+    ls::FromSurfaceMesh<T, D>(outer, mesh).apply();
+    const auto &lss = dom->getLevelSets();   // mask, then silicon and mask
+    ls::BooleanOperation<T, D>(lss.front(), outer,
+                               ls::BooleanOperationEnum::INTERSECT).apply();
+    lss.back()->deepCopy(outer);
+    std::cout << "  [geometry from " << e << ": " << mesh->lines.size()
+              << " segments]\n";
+  }
   return dom;
 }
 
@@ -83,7 +154,7 @@ makeCells(ps::SmartPointer<ps::Domain<T, D>> dom) {
   // the default -36 nm.
   T sub = T(-36);
   if (const char *e = std::getenv("PMC_SUB")) sub = std::atof(e);
-  { T o[D] = {0., 0.}, n[D] = {0., 1.}; o[D - 1] = sub;
+  { T o[D] = {}, n[D] = {}; o[D - 1] = sub; n[D - 1] = T(1);
     ls::MakeGeometry<T, D>(deep,
         ls::SmartPointer<ls::Plane<T, D>>::New(o, n)).apply(); }
   std::vector<ls::SmartPointer<ls::Domain<T, D>>> lss{deep};
@@ -176,6 +247,15 @@ public:
 };
 
 int main(int argc, char **argv) {
+  // Level-set defaults agreed 2026-10-20 (Lado): the ion's incidence angle and
+  // reflection from the surface normals averaged over 6 grid spacings
+  // (LS_IONNORM), and surface diffusion of the oxide coverage SiO with
+  // D = 10 nm^2/s (LS_COVDIFF). Together they keep the deep-trench wall free
+  // of the grid-scale zigzag to 560 nm (Meeting14/runs/har_w40_o400_covdiff)
+  // and leave the shallow profiles as they were. LS_IONNORM=0 and
+  // LS_COVDIFF=none switch them off.
+  setenv("LS_IONNORM", "6", 0);
+  setenv("LS_COVDIFF", "SiO:10", 0);
   if (argc > 1)
     TARGET = std::atof(argv[1]);
   if (argc > 2)
@@ -219,6 +299,30 @@ int main(int argc, char **argv) {
         y.A = T(0);
         y.materialA = ps::MaterialValueMap<T>::fromDefault(T(0));
       }
+  // TEST (LS_COVDIFF, 2026-10-19): surface diffusion of coverages in the level
+  // set, e.g. LS_COVDIFF=SiO:10 or SiO:10,SiF:1 (nm^2/s). ViennaPS's
+  // SurfaceDiffusion then moves each named coverage along the surface between
+  // neighbouring points whose normals agree; the mechanism file sets none.
+  if (const char *e = std::getenv("LS_COVDIFF")) {
+    std::stringstream list(e);
+    std::string item;
+    while (std::getline(list, item, ',')) {
+      const auto colon = item.find(':');
+      if (colon == std::string::npos)
+        continue;
+      const std::string name = item.substr(0, colon);
+      const T value = std::atof(item.substr(colon + 1).c_str());
+      bool found = false;
+      for (size_t i = 0; i < mech.coverageNames.size(); ++i)
+        if (mech.coverageNames[i] == name) {
+          mech.diffusionCoefficients[i] = value;
+          found = true;
+        }
+      std::cout << "  [level set: coverage " << name
+                << (found ? " diffuses along the surface, D = " : " NOT FOUND, D = ")
+                << value << " nm^2/s]\n";
+    }
+  }
 
   // NOREFL_BOTH: switch ion reflection off in EVERY arm, so what reaches a
   // surface is only what came straight from the source. The level set reflects
@@ -273,14 +377,42 @@ int main(int argc, char **argv) {
       std::cout << "  [level set: TRANSIENT coverages (LS_STEADY=1 to disable)]\n";
     }
     ps::Process<T, D> proc(dom, model, time);
-    proc.setFluxEngineType(ps::FluxEngineType::CPU_TRIANGLE);
+    // TEST (LS_GPU, LS_RPP, 2026-10-31): LS_GPU=1 traces the level set on the
+    // GPU (GPU_TRIANGLE, gpu::SurfaceChemistry, with the averaged ion normal
+    // of LS_IONNORM ported), LS_RPP sets its rays per point (default 400)
+    if (std::getenv("LS_GPU")) {
+      proc.setFluxEngineType(ps::FluxEngineType::GPU_TRIANGLE);
+      std::cout << "  [level set: GPU transport (GPU_TRIANGLE)]\n";
+    } else {
+      proc.setFluxEngineType(ps::FluxEngineType::CPU_TRIANGLE);
+    }
     ps::RayTracingParameters rt;
     rt.raysPerPoint = 400; rt.useRandomSeeds = false; rt.rngSeed = 1000;
+    if (const char *e = std::getenv("LS_RPP")) {
+      rt.raysPerPoint = std::atoi(e);
+      std::cout << "  [level set: " << rt.raysPerPoint << " rays per point]\n";
+    }
+    // TEST (LS_ION_RAYS, 2026-10-31): GPU only, read by gpu::SurfaceChemistry
+    for (const char *v : {"LS_ION_RAYS", "LS_NEUTRAL_RAYS"})
+      if (const char *e = std::getenv(v))
+        std::cout << "  [level set, GPU: " << v << " = " << e
+                  << ", rays per point of the "
+                  << (v[3] == 'I' ? "ion" : "neutrals") << " times " << e
+                  << "]\n";
     // LS_SEED: the level set's own RAY seed. Fixing it makes the arm
     // reproducible, which is not the same as noise-free -- it is still a Monte
     // Carlo flux with 400 rays per point, so it carries a statistical spread
     // of its own that a single seed hides.
     if (const char *e = std::getenv("LS_SEED")) rt.rngSeed = std::atoi(e);
+    // LS_SMOOTH=<n>: ViennaPS smoothingNeighbors. The triangle engine averages
+    // the element fluxes onto each level-set point over all elements within
+    // (n + 1) grid spacings, weighted by the alignment of their normals with
+    // the point's; the default n = 1 averages within two grid spacings.
+    if (const char *e = std::getenv("LS_SMOOTH")) {
+      rt.smoothingNeighbors = std::atoi(e);
+      std::cout << "  [level set: fluxes averaged within " << rt.smoothingNeighbors + 1
+                << " grid spacings]\n";
+    }
     proc.setParameters(rt);
     ps::CoverageParameters cov; cov.tolerance = 1e-6; cov.maxIterations = 40;
     // LS_NOPREEQ: skip the coverage initialisation entirely, so the level set
@@ -514,12 +646,62 @@ int main(int argc, char **argv) {
       continue;
     auto cells = makeCells(makeDomain());
     cs::LatticeMap<T, D> lat(*cells);
+    // 3D: the sides mirror in every neighbourhood lookup, as the transport
+    // mirrors the rays (LatticeMap::setMirrorLateral); PMC_MIRROR=0 turns it
+    // off. A 2D run keeps the sides as cuts, as before.
+    if (D == 3 && !(std::getenv("PMC_MIRROR") && std::atoi(std::getenv("PMC_MIRROR")) == 0)) {
+      lat.setMirrorLateral(true);
+      std::cout << "  [3D: lateral sides mirrored in the neighbourhood lookups]\n";
+    }
     const auto &mid = *cells->getScalarData("Material");
     std::vector<T> fill(cells->getNumberOfCells(), T(0));
     std::vector<int> material(cells->getNumberOfCells());
     for (size_t c = 0; c < fill.size(); ++c) {
       material[c] = (int)mid[c];
       fill[c] = material[c] == (int)ps::Material::GAS ? T(0) : T(1);
+    }
+    // PMC_CELLS_FROM=<csv x,y,material> (test 2026-11-13, 2D only): start
+    // from the solid cells a finished run left (its cmp_<tag>_final.vtu,
+    // converted by Meeting15/runs/rough271/vtu_to_cells.py), so that its
+    // evolved surface can be frozen (PMC_FLUXONLY) and the flux on it
+    // tallied. The cell set must be that run's (same W, mask, extent, dx).
+    // Etching only removes, so every silicon cell absent from the file
+    // becomes gas; mask cells stay. Cells are matched by their centres on
+    // the half-cell grid.
+    if (const char *e = std::getenv("PMC_CELLS_FROM")) {
+      if (D != 2) { std::cerr << "PMC_CELLS_FROM: 2D only\n"; std::exit(2); }
+      const T g = lat.gridDelta();
+      auto key = [g](T x, T y) {
+        return std::make_pair(std::lround(2 * x / g), std::lround(2 * y / g)); };
+      std::map<std::pair<long, long>, int> solid;
+      std::ifstream in(e);
+      std::string row;
+      std::getline(in, row);                 // x,y,material
+      double x, y, m;
+      while (std::getline(in, row))
+        if (std::sscanf(row.c_str(), "%lf,%lf,%lf", &x, &y, &m) == 3)
+          solid[key(x, y)] = (int)std::lround(m);
+      size_t matched = 0, kept = 0, removed = 0, maskMissing = 0;
+      for (size_t c = 0; c < fill.size(); ++c) {
+        if (fill[c] < T(0.5)) continue;
+        const auto ctr = cells->getCellCenter(c);
+        const bool in = solid.count(key(ctr[0], ctr[1])) > 0;
+        if (in) ++matched;
+        if (material[c] == (int)ps::Material::Mask) { if (!in) ++maskMissing; continue; }
+        if (in) { ++kept; continue; }
+        fill[c] = T(0);
+        material[c] = (int)ps::Material::GAS;
+        ++removed;
+      }
+      std::cout << "  [cells from " << e << ": " << solid.size()
+                << " solid cells in the file, " << matched << " matched; silicon kept "
+                << kept << ", removed " << removed << "; mask cells missing from the file "
+                << maskMissing << "]\n";
+      if (matched != solid.size() || solid.empty()) {
+        std::cerr << "PMC_CELLS_FROM: " << solid.size() - matched
+                  << " cells of the file are not solid in this cell set\n";
+        std::exit(2);
+      }
     }
     // create the field BEFORE any reference into the cell data is
     // taken: adding one reallocates and would dangle them
@@ -549,6 +731,9 @@ int main(int argc, char **argv) {
     if (const char *e = std::getenv("PMC_STICKO")) p.stickO = std::atof(e);
     if (const char *e = std::getenv("PMC_FLUXION")) p.fluxIon = std::atof(e);
     if (const char *e = std::getenv("PMC_ENERGY")) p.meanEnergy = std::atof(e);
+    // PMC_IONEXP: the exponent of the ion source, cos^n (default 500, the
+    // SF6/O2 example); the argon sputtering example uses 200 (2026-10-20).
+    if (const char *e = std::getenv("PMC_IONEXP")) p.cosinePowerIon = std::atof(e);
     if (const char *e = std::getenv("PMC_ASP")) p.A_sp = std::atof(e);
     if (const char *e = std::getenv("PMC_ETHSP")) p.Eth_sp = std::atof(e);
     if (const char *e = std::getenv("PMC_BSP")) p.B_sp = std::atof(e);
@@ -556,6 +741,15 @@ int main(int argc, char **argv) {
     if (const char *e = std::getenv("PMC_ETHP")) p.Eth_p = std::atof(e);
     ps::VoxelPMC<T, D> pmc(lat, fill, material, p);
     pmc.setSeed(SEED);
+    // PMC_SLICE=1 (2D, 2026-11-12): the run is a slice of the 3D lattice one
+    // cell thick, counted per dx of trench instead of per nm, so a cell is the
+    // cube of the 3D lattice (VoxelPMC::depth). One atom per cell then needs
+    // dx = 0.271 nm, as in 3D.
+    if (D == 2 && std::getenv("PMC_SLICE") && std::atoi(std::getenv("PMC_SLICE")) != 0) {
+      pmc.setSlice2D(true);
+      std::cout << "  [2D as a slice one cell thick: " << std::setprecision(4)
+                << pmc.atomsPerCellNow() << " atoms per cell]\n";
+    }
     pmc.setFractionalRemoval(cfg.frac);
     pmc.setLocalClearing(cfg.loc);
     pmc.setReemission(cfg.reem);
@@ -626,6 +820,18 @@ int main(int argc, char **argv) {
     // Ions react on a cell of their cascade (same neighbourhood as the neutrals)
     // instead of only the cell on their line of flight. DEFAULT ON; PMC_IONHOP=0 off.
     if (const char *e = std::getenv("PMC_IONHOP")) pmc.setIonHop(std::atoi(e) != 0);
+    // PMC_SIMPLEHOP=1 (test 2026-11-13): the single-species removal goes to a
+    // cell of the same neighbourhood as F, O and ions (PMC_FHOP, PMC_HOPW)
+    if (std::getenv("PMC_SIMPLEHOP")) pmc.setSimpleHop(std::atoi(std::getenv("PMC_SIMPLEHOP")) != 0);
+    // PMC_SIMPLEHOPOPEN=k (test 2026-11-13): with PMC_SIMPLEHOP, candidate
+    // weights times (open faces)^k, so protrusions go first
+    if (const char *e = std::getenv("PMC_SIMPLEHOPOPEN")) pmc.setSimpleHopOpen(std::atof(e));
+    // PMC_SIDEFOLD=1 (test 2026-11-13): a finite particle's hit beyond a
+    // mirrored side is mirrored back in, and so is a ray origin beyond a side
+    if (const char *e = std::getenv("PMC_SIDEFOLD")) pmc.setSideFold(std::atoi(e) != 0);
+    // PMC_REHITPASS=1 (test 2026-11-13): a sub-resolution re-hit is passed
+    // through, the particle flies on along its path (Meeting15/runs/corner271)
+    if (const char *e = std::getenv("PMC_REHITPASS")) pmc.setRehitPass(std::atoi(e) != 0);
     // PMC_HOPW="w0,w1,w2": per-cell hop weights by distance from the landing
     // cell. DEFAULT 0.30,0.20,0.15; PMC_HOPW=0,0,0 gives the uniform box.
     if (const char *e = std::getenv("PMC_HOPW")) {
@@ -763,6 +969,14 @@ int main(int argc, char **argv) {
     // its state on arrival, energy, cosine, yields, cells removed, time) into
     // cmp_pmc_ions.csv after the run. Diagnostic, off by default.
     if (std::getenv("PMC_IONLOG")) pmc.setIonLog(true);
+    // PMC_COLTALLY=<nm> (test 2026-11-05): O and F arrivals per cell column in
+    // bins of <nm> of blanket-equivalent etch, into cmp_pmc_coltally.csv
+    if (const char *e = std::getenv("PMC_COLTALLY"))
+      pmc.setColumnTally(T(std::atof(e)) / ER,
+                         static_cast<int>(TARGET / std::atof(e)) + 2);
+    // PMC_ADSLOG (test 2026-11-05): every O uptake (cell, time) into
+    // cmp_pmc_ads.csv
+    if (std::getenv("PMC_ADSLOG")) pmc.setAdsorptionLog(true);
     // PMC_SPUTTERALL=0: sputter bare cells only (before 2026-10-12). DEFAULT ON:
     // an ion on a fluorinated or oxidised cell sputters as well, as R10 says.
     if (const char *e = std::getenv("PMC_SPUTTERALL")) pmc.setSputterAll(std::atoi(e) != 0);
@@ -770,6 +984,80 @@ int main(int argc, char **argv) {
     std::cout << "  particle size " << pmc.particleSize()
               << " cells (seven-point molecule), spreading by line of sight "
               << (pmc.hopVisible() ? "on" : "off") << std::endl;
+    // TEST 2026-11-04 (Meeting15/runs/corner_fix): ion transport at a face,
+    // all off by default. PMC_IONPOINT: ions trace as point particles (F and
+    // O keep PMC_PSIZE). PMC_IONCONTACT: a reflected ion restarts where it met
+    // the surface. PMC_IONREFLN: the reflection uses the ion-normal fit.
+    if (std::getenv("PMC_IONPOINT")) pmc.setIonPoint(true);
+    // PMC_RADIUS_F / PMC_RADIUS_O = <nm> (test 2026-11-13): F and O trace with
+    // their own radius in nm (van der Waals radii: F 0.147, O 0.152 nm); an
+    // unset one keeps PMC_PSIZE cells
+    if (std::getenv("PMC_RADIUS_F") || std::getenv("PMC_RADIUS_O")) {
+      const char *ef = std::getenv("PMC_RADIUS_F");
+      const char *eo = std::getenv("PMC_RADIUS_O");
+      pmc.setSpeciesRadiusNm(ef ? std::atof(ef) : -1, eo ? std::atof(eo) : -1);
+      std::cout << "  particle radius: F " << pmc.radiusF() << " nm ("
+                << pmc.radiusF() / DX << " cells), O " << pmc.radiusO()
+                << " nm (" << pmc.radiusO() / DX << " cells), ions "
+                << (pmc.ionPoint() ? 0.0 : pmc.particleSize() * DX)
+                << " nm; BVH padded for " << pmc.paddingRadius() << " nm\n";
+    }
+    if (std::getenv("PMC_IONCONTACT")) pmc.setIonContact(true);
+    if (std::getenv("PMC_IONREFLN")) pmc.setIonReflectFit(true);
+    // PMC_NEUTCONTACT: a re-emitted F or O restarts where it met the surface
+    if (std::getenv("PMC_NEUTCONTACT")) pmc.setNeutralContact(true);
+    // PMC_NEUTFACEMASK (test 2026-11-12, Meeting15/runs/deficit_frozen): a
+    // neutral re-emitted from a mask cell leaves cosine-distributed about the
+    // face it came in through, from the contact point; the same-facet re-hit
+    // test keeps the fitted normals
+    if (std::getenv("PMC_NEUTFACEMASK")) pmc.setNeutralFaceNormalMask(true);
+    // PMC_EMITR=<cells> (test 2026-11-12, Meeting15/runs/emit_scan): a
+    // re-emitted F or O leaves about the interface-average normal over this
+    // radius (0 = the face it came in through; unset = the estimator's 3).
+    // PMC_EMITOFF=<cells>: it restarts this far beyond the contact (unset =
+    // one cell, or the contact with PMC_NEUTCONTACT)
+    if (const char *e = std::getenv("PMC_EMITR")) pmc.setEmitRadius(std::atoi(e));
+    if (const char *e = std::getenv("PMC_EMITOFF")) pmc.setEmitOffset(std::atof(e));
+    // PMC_TALLYACC (diagnostic 2026-11-12): the arrival tally of PMC_HITTALLY
+    // leaves out the re-hits that the same-facet rule refuses
+    if (std::getenv("PMC_TALLYACC")) pmc.setTallyAccepted(true);
+    // PMC_ARMAFTER=<cells> (2026-11-12): a re-emitted neutral can hit again
+    // only after this distance (VoxelPMC::setArmAfter, default 0)
+    if (const char *e = std::getenv("PMC_ARMAFTER")) pmc.setArmAfter(std::atof(e));
+    // PMC_IONAWAY (test 2026-11-04, Meeting15/runs/restart_w10): an ion that
+    // meets a cell while moving away from the fitted surface travels on
+    if (std::getenv("PMC_IONAWAY")) pmc.setIonAway(true);
+    // PMC_IONAVG (test 2026-11-05, Meeting15/runs/w10_o800_fix): the ion
+    // normal is the face-normal average over a disk of PMC_IONNORMR cells,
+    // the level set's averaged normal on the cells, instead of the segmented
+    // plane fit
+    if (std::getenv("PMC_IONAVG")) pmc.setIonNormalAverage(true);
+    // PMC_CONE3D (test 2026-11-05): the 2D reflection cone of the ions as
+    // viennaray's, a 3D cone projected onto the plane
+    if (std::getenv("PMC_CONE3D")) pmc.setCone3D(true);
+    std::cout << "  ions: normal "
+              << (pmc.ionNormalAverage() ? "face-normal average over a disk"
+                                         : "segmented plane fit")
+              << ", reflection cone "
+              << (pmc.cone3D() ? "3D, projected" : "in-plane")
+              << ", point particles " << (pmc.ionPoint() ? "on" : "off")
+              << ", reflection restarts at the contact "
+              << (pmc.ionContact() ? "on" : "off")
+              << ", reflection normal from the ion-normal fit "
+              << (pmc.ionReflectFit() ? "on" : "off")
+              << ", hits moving away from the fitted surface pass "
+              << (pmc.ionAway() ? "on" : "off")
+              << "; neutrals: re-emission restarts at the contact "
+              << (pmc.neutralContact() ? "on" : "off")
+              << ", entered face and contact restart on the mask "
+              << (pmc.neutralFaceNormalMask() ? "on" : "off")
+              << ", emission normal radius "
+              << (pmc.emitRadius() < 0 ? std::string("default")
+                                       : std::to_string(pmc.emitRadius()))
+              << ", restart beyond the contact "
+              << (pmc.emitOffset() < 0 ? std::string("default")
+                                       : std::to_string(pmc.emitOffset()))
+              << std::endl;
     if (const char *e = std::getenv("PMC_MINR")) pmc.setMinFitRadius(std::atoi(e));
     const std::string tag = cfg.tag;
     auto dump = [&](const std::string &name) {
@@ -1189,6 +1477,31 @@ int main(int argc, char **argv) {
               // apart in a log.
               << ",  ray-smoothing skips " << pmc.nSeeThrough << std::endl;
     dump("cmp_" + tag + "_final.vtu");
+    if (const char *e = std::getenv("PMC_COLTALLY")) {
+      std::ofstream cf("cmp_pmc_coltally.csv");
+      cf << "bin_nm,x,O,F\n";
+      const auto &ct = pmc.columnTally();
+      const int nx = pmc.columnTallyNx();
+      const T binNm = T(std::atof(e));
+      for (int b = 0; b < pmc.columnTallyBins() && !ct.empty(); ++b)
+        for (int i = 0; i < nx; ++i) {
+          const auto o = ct[(size_t(b) * nx + i) * 2];
+          const auto f = ct[(size_t(b) * nx + i) * 2 + 1];
+          if (o || f)
+            cf << b * binNm << ',' << lat.minCorner()[0] + DX * (i + T(0.5)) << ','
+               << o << ',' << f << '\n';
+        }
+      std::cout << "    wrote cmp_pmc_coltally.csv" << std::endl;
+    }
+    if (std::getenv("PMC_ADSLOG")) {
+      std::ofstream af("cmp_pmc_ads.csv");
+      af << "x,z,t\n";
+      for (const auto &ev : pmc.adsorptionLog())
+        af << lat.minCorner()[0] + DX * (ev.i + T(0.5)) << ','
+           << lat.minCorner()[1] + DX * (ev.j + T(0.5)) << ',' << ev.t << '\n';
+      std::cout << "    wrote cmp_pmc_ads.csv (" << pmc.adsorptionLog().size()
+                << " O uptakes)" << std::endl;
+    }
     if (std::getenv("PMC_REMLOG")) {
       std::ofstream rf("cmp_pmc_removal.csv");
       rf << "x,z,channel,t\n";
@@ -1218,7 +1531,8 @@ int main(int argc, char **argv) {
                 << " fits (" << (cf ? 100.0 * cfd / cf : 0.0)
                 << " %),  mean capped radius " << cr << "\n"; }
     // atoms one cell carries, from the SAME parameters the model was given
-    const double atomsPerCellLedger = double(p.rho) * std::pow(double(DX), D);
+    // (the model's own value, so a 2D slice, PMC_SLICE, is counted right)
+    const double atomsPerCellLedger = double(pmc.atomsPerCellNow());
     // Cells the ISLAND PRUNE swept up are removals no channel ever asked for,
     // and the prune above has already run by the time this prints, so they
     // must come out of the numerator or the ledger reports credit that was
@@ -1255,6 +1569,14 @@ int main(int argc, char **argv) {
               << " (n=" << pmc.nDxIE << ")"
               << ",  sputter " << (pmc.nDxSp ? pmc.sumDxSp / pmc.nDxSp : 0.0)
               << " (n=" << pmc.nDxSp << ")"
+              << "\n    SINGLE-SPECIES REMOVAL HOP (PMC_SIMPLEHOP " << (pmc.simpleHop_ ? "on" : "off")
+              << ", open-face exponent " << pmc.simpleHopOpenK_
+              << "): moved " << pmc.nSimpleHop << ", kept on the struck cell " << pmc.nSimpleHopStay
+              << "\n    SIDE FOLD (PMC_SIDEFOLD " << (pmc.sideFold() ? "on" : "off")
+              << "): hits beyond a side mirrored back " << pmc.nSideFold
+              << ", origins folded in " << pmc.nOriginFold << ", side mirrors " << pmc.nSideMirror
+              << "\n    REHIT PASS (PMC_REHITPASS " << (pmc.rehitPass() ? "on" : "off")
+              << "): steps passed " << pmc.nRehitPass << ", blocked by a thick step " << pmc.nRehitPassBlocked
               // LEDGER AUDIT: the yields ask for atomsAsked(); the lattice
               // gives up removedCells()*rho*dx^D. removeNearby can only take
               // EXPOSED cells inside the damage ball, so when the ball runs
@@ -1337,6 +1659,11 @@ int main(int argc, char **argv) {
                      << pmc.nFHop << ", kept on the hit cell " << pmc.nFHopStay
                      << ";  O hop " << (pmc.oHop_ ? "on" : "off") << ", O sites moved " << pmc.nOHop
                      << "\n    ION HOP " << (pmc.ionHop_ ? "on" : "off") << ": moved " << pmc.nIonHop << ", kept " << pmc.nIonHopStay
+                     << "\n    SINGLE-SPECIES HOP " << (pmc.simpleHop_ ? "on" : "off") << ": moved " << pmc.nSimpleHop
+                     << ", kept " << pmc.nSimpleHopStay
+                     << "\n    ION HITS MOVING AWAY (PMC_IONAWAY " << (pmc.ionAway() ? "on" : "off") << "): passed "
+                     << pmc.nIonAway << ", ended after a pass (left the domain or met bulk) " << pmc.nIonAwayEnd
+                     << ", dropped at the cap " << pmc.nIonAwayCap
                      << "\n    WHERE F BONDS: top cells " << pmc.nFbondTop << ", side-only cells " << pmc.nFbondSide
                      << "   WHERE SiF4 LEAVES: top cells " << pmc.nSiF4Top << ", side-only cells " << pmc.nSiF4Side;
                    return o.str();

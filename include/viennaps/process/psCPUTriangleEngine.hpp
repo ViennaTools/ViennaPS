@@ -10,6 +10,10 @@
 
 #include <rayTraceTriangle.hpp>
 
+#include <cmath>    // TEST (LS_IONNORM)
+#include <cstdlib>  // TEST (LS_IONNORM)
+#include <iostream> // TEST (LS_IONNORM)
+
 namespace viennaps {
 
 using namespace viennacore;
@@ -138,6 +142,61 @@ public:
           std::move(triangleMesh.normals), "Normals");
       surfaceMesh_->minimumExtent = triangleMesh.minimumExtent;
       surfaceMesh_->maximumExtent = triangleMesh.maximumExtent;
+
+      // TEST (LS_IONNORM): element normals averaged, area-weighted, over the
+      // elements within LS_IONNORM grid spacings, for the ion's incidence
+      // angle (the cell set's plane fit over ionNormR_ cells)
+      ionnorm::averaged.clear();
+      if (const char *e = std::getenv("LS_IONNORM"); e && std::atof(e) > 0) {
+        const NumericType radius =
+            std::atof(e) * context.domain->getGridDelta();
+        const auto &nodes = surfaceMesh_->nodes;
+        const auto &tris = surfaceMesh_->triangles;
+        const auto &nrm = *surfaceMesh_->getNormals();
+        const auto numTris = tris.size();
+        std::vector<double> area(numTris);
+        std::vector<std::array<NumericType, 3>> centers(numTris);
+        for (size_t i = 0; i < numTris; ++i) {
+          const auto &a = nodes[tris[i][0]], &b = nodes[tris[i][1]],
+                     &c = nodes[tris[i][2]];
+          area[i] = 0.5 * Norm(CrossProduct(b - a, c - a));
+          for (int k = 0; k < 3; ++k)
+            centers[i][k] = (a[k] + b[k] + c[k]) / NumericType(3);
+        }
+        ionnorm::averaged.resize(numTris);
+#pragma omp parallel for schedule(static)
+        for (size_t i = 0; i < numTris; ++i) {
+          const auto close =
+              elementKdTree_->findNearestWithinRadius(centers[i], radius)
+                  .value();
+          std::array<double, 3> s{0., 0., 0.};
+          double w = 0.;
+          for (const auto &[j, dist] : close) {
+            if (DotProduct(nrm[i], nrm[j]) < -0.5f)
+              continue; // the far side of a thin feature
+            for (int k = 0; k < 3; ++k)
+              s[k] += area[j] * nrm[j][k];
+            w += area[j];
+          }
+          const double l = std::sqrt(s[0] * s[0] + s[1] * s[1] + s[2] * s[2]);
+          if (w > 0. && l > 0.5 * w)
+            ionnorm::averaged[i] = {float(s[0] / l), float(s[1] / l),
+                                    float(s[2] / l)};
+          else
+            ionnorm::averaged[i] = nrm[i];
+        }
+        ionnormElems_ = numTris;
+        ionnormTurned_ = 0;
+        for (size_t i = 0; i < numTris; ++i)
+          if (DotProduct(ionnorm::averaged[i], nrm[i]) < 0.9397f) // 20 deg
+            ++ionnormTurned_;
+        if (!ionnormAnnounced_) {
+          ionnormAnnounced_ = true;
+          std::cout << "  [level set: ion incidence normal averaged within "
+                    << std::atof(e) << " grid spacings (" << radius
+                    << " nm)]\n";
+        }
+      }
     }
 
     auto const &pointMaterialIds = *context.diskMesh->getMaterialIds();
@@ -173,6 +232,14 @@ public:
     }
 
     auto elementFluxes = runRayTracer(context);
+
+    if (!ionnorm::averaged.empty() && ++ionnormCalls_ % 200 == 0)
+      std::cout << "  [ion normal: " << ionnorm::hits << " ion hits, "
+                << ionnorm::facet << " from behind the averaged surface, "
+                << ionnorm::stopped
+                << " reflections stopped by the struck facet; elements "
+                   "more than 20 deg from their averaged normal: "
+                << ionnormTurned_ << " of " << ionnormElems_ << "]\n";
 
     // post-process fluxes
     postProcessing_.setPointData(fluxes);
@@ -345,6 +412,9 @@ private:
 
   KDTreeType elementKdTree_;
   MeshType surfaceMesh_;
+  bool ionnormAnnounced_ = false;  // TEST (LS_IONNORM)
+  unsigned long ionnormCalls_ = 0; // TEST (LS_IONNORM)
+  size_t ionnormElems_ = 0, ionnormTurned_ = 0; // TEST (LS_IONNORM)
 };
 
 } // namespace viennaps

@@ -328,6 +328,7 @@ private:
   int reflectRadius_ = 3;
   bool freeze_ = false;   ///< adsorb and desorb, but never remove material
   bool sideReflect_ = true;  ///< mirror rays at the lateral walls
+  bool slice2D_ = false;     ///< 2D counted per dx of trench, see depth()
   int areaNorm_ = 0;         ///< 0 none, 1 face count, 2 true area 1/max|n|
   bool fBalance_ = false;    ///< spontaneous etch from the F balance
   /// A removed cell passes its state downward instead of the newly uncovered
@@ -869,6 +870,11 @@ private:
   NumericType depRho_ = 0;        ///< >0 overrides p_.rho for a deposited cell
   bool depNormal_ = false;        ///< grow along the interface normal
   bool depRelax_ = false;         ///< let a stuck molecule settle into a hollow
+  /// Generic deposition places the new cell as the silane growth does
+  /// (cvdGrowTarget): the gas cell within cvdRelaxR_ cells of the struck cell
+  /// that touches the most solid cells. Grown where it lands instead, the film
+  /// is ballistic, porous and branched (2026-10-20, constant-sticking example).
+  bool depCoordPlace_ = false;
   bool settle_ = true;            ///< DEFAULT: settle a cell left unsupported
   /// A RELOCATED CELL ARRIVES CHEMICALLY FRESH.
   ///
@@ -1085,7 +1091,7 @@ public:
     const int keepOnly = ionOnly_;
     removalTally_ = &remSp;
     ionOnly_ = -1;
-    atomsOwed += nsp * p_.rho * std::pow(delta(), D);
+    atomsOwed += nsp * p_.rho * cellVolume();
     for (int c = 0; c < nsp; ++c)
       if (!removeNearby(rat, damageRadius(Ysp / ionWeight_))) {
         nIonShort += static_cast<size_t>(nsp - c);
@@ -1112,6 +1118,7 @@ public:
   int fHopR_ = 2;
   size_t nFHop = 0, nFHopStay = 0;
   void setFHopRadius(int r) { fHopR_ = r > 0 ? r : 0; }
+  int fHopRadius() const { return fHopR_; }
   /// true: a random nearby silicon (mean-field placement); false: the
   /// least-fluorinated one, which over-feeds bare Si (blanket +15 % at R = 1)
   bool fHopUniform_ = true;
@@ -1126,6 +1133,177 @@ public:
   bool ionHop_ = true;
   size_t nIonHop = 0, nIonHopStay = 0;
   void setIonHop(bool on) { ionHop_ = on; }
+  /// simpleHop_ (PMC_SIMPLEHOP, test 2026-11-13): the single-species removal
+  /// (simpleStick_) goes to a cell of the same neighbourhood rule as F, O and
+  /// ions (hopSite: exposed silicon within fHopR_ cells, distance weights
+  /// hopW_, line of sight) instead of the struck cell. OFF by default.
+  bool simpleHop_ = false;
+  size_t nSimpleHop = 0, nSimpleHopStay = 0;
+  void setSimpleHop(bool on) { simpleHop_ = on; }
+  /// simpleHopOpenK_ (PMC_SIMPLEHOPOPEN=k, test 2026-11-13): with simpleHop_,
+  /// each candidate's weight is multiplied by (open faces)^k, protrusions first.
+  /// 0 (default) keeps the distance weights alone.
+  NumericType simpleHopOpenK_ = 0;
+  void setSimpleHopOpen(NumericType k) { simpleHopOpenK_ = k > NumericType(0) ? k : NumericType(0); }
+  /// SIDE FOLD (test 2026-11-13, PMC_SIDEFOLD=1, Meeting15/runs/slab271). With a
+  /// finite particle the cell boxes reach radius_ past the mirrored sides, so a
+  /// ray that has already left the domain can still meet a cell there, at a
+  /// point outside; the re-emission then starts outside and, pointed further
+  /// out, never comes back (counted as escaped). Measured on the frozen W 20 nm
+  /// trench at s = 0, dx 0.271 nm, F at 0.147 nm: hits per launch 1.2017 in a
+  /// slab 2 cells deep and 1.2216 at 15 cells against 1.2265 in the 2D slice;
+  /// point particles 1.2243 at 2 cells. With the fold a hit beyond a side is
+  /// refused and the ray is mirrored at the side and traced on, so it meets
+  /// the mirror image from inside; an origin beyond a side is folded back in.
+  bool sideFold_ = false;
+  size_t nSideFold = 0;   ///< hits beyond a side, refused and mirrored
+  size_t nOriginFold = 0; ///< ray origins beyond a side, folded back in
+  void setSideFold(bool on) { sideFold_ = on; }
+  bool sideFold() const { return sideFold_; }
+  /// REHIT PASS (test 2026-11-13, PMC_REHITPASS=1, Meeting15/runs/corner271): a
+  /// re-hit the re-hit rule calls sub-resolution (a step of the surface the
+  /// particle just left) is passed through: the particle flies on along its
+  /// path. Lado, 2026-11-13: "a particle hitting the bottom of the etched hole
+  /// and reflecting towards the corner ... there is a cell in its immediate
+  /// viscinity so it hits that instead of reaching the corner." Meant to go
+  /// with the restart at the contact (PMC_EMITOFF=0), which keeps real corners
+  /// fed but on a staircase sends particles into the neighbouring step.
+  bool rehitPass_ = false;
+  size_t nRehitPass = 0, nRehitPassBlocked = 0;
+  void setRehitPass(bool on) { rehitPass_ = on; }
+  bool rehitPass() const { return rehitPass_; }
+  /// ION TRANSPORT AT A FACE (test 2026-11-04, Meeting15/runs/corner_fix; all
+  /// OFF by default). At t = 0 the cell column beside the mask receives no ion
+  /// (Meeting15/runs/series25_r198 README, "Where the corners part"):
+  /// ionPoint_ (PMC_IONPOINT): ions trace as point particles, F and O keep
+  ///   particleSize_ (introduced against F slipping through the oxide skin);
+  /// ionContact_ (PMC_IONCONTACT): a reflected ion restarts where it met the
+  ///   surface, as the level set's ChemicalIon does, not one cell further out;
+  /// ionReflFit_ (PMC_IONREFLN): the specular direction uses the ion-normal
+  ///   fit (ionNormR_) that gives the incidence angle, as the level set uses
+  ///   its averaged normal for both, instead of the fit over reflectRadius_.
+  bool ionPoint_ = false, ionContact_ = false, ionReflFit_ = false;
+  /// ionNormAvg_ (PMC_IONAVG, test 2026-11-05, Meeting15/runs/w10_o800_fix):
+  ///   the ion normal (incidence angle, and the specular direction with
+  ///   ionReflFit_) is the face-normal average over a disk of ionNormR_ cells,
+  ///   the level set's averaged normal on the cells, instead of the segmented
+  ///   plane fit, which reads a leaning foot steeper than the surface.
+  bool ionNormAvg_ = false;
+  void setIonNormalAverage(bool on) { ionNormAvg_ = on; ionFitCache_.clear(); }
+  bool ionNormalAverage() const { return ionNormAvg_; }
+  /// cone3d_ (PMC_CONE3D, test 2026-11-05): in 2D the coned reflection of the
+  ///   ions draws its direction on the 3D cone and keeps the in-plane part,
+  ///   as viennaray::ReflectionConedCosine does for the level set, instead of
+  ///   turning the specular direction by the full cone angle in the plane.
+  bool cone3d_ = false;
+  void setCone3D(bool on) { cone3d_ = on; }
+  /// 2D as a slice of the 3D lattice, one cell thick (see depth()).
+  void setSlice2D(bool on) { slice2D_ = on; }
+  bool slice2D() const { return slice2D_; }
+  bool cone3D() const { return cone3d_; }
+  /// neutContact_ (PMC_NEUTCONTACT, same test): a re-emitted F or O restarts
+  /// where it met the surface, as the level set's neutrals do, not one cell
+  /// further out (step(); the fluorocarbon path is unchanged).
+  bool neutContact_ = false;
+  void setNeutralContact(bool on) { neutContact_ = on; }
+  bool neutralContact() const { return neutContact_; }
+  /// neutFaceMask_ (PMC_NEUTFACEMASK, test 2026-11-12, Meeting15/runs/
+  /// deficit_frozen): a neutral re-emitted from a MASK cell leaves
+  /// cosine-distributed about the outward normal of the face it came in
+  /// through, from the contact point, instead of about the estimator's normal
+  /// one cell out. The same-facet re-hit test keeps its fitted normals. On all
+  /// cells (tested and removed 2026-11-12) the face normal sent particles into
+  /// the roughness of the evolving silicon: s = 0.01 trench +82 % area with
+  /// points, +16 % with particles of one cell (Meeting15/runs/deficit_stick
+  /// *_fn); the mask does not roughen.
+  bool neutFaceMask_ = false;
+  void setNeutralFaceNormalMask(bool on) { neutFaceMask_ = on; }
+  bool neutralFaceNormalMask() const { return neutFaceMask_; }
+  /// emitR_ (PMC_EMITR, test 2026-11-12, Meeting15/runs/emit_scan): a
+  /// re-emitted F or O leaves about the interface-average normal over a cube
+  /// of this radius in cells around the struck cell; 0 is the face it came in
+  /// through. Unset (-1): the estimator's normal, the interface average over
+  /// fitRadius_ (3). The default under-etches features (it smooths real
+  /// corners away), the face normal over-etches the rough evolving surface.
+  int emitR_ = -1;
+  void setEmitRadius(int r) { emitR_ = r; }
+  int emitRadius() const { return emitR_; }
+  /// emitOff_ (PMC_EMITOFF, same test): the restart of a re-emitted F or O
+  /// lies this many cells beyond the contact along the emission normal.
+  /// Unset (-1): one cell (the default), or the contact with neutContact_.
+  NumericType emitOff_ = -1;
+  void setEmitOffset(NumericType c) { emitOff_ = c; }
+  NumericType emitOffset() const { return emitOff_; }
+
+  /// The interface-average normal at idx over a cube of radius R in cells,
+  /// computed as VoxelInteraction::interfaceNormal does (exposed faces of the
+  /// solid cells, the lattice edge reading as gas) but with its own radius.
+  /// false where the faces cancel.
+  bool averagedNormal(const std::array<int, D> &idx, int R,
+                      std::array<NumericType, D> &n) const {
+    auto fillOf = [&](const std::array<int, D> &q) {
+      const int id = lattice_->cellId(q);
+      return id < 0 ? NumericType(0) : (*fill_)[id];
+    };
+    std::array<NumericType, 3> sum{0, 0, 0};
+    std::array<int, D> at{}, lo{}, hi{};
+    for (int d = 0; d < D; ++d) {
+      lo[d] = idx[d] - R;
+      hi[d] = idx[d] + R;
+      at[d] = lo[d];
+    }
+    while (true) {
+      if (fillOf(at) >= NumericType(0.5))
+        for (int d = 0; d < D; ++d)
+          for (int sgn = -1; sgn <= 1; sgn += 2) {
+            auto nb = at;
+            nb[d] += sgn;
+            if (fillOf(nb) < NumericType(0.5))
+              sum[d] += static_cast<NumericType>(sgn);
+          }
+      int d = 0;
+      for (; d < D; ++d) {
+        if (++at[d] <= hi[d])
+          break;
+        at[d] = lo[d];
+      }
+      if (d == D)
+        break;
+    }
+    const NumericType len =
+        std::sqrt(sum[0] * sum[0] + sum[1] * sum[1] + sum[2] * sum[2]);
+    if (len < NumericType(1e-12))
+      return false;
+    for (int d = 0; d < D; ++d) n[d] = sum[d] / len;
+    return true;
+  }
+  /// tallyAccepted_ (PMC_TALLYACC, diagnostic 2026-11-12): the per-cell
+  /// arrival tally leaves out the re-hits the same-facet rule refuses, so it
+  /// counts the arrivals that get a reaction test.
+  bool tallyAccepted_ = false;
+  void setTallyAccepted(bool on) { tallyAccepted_ = on; }
+  void setIonPoint(bool on) {
+    ionPoint_ = on;
+    interaction_.setParticleRadius(paddingRadius());
+  }
+  void setIonContact(bool on) { ionContact_ = on; }
+  void setIonReflectFit(bool on) { ionReflFit_ = on; }
+  bool ionPoint() const { return ionPoint_; }
+  bool ionContact() const { return ionContact_; }
+  bool ionReflectFit() const { return ionReflFit_; }
+  /// ionAway_ (PMC_IONAWAY, test 2026-11-04, Meeting15/runs/restart_w10; OFF
+  /// by default, CPU ion path only): an ion that meets a cell while it already
+  /// moves away from the fitted surface there (incidence cosine about the ion
+  /// normal <= 0) has met the staircase, not the surface, and travels on
+  /// without a reaction, an energy loss or a reflection. A ray leaving a plane
+  /// cannot meet that plane again. With the contact restart a reflected ion
+  /// otherwise re-enters the cell it has just left at cosine 0, reflects
+  /// again, and repeats this up to ~25 times until its energy is gone.
+  bool ionAway_ = false;
+  int ionAwayCap_ = 64;          ///< pass-throughs per ion before it is dropped
+  size_t nIonAway = 0, nIonAwayEnd = 0, nIonAwayCap = 0;
+  void setIonAway(bool on) { ionAway_ = on; }
+  bool ionAway() const { return ionAway_; }
   /// where F bonds and where SiF4 leaves: a TOP cell (gas directly above, the
   /// face a near-vertical ion can reach) or a SIDE-only exposed cell
   size_t nFbondTop = 0, nFbondSide = 0, nSiF4Top = 0, nSiF4Side = 0;
@@ -1141,8 +1319,26 @@ public:
   /// cell included. Choosing it this way gives the level set's s*Gamma*theta:
   /// the chance the site is SiO (F reflects) or bare (O bonds) is the local
   /// coverage, not the state of whichever cell the ray happened to strike.
+  /// number of faces of the cell at idx that open onto gas (the isExposed rule:
+  /// a neighbour outside the lattice is not gas)
+  int openFaces(const std::array<int, D> &idx) const {
+    int n = 0;
+    for (int d = 0; d < D; ++d)
+      for (int s = -1; s <= 1; s += 2) {
+        auto nb = idx;
+        nb[d] += s;
+        const int nid = lattice_->cellId(nb);
+        if (nid >= 0 && !solid(nid))
+          ++n;
+      }
+    return n;
+  }
+  /// openK > 0 (test 2026-11-13, simpleHopOpenK_): each candidate's weight is
+  /// multiplied by (open faces)^openK, so weakly bound cells on protrusions go
+  /// first and the surface flattens. openK = 0 is the rule as before.
   std::array<int, D> hopSite(const std::array<int, D> &at,
-                             const std::array<NumericType, D> *from = nullptr) {
+                             const std::array<NumericType, D> *from = nullptr,
+                             NumericType openK = 0) {
     std::array<int, D> best = at;
     int seen = 0;
     NumericType wsum = 0;
@@ -1159,13 +1355,17 @@ public:
         ++nHopHidden;
         continue;
       }
-      if (hopW_[0] > NumericType(0)) {
+      if (hopW_[0] > NumericType(0) || openK > NumericType(0)) {
         // WEIGHTED by distance from the landing cell (Chebyshev), renormalised
         // over the exposed cells actually present
         int cheb = 0;
         for (int d = 0; d < D; ++d) cheb = std::max(cheb, std::abs(nb[d] - at[d]));
-        NumericType wgt = cheb < 3 ? hopW_[cheb] : NumericType(0);
+        NumericType wgt = hopW_[0] > NumericType(0)
+                              ? (cheb < 3 ? hopW_[cheb] : NumericType(0))
+                              : NumericType(1);
         if (wgt <= NumericType(0)) continue;
+        if (openK > NumericType(0))
+          wgt *= std::pow(static_cast<NumericType>(openFaces(nb)), openK);
         wsum += wgt;
         if (uni() * wsum < wgt) best = nb;
         continue;
@@ -1468,6 +1668,19 @@ private:
 
   NumericType delta() const { return lattice_->gridDelta(); }
 
+  /// THE DEPTH A 2D CELL STANDS FOR (2026-11-12). By convention a 2D run is
+  /// counted per nm of trench, so a 2D cell is a rod dx x dx x 1 nm, and one
+  /// silicon atom per cell holds at dx = 0.141 nm. With slice2D_, a 2D run is a
+  /// slice of the 3D lattice one cell thick: the depth is dx, a cell is the
+  /// cube of the 3D lattice, and one atom per cell holds at dx = rho^(-1/3) =
+  /// 0.271 nm in 2D as in 3D, with the same sites per cell face. 3D: always 1.
+  NumericType depth() const {
+    return (D == 2 && slice2D_) ? delta() : NumericType(1);
+  }
+  /// volume of a cell [nm^3] and area of a cell face [nm^2], the 2D depth included
+  NumericType cellVolume() const { return std::pow(delta(), D) * depth(); }
+  NumericType cellFace() const { return std::pow(delta(), D - 1) * depth(); }
+
   /// Reflective LATERAL boundaries, as the level-set arm uses.
   ///
   /// A ray that leaves the side of the domain was simply dropped. On a
@@ -1568,15 +1781,55 @@ private:
     return false;
   }
 
+  /// Distance along the ray to the first lateral side it crosses (sideFold_).
+  NumericType sideDistance(const std::array<NumericType, D> &o,
+                           const std::array<NumericType, D> &dir) const {
+    const auto &mn = lattice_->minCorner();
+    const auto &dims = lattice_->dims();
+    constexpr NumericType kEps = 1e-12;
+    NumericType tSide = std::numeric_limits<NumericType>::max();
+    for (int d = 0; d < D - 1; ++d) {
+      const NumericType lo = mn[d];
+      const NumericType hi = mn[d] + delta() * static_cast<NumericType>(dims[d]);
+      NumericType t = -1;
+      if (dir[d] > kEps) t = (hi - o[d]) / dir[d];
+      else if (dir[d] < -kEps) t = (lo - o[d]) / dir[d];
+      if (t >= 0 && t < tSide) tSide = t;
+    }
+    return tSide;
+  }
+
+  /// An origin beyond a lateral side becomes its mirror image inside, with
+  /// the direction mirrored too (sideFold_).
+  void foldInside(std::array<NumericType, D> &o,
+                  std::array<NumericType, D> &dir) {
+    const auto &mn = lattice_->minCorner();
+    const auto &dims = lattice_->dims();
+    bool folded = false;
+    for (int d = 0; d < D - 1; ++d) {
+      const NumericType lo = mn[d];
+      const NumericType hi = mn[d] + delta() * static_cast<NumericType>(dims[d]);
+      if (o[d] < lo) { o[d] = 2 * lo - o[d]; dir[d] = -dir[d]; folded = true; }
+      else if (o[d] > hi) { o[d] = 2 * hi - o[d]; dir[d] = -dir[d]; folded = true; }
+    }
+    if (folded) ++nOriginFold;
+  }
+
   viennacs::VoxelHit<NumericType, D>
   traceOnce(std::array<NumericType, D> &o, std::array<NumericType, D> &dir,
             NumericType armAfter) {
+    if (sideReflect_ && sideFold_)
+      foldInside(o, dir);
     auto h = interaction_.firstHit(o, dir, rng_, armAfter);
     if (!sideReflect_)
       return h;
-    for (int k = 0; !h.hit() && k < kMaxSideBounce; ++k) {
+    for (int k = 0; k < kMaxSideBounce; ++k) {
+      // a hit counts unless, with the fold, it lies beyond the first side
+      if (h.hit() && !(sideFold_ && h.distance > sideDistance(o, dir) + NumericType(1e-9)))
+        break;
       if (!mirrorAtSide(o, dir))
         break;
+      if (h.hit()) ++nSideFold;
       ++nSideMirror;
       h = interaction_.firstHit(o, dir, rng_, armAfter);
     }
@@ -1637,7 +1890,7 @@ private:
   /// Off when a cell holds a whole atom or more (rho*dx^D >= 1): at dx = 0.2
   /// the ratio inverts, one cell carries two atoms, and the argument is void.
   bool underOxideCap(const std::array<int, D> &at) const {
-    if (!capShield_ || p_.rho * std::pow(delta(), D) >= NumericType(1))
+    if (!capShield_ || p_.rho * cellVolume() >= NumericType(1))
       return false;
     // A cell TOUCHING an oxidised cell is protected. No normal, no axis, no
     // gas test: an oxidised silicon shields what it is bonded to, and at
@@ -1734,13 +1987,13 @@ private:
     if constexpr (D == 3)
       return std::sqrt(area / NumericType(M_PI)) / delta();
     else
-      return area / (2 * delta());
+      return area / (2 * depth() * delta());
   }
 
   /// sites a cell at `idx` holds; the empty index means "use the mean"
   /// sites a cell stands for, before any area weighting
   NumericType nuScalar() const {
-    return p_.sigma0 * std::pow(delta(), D - 1);
+    return p_.sigma0 * cellFace();
   }
   /// fraction of a cell's sites that are free / fluorinated
   NumericType freeFrac(int id) const {
@@ -1762,7 +2015,7 @@ private:
                                     : Oxidised;
   }
   NumericType nuOf(const std::array<int, D> &idx) const {
-    const NumericType nu = p_.sigma0 * std::pow(delta(), D - 1);
+    const NumericType nu = p_.sigma0 * cellFace();
     bool zero = true;
     for (int d = 0; d < D; ++d)
       if (idx[d] != 0) zero = false;
@@ -2012,7 +2265,14 @@ private:
     std::array<NumericType, D> t{};
     if constexpr (D == 2) {
       t[0] = -w[1]; t[1] = w[0];
-      if (uni() < NumericType(0.5)) { t[0] = -t[0]; t[1] = -t[1]; }
+      if (cone3d_) {
+        // PMC_CONE3D (test 2026-11-05): as viennaray::ReflectionConedCosine
+        // in 2D, the direction is drawn on the 3D cone about w (azimuth phi
+        // uniform) and only its in-plane part is kept, so the in-plane
+        // deviation is sin(theta) cos(phi); normalised below
+        const NumericType c = std::cos(2 * NumericType(M_PI) * uni());
+        t[0] *= c; t[1] *= c;
+      } else if (uni() < NumericType(0.5)) { t[0] = -t[0]; t[1] = -t[1]; }
     } else {
       std::array<NumericType, D> a{1, 0, 0};
       if (std::abs(w[0]) > NumericType(0.9)) a = {0, 1, 0};
@@ -2049,12 +2309,26 @@ private:
   /// inside the solid goes on to adsorb onto BURIED cells.
   bool reemitFrom(const viennacs::VoxelHit<NumericType, D> &h,
                   std::array<NumericType, D> &origin,
-                  std::array<NumericType, D> &direction) {
+                  std::array<NumericType, D> &direction,
+                  bool atContact = false, bool faceNormal = false,
+                  int avgR = -1, NumericType offCells = -1) {
     std::array<NumericType, D> n3{}, nd{};
-    NumericType len = 0;
-    for (int d = 0; d < D; ++d) len += h.normal[d] * h.normal[d];
-    len = len > 0 ? std::sqrt(len) : NumericType(1);
-    for (int d = 0; d < D; ++d) n3[d] = h.normal[d] / len;
+    if (!faceNormal && avgR > 0 && averagedNormal(h.index, avgR, n3)) {
+      // emitR_ (test 2026-11-12): the interface average over avgR cells
+    } else if ((faceNormal || avgR == 0) && h.enteredAxis >= 0 &&
+               h.enteredAxis < D) {
+      // neutFaceMask_ (test 2026-11-12, Meeting15/runs/deficit_frozen): the
+      // outward normal of the face the particle came in through. Cosine
+      // emission about every true face keeps a frozen trench in equilibrium
+      // at s = 0 (the source flux on every surface); the estimator's normal
+      // tilts the emission at real corners.
+      n3[h.enteredAxis] = static_cast<NumericType>(h.enteredSign);
+    } else {
+      NumericType len = 0;
+      for (int d = 0; d < D; ++d) len += h.normal[d] * h.normal[d];
+      len = len > 0 ? std::sqrt(len) : NumericType(1);
+      for (int d = 0; d < D; ++d) n3[d] = h.normal[d] / len;
+    }
     // Cosine-weighted about the normal, taken from VIENNARAY ITSELF rather
     // than reimplemented here. The level set's ChemicalParticle re-emits with
     // exactly this call, so the two arms cannot drift apart.
@@ -2158,9 +2432,20 @@ private:
       }
     }
     if (!placed) {
+      // atContact (ionContact_, test 2026-11-04): restart where the particle
+      // met the surface, in the gas cell it came from, as the level set's
+      // ChemicalIon restarts at its hit point; otherwise one cell further out.
+      // At a concave corner the extra cell moves every mask-reflected ion off
+      // the column beside the mask (Meeting15/runs/series25_r198 README).
+      // offCells >= 0 (emitOff_, test 2026-11-12): that many cells beyond
+      // the contact instead
+      const NumericType out =
+          offCells >= NumericType(0)
+              ? static_cast<NumericType>(clear - 1) + offCells + NumericType(1e-3)
+              : static_cast<NumericType>(atContact ? clear - 1 : clear) +
+                    NumericType(1e-3);
       for (int d = 0; d < D; ++d) {
-        origin[d] = h.point[d] +
-                    n3[d] * delta() * (static_cast<NumericType>(clear) + 1e-3);
+        origin[d] = h.point[d] + n3[d] * delta() * out;
         direction[d] = nd[d];
       }
       ++nReemitCell;
@@ -2187,10 +2472,11 @@ private:
   /// The same placement, keeping the caller's direction: what an ion needs
   /// after it reflects.
   bool placeOutside(const viennacs::VoxelHit<NumericType, D> &h,
-                    std::array<NumericType, D> &origin) {
+                    std::array<NumericType, D> &origin,
+                    bool atContact = false) {
     std::array<NumericType, D> keep{}, dummy{};
     for (int d = 0; d < D; ++d) keep[d] = 0;
-    if (!reemitFrom(h, origin, dummy))
+    if (!reemitFrom(h, origin, dummy, atContact))
       return false;
     (void)keep;
     return true;
@@ -2492,6 +2778,25 @@ private:
   /// channel takes material. Settled cells are moved, not removed, and are
   /// not logged.
   struct RemovalEvent { int i, j, channel; NumericType t; };
+  /// COLUMN TALLY (test 2026-11-05, PMC_COLTALLY, Meeting15/runs/
+  /// w10_o800_fix): O and F arrivals per cell column and per time bin, before
+  /// sticking and without the same-facet re-hits, so the flux reaching the
+  /// floor of a deepening trench can be compared with the level set's O_flux
+  /// and F_flux at every depth.
+  bool colTally_ = false;
+  NumericType colBinDt_ = 1;
+  int colBins_ = 0, colNx_ = 0;
+  std::vector<std::uint32_t> colArr_;   ///< [bin][column][0 O, 1 F]
+  /// O UPTAKE LOG (test 2026-11-05, PMC_ADSLOG, Meeting15/runs/w10_o800_fix):
+  /// every oxygen atom a cell takes up (CPU neutral paths), with the cell's
+  /// lattice index and the process time, to see where the oxygen goes on its
+  /// way down a trench.
+  struct AdsEvent { int i, j; NumericType t; };
+  bool adsLog_ = false;
+  std::vector<AdsEvent> adsLogRows_;
+  void logAdsO(const std::array<int, D> &idx) {
+    if (adsLog_) adsLogRows_.push_back({idx[0], idx[D - 1], remLogTime_});
+  }
   bool remLog_ = false;
   NumericType remLogTime_ = 0;
   std::vector<RemovalEvent> remLogRows_;
@@ -2740,8 +3045,14 @@ private:
     }
   }
 
-  void removeCellAt(const std::array<int, D> &at_) {
+  void removeCellAt(const std::array<int, D> &atIn) {
     if (freeze_) return;
+    // In 3D the lateral sides mirror, so a neighbour across a side arrives
+    // here as its mirror image (x index -1, -2, ...). cellId maps it to the
+    // real cell; the per-column histograms and the removal log need the same
+    // mapping (2026-11-13, Meeting15/runs/flat3d271: the raw index overran
+    // histRem/histTh and corrupted the heap). Identity in 2D.
+    const std::array<int, D> at_ = lattice_->canonical(atIn);
     if (removalTally_) ++(*removalTally_);
     if (remLog_)
       remLogRows_.push_back({at_[0], at_[D - 1],
@@ -3059,7 +3370,7 @@ private:
   /// arrivals, so each per-site rate constant is applied nu times over, the
   /// same scaling as the cascade's O* loss.
   void cvdThermal(NumericType dt) {
-    const NumericType nu = p_.sigma0 * std::pow(delta(), D - 1);
+    const NumericType nu = p_.sigma0 * cellFace();
     std::vector<int> work;
     auto collect = [&](std::uint8_t s) {
       work.clear();
@@ -3222,8 +3533,9 @@ private:
                  const std::array<NumericType, D> &dir) {
     ++nDepStick;
     std::array<int, D> t = h.index;
-    // CVD places the atom by coordination within cvdRelaxR_ (cvdGrowTarget)
-    const bool cvdPlaced = cvd_ && cvdGrowTarget(h.index, t);
+    // CVD places the atom by coordination within cvdRelaxR_ (cvdGrowTarget),
+    // and so does generic deposition with depCoordPlace_
+    const bool cvdPlaced = (cvd_ || depCoordPlace_) && cvdGrowTarget(h.index, t);
     bool placed = cvdPlaced;
     // ALONG THE NORMAL, not along the ray. The face a ray crossed is the
     // growth direction only for a ray arriving head on; a cosine-distributed
@@ -3322,7 +3634,7 @@ private:
       }
     }
     const NumericType atomsPerCell =
-        (depRho_ > 0 ? depRho_ : p_.rho) * std::pow(delta(), D);
+        (depRho_ > 0 ? depRho_ : p_.rho) * cellVolume();
     depCredit_[tid] += depAtoms_;
     // ONE cell per arrival, however much credit the sweep brought. Spending a
     // surplus immediately means placing cells in a line outward along the
@@ -3344,7 +3656,7 @@ private:
     // and sputter channels removed silicon the ledger never counted as asked
     // for, while "atoms taken" counted every channel. The printed figure was
     // thermal demand over total removal and read 986 % on an SF6/O2 trench.
-    atomsOwed += count * p_.rho * std::pow(delta(), D);
+    atomsOwed += count * p_.rho * cellVolume();
     for (int c = 0; c < count; ++c)
       removeNearby(idx, radiusCells);
   }
@@ -3375,7 +3687,7 @@ private:
     // uncovers. So keep the credit per cell and HAND IT DOWN in removeCellAt,
     // exactly as handDown_ already does for the adsorbate state. That closes
     // the leak the column was introduced for without choosing an axis.
-    const NumericType atomsPerCell = p_.rho * std::pow(delta(), D);
+    const NumericType atomsPerCell = p_.rho * cellVolume();
     atomsOwed += atoms;
     if (!fractional_) {
       // EVENT DRIVEN. One draw per event, nothing carried between events:
@@ -3482,7 +3794,7 @@ private:
     size_t surfInBox = 0;         ///< surface cells counted in the same walk
     std::vector<int> cand;
     if (cellIsWall_.size() != fill_->size()) cellIsWall_.assign(fill_->size(), 0);
-    const NumericType cellA = std::pow(delta(), D - 1);
+    const NumericType cellA = cellFace();
     while (true) {
       const int id = lattice_->cellId(at);
       if (id >= 0 && solid(id) && isSurface(at)) {
@@ -3670,7 +3982,7 @@ public:
     // 2D gets WORSE and is nonetheless right: starting from zero, its yields
     // over-asking by +4.1 % was cancelled by the -4.6 % deferral, and that
     // cancellation held only at this depth and grid spacing.
-    const NumericType atomsPerCell = p_.rho * std::pow(delta(), D);
+    const NumericType atomsPerCell = p_.rho * cellVolume();
     credit_.resize(std::max(columns, state_.size()));
     for (auto &c : credit_)
       c = static_cast<NumericType>(
@@ -3769,14 +4081,49 @@ public:
   void setFacetTol(NumericType t) { facetTol_ = t > 0 ? t : NumericType(1); }
   void setSameFacet(bool on) { sameFacet_ = on; }
   void setRemovalLog(bool on) { remLog_ = on; }
+  /// O UPTAKE LOG (test 2026-11-05, PMC_ADSLOG): see adsLog_
+  void setAdsorptionLog(bool on) { adsLog_ = on; }
+  const std::vector<AdsEvent> &adsorptionLog() const { return adsLogRows_; }
+  /// COLUMN TALLY (test 2026-11-05, PMC_COLTALLY): see colTally_
+  void setColumnTally(NumericType binDt, int nBins) {
+    colTally_ = true; colBinDt_ = binDt; colBins_ = nBins; }
+  const std::vector<std::uint32_t> &columnTally() const { return colArr_; }
+  int columnTallyNx() const { return colNx_; }
+  int columnTallyBins() const { return colBins_; }
   void setIonLog(bool on) { ionLog_ = on; }
   const std::vector<IonEvent> &ionLog() const { return ionLogRows_; }
   const std::vector<RemovalEvent> &removalLog() const { return remLogRows_; }
   void setParticleSize(NumericType cells) {
     particleSize_ = cells > NumericType(0) ? cells : NumericType(0);
-    interaction_.setParticleRadius(particleSize_ * delta());
+    interaction_.setParticleRadius(paddingRadius());
   }
   NumericType particleSize() const { return particleSize_; }
+  /// radiusFnm_ / radiusOnm_ (PMC_RADIUS_F / PMC_RADIUS_O, test 2026-11-13;
+  /// Lado: "make the particle size a per-species length in nm"): the radius in
+  /// nm with which F and O trace, e.g. their van der Waals radii 0.147 and
+  /// 0.152 nm (Bondi 1964). < 0 keeps particleSize_ cells. Ions keep
+  /// particleSize_ (or trace as points with ionPoint_). The BVH of a step is
+  /// padded for the largest radius in use and each species queries its own.
+  NumericType radiusFnm_ = -1, radiusOnm_ = -1;
+  NumericType radiusF() const {
+    return radiusFnm_ >= NumericType(0) ? radiusFnm_ : particleSize_ * delta();
+  }
+  NumericType radiusO() const {
+    return radiusOnm_ >= NumericType(0) ? radiusOnm_ : particleSize_ * delta();
+  }
+  NumericType paddingRadius() const {
+    NumericType r = std::max(radiusF(), radiusO());
+    if (!ionPoint_) r = std::max(r, particleSize_ * delta());
+    return r;
+  }
+  void setSpeciesRadiusNm(NumericType f, NumericType o) {
+    radiusFnm_ = f;
+    radiusOnm_ = o;
+    interaction_.setParticleRadius(paddingRadius());
+  }
+  bool speciesRadius() const {
+    return radiusFnm_ >= NumericType(0) || radiusOnm_ >= NumericType(0);
+  }
   void setSameFacetAngle(NumericType deg) { sameFacetAngle_ = deg; }
   void setSameFacetCells(int c) { sameFacetCells_ = c > 0 ? c : 1; }
   size_t subResolutionSkips() const { return nSubRes; }
@@ -3861,7 +4208,8 @@ public:
   viennacore::Vec3D<NumericType> ionFitNormal(const std::array<int, D> &idx) {
     const int id = lattice_->cellId(idx);
     if (id < 0 || !ionFitCache_on_)
-      return interaction_.fitNormalAt(idx, ionNormR_);
+      return ionNormAvg_ ? interaction_.avgNormalAt(idx, ionNormR_)
+                         : interaction_.fitNormalAt(idx, ionNormR_);
     if (ionFitCache_.size() != fill_->size())
       ionFitCache_.assign(fill_->size(), IonFitEntry{});
     const int Rs = ionNormR_ + 1, w = 2 * Rs + 1;
@@ -3885,7 +4233,8 @@ public:
       return e.n;
     }
     ++nIonFitMiss;
-    e.n = interaction_.fitNormalAt(idx, ionNormR_);
+    e.n = ionNormAvg_ ? interaction_.avgNormalAt(idx, ionNormR_)
+                      : interaction_.fitNormalAt(idx, ionNormR_);
     e.bits = std::move(sig);
     e.radius = ionNormR_;
     return e.n;
@@ -3994,7 +4343,7 @@ public:
     // 4.5 carbons on a cell that flips at 1.5, so the two ends of one ledger
     // disagree by three.
     const NumericType atomsPerCell =
-        (depRho_ > 0 ? depRho_ : p_.rho) * std::pow(delta(), D);
+        (depRho_ > 0 ? depRho_ : p_.rho) * cellVolume();
     const auto &dims = lattice_->dims();
     size_t sites = 1;
     for (int d = 0; d < D; ++d)
@@ -4086,6 +4435,7 @@ public:
   void setDepositAlongNormal(bool on) { depNormal_ = on; }
   /// Let arriving material settle into the neighbouring hollow.
   void setDepositRelaxation(bool on) { depRelax_ = on; }
+  void setDepositCoordinationPlacement(bool on) { depCoordPlace_ = on; }
   /// Move a cell left without any solid face neighbour back onto the surface
   /// instead of leaving it floating or corner-attached.
   void setSettleOrphans(bool on) { settle_ = on; }
@@ -4100,7 +4450,7 @@ public:
       return simpleP_;
     const NumericType a = p_.fluxF * p_.stickF;
     const NumericType th = a / (a + 4 * p_.kSigma);
-    return p_.stickF * (1 - th) / 4 / (p_.rho * std::pow(delta(), D));
+    return p_.stickF * (1 - th) / 4 / (p_.rho * cellVolume());
   }
   void setFluxEtch(bool on) {
     fluxEtch_ = on;
@@ -4127,7 +4477,7 @@ public:
   /// sum(1/p_i) = rho*dx^D * target. Both the blanket rate and the effective
   /// sticking then hold as dx moves.
   void setCascadeAuto(NumericType s0 = 0.7) {
-    const NumericType atoms = p_.rho * std::pow(delta(), D);
+    const NumericType atoms = p_.rho * cellVolume();
     int n = static_cast<int>(std::lround(4 * atoms));
     n = std::max(1, std::min<int>(kCascadeMax, n));
     cascadeTop_ = static_cast<std::uint8_t>(n - 1);
@@ -4187,7 +4537,7 @@ public:
   }
   /// atoms per cell. The cascade is only self-consistent at 1.
   NumericType atomsPerCellNow() const {
-    return p_.rho * std::pow(delta(), D);
+    return p_.rho * cellVolume();
   }
   /// The blanket rate this cascade predicts, in nm/s, from the chain alone:
   /// four steps at s0 and a top step leaving at nu*k_sigma give
@@ -4439,7 +4789,7 @@ public:
   /// so any gap between them is a leak.
   double polymerCarbons() const {
     const double perCell =
-        double(depRho_ > 0 ? depRho_ : p_.rho) * std::pow(double(delta()), D);
+        double(depRho_ > 0 ? depRho_ : p_.rho) * double(cellVolume());
     const auto &dims = lattice_->dims();
     size_t sites = 1;
     for (int d = 0; d < D; ++d) sites *= size_t(dims[d]);
@@ -4534,7 +4884,7 @@ public:
                             NumericType atoms, NumericType rho, bool polymer) {
     if (remCredit_.size() != fill_->size())
       remCredit_.assign(fill_->size(), NumericType(0));
-    const NumericType perCell = rho * std::pow(delta(), D);
+    const NumericType perCell = rho * cellVolume();
     NumericType owed = atoms;
     for (int guard = 0; guard < 8 && owed > NumericType(0); ++guard) {
       const int id = lattice_->cellId(cell);
@@ -4754,6 +5104,7 @@ public:
     NumericType area = 1;
     for (int d = 0; d < D - 1; ++d)
       area *= delta() * static_cast<NumericType>(dims[d]);
+    area *= depth();   // 2D: the trench length the run stands for
     interaction_.prepare();
     auto count = [&](NumericType flux) {
       std::poisson_distribution<long long> pois(static_cast<double>(
@@ -4995,7 +5346,9 @@ public:
                     !hitTally_ && reemit_ && ionReflect_ && ionNormR_ <= 1 &&
                     ionSameIdentity_ && !freeze_ && smoothSupport_ <= 0 &&
                     !oxideOpaque_ && particleSize_ <= NumericType(0) &&
-                    !hopVisible_;
+                    !hopVisible_ && !neutFaceMask_ && emitR_ < 0 &&
+                    emitOff_ < NumericType(0) && !speciesRadius() && !simpleHop_ &&
+                    !sideFold_ && !rehitPass_;
     if (!ok && !gpuWarned_) {
       std::fprintf(stderr, "VoxelPMC: an option the GPU transport does not "
                            "implement is set, tracing on the CPU\n");
@@ -5341,7 +5694,7 @@ public:
              float(yieldEnhanced(E, cosT)), float(yieldSputter(E, cosT)),
              float(Y), remLogTime_});
       const int want = drawCount(Y / (ionWeight_ * atomsPerCell));
-      atomsOwed += want * p_.rho * std::pow(delta(), D);
+      atomsOwed += want * p_.rho * cellVolume();
       if (want > 0) {
         // sputtering (a bare site) takes silicon in every state beyond the
         // site itself, the other channels only their own species
@@ -5406,9 +5759,10 @@ public:
     NumericType area = 1;
     for (int d = 0; d < D - 1; ++d)
       area *= delta() * static_cast<NumericType>(dims[d]);
+    area *= depth();   // 2D: the trench length the run stands for
     // atoms per cell and adsorption SITES per cell are different counts
-    const NumericType atomsPerCell = p_.rho * std::pow(delta(), D);
-    const NumericType nu = p_.sigma0 * std::pow(delta(), D - 1);
+    const NumericType atomsPerCell = p_.rho * cellVolume();
+    const NumericType nu = p_.sigma0 * cellFace();
     interaction_.prepare();
 
     auto deliver = [&](NumericType flux, NumericType power, bool ion,
@@ -5475,10 +5829,21 @@ public:
             // Per-cell ARRIVAL tally, before sticking or the site test, so it
             // is the flux itself and is directly comparable with the level
             // set's O_flux / F_flux fields.
-            if (hitTally_) {
+            if (hitTally_ && !(tallyAccepted_ && skipReact)) {
               auto &t = (adsorbState == Oxidised) ? hitO_ : hitF_;
               if (t.size() != fill_->size()) t.assign(fill_->size(), 0);
               if (hid >= 0) ++t[hid];
+            }
+            if (colTally_ && !skipReact) {
+              if (colArr_.empty()) {
+                colNx_ = lattice_->dims()[0];
+                colArr_.assign(size_t(colBins_) * colNx_ * 2, 0u);
+              }
+              const int b = static_cast<int>(remLogTime_ / colBinDt_);
+              const int ix = h.index[0];
+              if (b >= 0 && b < colBins_ && ix >= 0 && ix < colNx_)
+                ++colArr_[(size_t(b) * colNx_ + ix) * 2 +
+                          (adsorbState == Oxidised ? 0 : 1)];
             }
             if (skipReact) {
               // Same continuum facet, one cell away: the level set would have
@@ -5488,7 +5853,26 @@ public:
               // stick and be consumed, or reflect. Nothing else happens to
               // the cell that was hit.
               if (uni() < depP_) {
-                depositAt(h, dir);
+                // TEST (DEP_FROZEN): on a frozen surface the molecule is
+                // counted where it sticks, in the O tally (no O flies in a
+                // deposition), and nothing grows
+                if (freeze_) {
+                  if (hitTally_ && hid >= 0) {
+                    if (hitO_.size() != fill_->size()) hitO_.assign(fill_->size(), 0);
+                    ++hitO_[hid];
+                  }
+                } else {
+                  // The molecule bonds where silane's SiH4 does (R1 below): on
+                  // a cell picked by the same spreading as an F or O arrival,
+                  // and the film grows from there (2026-10-20).
+                  auto hs = h;
+                  if (fHopR_ > 0) {
+                    const auto vp = viewPoint(h);
+                    hs.index = hopSite(h.index, &vp);
+                    hs.cellId = lattice_->cellId(hs.index);
+                  }
+                  depositAt(hs, dir);
+                }
                 break;
               }
               // otherwise it reflects, handled by the re-emission below
@@ -5543,6 +5927,7 @@ public:
                   if (uni() < stick) {
                     state_[sid] = Oxidised;     // Si + O -> SiO
                     ++nAdsO;
+                    logAdsO(site);
                     break;
                   }
                   ++nStickFail;
@@ -5555,6 +5940,7 @@ public:
                   if (uni() < stick) {
                     state_[hid] = Oxidised;     // Si + O -> SiO
                     ++nAdsO;
+                    logAdsO(h.index);
                     break;
                   }
                   ++nStickFail;
@@ -5687,7 +6073,17 @@ public:
                     // means the particle has not reacted. nRemoveFail moves
                     // only in that case, so compare it across the call.
                     const std::size_t failBefore = nRemoveFail;
-                    const bool removed = removeAtoms(h.index, simpleAtoms_);
+                    // simpleHop_ (PMC_SIMPLEHOP, test 2026-11-13; Lado: "What
+                    // about the distribution of the hit across a cell
+                    // neighborhood?"): the removal goes to a cell of the
+                    // neighbourhood rule (hopSite), as F, O and ions do
+                    std::array<int, D> rsite = h.index;
+                    if (simpleHop_ && fHopR_ > 0) {
+                      const auto vp = viewPoint(h);
+                      rsite = hopSite(h.index, &vp, simpleHopOpenK_);
+                      if (rsite != h.index) ++nSimpleHop; else ++nSimpleHopStay;
+                    }
+                    const bool removed = removeAtoms(rsite, simpleAtoms_);
                     const bool blocked = (nRemoveFail != failBefore);
                     if (!removed && blocked) {
                       // NOTHING was removed, so this particle has not reacted.
@@ -5751,6 +6147,7 @@ public:
                 } else {
                   if (nO_[hid] < static_cast<int>(nuS)) ++nO_[hid];
                   ++nAdsO;
+                  logAdsO(h.index);
                 }
                 syncState(hid);
                 break;
@@ -5854,7 +6251,7 @@ public:
                 state_[hid] = adsorbState;
                 if (hid < (int)fIdx_.size())
                   fIdx_[hid] = (adsorbState == Fluorinated) ? 1 : 0;
-                if (adsorbState == Fluorinated) ++nAdsF; else ++nAdsO;
+                if (adsorbState == Fluorinated) ++nAdsF; else { ++nAdsO; logAdsO(h.index); }
                 // FBALANCE: drive the spontaneous etch off the F BALANCE
                 // rather than off a per-cell firing rate. A flip to [F]
                 // stands for nu adsorbed sites and 4F* + Si -> SiF4 takes
@@ -5872,7 +6269,15 @@ public:
               break;                        // discarded, as before
             if (bounce + 1 >= kMaxBounce) ++nBounceCap;
             ++nBounce;
-            if (!reemitFrom(h, o, dir)) {
+            // neutContact_ (test 2026-11-04): restart at the contact point;
+            // neutFaceMask_ (test 2026-11-12): on mask cells, the contact
+            // restart and the emission about the entered face
+            const bool faceHere = neutFaceMask_ && isMask(h.cellId);
+            // emitR_ / emitOff_ (test 2026-11-12): the radius of the emission
+            // normal and the restart distance beyond the contact
+            if (!reemitFrom(h, o, dir, neutContact_ || faceHere, faceHere,
+                            faceHere ? -1 : emitR_,
+                            faceHere ? NumericType(-1) : emitOff_)) {
               ++nBounceFail;
               break;                        // could not be placed in gas
             }
@@ -5881,39 +6286,68 @@ public:
               ++nEscape;
               break;                        // left the domain, or went inside
             }
-            skipReact = false;
-            if (facetPlane_) {
-              // is the new hit ON the plane we just left?
-              viennacore::Vec3D<NumericType> pn;
-              std::array<NumericType, D> pc{};
-              if (interaction_.fitPlaneAt(prevIdx, pn, pc) &&
-                  interaction_.lastFitPoints() >= minFitPts_) {
-                NumericType off = 0;
+            // the re-hit rule: is h a sub-resolution re-hit of the surface the
+            // particle just left (prevIdx)?
+            auto classify = [&]() {
+              skipReact = false;
+              if (facetPlane_) {
+                // is the new hit ON the plane we just left?
+                viennacore::Vec3D<NumericType> pn;
+                std::array<NumericType, D> pc{};
+                if (interaction_.fitPlaneAt(prevIdx, pn, pc) &&
+                    interaction_.lastFitPoints() >= minFitPts_) {
+                  NumericType off = 0;
+                  for (int d = 0; d < D; ++d)
+                    off += (static_cast<NumericType>(h.index[d]) - pc[d]) * pn[d];
+                  if (std::abs(off) <= facetTol_) { skipReact = true; ++nSubRes; }
+                  else                             ++nCornerKeep;
+                }
+              } else if (sameFacet_) {
+                int cheb = 0;
                 for (int d = 0; d < D; ++d)
-                  off += (static_cast<NumericType>(h.index[d]) - pc[d]) * pn[d];
-                if (std::abs(off) <= facetTol_) { skipReact = true; ++nSubRes; }
-                else                             ++nCornerKeep;
-              }
-            } else if (sameFacet_) {
-              int cheb = 0;
-              for (int d = 0; d < D; ++d)
-                cheb = std::max(cheb, std::abs(h.index[d] - prevIdx[d]));
-              if (cheb <= sameFacetCells_) {
-                const auto na = interaction_.fitNormalAt(prevIdx, reflectRadius_);
-                const auto nb2 = interaction_.fitNormalAt(h.index, reflectRadius_);
-                NumericType la = 0, lb = 0, dot = 0;
-                for (int d = 0; d < D; ++d) {
-                  la += na[d] * na[d]; lb += nb2[d] * nb2[d];
-                  dot += na[d] * nb2[d];
-                }
-                if (la > NumericType(1e-12) && lb > NumericType(1e-12)) {
-                  dot /= std::sqrt(la * lb);
-                  const NumericType cosLim =
-                      std::cos(sameFacetAngle_ * NumericType(M_PI) / 180);
-                  if (dot >= cosLim) { skipReact = true; ++nSubRes; }
-                  else                 ++nCornerKeep;
+                  cheb = std::max(cheb, std::abs(h.index[d] - prevIdx[d]));
+                if (cheb <= sameFacetCells_) {
+                  const auto na = interaction_.fitNormalAt(prevIdx, reflectRadius_);
+                  const auto nb2 = interaction_.fitNormalAt(h.index, reflectRadius_);
+                  NumericType la = 0, lb = 0, dot = 0;
+                  for (int d = 0; d < D; ++d) {
+                    la += na[d] * na[d]; lb += nb2[d] * nb2[d];
+                    dot += na[d] * nb2[d];
+                  }
+                  if (la > NumericType(1e-12) && lb > NumericType(1e-12)) {
+                    dot /= std::sqrt(la * lb);
+                    const NumericType cosLim =
+                        std::cos(sameFacetAngle_ * NumericType(M_PI) / 180);
+                    if (dot >= cosLim) { skipReact = true; ++nSubRes; }
+                    else                 ++nCornerKeep;
+                  }
                 }
               }
+            };
+            classify();
+            // rehitPass_ (PMC_REHITPASS, test 2026-11-13, Meeting15/runs/
+            // corner271): a sub-resolution re-hit is a cell-sized step of the
+            // surface the particle just left, which the level set's smooth
+            // surface does not have. The particle flies on past the step
+            // along its path instead of being re-emitted from it, as long as
+            // the point beyond the step is gas.
+            for (int pass = 0; rehitPass_ && skipReact && pass < 8; ++pass) {
+              std::array<NumericType, D> o2{};
+              passThrough(h, dir, o2);
+              std::array<int, D> i2{};
+              if (indexAt(o2, i2) && solid(lattice_->cellId(i2))) {
+                ++nRehitPassBlocked;
+                break;                      // a thick step: a hit after all
+              }
+              h = traceReflective(o2, dir, NumericType(0));
+              ++nRehitPass;
+              if (!h.hit() || !isExposed(h.index))
+                break;
+              classify();
+            }
+            if (!h.hit() || !isExposed(h.index)) {
+              ++nEscape;
+              break;                        // flew out past the step
             }
             prevIdx = h.index;
           }
@@ -5936,6 +6370,7 @@ public:
         const NumericType tMax = p_.thetaRMax * NumericType(M_PI) / 180;
 
         ionHasReflected_ = false;
+        int nAway = 0;                 // ionAway_ pass-throughs of this ion
         for (int bounce = 0;; ++bounce) {
           if (!resolveImpact(h, dir)) {
             if (bounce >= kMaxBounce) break;
@@ -5969,6 +6404,15 @@ public:
           NumericType cosT = 0;
           for (int d = 0; d < D; ++d)
             cosT += -dir[d] * n[d];
+          if (ionAway_ && cosT <= NumericType(0)) {
+            // moving away from the fitted surface: the staircase, travel on
+            ++nIonAway;
+            if (++nAway > ionAwayCap_) { ++nIonAwayCap; break; }
+            passThrough(h, dir, o);
+            h = traceReflective(o, dir);
+            if (!h.hit() || !isExposed(h.index)) { ++nIonAwayEnd; break; }
+            continue;
+          }
           cosT = std::min(NumericType(1), std::max(NumericType(0), cosT));
           const NumericType incAngle = std::acos(cosT);
 
@@ -6047,8 +6491,10 @@ public:
               histRem.assign(lattice_->dims()[0], 0);
               histTh.assign(lattice_->dims()[0], 0);
             }
-            ++histHit[h.index[0]];
-            if (uni() < fFrac(id)) ++histOnF[h.index[0]];
+            // canonical x: in 3D a hit index may be a mirror image (removeCellAt)
+            const int hx = lattice_->canonical(h.index)[0];
+            ++histHit[hx];
+            if (uni() < fFrac(id)) ++histOnF[hx];
             if (cascade_) {
               // ONE IDENTITY, ONE YIELD. Belen weights his three yields by
               // theta_F and theta_O; here those are not probabilities, they
@@ -6100,7 +6546,7 @@ public:
                   // none the rest is not taken. Picking any exposed cell let an
                   // ion-enhanced event remove bare Si and SiO and leave the
                   // fluorinated cell it hit to finish its cascade as SiF4.
-                  atomsOwed += want * p_.rho * std::pow(delta(), D);
+                  atomsOwed += want * p_.rho * cellVolume();
                   if (want > 0) {
                     // sputtering (a bare site) takes silicon in every state
                     // beyond the site itself, the other channels only their
@@ -6167,8 +6613,9 @@ public:
                   const double y = yieldEnhanced(E, cosT);
                   const int q = std::min(8, (int)(std::acos(std::min(
                       NumericType(1), cosT)) * 180.0 / M_PI / 10.0));
-                  if (bounce > 0) { ++reflRem[h.index[0]]; reflY += y; ++reflAng[q]; }
-                  else            { ++directRem[h.index[0]]; directY += y; }
+                  const int hx = lattice_->canonical(h.index)[0];
+                  if (bounce > 0) { ++reflRem[hx]; reflY += y; ++reflAng[q]; }
+                  else            { ++directRem[hx]; directY += y; }
                 }
                 { const int q = std::min(8, (int)(std::acos(std::min(NumericType(1),
                                 cosT)) * 180.0 / M_PI / 10.0));
@@ -6218,9 +6665,11 @@ public:
           { const int qs = std::min(8, (int)(incAngle * 180.0 / M_PI / 10.0));
             if (wallCell(h.index)) ++reflSrcWall[qs]; else ++reflSrcFloor[qs]; }
           if (bounce + 1 < 12) ++bounceHist[bounce + 1];
-          // specular direction off the SMOOTHED wall, not the local facet
+          // specular direction off the SMOOTHED wall, not the local facet.
+          // ionReflFit_ (test 2026-11-04): the same fit as the incidence
+          // angle (ionNormR_), as the level set's averaged normal gives both
           auto nRef = n;
-          {
+          if (!(ionReflFit_ && ionNormR_ > 1)) {
             const auto nw = interaction_.fitNormalAt(h.index, reflectRadius_);
             NumericType l = 0;
             for (int d = 0; d < D; ++d) l += nw[d] * nw[d];
@@ -6231,7 +6680,7 @@ public:
               dir, nRef,
               NumericType(M_PI_2) -
                   std::min(incAngle, p_.minAngle * NumericType(M_PI) / 180));
-          if (!placeOutside(h, o))
+          if (!placeOutside(h, o, ionContact_))
             break;
           dir = nd;
           h = traceReflective(o, dir);
@@ -6259,11 +6708,26 @@ public:
     } else
 #endif
     {
+      // radiusFnm_ / radiusOnm_ (test 2026-11-13): F and O each trace with
+      // their own radius; the BVH of this step is padded for the largest
+      const bool perSpecies = speciesRadius();
+      if (perSpecies)
+        interaction_.setQueryRadius(radiusF());
       deliver(p_.fluxF, p_.cosinePowerNeutral, false, Fluorinated,
               stickCorrected(p_.stickF));
+      if (perSpecies)
+        interaction_.setQueryRadius(radiusO());
       deliver(p_.fluxO, p_.cosinePowerNeutral, false, Oxidised,
               stickCorrected(p_.stickO));
+      // ionPoint_ (test 2026-11-04): ions trace as point particles while F
+      // and O keep their size; the BVH of this step stays as built
+      if (ionPoint_)
+        interaction_.setQueryRadius(NumericType(0));
+      else if (perSpecies)
+        interaction_.setQueryRadius(particleSize_ * delta());
       deliver(p_.fluxIon * ionWeight_, p_.cosinePowerIon, true, Bare, 0);
+      if (ionPoint_ || perSpecies)
+        interaction_.setQueryRadius(paddingRadius());
     }
 
     if (cascade_) {
@@ -6273,7 +6737,7 @@ public:
       // the oxide leaving, not a step being reduced: the silicon stays and the
       // cell survives. The fluorine chain has no timed step at all; SiF4
       // leaves on the fourth ARRIVAL, inside the ray loop.
-      const NumericType nuL = p_.sigma0 * std::pow(delta(), D - 1);
+      const NumericType nuL = p_.sigma0 * cellFace();
       size_t nsites = 1;
       for (int d = 0; d < D; ++d)
         nsites *= static_cast<size_t>(dims[d]);

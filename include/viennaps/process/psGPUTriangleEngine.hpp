@@ -14,6 +14,10 @@
 
 #include <gpu/raygTraceTriangle.hpp>
 
+#include <cmath>    // TEST (LS_IONNORM, GPU)
+#include <cstdlib>  // TEST (LS_IONNORM, GPU)
+#include <iostream> // TEST (LS_IONNORM, GPU)
+
 namespace viennaps {
 
 using namespace viennacore;
@@ -159,6 +163,59 @@ public:
       surfaceMesh_->maximumExtent = triangleMesh.maximumExtent;
     }
 
+    // TEST (LS_IONNORM, GPU, 2026-10-31): element normals averaged,
+    // area-weighted, over the elements within LS_IONNORM grid spacings, as in
+    // CPUTriangleEngine. calculateSourceFluxes appends them to the element
+    // data, where gpu::SurfaceChemistry's ion reads them for its incidence
+    // angle and reflection.
+    ionnorm::averaged.clear();
+    if (const char *e = std::getenv("LS_IONNORM"); e && std::atof(e) > 0) {
+      const NumericType radius =
+          std::atof(e) * context.domain->getGridDelta();
+      const auto &nodes = surfaceMesh_->nodes;
+      const auto &tris = surfaceMesh_->triangles;
+      const auto &nrm = *surfaceMesh_->getNormals();
+      const auto numTris = tris.size();
+      std::vector<double> area(numTris);
+      std::vector<Vec3D<NumericType>> centers(numTris);
+      for (size_t i = 0; i < numTris; ++i) {
+        const auto &a = nodes[tris[i][0]], &b = nodes[tris[i][1]],
+                   &c = nodes[tris[i][2]];
+        area[i] = 0.5 * Norm(CrossProduct(b - a, c - a));
+        for (int k = 0; k < 3; ++k)
+          centers[i][k] = (a[k] + b[k] + c[k]) / NumericType(3);
+      }
+      ionnorm::averaged.resize(numTris);
+#pragma omp parallel for schedule(static)
+      for (size_t i = 0; i < numTris; ++i) {
+        const auto close =
+            elementKdTree_->findNearestWithinRadius(centers[i], radius)
+                .value();
+        std::array<double, 3> s{0., 0., 0.};
+        double w = 0.;
+        for (const auto &[j, dist] : close) {
+          if (DotProduct(nrm[i], nrm[j]) < -0.5f)
+            continue; // the far side of a thin feature
+          for (int k = 0; k < 3; ++k)
+            s[k] += area[j] * nrm[j][k];
+          w += area[j];
+        }
+        const double l = std::sqrt(s[0] * s[0] + s[1] * s[1] + s[2] * s[2]);
+        if (w > 0. && l > 0.5 * w)
+          ionnorm::averaged[i] = {float(s[0] / l), float(s[1] / l),
+                                  float(s[2] / l)};
+        else
+          ionnorm::averaged[i] = {float(nrm[i][0]), float(nrm[i][1]),
+                                  float(nrm[i][2])};
+      }
+      if (!ionnormAnnounced_) {
+        ionnormAnnounced_ = true;
+        std::cout << "  [level set, GPU: ion incidence normal averaged within "
+                  << std::atof(e) << " grid spacings (" << radius
+                  << " nm)]\n";
+      }
+    }
+
     if (model_->useMaterialIds()) {
       auto const &pointMaterialIds = *context.diskMesh->getMaterialIds();
       auto pointKdTree = context.getPointKdTree();
@@ -183,17 +240,38 @@ public:
     this->timer_.start();
 
     CudaBuffer d_coverages; // device buffer for coverages
+    unsigned numCovElem = 0; // TEST (LS_IONNORM, GPU)
     if (context.flags.useCoverages) {
       auto coverages = model_->getSurfaceModel()->getCoverages();
       assert(coverages);
       assert(context.diskMesh);
       assert(context.translationField);
       auto numCov = coverages->getScalarDataSize();
+      numCovElem = numCov;
       auto pointKdTree = context.getPointKdTree();
       gpu::PointToElementData<NumericType, float>(d_coverages, coverages,
                                                   *pointKdTree, surfaceMesh_)
           .apply();
       rayTracer_.setElementData(d_coverages, numCov);
+    }
+    // TEST (LS_IONNORM, GPU, 2026-10-31): the averaged element normals follow
+    // the coverages in the element data, three arrays x, y, z, where the ion
+    // of gpu::SurfaceChemistry reads them (ionNormalOffset = number of
+    // coverages).
+    CudaBuffer d_elementData;
+    if (!ionnorm::averaged.empty()) {
+      const size_t nEl = surfaceMesh_->triangles.size();
+      if (ionnorm::averaged.size() != nEl)
+        VIENNACORE_LOG_ERROR("LS_IONNORM: averaged normals do not match the "
+                             "elements.");
+      std::vector<float> data((numCovElem + 3) * nEl);
+      if (numCovElem > 0)
+        d_coverages.download(data.data(), numCovElem * nEl);
+      for (size_t i = 0; i < nEl; ++i)
+        for (int k = 0; k < 3; ++k)
+          data[i + (numCovElem + k) * nEl] = ionnorm::averaged[i][k];
+      d_elementData.allocUpload(data);
+      rayTracer_.setElementData(d_elementData, numCovElem + 3);
     }
 
     // run the ray tracer
@@ -229,6 +307,7 @@ public:
     }
 
     d_coverages.free();
+    d_elementData.free(); // TEST (LS_IONNORM, GPU)
     this->timer_.finish();
 
     return ProcessResult::SUCCESS;
@@ -362,6 +441,7 @@ private:
   PostProcessingType postProcessing_;
 
   KDTreeType elementKdTree_;
+  bool ionnormAnnounced_ = false; // TEST (LS_IONNORM, GPU)
   MeshType surfaceMesh_;
 
   bool rayTracerInitialized_ = false;

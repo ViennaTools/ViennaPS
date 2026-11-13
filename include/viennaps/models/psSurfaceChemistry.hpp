@@ -1325,8 +1325,34 @@ class ChemicalIon final
   const NumericType A_energy;
   const NumericType minEth; // stop the ion once it can drive nothing
   NumericType E = 0.;
+  // TEST (LS_IONNORM): per-thread counts, added to ionnorm:: when the copy
+  // used by a thread is destroyed
+  unsigned long long nHits_ = 0, nFacet_ = 0, nStopped_ = 0;
+
+  // TEST (LS_IONNORM): the averaged element normal when the ion arrives from
+  // outside the averaged surface, false (facet normal) otherwise or if unset
+  static bool averagedNormal(const Vec3D<NumericType> &rayDir,
+                             const unsigned int primID,
+                             Vec3D<NumericType> &n) {
+    if (primID >= ionnorm::averaged.size())
+      return false;
+    const auto &a = ionnorm::averaged[primID];
+    const Vec3D<NumericType> m{a[0], a[1], a[2]};
+    if (DotProduct(rayDir, m) >= 0)
+      return false;
+    n = m;
+    return true;
+  }
 
 public:
+  ~ChemicalIon() {
+    if (nHits_ | nFacet_ | nStopped_) {
+      ionnorm::hits += nHits_;
+      ionnorm::facet += nFacet_;
+      ionnorm::stopped += nStopped_;
+    }
+  }
+
   ChemicalIon(IonSource src, std::vector<IonYield> ys)
       : source(src), yields(std::move(ys)),
         A_energy(1. / (1. + src.n_l * (M_PI_2 / (src.inflectAngle * M_PI /
@@ -1345,8 +1371,13 @@ public:
                         PointData<NumericType> &localData,
                         const PointData<NumericType> *, RNG &) override {
     const auto material = MaterialMap::mapToMaterial(materialId);
-    const NumericType cosTheta =
-        util::saturate(-DotProduct(rayDir, geomNormal));
+    Vec3D<NumericType> n = geomNormal;
+    if (!ionnorm::averaged.empty()) {
+      ++nHits_;
+      if (!averagedNormal(rayDir, primID, n))
+        ++nFacet_;
+    }
+    const NumericType cosTheta = util::saturate(-DotProduct(rayDir, n));
     const NumericType angle = std::acos(cosTheta);
     const NumericType sqrtE = std::sqrt(E);
 
@@ -1378,11 +1409,13 @@ public:
 
   std::pair<NumericType, Vec3D<NumericType>>
   surfaceReflection(NumericType, const Vec3D<NumericType> &rayDir,
-                    const Vec3D<NumericType> &geomNormal, const unsigned int,
-                    const int, const PointData<NumericType> *,
+                    const Vec3D<NumericType> &geomNormal,
+                    const unsigned int primID, const int,
+                    const PointData<NumericType> *,
                     RNG &rngState) override {
-    const NumericType cosTheta =
-        util::saturate(-DotProduct(rayDir, geomNormal));
+    Vec3D<NumericType> n = geomNormal;
+    const bool averaged = averagedNormal(rayDir, primID, n);
+    const NumericType cosTheta = util::saturate(-DotProduct(rayDir, n));
     const NumericType incAngle = std::acos(cosTheta);
 
     // a steep hit is absorbed; a glancing one reflects
@@ -1403,8 +1436,14 @@ public:
 
     E = newEnergy;
     auto direction = viennaray::ReflectionConedCosine<NumericType, D>(
-        rayDir, geomNormal, rngState,
+        rayDir, n, rngState,
         M_PI_2 - std::min(incAngle, NumericType(source.minAngle * M_PI / 180.)));
+    // TEST (LS_IONNORM): a direction off the averaged surface that points
+    // into the struck facet cannot leave it, and the ion stops there
+    if (averaged && DotProduct(direction, geomNormal) <= 0) {
+      ++nStopped_;
+      return VIENNARAY_PARTICLE_STOP;
+    }
     return std::pair<NumericType, Vec3D<NumericType>>{sticking, direction};
   }
 
@@ -1466,6 +1505,16 @@ struct SurfaceChemistryParamsGPU {
   int yieldOverrideMaterial[maxYields][maxMaterials] = {};
   float yieldOverrideA[maxYields][maxMaterials] = {};
   float yieldOverrideEth[maxYields][maxMaterials] = {};
+
+  // TEST (LS_IONNORM, GPU, 2026-10-31): index of the first of three element
+  // data arrays (x, y, z) that hold the averaged element normals after the
+  // coverages, -1 if the ion takes the facet normal
+  int ionNormalOffset = -1;
+
+  // TEST (GPU, 2026-10-31): the coverages that block each neutral, one bit per
+  // coverage, from GasSpecies::stickingBlockers; 0 takes every coverage on the
+  // particle's sticking site, as the CPU particle does without a blocker list
+  int blockerMask[maxParticles] = {};
 };
 
 // The host and the device each carry their own copy of this struct, and a
@@ -1495,6 +1544,10 @@ public:
       : mech_(m) {
     const int nCov = static_cast<int>(mech_.coverageNames.size());
     deviceParams_.numCoverages = nCov;
+    // TEST (LS_IONNORM, GPU, 2026-10-31): the averaged element normals follow
+    // the coverages in the element data (GPUTriangleEngine)
+    if (const char *e = std::getenv("LS_IONNORM"); e && std::atof(e) > 0)
+      deviceParams_.ionNormalOffset = nCov;
     if (nCov > SurfaceChemistryParamsGPU::maxCoverages)
       VIENNACORE_LOG_ERROR("SurfaceChemistry GPU: too many coverages.");
     for (int i = 0; i < nCov && i < SurfaceChemistryParamsGPU::maxCoverages;
@@ -1517,10 +1570,23 @@ public:
           .name = mech_.gas[g].label,
           .sticking = static_cast<NumericType>(mech_.stickingOf(int(g)))};
       particle.dataLabels.push_back(mech_.gas[g].label);
+      // TEST (LS_ION_RAYS, 2026-10-31): LS_NEUTRAL_RAYS times the rays per
+      // point for the neutrals.
+      if (const char *e = std::getenv("LS_NEUTRAL_RAYS"))
+        particle.raysFactor = static_cast<unsigned>(std::max(1, std::atoi(e)));
 
       deviceParams_.freeSiteExponent[p] =
           mech_.gas[g].stickingFreeSiteExponent;
       deviceParams_.stickingSite[p] = mech_.gas[g].stickingSite;
+      // TEST (GPU, 2026-10-31): the blocking coverages named by the mechanism,
+      // as impl::ChemicalParticle uses them for the re-emission on the CPU
+      {
+        int mask = 0;
+        for (const int i : mech_.gas[g].stickingBlockers)
+          if (i >= 0 && i < SurfaceChemistryParamsGPU::maxCoverages)
+            mask |= (1 << i);
+        deviceParams_.blockerMask[p] = mask;
+      }
 
       // per-material sticking, evaluated once here so the shader only looks up
       const auto &d = mech_.gas[g].stickingConstant.getDefault();
@@ -1572,6 +1638,10 @@ public:
       ion.name = "ChemicalIon";
       ion.sticking = 0.f;
       ion.cosineExponent = static_cast<NumericType>(src.exponent);
+      // TEST (LS_ION_RAYS, 2026-10-31): LS_ION_RAYS times the rays per point
+      // for the ion, which carries most of the removal at the bottom corner.
+      if (const char *e = std::getenv("LS_ION_RAYS"))
+        ion.raysFactor = static_cast<unsigned>(std::max(1, std::atoi(e)));
 
       NumericType minEth = std::numeric_limits<NumericType>::max();
       int nYield = 0;
@@ -1732,6 +1802,18 @@ public:
   SmartPointer<ProcessModelBase<NumericType, D>> getGPUModel() override {
     auto model = SmartPointer<gpu::SurfaceChemistry<NumericType, D>>::New(mech);
     model->setProcessName(this->getProcessName().value());
+    // TEST (GPU, 2026-10-31): the GPU model takes over this model's surface
+    // model. Its constructor builds a fresh one from the mechanism, which lost
+    // every setting made here (transient coverages, surface renewal, film
+    // regulation) and solved steady-state coverages where the CPU model
+    // integrates them in time; the flux snapshot of LS_FLUXDUMP lives there too.
+    if (this->getSurfaceModel())
+      model->setSurfaceModel(this->getSurfaceModel());
+    // The advection callback too (voxelCompare's SNAP_NM snapshots): the flags
+    // of the process are set from this model, so without it the flux strategy
+    // called a null callback.
+    if (this->getAdvectionCallback())
+      model->setAdvectionCallback(this->getAdvectionCallback());
     return model;
   }
 #endif

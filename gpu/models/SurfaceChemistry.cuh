@@ -56,6 +56,16 @@ struct SurfaceChemistryParamsGPU {
   int yieldOverrideMaterial[maxYields][maxMaterials] = {};
   float yieldOverrideA[maxYields][maxMaterials] = {};
   float yieldOverrideEth[maxYields][maxMaterials] = {};
+
+  // TEST (LS_IONNORM, GPU, 2026-10-31): index of the first of three element
+  // data arrays (x, y, z) that hold the averaged element normals after the
+  // coverages, -1 if the ion takes the facet normal
+  int ionNormalOffset = -1;
+
+  // TEST (GPU, 2026-10-31): the coverages that block each neutral, one bit per
+  // coverage, from GasSpecies::stickingBlockers; 0 takes every coverage on the
+  // particle's sticking site, as the CPU particle does without a blocker list
+  int blockerMask[maxParticles] = {};
 };
 
 // The host and the device each carry their own copy of this struct, and a
@@ -85,9 +95,12 @@ chemicalFreeSiteFraction(const void *sbtData, const unsigned primID) {
           launchParams.customData);
 
   const int site = params->stickingSite[launchParams.particleIdx];
+  // TEST (GPU, 2026-10-31): the blocking coverages of the mechanism when it
+  // names them (F is blocked by SiO alone), as on the CPU
+  const int mask = params->blockerMask[launchParams.particleIdx];
   float occupied = 0.f;
   for (int i = 0; i < params->numCoverages; ++i)
-    if (params->coverageSite[i] == site)
+    if (mask != 0 ? ((mask >> i) & 1) != 0 : params->coverageSite[i] == site)
       occupied += coverages[primID + i * launchParams.numElements];
   return fmaxf(1.f - occupied, 0.f);
 }
@@ -162,6 +175,30 @@ chemicalIonInit(viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::initNormalDistEnergy(prd, p->meanEnergy, p->sigmaEnergy);
 }
 
+// TEST (LS_IONNORM, GPU, 2026-10-31): the averaged element normal, stored
+// after the coverages in the element data by GPUTriangleEngine, when the ion
+// arrives from outside the averaged surface; false (facet normal) otherwise
+// or if unset. The same rule as impl::ChemicalIon::averagedNormal on the CPU.
+__forceinline__ __device__ bool
+chemicalAveragedNormal(const void *sbtData, const unsigned primID,
+                       const viennacore::Vec3Df &dir, viennacore::Vec3Df &n) {
+  const auto *p = chemicalParams();
+  if (p->ionNormalOffset < 0 || primID >= launchParams.numElements)
+    return false;
+  const auto *baseData =
+      reinterpret_cast<const viennaray::gpu::HitSBTDataBase *>(sbtData);
+  const float *data = (const float *)baseData->cellData;
+  const unsigned nEl = launchParams.numElements;
+  const unsigned o = static_cast<unsigned>(p->ionNormalOffset);
+  const viennacore::Vec3Df m{data[primID + o * nEl],
+                             data[primID + (o + 1) * nEl],
+                             data[primID + (o + 2) * nEl]};
+  if (viennacore::DotProduct(dir, m) >= 0.f)
+    return false;
+  n = m;
+  return true;
+}
+
 __forceinline__ __device__ void
 chemicalIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   const auto *p = chemicalParams();
@@ -170,6 +207,8 @@ chemicalIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
     const int legacyId = launchParams.materialMap[consecutiveId];
 
     auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primIDs[i]);
+    // TEST (LS_IONNORM, GPU): the averaged normal for the incidence angle
+    chemicalAveragedNormal(sbtData, prd->primIDs[i], prd->dir, geomNormal);
     const float cosTheta =
         __saturatef(-viennacore::DotProduct(prd->dir, geomNormal));
     const float angle = acosf(cosTheta);
@@ -205,9 +244,13 @@ chemicalIonCollision(const void *sbtData, viennaray::gpu::PerRayData *prd) {
 __forceinline__ __device__ void
 chemicalIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   const auto *p = chemicalParams();
-  auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
-  const float cosTheta =
-      __saturatef(-viennacore::DotProduct(prd->dir, geomNormal));
+  const auto geomNormal = viennaray::gpu::getNormal(sbtData, prd->primID);
+  // TEST (LS_IONNORM, GPU): incidence angle and reflection about the averaged
+  // normal when the ion arrives from outside the averaged surface
+  auto n = geomNormal;
+  const bool averaged =
+      chemicalAveragedNormal(sbtData, prd->primID, prd->dir, n);
+  const float cosTheta = __saturatef(-viennacore::DotProduct(prd->dir, n));
   const float angle = acosf(cosTheta);
 
   // a steep hit is absorbed, a glancing one reflects
@@ -223,8 +266,12 @@ chemicalIonReflection(const void *sbtData, viennaray::gpu::PerRayData *prd) {
   viennaps::gpu::impl::updateEnergy(prd, p->inflectAngle, p->n_l, angle);
   if (prd->energy > p->minEth) {
     prd->rayWeight -= prd->rayWeight * sticking;
-    viennaray::gpu::conedCosineReflection(prd, geomNormal,
+    viennaray::gpu::conedCosineReflection(prd, n,
                                           M_PI_2f - fminf(angle, p->minAngle));
+    // TEST (LS_IONNORM, GPU): a direction off the averaged surface that points
+    // into the struck facet cannot leave it, and the ion stops there
+    if (averaged && viennacore::DotProduct(prd->dir, geomNormal) <= 0.f)
+      prd->rayWeight = 0.f;
   } else {
     prd->rayWeight = 0.f;
   }

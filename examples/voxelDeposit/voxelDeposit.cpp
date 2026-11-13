@@ -31,6 +31,9 @@
 //   LS_PREEQ=1    pre-equilibrate the level set's coverages (comparison only;
 //                 by default it starts bare, like the cell set)
 //   PMC_FITR / PMC_REFLR / PMC_PWIN / PMC_MINPTS / PMC_PRUNE / PMC_PLANE
+//   PMC_EST=face  re-emit about the face the molecule entered by (default:
+//                 the interface average, as the etch and the silane runs)
+//   PMC_FHOP=0    bond on the cell hit (default: the 2-cell hop of F and O)
 //
 // SILANE CVD. With MECH_FILE=.../silane.mechanism.json the cell set runs the
 // mechanism's own surface kinetics (VoxelPMC::setCVD): SiH4 adsorbs on a free
@@ -232,6 +235,8 @@ int main(int argc, char **argv) {
     proc.setFluxEngineType(ps::FluxEngineType::CPU_TRIANGLE);
     ps::RayTracingParameters rt;
     rt.raysPerPoint = 400; rt.useRandomSeeds = false; rt.rngSeed = 1000;
+    // TEST (DEP_FROZEN): more rays for the frozen flux
+    if (const char *e = std::getenv("DEP_RPP")) rt.raysPerPoint = std::atoi(e);
     proc.setParameters(rt);
     ps::CoverageParameters cov; cov.tolerance = 1e-6; cov.maxIterations = 40;
     // NO PRE-EQUILIBRATION IN EITHER ARM: the level set starts from a bare
@@ -245,6 +250,24 @@ int main(int argc, char **argv) {
               << ":\n";
     proc.apply();
     writeSurface(dom, "dep_ls_final.vtp");
+    // TEST (DEP_FROZEN): the flux field of the last step, in the format of
+    // voxelCompare's cmp_ls_flux.csv
+    if (std::getenv("LS_FLUXDUMP")) {
+      const auto &labels = model->fluxFieldLabels();
+      const auto &fields = model->fluxFields();
+      const auto &pts = model->fluxFieldCoords();
+      std::ofstream ff("dep_ls_flux.csv");
+      ff << "x,z";
+      for (const auto &l : labels) ff << ',' << l;
+      ff << "\n";
+      for (size_t i = 0; i < pts.size(); ++i) {
+        ff << pts[i][0] << ',' << pts[i][1];
+        for (size_t g = 0; g < fields.size(); ++g) ff << ',' << fields[g][i];
+        ff << "\n";
+      }
+      std::cout << "    wrote dep_ls_flux.csv (" << pts.size() << " points, "
+                << rt.raysPerPoint << " rays per point)\n";
+    }
     if (BLANKET)
       std::cout << "    film " << meanHeight(dom) << " nm against the rate "
                 << "law's " << GR * time << " nm\n";
@@ -356,9 +379,13 @@ int main(int argc, char **argv) {
     pmc.setSeed(SEED);
     const T nu = sigma0 * std::pow(DX, D - 1);   // sites per cell
     int steps = 300;
+    // The estimator the SF6/O2 comparison runs on (voxelCompare, pmciface),
+    // for every deposition: a molecule re-emits about the mean of the exposed
+    // faces within the fit radius. Until 2026-10-20 only the silane branch set
+    // it, and the constant-sticking runs re-emitted about the face the molecule
+    // entered by (VoxelInteraction's default). PMC_EST=face restores that.
+    pmc.setNormalEstimator(cs::NormalEstimator::InterfaceAverage);
     if (cvd) {
-      // the estimator the SF6/O2 comparison runs on (voxelCompare, pmciface)
-      pmc.setNormalEstimator(cs::NormalEstimator::InterfaceAverage);
       pmc.setCVD(true, kc[0], kc[1], kc[2]);
       if (const char *e = std::getenv("PMC_CVDMIX"))
         pmc.setCVDMixing(std::atof(e));
@@ -372,7 +399,30 @@ int main(int argc, char **argv) {
     } else {
       pmc.setDeposition(true);
       pmc.setDepositionP(pStick);
+      // The silane growth placement for every deposition (2026-10-20, Lado):
+      // the new cell goes to the empty cell within PMC_CVDRELAX (default 4)
+      // cells of the struck cell that touches the most full cells. Grown where
+      // the molecule lands, the film is ballistic, porous and branched (in the
+      // 20 x 80 nm trench, the material of 4 nm stood 9.5 to 11.4 nm tall on
+      // the field). DEP_BALLISTIC=1 grows it where it lands, as before.
+      if (!std::getenv("DEP_BALLISTIC")) {
+        pmc.setDepositCoordinationPlacement(true);
+        if (const char *e = std::getenv("PMC_CVDRELAX"))
+          pmc.setCVDRelaxRadius(std::atoi(e));
+        std::cout << "PMC growth placement: the empty cell within "
+                  << pmc.cvdRelaxRadius()
+                  << " cells that touches the most full cells\n";
+      } else {
+        std::cout << "PMC growth placement: where the molecule lands "
+                     "(ballistic)\n";
+      }
+      // The rest of the silane settings (2026-10-20, Lado): the molecule bonds
+      // on a cell picked by the hop of an F or O arrival (VoxelPMC, deposit
+      // branch; PMC_FHOP=0 bonds it on the cell it hit), and where no
+      // placement is found the film grows along the local normal (setCVD).
+      pmc.setDepositAlongNormal(true);
     }
+    if (const char *e = std::getenv("PMC_FHOP")) pmc.setFHopRadius(std::atoi(e));
     if (const char *e = std::getenv("DEP_STEPS")) steps = std::atoi(e);
     if (const char *e = std::getenv("DEP_BOUNCE")) pmc.setMaxBounce(std::atoi(e));
     if (const char *e = std::getenv("PMC_FITR")) pmc.setFitRadius(std::atoi(e));
@@ -381,6 +431,27 @@ int main(int argc, char **argv) {
     if (const char *e = std::getenv("PMC_MINPTS")) pmc.setMinFitPoints(std::atoi(e));
     if (std::getenv("PMC_PLANE")) pmc.setPlaneAcceptance(true);
     if (std::getenv("PMC_PRUNE")) pmc.setPruneIslands(true);
+    // PMC_EST=face re-emits about the face the molecule entered by, PMC_EST=fit
+    // about the least-squares plane through the interface
+    if (const char *e = std::getenv("PMC_EST"))
+      pmc.setNormalEstimator(std::string(e) == "face"
+                                 ? cs::NormalEstimator::Face
+                             : std::string(e) == "fit"
+                                 ? cs::NormalEstimator::InterfaceFit
+                                 : cs::NormalEstimator::InterfaceAverage);
+    std::cout << "PMC normal estimator: "
+              << (std::getenv("PMC_EST") ? std::getenv("PMC_EST") : "iface")
+              << ",  adsorption hop " << pmc.fHopRadius() << " cells\n";
+    // TEST (DEP_FROZEN=<nm>): the trench is held, and the molecules of a dose
+    // of <nm> on the open field are counted where they arrive and where they
+    // stick (dep_pmc_flux.csv); nothing grows
+    const char *frozen = std::getenv("DEP_FROZEN");
+    const T tPmc = frozen ? T(std::atof(frozen)) / GR : time;
+    if (frozen) {
+      pmc.setFreezeSurface(true);
+      pmc.setHitTally(true);
+      std::cout << "FROZEN: dose " << frozen << " nm on the field\n";
+    }
     auto dump = [&](const std::string &name) {
       auto &ff = *cells->getFillingFractions();
       auto &mmv = *cells->getScalarData("Material");
@@ -399,7 +470,7 @@ int main(int argc, char **argv) {
     if (cvd) std::cout << pmc.cvdMixing() << ", growth reach "
                        << pmc.cvdRelaxRadius() << " cells)";
     std::cout << ", " << steps << " steps of " << std::scientific
-              << std::setprecision(3) << time / steps << " s:\n"
+              << std::setprecision(3) << tPmc / steps << " s:\n"
               << std::fixed;
     dump("dep_pmc_initial.vtu");
     // coverages, averaged over the second half of the run
@@ -409,7 +480,7 @@ int main(int argc, char **argv) {
     size_t cellsHalf = 0;   // grown cells at the half-way point
     for (int s = 0; s < steps; ++s) {
       if (2 * s == steps || 2 * s == steps + 1) cellsHalf = pmc.depositedCells();
-      pmc.step(time / steps);
+      pmc.step(tPmc / steps);
       if (cvd && 2 * s >= steps && (s % every) == 0) {
         const auto c = pmc.cvdCensus();
         for (int k = 0; k < 3; ++k) census[k] += double(c[k]);
@@ -448,6 +519,38 @@ int main(int argc, char **argv) {
     if (pmc.pruneIslands())
       std::cout << "    pruned " << pmc.pruneUnsupported() << " unsupported cells\n";
     dump("dep_pmc_final.vtu");
+    // TEST (DEP_FROZEN): arrivals and sticks per exposed cell
+    if (frozen) {
+      const auto &arr = pmc.neutralHitsF();
+      const auto &stk = pmc.neutralHitsO();
+      const auto &dd = lat.dims();
+      std::ofstream f("dep_pmc_flux.csv");
+      f << "x,z,arrivals,sticks\n";
+      size_t nArr = 0, nStk = 0;
+      std::array<int, D> q{};
+      for (int j = 0; j < dd[1]; ++j)
+        for (int i = 0; i < dd[0]; ++i) {
+          q[0] = i; q[1] = j;
+          const int c = lat.cellId(q);
+          if (c < 0 || fill[c] < T(0.5)) continue;
+          bool exposed = false;
+          for (int d = 0; d < D && !exposed; ++d)
+            for (int sg = -1; sg <= 1 && !exposed; sg += 2) {
+              auto nb = q; nb[d] += sg;
+              const int b = lat.cellId(nb);
+              if (b >= 0 && fill[b] < T(0.5)) exposed = true;
+            }
+          if (!exposed) continue;
+          const size_t a = c < (int)arr.size() ? arr[c] : 0;
+          const size_t k = c < (int)stk.size() ? stk[c] : 0;
+          nArr += a; nStk += k;
+          f << lat.minCorner()[0] + DX * (i + T(0.5)) << ','
+            << lat.minCorner()[1] + DX * (j + T(0.5)) << ',' << a << ',' << k
+            << '\n';
+        }
+      std::cout << "    FROZEN: wrote dep_pmc_flux.csv, " << nArr
+                << " arrivals and " << nStk << " sticks on exposed cells\n";
+    }
     const double perCell = p.rho * std::pow(DX, D);
     std::cout << std::setprecision(4)
               << "    launched " << pmc.nLaunch << ",  surface hits "

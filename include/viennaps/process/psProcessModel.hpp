@@ -18,6 +18,8 @@
 
 #include <vcLogger.hpp>
 
+#include "../psIonNormal.hpp" // TEST (LS_IONNORM)
+
 namespace viennaps {
 
 using namespace viennacore;
