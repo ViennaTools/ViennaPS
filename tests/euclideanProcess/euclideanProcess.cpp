@@ -582,6 +582,38 @@ template <class NumericType, int D> void RunTest() {
     VC_TEST_ASSERT(std::abs(level[1] - level[0]) < 0.25 * gridDelta);
   }
 
+  // the switch to the upwind update (setEuclideanUpwind(true, after)) with
+  // and without a flux engine: single-particle etching (rate -1, sticking 1)
+  // and isotropic etching (rate -1) for four grid spacings of time. The
+  // process drops the Hermite data once the fastest point of the surface has
+  // moved the given number of grid spacings and keeps them before (the
+  // isotropic etch never switched before AdvectHermite measured that motion)
+  for (bool flux : {false, true})
+    for (NumericType after : {1., 8.}) {
+      auto domain = makeDomain(true);
+      SmartPointer<ProcessModelBase<NumericType, D>> model;
+      if (flux)
+        model = SmartPointer<SingleParticleProcess<NumericType, D>>::New(
+            -1., 1., 1., Material::Mask);
+      else
+        model = SmartPointer<IsotropicProcess<NumericType, D>>::New(
+            -1., Material::Mask);
+      model->setEuclideanUpwind(true, after);
+      Process<NumericType, D> process(domain, model, 4. * gridDelta);
+      RayTracingParameters rays;
+      rays.raysPerPoint = 500;
+      process.setParameters(rays);
+      process.apply();
+      LSTEST_ASSERT_VALID_LS(domain->getSurface(), NumericType, D);
+      const bool kept = viennals::storesHermiteData(domain->getSurface());
+      std::cout << D << "D switch to the upwind update after " << after
+                << " grid spacings, "
+                << (flux ? "single-particle etching" : "isotropic etching")
+                << ": Hermite data " << (kept ? "kept" : "dropped")
+                << std::endl;
+      VC_TEST_ASSERT(kept == (after > 4.));
+    }
+
   // speeds that depend on the normal: wet etching with the rates of the model
   // (default crystal directions, the trench along <110> on (100)) until the
   // floor has sunk by 1.125, against the exact groove; selective epitaxy at

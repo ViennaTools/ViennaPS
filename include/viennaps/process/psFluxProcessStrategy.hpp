@@ -348,13 +348,6 @@ private:
 
     // Calculate velocities in surface model
     auto velocities = calculateVelocities(context, fluxes);
-    // the largest speed of the step, for the switch to the upwind update
-    // (AdvectionHandler::performAdvection)
-    context.stepMaxSpeed = 0.;
-    if (velocities)
-      for (const auto v : *velocities)
-        context.stepMaxSpeed =
-            std::max(context.stepMaxSpeed, double(std::abs(v)));
     if (velocities && context.isHermite() &&
         context.translationField->getTranslationMethod() == 2)
       calculateCrossVelocities(context, fluxes);

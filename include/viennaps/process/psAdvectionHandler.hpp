@@ -25,7 +25,8 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) class AdvectionHandler {
   viennals::AdvectHermite<NumericType, D> hermiteKernel_;
   bool hermite_ = false;
   // the distance after which the upwind update takes over, and the distance
-  // the fastest point of the surface has moved in the process
+  // the fastest point of the surface has moved in the process, in grid
+  // spacings
   double upwindAfter_ = 0., frontDistance_ = 0.;
   viennacore::Timer<> timer_;
   unsigned lsVelOutputCounter_ = 0;
@@ -97,8 +98,7 @@ public:
       // first) or once the front has moved the model's distance
       // (performAdvection): Advect with values only and the advection
       // parameters' schemes
-      upwindAfter_ = context.model->getEuclideanUpwindAfter() *
-                     context.domain->getGridDelta();
+      upwindAfter_ = context.model->getEuclideanUpwindAfter();
       frontDistance_ = 0.;
       context.euclideanUpwind =
           context.model->getEuclideanUpwind() && upwindAfter_ <= 0.;
@@ -177,10 +177,11 @@ public:
     } else {
       context.processTime += context.timeStep;
       // the upwind update takes over once the fastest point of the surface
-      // has moved the model's distance
-      if (hermite_ && !context.euclideanUpwind &&
-          context.model->getEuclideanUpwind()) {
-        frontDistance_ += context.stepMaxSpeed * context.timeStep;
+      // has moved the model's distance, as AdvectHermite measured it in its
+      // step (the speeds of any model, from a flux engine or a velocity
+      // field)
+      if (hermiteStep && context.model->getEuclideanUpwind()) {
+        frontDistance_ += hermiteKernel_.getFrontMotion();
         context.euclideanUpwind = frontDistance_ >= upwindAfter_;
         if (context.euclideanUpwind)
           for (auto &levelSet : context.domain->getLevelSets())

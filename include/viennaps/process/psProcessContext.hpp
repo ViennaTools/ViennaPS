@@ -45,10 +45,8 @@ VIENNAPS_TEMPLATE_ND(NumericType, D) struct ProcessContext {
   SmartPointer<viennals::Mesh<float>> triangleMesh; // set by triangle engines
   SmartPointer<TranslationField<NumericType, D>> translationField;
   // the upwind update of a Euclidean domain's moving material in this step
-  // (AdvectionHandler, from the model's setEuclideanUpwind), and the largest
-  // speed of the step's surface velocities
+  // (AdvectionHandler, from the model's setEuclideanUpwind)
   bool euclideanUpwind = false;
-  double stepMaxSpeed = 0.0;
 
   // Computed flags (derived from model state)
   struct Flags {
