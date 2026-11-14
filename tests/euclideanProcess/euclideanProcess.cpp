@@ -1,5 +1,6 @@
 #include <gds/psGDSGeometry.hpp>
 #include <geometries/psMakeFin.hpp>
+#include <geometries/psMakePlane.hpp>
 #include <geometries/psMakeTrench.hpp>
 #include <models/psDirectionalProcess.hpp>
 #include <models/psGeometricDistributionModels.hpp>
@@ -916,6 +917,68 @@ template <class NumericType, int D> void RunTest() {
     std::cout << D << "D directional etching of a turned box with the switch "
               << "to the upwind update after 5 grid spacings: valid"
               << std::endl;
+  }
+
+  // selective epitaxy on a fin with the switch to the upwind update after 2
+  // grid spacings (the fin of the paper's benchmark at grid spacing 0.4, 1.6
+  // deep), against the upwind update from the start: in 3D the crystal
+  // spreads over the oxide after the switch, which needs the layer wrapping
+  // of the stencil scheme as from the start; without it the band above the
+  // oxide kept the oxide's rate and the crystal grew over a gap, its foot
+  // lagging behind its wall
+  if constexpr (D == 3) {
+    const NumericType spacing = 0.4, oxide = 3.;
+    NumericType lag[2] = {0., 0.};
+    int down[2] = {0, 0};
+    for (bool hybrid : {false, true}) {
+      auto domain = Domain<NumericType, D>::New(spacing, 16., 1.6);
+      domain->setNormalization(viennals::NormalizationEnum::EUCLIDEAN);
+      MakeFin<NumericType, D>(domain, 7., 10.).apply();
+      MakePlane<NumericType, D>(domain, oxide, Material::SiO2, true).apply();
+      domain->duplicateTopLevelSet(Material::SiGe);
+      auto model = SmartPointer<SelectiveEpitaxy<NumericType, D>>::New(
+          std::vector<std::pair<Material, NumericType>>{{Material::Si, 2.},
+                                                        {Material::SiGe, 2.}},
+          0.4, 1.);
+      model->setEuclideanUpwind(true, hybrid ? 2. : 0.);
+      AdvectionParameters advection;
+      advection.spatialScheme =
+          viennals::SpatialSchemeEnum::STENCIL_LOCAL_LAX_FRIEDRICHS_1ST_ORDER;
+      Process<NumericType, D> process(domain, model, 2.5);
+      process.setParameters(advection);
+      process.apply();
+      LSTEST_ASSERT_VALID_LS(domain->getSurface(), NumericType, D);
+      VC_TEST_ASSERT(!viennals::storesHermiteData(domain->getSurface()));
+      // the wall 1 to 3 above the oxide, the foot within a grid spacing of it
+      auto mesh = domain->getSurfaceMesh(false);
+      const auto &nodes = mesh->getNodes();
+      NumericType wall = -1e30, foot = -1e30;
+      for (const auto &n : nodes) {
+        if (n[D - 1] > oxide + 1. && n[D - 1] < oxide + 3.)
+          wall = std::max(wall, NumericType(n[0]));
+        if (n[D - 1] > oxide + 0.1 * spacing && n[D - 1] < oxide + spacing)
+          foot = std::max(foot, NumericType(n[0]));
+      }
+      lag[hybrid] = (wall - foot) / spacing;
+      // triangles above the oxide that face downwards
+      for (const auto &t : mesh->triangles) {
+        const auto &a = nodes[t[0]], &b = nodes[t[1]], &c = nodes[t[2]];
+        const Vec3D<NumericType> u{b[0] - a[0], b[1] - a[1], b[2] - a[2]},
+            v{c[0] - a[0], c[1] - a[1], c[2] - a[2]};
+        const auto normal = CrossProduct(u, v);
+        const NumericType length = Norm(normal);
+        if (length > 0. && (a[2] + b[2] + c[2]) / 3. > oxide + 0.1 * spacing &&
+            normal[2] < -0.5 * length)
+          ++down[hybrid];
+      }
+    }
+    std::cout << D << "D selective epitaxy on a fin, the foot of the crystal "
+              << lag[0] << " (upwind update) and " << lag[1]
+              << " (switch after 2) grid spacings behind its wall, " << down[0]
+              << " and " << down[1]
+              << " triangles above the oxide facing downwards" << std::endl;
+    VC_TEST_ASSERT(down[0] == 0 && down[1] == 0);
+    VC_TEST_ASSERT(lag[1] < lag[0] + 0.5);
   }
 }
 

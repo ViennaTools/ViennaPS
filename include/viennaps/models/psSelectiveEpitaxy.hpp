@@ -142,6 +142,15 @@ public:
         viennals::PrepareStencilLocalLaxFriedrichs(levelSets, {false, true});
 
       firstInit = false;
+    } else if (hermite && !viennals::storesHermiteData(domain->getSurface())) {
+      // the Euclidean hybrid (setEuclideanUpwind with a distance): once the
+      // process has switched to the upwind update, the level sets hold values
+      // only and the stack takes the layer wrapping of the stencil scheme, as
+      // a domain that starts with values only
+      hermite = false;
+      velField->wrapped = true;
+      auto levelSets = domain->getLevelSets();
+      viennals::PrepareStencilLocalLaxFriedrichs(levelSets, {false, true});
     }
   }
 
