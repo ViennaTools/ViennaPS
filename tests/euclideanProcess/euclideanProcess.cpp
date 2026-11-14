@@ -863,6 +863,60 @@ template <class NumericType, int D> void RunTest() {
               << deviation / gridDelta << " grid spacings" << std::endl;
     VC_TEST_ASSERT(deviation / gridDelta < 1e-3);
   }
+
+  // the switch to the upwind update in directional etching of a box turned
+  // by 30 degrees (the 2D box of the paper's benchmark, grid spacing 0.5, 15
+  // deep, the upwind update after 5 grid spacings): between single steps the
+  // band of AdvectHermite can have gaps next to the box's convex corners,
+  // where a point that Advect moves lacked neighbours and its rate came out
+  // as NaN; at the switch every level set now takes the exact distances to
+  // the mesh of its planes on its whole band
+  if constexpr (D == 2) {
+    const double scale = 5., extent = 70., spacing = 0.5;
+    const double half[2] = {5.15 * scale, 3.85 * scale};
+    const double centre[2] = {0.31 * scale, -0.27 * scale};
+    const double angle = 30. * M_PI / 180., ca = std::cos(angle),
+                 sa = std::sin(angle);
+    auto turned = SmartPointer<viennals::Mesh<NumericType>>::New();
+    for (int n = 0; n < 4; ++n) {
+      const double lx = (n & 1 ? 1. : -1.) * half[0];
+      const double ly = (n & 2 ? 1. : -1.) * half[1];
+      turned->insertNextNode({NumericType(centre[0] + ca * lx - sa * ly),
+                              NumericType(centre[1] + sa * lx + ca * ly),
+                              NumericType(0)});
+    }
+    for (const auto &line :
+         {std::array<unsigned, 2>{0, 2}, {2, 3}, {3, 1}, {1, 0}})
+      turned->insertNextLine(line);
+    viennahrle::CoordType bounds[2 * D];
+    BoundaryType boundaries[D];
+    for (int i = 0; i < D; ++i) {
+      bounds[2 * i] = -extent;
+      bounds[2 * i + 1] = extent;
+      boundaries[i] = BoundaryType::REFLECTIVE_BOUNDARY;
+    }
+    auto box =
+        viennals::Domain<NumericType, D>::New(bounds, boundaries, spacing);
+    box->setNormalization(viennals::NormalizationEnum::EUCLIDEAN);
+    box->setLevelSetWidth(12);
+    viennals::FromSurfaceMesh<NumericType, D> mesher(box, turned);
+    mesher.setUseWindingNumber(true);
+    mesher.apply();
+    auto domain = Domain<NumericType, D>::New();
+    domain->insertNextLevelSetAsMaterial(box, Material::Si);
+    Vec3D<NumericType> direction{0., 0., 0.};
+    direction[D - 1] = -1.;
+    auto model =
+        SmartPointer<DirectionalProcess<NumericType, D>>::New(direction, -1.);
+    model->setEuclideanUpwind(true, 5.);
+    Process<NumericType, D>(domain, model, 15.).apply();
+    LSTEST_ASSERT_VALID_LS(domain->getSurface(), NumericType, D);
+    VC_TEST_ASSERT(!viennals::storesHermiteData(domain->getSurface()));
+    VC_TEST_ASSERT(!domain->getSurfaceMesh(false)->getNodes().empty());
+    std::cout << D << "D directional etching of a turned box with the switch "
+              << "to the upwind update after 5 grid spacings: valid"
+              << std::endl;
+  }
 }
 
 } // namespace viennacore

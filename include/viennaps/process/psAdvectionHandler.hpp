@@ -6,6 +6,7 @@
 #include <lsAdvectHermite.hpp>
 #include <lsFromSurfaceMesh.hpp>
 #include <lsMaterialStack.hpp>
+#include <lsReinitialize.hpp>
 
 #include <vcTimer.hpp>
 
@@ -183,9 +184,22 @@ public:
       if (hermiteStep && context.model->getEuclideanUpwind()) {
         frontDistance_ += hermiteKernel_.getFrontMotion();
         context.euclideanUpwind = frontDistance_ >= upwindAfter_;
-        if (context.euclideanUpwind)
-          for (auto &levelSet : context.domain->getLevelSets())
+        if (context.euclideanUpwind) {
+          // AdvectHermite ends its advection as at the end of a process (the
+          // band repaired where its values lag behind the planes, the lower
+          // level sets ending at the surface), and every level set takes the
+          // exact distances to the mesh of its planes on its whole band, which
+          // next to convex corners can have gaps between single steps, before
+          // Advect moves the values without the planes
+          timer_.start();
+          hermiteKernel_.finish();
+          for (auto &levelSet : context.domain->getLevelSets()) {
+            if (viennals::storesHermiteData(levelSet))
+              viennals::Reinitialize<NumericType, D>(levelSet).apply();
             viennals::dropHermiteData(levelSet);
+          }
+          timer_.finish();
+        }
       }
     }
 
