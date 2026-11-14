@@ -587,10 +587,23 @@ public:
                  double minNodeDistanceFactor = 0.01) const {
     auto mesh = viennals::Mesh<NumericType>::New();
     // a surface with Hermite data goes through dual contouring of its
-    // stored planes, which keeps its sharp edges and corners; a Euclidean
-    // surface with values only, as a Manhattan one
+    // stored planes, which keeps its sharp edges and corners
     if (!levelSets_.empty() && viennals::storesHermiteData(levelSets_.back())) {
       euclideanSurfaceMesh(mesh, addInterfaces);
+      return mesh;
+    }
+    // a Euclidean surface with values only (the upwind update) goes through
+    // marching squares or cubes of its values alone: the disk mesh that gives
+    // a Manhattan surface the materials of its points expands the top level
+    // set, and Expand of a Euclidean level set stores planes (Reinitialize),
+    // after which every further mesh of it was dual contouring
+    if (!addInterfaces && !levelSets_.empty() &&
+        levelSets_.back()->getNormalization() ==
+            viennals::NormalizationEnum::EUCLIDEAN) {
+      viennals::ToSurfaceMesh<NumericType, D> surfMesher(levelSets_.back(),
+                                                         mesh);
+      surfMesher.setSharpCorners(sharpCorners);
+      surfMesher.apply();
       return mesh;
     }
     if (addInterfaces) {

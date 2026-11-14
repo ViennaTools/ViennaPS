@@ -951,6 +951,9 @@ template <class NumericType, int D> void RunTest() {
       VC_TEST_ASSERT(!viennals::storesHermiteData(domain->getSurface()));
       // the wall 1 to 3 above the oxide, the foot within a grid spacing of it
       auto mesh = domain->getSurfaceMesh(false);
+      // the export meshes the values by marching, with no Expand that would
+      // store planes and make every further mesh dual contouring
+      VC_TEST_ASSERT(!viennals::storesHermiteData(domain->getSurface()));
       const auto &nodes = mesh->getNodes();
       NumericType wall = -1e30, foot = -1e30;
       for (const auto &n : nodes) {
